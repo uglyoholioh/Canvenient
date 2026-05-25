@@ -1,5 +1,6 @@
 import os
 
+import certifi
 from dotenv import load_dotenv
 from databases import Database
 
