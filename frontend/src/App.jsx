@@ -1,41 +1,36 @@
-import { useState } from "react"
+import { BrowserRouter as Router, Routes, Route, Link, Navigate } from "react-router-dom"
 import RegisterForm from "./components/RegisterForm"
 import LoginForm from "./components/LoginForm"
 import "./App.css"
 
 function App() {
-  const [page, setPage] = useState("register")
 
   return (
-    <div>
-      <h1>CanVenient</h1>
-
+    <Router>
       <div>
-        <button onClick={() => setPage("login")} disabled={page === "login"}>
-          Log In
-        </button>
-        <button
-          onClick={() => setPage("register")}
-          disabled={page === "register"}
-        >
-          Register
-        </button>
+        <h1>CanVenient</h1>
+
+        <nav style={{ marginBottom: "20px" }}>
+          <Link to="/login" style={{ marginRight: "10px" }}>Log In</Link>
+          <Link to="/register">Register</Link>
+        </nav>
+
+
+        <Routes>
+          <Route path="/" element={<Navigate to="/login" replace />} />
+          <Route path="/register" element={<RegisterForm />} />
+          <Route path="/login" element={<LoginForm />} />
+          <Route path="/dashboard" element={
+            <div>
+              <h2>Dashboard</h2>
+              <p>Welcome to CanVenient! You are successfully logged in.</p>
+              <Link to="/login">Log Out</Link>
+            </div>
+          } />
+        </Routes>
+
       </div>
-
-      {page === "register" && <RegisterForm />}
-
-      {page === "login" && (
-        <LoginForm onLoginSuccess={() => setPage("dashboard")} />
-      )}
-
-      {page === "dashboard" && (
-        <div>
-          <h2>Dashboard</h2>
-          <p>Welcome to CanVenient! You are successfully logged in.</p>
-          <button onClick={() => setPage("login")}>Log Out</button>
-        </div>
-      )}
-    </div>
+    </Router>
   )
 }
 

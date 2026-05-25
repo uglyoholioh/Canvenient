@@ -1,6 +1,8 @@
 import { useState } from "react"
+import { useNavigate } from "react-router-dom"
 
-function LoginForm({ onLoginSuccess }) {
+function LoginForm() {
+    const navigate = useNavigate()
     const [email, setEmail] = useState("")
     const [password, setPassword] = useState("")
     const [message, setMessage] = useState("")
@@ -24,7 +26,7 @@ function LoginForm({ onLoginSuccess }) {
                 setMessage("Login successful!")
                 setIsError(false)
                 setTimeout(() => {
-                    onLoginSuccess()
+                    navigate("/dashboard")
                 }, 800)
             } else {
                 const errorMessage = typeof data.detail === 'object'
