@@ -2,13 +2,13 @@ import os
 
 import certifi
 from dotenv import load_dotenv
-from motor.motor_asyncio import AsyncIOMotorClient
+from databases import Database
 
 load_dotenv()
 
-MONGO_URL = os.getenv("MONGODB_URL")
-if not MONGO_URL:
-    raise ValueError("MONGODB_URL is not set in .env")
+DATABASE_URL = os.getenv("DATABASE_URL")
+if not DATABASE_URL:
+    raise ValueError("DATABASE_URL is not set in .env")
 
-client = AsyncIOMotorClient(MONGO_URL, tlsCAFile=certifi.where())
-db = client.canvenient
+db = Database(DATABASE_URL, min_size=1, max_size=3)
+
