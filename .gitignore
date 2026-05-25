@@ -4,3 +4,5 @@ venv/
 __pycache__/
 *.pyc
 SESSION-LOG.md
+.agents/
+skills-lock.json

@@ -1,6 +1,9 @@
 import { useState } from "react"
+import { useNavigate } from "react-router-dom"
+
 
 function RegisterForm() {
+  const navigate = useNavigate()
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [message, setMessage] = useState("")
@@ -21,9 +24,13 @@ function RegisterForm() {
       const data = await response.json()
 
       if (response.ok) {
-        setMessage("Registration successful! You can now log in.")
+        setMessage("Registration successful! Redirecting to login...")
         setIsError(false)
-      } else {
+        setTimeout(() => {
+          navigate("/login")
+        }, 1500)
+      }
+      else {
         const errorMessage = typeof data.detail === 'object'
           ? "Invalid email or password format."
           : data.detail || "Registration failed"
