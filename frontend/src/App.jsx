@@ -1,5 +1,6 @@
 import { useState } from "react"
 import RegisterForm from "./components/RegisterForm"
+import LoginForm from "./components/LoginForm"
 import "./App.css"
 
 function App() {
@@ -23,7 +24,17 @@ function App() {
 
       {page === "register" && <RegisterForm />}
 
-      {page === "login" && <p>Login form coming soon.</p>}
+      {page === "login" && (
+        <LoginForm onLoginSuccess={() => setPage("dashboard")} />
+      )}
+
+      {page === "dashboard" && (
+        <div>
+          <h2>Dashboard</h2>
+          <p>Welcome to CanVenient! You are successfully logged in.</p>
+          <button onClick={() => setPage("login")}>Log Out</button>
+        </div>
+      )}
     </div>
   )
 }
