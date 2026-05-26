@@ -1,62 +1,76 @@
 import { useState } from "react"
 
-function RegisterForm() {
+import { register } from "../api"
+
+function RegisterForm({ onRegisterSuccess, onSwitchMode }) {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [message, setMessage] = useState("")
   const [isError, setIsError] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const handleSubmit = async (e) => {
-    e.preventDefault()
+  const handleSubmit = async (event) => {
+    event.preventDefault()
     setMessage("")
     setIsError(false)
+    setIsSubmitting(true)
 
     try {
-      const response = await fetch('/auth/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
-      })
-
-      const data = await response.json()
-
-      if (response.ok) {
-        setMessage("Registration successful! You can now log in.")
-        setIsError(false)
-      } else {
-        const errorMessage = typeof data.detail === 'object'
-          ? "Invalid email or password format."
-          : data.detail || "Registration failed"
-        setMessage(errorMessage)
-        setIsError(true)
-      }
+      const session = await register({ email, password })
+      setMessage("Account created. Setting up your Task Manager...")
+      onRegisterSuccess(session)
     } catch (error) {
-      setMessage("Could not connect to the server.")
+      setMessage(error.message || "Could not connect to the server.")
       setIsError(true)
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
   return (
-    <form onSubmit={handleSubmit}>
-      <input
-        type="email"
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
-        placeholder="Email"
-        required
-      />
-      <input
-        type="password"
-        value={password}
-        onChange={(e) => setPassword(e.target.value)}
-        placeholder="Password"
-        required
-      />
-      <button type="submit">Register</button>
+    <form className="auth-form" onSubmit={handleSubmit}>
+      <label>
+        <span>Email</span>
+        <input
+          type="email"
+          value={email}
+          onChange={(event) => setEmail(event.target.value)}
+          placeholder="you@u.nus.edu"
+          required
+        />
+      </label>
+
+      <label>
+        <span>Password</span>
+        <input
+          type="password"
+          value={password}
+          onChange={(event) => setPassword(event.target.value)}
+          placeholder="At least 8 characters"
+          required
+        />
+      </label>
+
+      <button className="primary-button" type="submit" disabled={isSubmitting}>
+        {isSubmitting ? "Creating account..." : "Create Account"}
+      </button>
 
       {message && (
-        <p style={{ color: isError ? "red" : "green" }}>{message}</p>
+        <p className={isError ? "status-message error" : "status-message success"}>
+          {message}
+        </p>
       )}
+
+      <p className="auth-footnote">
+        Already registered?{" "}
+        <button
+          className="text-button"
+          type="button"
+          onClick={onSwitchMode}
+        >
+          Log in instead
+        </button>
+      </p>
     </form>
   )
 }

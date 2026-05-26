@@ -1,67 +1,78 @@
 import { useState } from "react"
 
-function LoginForm({ onLoginSuccess }) {
-    const [email, setEmail] = useState("")
-    const [password, setPassword] = useState("")
-    const [message, setMessage] = useState("")
-    const [isError, setIsError] = useState(false)
+import { login } from "../api"
 
-    const handleSubmit = async (e) => {
-        e.preventDefault()
-        setMessage("")
-        setIsError(false)
+function LoginForm({ onLoginSuccess, onSwitchMode }) {
+  const [email, setEmail] = useState("")
+  const [password, setPassword] = useState("")
+  const [message, setMessage] = useState("")
+  const [isError, setIsError] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
-        try {
-            const response = await fetch('/auth/login', {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ email, password })
-            })
+  const handleSubmit = async (event) => {
+    event.preventDefault()
+    setMessage("")
+    setIsError(false)
+    setIsSubmitting(true)
 
-            const data = await response.json()
-
-            if (response.ok) {
-                setMessage("Login successful!")
-                setIsError(false)
-                setTimeout(() => {
-                    onLoginSuccess()
-                }, 800)
-            } else {
-                const errorMessage = typeof data.detail === 'object'
-                    ? "Invalid email or password format."
-                    : data.detail || "Login failed"
-                setMessage(errorMessage)
-                setIsError(true)
-            }
-        } catch (error) {
-            setMessage("Could not connect to the server.")
-            setIsError(true)
-        }
+    try {
+      const session = await login({ email, password })
+      setMessage("Welcome back. Loading your workspace...")
+      onLoginSuccess(session)
+    } catch (error) {
+      setMessage(error.message || "Could not connect to the server.")
+      setIsError(true)
+    } finally {
+      setIsSubmitting(false)
     }
+  }
 
-    return (
-        <form onSubmit={handleSubmit}>
-            <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="Email"
-                required
-            />
-            <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Password"
-                required
-            />
-            <button type="submit">Login</button>
+  return (
+    <form className="auth-form" onSubmit={handleSubmit}>
+      <label>
+        <span>Email</span>
+        <input
+          type="email"
+          value={email}
+          onChange={(event) => setEmail(event.target.value)}
+          placeholder="you@u.nus.edu"
+          required
+        />
+      </label>
 
-            {message && (
-                <p style={{ color: isError ? "red" : "green" }}>{message}</p>
-            )}
-        </form>
-    )
+      <label>
+        <span>Password</span>
+        <input
+          type="password"
+          value={password}
+          onChange={(event) => setPassword(event.target.value)}
+          placeholder="At least 8 characters"
+          required
+        />
+      </label>
+
+      <button className="primary-button" type="submit" disabled={isSubmitting}>
+        {isSubmitting ? "Logging in..." : "Log In"}
+      </button>
+
+      {message && (
+        <p className={isError ? "status-message error" : "status-message success"}>
+          {message}
+        </p>
+      )}
+
+      <p className="auth-footnote">
+        New here?{" "}
+        <button
+          className="text-button"
+          type="button"
+          onClick={onSwitchMode}
+        >
+          Create an account
+        </button>
+      </p>
+    </form>
+  )
 }
 
 export default LoginForm
