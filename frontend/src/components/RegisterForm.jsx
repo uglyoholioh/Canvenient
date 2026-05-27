@@ -1,6 +1,8 @@
 import { useState } from "react"
+import { useNavigate, Link } from "react-router-dom"
 
 function RegisterForm() {
+  const navigate = useNavigate()
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [message, setMessage] = useState("")
@@ -21,9 +23,13 @@ function RegisterForm() {
       const data = await response.json()
 
       if (response.ok) {
-        setMessage("Registration successful! You can now log in.")
+        setMessage("Registration successful! Redirecting to login...")
         setIsError(false)
-      } else {
+        setTimeout(() => {
+          navigate("/login")
+        }, 1500)
+      }
+      else {
         const errorMessage = typeof data.detail === 'object'
           ? "Invalid email or password format."
           : data.detail || "Registration failed"
@@ -37,27 +43,45 @@ function RegisterForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit}>
-      <input
-        type="email"
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
-        placeholder="Email"
-        required
-      />
-      <input
-        type="password"
-        value={password}
-        onChange={(e) => setPassword(e.target.value)}
-        placeholder="Password"
-        required
-      />
-      <button type="submit">Register</button>
+    <div className="auth-container">
+      <div className="auth-card">
+        <h2>Create Account</h2>
+        <form onSubmit={handleSubmit}>
+          <div className="form-group">
+            <label htmlFor="email">Email Address</label>
+            <input
+              id="email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="e.g. EXXXXXXX@u.nus.edu"
+              required
+            />
+          </div>
+          <div className="form-group">
+            <label htmlFor="password">Password</label>
+            <input
+              id="password"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Create a password"
+              required
+            />
+          </div>
+          <br></br>
 
-      {message && (
-        <p style={{ color: isError ? "red" : "green" }}>{message}</p>
-      )}
-    </form>
+          <button type="submit" className="button">Register</button>
+          <p className="auth-footer">
+            Already have an account? <Link to="/login">Log In</Link>
+          </p>
+
+          {message && (
+            <p style={{ color: isError ? "red" : "green" }}>{message}</p>
+          )}
+        </form>
+      </div>
+    </div>
   )
 }
 

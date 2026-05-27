@@ -1,6 +1,8 @@
 import { useState } from "react"
+import { useNavigate, Link } from "react-router-dom"
 
-function LoginForm({ onLoginSuccess }) {
+function LoginForm() {
+    const navigate = useNavigate()
     const [email, setEmail] = useState("")
     const [password, setPassword] = useState("")
     const [message, setMessage] = useState("")
@@ -24,7 +26,7 @@ function LoginForm({ onLoginSuccess }) {
                 setMessage("Login successful!")
                 setIsError(false)
                 setTimeout(() => {
-                    onLoginSuccess()
+                    navigate("/dashboard")
                 }, 800)
             } else {
                 const errorMessage = typeof data.detail === 'object'
@@ -40,27 +42,45 @@ function LoginForm({ onLoginSuccess }) {
     }
 
     return (
-        <form onSubmit={handleSubmit}>
-            <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="Email"
-                required
-            />
-            <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Password"
-                required
-            />
-            <button type="submit">Login</button>
+        <div className="auth-container">
+            <div className="auth-card">
+                <h2>Sign in</h2>
+                <form onSubmit={handleSubmit}>
+                    <div className="form-group">
+                        <label htmlFor="email">Email Address</label>
+                        <input
+                            id="email"
+                            type="email"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            placeholder="e.g. EXXXXXXX@u.nus.edu"
+                            required
+                        />
+                    </div>
+                    <div className="form-group">
+                        <label htmlFor="password">Password</label>
+                        <input
+                            id="password"
+                            type="password"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            placeholder="Enter your password"
+                            required
+                        />
+                    </div>
+                    <br></br>
 
-            {message && (
-                <p style={{ color: isError ? "red" : "green" }}>{message}</p>
-            )}
-        </form>
+                    <button type="submit" className="button">Login</button>
+                    <p className="auth-footer">
+                        Don't have an account? <Link to="/register">Register</Link>
+                    </p>
+
+                    {message && (
+                        <p style={{ color: isError ? "red" : "green" }}>{message}</p>
+                    )}
+                </form>
+            </div>
+        </div>
     )
 }
 
