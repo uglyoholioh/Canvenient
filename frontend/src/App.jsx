@@ -6,6 +6,21 @@ import Dashboard from "./components/Dashboard"
 import TaskManagerDashboard from "./components/TaskManagerDashboard"
 import { getStoredToken, persistToken, clearStoredToken, getCurrentUser } from "./api"
 import "./App.css"
+import { Outlet } from "react-router-dom"
+import Sidebar from "./components/Sidebar"
+
+function Layout({ currentUser, onLogout }) {
+  return (
+    <div className="app-layout">
+      <Sidebar currentUser={currentUser} onLogout={onLogout} />
+
+      <div className="app-content">
+        <Outlet />
+      </div>
+    </div>
+  )
+}
+
 
 function App() {
   const [token, setToken] = useState(() => getStoredToken())
@@ -77,36 +92,20 @@ function App() {
       <Routes>
         <Route path="/" element={<Navigate to="/login" replace />} />
         <Route path="/register" element={<RegisterForm />} />
-        <Route 
-          path="/login" 
+        <Route
+          path="/login"
           element={
             currentUser ? (
               <Navigate to="/dashboard" replace />
             ) : (
               <LoginForm onLoginSuccess={handleLoginSuccess} />
             )
-          } 
+          }
         />
-        <Route 
-          path="/dashboard" 
-          element={
-            currentUser ? (
-              <Dashboard token={token} currentUser={currentUser} onLogout={handleLogout} />
-            ) : (
-              <Navigate to="/login" replace />
-            )
-          } 
-        />
-        <Route 
-          path="/planner" 
-          element={
-            currentUser ? (
-              <TaskManagerDashboard token={token} currentUser={currentUser} onLogout={handleLogout} />
-            ) : (
-              <Navigate to="/login" replace />
-            )
-          } 
-        />
+        <Route element={currentUser ? <Layout currentUser={currentUser} onLogout={handleLogout} /> : <Navigate to="/login" replace />}>
+          <Route path="/dashboard" element={<Dashboard token={token} currentUser={currentUser} onLogout={handleLogout} />} />
+          <Route path="/planner" element={<TaskManagerDashboard token={token} currentUser={currentUser} onLogout={handleLogout} />} />
+        </Route>
       </Routes>
     </Router>
   )
