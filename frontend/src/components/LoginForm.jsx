@@ -8,17 +8,18 @@ function LoginForm() {
     const [message, setMessage] = useState("")
     const [isError, setIsError] = useState(false)
 
-    const handleSubmit = async (e) => {
-        e.preventDefault()
-        setMessage("")
-        setIsError(false)
+function LoginForm({ onLoginSuccess, onSwitchMode }) {
+  const [email, setEmail] = useState("")
+  const [password, setPassword] = useState("")
+  const [message, setMessage] = useState("")
+  const [isError, setIsError] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
-        try {
-            const response = await fetch('/auth/login', {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ email, password })
-            })
+  const handleSubmit = async (event) => {
+    event.preventDefault()
+    setMessage("")
+    setIsError(false)
+    setIsSubmitting(true)
 
             const data = await response.json()
 
@@ -40,6 +41,35 @@ function LoginForm() {
             setIsError(true)
         }
     }
+  }
+
+  return (
+    <form className="auth-form" onSubmit={handleSubmit}>
+      <label>
+        <span>Email</span>
+        <input
+          type="email"
+          value={email}
+          onChange={(event) => setEmail(event.target.value)}
+          placeholder="you@u.nus.edu"
+          required
+        />
+      </label>
+
+      <label>
+        <span>Password</span>
+        <input
+          type="password"
+          value={password}
+          onChange={(event) => setPassword(event.target.value)}
+          placeholder="At least 8 characters"
+          required
+        />
+      </label>
+
+      <button className="primary-button" type="submit" disabled={isSubmitting}>
+        {isSubmitting ? "Logging in..." : "Log In"}
+      </button>
 
     return (
         <div className="auth-container">

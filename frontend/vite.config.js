@@ -9,6 +9,18 @@ export default defineConfig({
         target: 'http://localhost:8000',
         changeOrigin: true,
       },
+      '/categories': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
+      },
+      '/academic-modules': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
+      },
+      '/tasks': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
+      },
     },
   },
 })

@@ -1,5 +1,3 @@
-from datetime import datetime
-
 from pydantic import BaseModel, EmailStr, Field
 
 
@@ -13,7 +11,10 @@ class UserLogin(BaseModel):
     password: str
 
 
-class UserOut(BaseModel):
-    id: str
+class UserSummary(BaseModel):
+    id: int
     email: EmailStr
-    created_at: datetime
+
+
+class UserOut(UserSummary):
+    pass

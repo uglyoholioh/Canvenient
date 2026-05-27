@@ -71,7 +71,7 @@ pip install -r requirements.txt
 ### 5. Configure Environment Variables
 Create a file named `.env` inside the `backend` directory. **Do not commit this file to Git.**
 ```env
-DATABASE_URL=postgresql+asyncpg://username:password@host:5432/dbname
+DATABASE_URL=postgresql://postgres:[PASSWORD]@db.ipxessavsczgldxelzph.supabase.co:5432/postgres
 ```
 Ask a team member for the active Supabase PostgreSQL connection string.
 

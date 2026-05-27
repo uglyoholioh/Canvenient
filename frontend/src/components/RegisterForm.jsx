@@ -7,11 +7,13 @@ function RegisterForm() {
   const [password, setPassword] = useState("")
   const [message, setMessage] = useState("")
   const [isError, setIsError] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const handleSubmit = async (e) => {
-    e.preventDefault()
+  const handleSubmit = async (event) => {
+    event.preventDefault()
     setMessage("")
     setIsError(false)
+    setIsSubmitting(true)
 
     try {
       const response = await fetch('/auth/register', {
@@ -37,8 +39,10 @@ function RegisterForm() {
         setIsError(true)
       }
     } catch (error) {
-      setMessage("Could not connect to the server.")
+      setMessage(error.message || "Could not connect to the server.")
       setIsError(true)
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
