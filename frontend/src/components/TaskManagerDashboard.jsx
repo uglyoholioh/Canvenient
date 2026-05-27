@@ -802,26 +802,6 @@ function TaskManagerDashboard({ token, currentUser, onLogout }) {
           </div>
         )}
       </section>
-
-      <section className="canvas-callout">
-        <div>
-          <p className="eyebrow">Next integration slice</p>
-          <h2>Canvas sync is the next layer, not the foundation.</h2>
-          <p>
-            The data model is now ready for Canvas-sourced tasks through
-            `source_type`, `source_id`, and `source_due_at`. The next backend
-            slice should add OAuth, token refresh, and a sync job for courses and
-            planner or assignment items.
-          </p>
-        </div>
-        <button
-          className="secondary-button"
-          type="button"
-          onClick={reloadTasksOnly}
-        >
-          Refresh tasks
-        </button>
-      </section>
     </main>
   )
 }

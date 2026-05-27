@@ -4,9 +4,11 @@ import hmac
 import json
 import os
 from datetime import datetime, timedelta, timezone
+from dotenv import load_dotenv
 
 from fastapi import HTTPException, status
 
+load_dotenv()
 
 ACCESS_TOKEN_EXPIRE_MINUTES = int(
     os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", str(60 * 24 * 7))
