@@ -4,6 +4,7 @@ import RegisterForm from "./components/RegisterForm"
 import LoginForm from "./components/LoginForm"
 import Dashboard from "./components/Dashboard"
 import TaskManagerDashboard from "./components/TaskManagerDashboard"
+import OnboardingForm from "./components/OnboardingForm"
 import { getStoredToken, persistToken, clearStoredToken, getCurrentUser } from "./api"
 import "./App.css"
 import { Outlet } from "react-router-dom"
@@ -102,7 +103,21 @@ function App() {
             )
           }
         />
-        <Route element={currentUser ? <Layout currentUser={currentUser} onLogout={handleLogout} /> : <Navigate to="/login" replace />}>
+        <Route
+          element={
+            !currentUser ? (
+              <Navigate to="/login" replace />
+            ) : !currentUser.name ? (
+              <OnboardingForm
+                token={token}
+                currentUser={currentUser}
+                onComplete={(updatedUser) => setCurrentUser(updatedUser)}
+              />
+            ) : (
+              <Layout currentUser={currentUser} onLogout={handleLogout} />
+            )
+          }
+        >
           <Route path="/dashboard" element={<Dashboard token={token} currentUser={currentUser} onLogout={handleLogout} />} />
           <Route path="/planner" element={<TaskManagerDashboard token={token} currentUser={currentUser} onLogout={handleLogout} />} />
         </Route>
