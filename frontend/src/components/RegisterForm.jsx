@@ -1,8 +1,8 @@
 import { useState } from "react"
+import { useNavigate, Link } from "react-router-dom"
 
-import { register } from "../api"
-
-function RegisterForm({ onRegisterSuccess, onSwitchMode }) {
+function RegisterForm() {
+  const navigate = useNavigate()
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [message, setMessage] = useState("")
@@ -16,9 +16,28 @@ function RegisterForm({ onRegisterSuccess, onSwitchMode }) {
     setIsSubmitting(true)
 
     try {
-      const session = await register({ email, password })
-      setMessage("Account created. Setting up your Task Manager...")
-      onRegisterSuccess(session)
+      const response = await fetch('/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      })
+
+      const data = await response.json()
+
+      if (response.ok) {
+        setMessage("Registration successful! Redirecting to login...")
+        setIsError(false)
+        setTimeout(() => {
+          navigate("/login")
+        }, 1500)
+      }
+      else {
+        const errorMessage = typeof data.detail === 'object'
+          ? "Invalid email or password format."
+          : data.detail || "Registration failed"
+        setMessage(errorMessage)
+        setIsError(true)
+      }
     } catch (error) {
       setMessage(error.message || "Could not connect to the server.")
       setIsError(true)
@@ -28,50 +47,45 @@ function RegisterForm({ onRegisterSuccess, onSwitchMode }) {
   }
 
   return (
-    <form className="auth-form" onSubmit={handleSubmit}>
-      <label>
-        <span>Email</span>
-        <input
-          type="email"
-          value={email}
-          onChange={(event) => setEmail(event.target.value)}
-          placeholder="you@u.nus.edu"
-          required
-        />
-      </label>
+    <div className="auth-container">
+      <div className="auth-card">
+        <h2>Create Account</h2>
+        <form onSubmit={handleSubmit}>
+          <div className="form-group">
+            <label htmlFor="email">Email Address</label>
+            <input
+              id="email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="e.g. EXXXXXXX@u.nus.edu"
+              required
+            />
+          </div>
+          <div className="form-group">
+            <label htmlFor="password">Password</label>
+            <input
+              id="password"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Create a password"
+              required
+            />
+          </div>
+          <br></br>
 
-      <label>
-        <span>Password</span>
-        <input
-          type="password"
-          value={password}
-          onChange={(event) => setPassword(event.target.value)}
-          placeholder="At least 8 characters"
-          required
-        />
-      </label>
+          <button type="submit" className="button">Register</button>
+          <p className="auth-footer">
+            Already have an account? <Link to="/login">Log In</Link>
+          </p>
 
-      <button className="primary-button" type="submit" disabled={isSubmitting}>
-        {isSubmitting ? "Creating account..." : "Create Account"}
-      </button>
-
-      {message && (
-        <p className={isError ? "status-message error" : "status-message success"}>
-          {message}
-        </p>
-      )}
-
-      <p className="auth-footnote">
-        Already registered?{" "}
-        <button
-          className="text-button"
-          type="button"
-          onClick={onSwitchMode}
-        >
-          Log in instead
-        </button>
-      </p>
-    </form>
+          {message && (
+            <p style={{ color: isError ? "red" : "green" }}>{message}</p>
+          )}
+        </form>
+      </div>
+    </div>
   )
 }
 
