@@ -84,6 +84,14 @@ export function getCurrentUser(token) {
   return apiRequest("/auth/me", { token })
 }
 
+export function updateProfile(token, payload) {
+  return apiRequest("/auth/profile", {
+    method: "PATCH",
+    body: payload,
+    token,
+  })
+}
+
 export function getCategories(token) {
   return apiRequest("/categories", { token })
 }
