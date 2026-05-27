@@ -6,6 +6,7 @@ from routes.academic_modules import router as academic_modules_router
 from routes.auth import router as auth_router
 from routes.categories import router as categories_router
 from routes.tasks import router as tasks_router
+from routes.canvas import router as canvas_router
 from schema import initialize_schema
 
 
@@ -24,6 +25,8 @@ app.include_router(auth_router)
 app.include_router(categories_router)
 app.include_router(academic_modules_router)
 app.include_router(tasks_router)
+app.include_router(canvas_router)
+
 
 
 @app.get("/")

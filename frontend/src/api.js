@@ -156,3 +156,20 @@ export function deleteTask(token, taskId) {
     token,
   })
 }
+
+export function getCanvasCourses(token) {
+  return apiRequest(`/canvas/courses`, { token }
+  )
+}
+
+export function getCanvasAnnouncements(token) {
+  return apiRequest(`/canvas/announcements`, { token })
+}
+
+export function getCanvasAssignments(token) {
+  return apiRequest(`/canvas/assignments`, { token })
+}
+
+export function getCanvasFiles(token, courseId) {
+  return apiRequest(`/canvas/files?course_id=` + courseId, { token })
+}
