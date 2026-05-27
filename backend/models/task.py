@@ -1,42 +1,83 @@
-# pyrefly: ignore [missing-import]
-
-from typing import Optional
 from datetime import datetime
-from pydantic import BaseModel, Field, ConfigDict
+from typing import Literal
+
+from pydantic import BaseModel, Field, field_validator
 
 
-class TaskBase(BaseModel):
-    title: str = Field(...,min_length = 1, max_length = 255)
-    description: Optional[str] = ""
-    status: Optional[str] = "todo"
-    due_at_override: Optional[datetime] = None  
-    module_id: Optional[int] = None
-    category_id: Optional[int] = None
-    priority_manual: Optional[str] = "medium"
-    estimated_minutes: Optional[int] = None
+TaskStatus = Literal["todo", "in_progress", "done"]
+TaskPriority = Literal["low", "medium", "high", "urgent"]
+TaskSourceType = Literal["manual", "canvas"]
 
 
-class TaskCreate(TaskBase):
-    pass
+class TaskCreate(BaseModel):
+    title: str = Field(..., min_length=1, max_length=160)
+    description: str = Field(default="", max_length=4000)
+    module_id: int | None = None
+    category_id: int | None = None
+    status: TaskStatus = "todo"
+    priority_manual: TaskPriority = "medium"
+    estimated_minutes: int | None = Field(default=None, ge=0)
+    source_type: TaskSourceType = "manual"
+    source_id: str | None = Field(default=None, max_length=120)
+    source_due_at: datetime | None = None
+    due_at_override: datetime | None = None
+    external_url: str | None = Field(default=None, max_length=500)
+
+    @field_validator("title")
+    @classmethod
+    def validate_title(cls, value: str) -> str:
+        title = value.strip()
+        if not title:
+            raise ValueError("Task title cannot be empty.")
+        return title
+
 
 class TaskUpdate(BaseModel):
-    title: Optional[str] = Field(None, min_length = 1, max_length = 255)
-    description: Optional[str] = None
-    status: Optional[str] = None
-    due_at_override: Optional[datetime] = None  
-    module_id: Optional[int] = None
-    category_id: Optional[int] = None
-    priority_manual: Optional[str] = None
-    estimated_minutes: Optional[int] = None
+    title: str | None = Field(default=None, min_length=1, max_length=160)
+    description: str | None = Field(default=None, max_length=4000)
+    module_id: int | None = None
+    category_id: int | None = None
+    status: TaskStatus | None = None
+    priority_manual: TaskPriority | None = None
+    estimated_minutes: int | None = Field(default=None, ge=0)
+    source_type: TaskSourceType | None = None
+    source_id: str | None = Field(default=None, max_length=120)
+    source_due_at: datetime | None = None
+    due_at_override: datetime | None = None
+    external_url: str | None = Field(default=None, max_length=500)
 
-class TaskOut(TaskBase):
+    @field_validator("title")
+    @classmethod
+    def validate_title(cls, value: str | None) -> str | None:
+        if value is None:
+            return value
+
+        title = value.strip()
+        if not title:
+            raise ValueError("Task title cannot be empty.")
+        return title
+
+
+class TaskOut(BaseModel):
     id: int
-    user_id: int
-    source_type: str
-    source_id: Optional[str] = None
-    source_due_at: Optional[datetime] = None
-    external_url: Optional[str] = None
-    completed_at: Optional[datetime] = None
+    title: str
+    description: str
+    status: TaskStatus
+    priority_manual: TaskPriority
+    recommended_priority: TaskPriority
+    estimated_minutes: int | None = None
+    source_type: TaskSourceType
+    source_id: str | None = None
+    source_due_at: datetime | None = None
+    due_at_override: datetime | None = None
+    effective_due_at: datetime | None = None
+    external_url: str | None = None
+    module_id: int | None = None
+    module_code: str | None = None
+    module_name: str | None = None
+    category_id: int | None = None
+    category_name: str | None = None
+    category_color: str | None = None
+    completed_at: datetime | None = None
     created_at: datetime
     updated_at: datetime
-    model_config = ConfigDict(from_attributes=True)    
