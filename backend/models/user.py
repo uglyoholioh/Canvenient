@@ -14,6 +14,13 @@ class UserLogin(BaseModel):
 class UserSummary(BaseModel):
     id: int
     email: EmailStr
+    name: str = ""
+    canvas_token: str = ""
+
+
+class ProfileUpdate(BaseModel):
+    name: str = Field(..., min_length=1)
+    canvas_token: str = Field(default="")
 
 
 class UserOut(UserSummary):

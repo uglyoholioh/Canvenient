@@ -68,7 +68,7 @@ function Dashboard({ token, currentUser, onLogout }) {
   return (
     <div className="dashboard-layout">
       <header className="dashboard-header">
-        <h1>Canvenient</h1>
+        <h1>Welcome, {currentUser?.name}</h1>
         <button onClick={handleLogout} className="btn-secondary">Log Out</button>
       </header>
 
