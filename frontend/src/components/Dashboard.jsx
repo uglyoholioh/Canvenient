@@ -1,40 +1,67 @@
-import { useState } from "react"
-import { useNavigate } from "react-router-dom"
+import { useEffect, useState } from "react"
+import { useNavigate, Link } from "react-router-dom"
+import { getTasks, createTask, updateTask, deleteTask } from "../api"
 
-function Dashboard() {
+function Dashboard({ token, currentUser, onLogout }) {
   const navigate = useNavigate()
-
-  // Local state for tasks
-  const [tasks, setTasks] = useState([
-    { id: 1, title: "Review CS2030S Lab 3", status: "todo", priority: "high" },
-    { id: 2, title: "Submit MA1521 Homework", status: "completed", priority: "medium" },
-    { id: 3, title: "Read Chapter 4 of GEA1000", status: "todo", priority: "low" }
-  ])
-
+  const [tasks, setTasks] = useState([])
   const [newTitle, setNewTitle] = useState("")
+  const [error, setError] = useState("")
 
-  const handleAddTask = (e) => {
+  useEffect(() => {
+    async function loadTasks() {
+      try {
+        const data = await getTasks(token)
+        setTasks(data)
+      } catch (err) {
+        setError(err.message || "Could not load tasks.")
+      }
+    }
+    if (token) {
+      loadTasks()
+    }
+  }, [token])
+
+  const handleAddTask = async (e) => {
     e.preventDefault()
     if (!newTitle.trim()) return
-    const newTask = {
-      id: Date.now(),
-      title: newTitle,
-      status: "todo",
-      priority: "medium"
+    setError("")
+    try {
+      const newTask = await createTask(token, {
+        title: newTitle,
+        status: "todo",
+        priority_manual: "medium"
+      })
+      setTasks([...tasks, newTask])
+      setNewTitle("")
+    } catch (err) {
+      setError(err.message || "Could not add task.")
     }
-    setTasks([...tasks, newTask])
-    setNewTitle("")
   }
 
-  const toggleTask = (id) => {
-    setTasks(tasks.map(t => t.id === id ? { ...t, status: t.status === "completed" ? "todo" : "completed" } : t))
+  const toggleTask = async (id, currentStatus) => {
+    setError("")
+    const nextStatus = currentStatus === "done" ? "todo" : "done"
+    try {
+      const updatedTask = await updateTask(token, id, { status: nextStatus })
+      setTasks(tasks.map(t => t.id === id ? updatedTask : t))
+    } catch (err) {
+      setError(err.message || "Could not update task.")
+    }
   }
 
-  const deleteTask = (id) => {
-    setTasks(tasks.filter(t => t.id !== id))
+  const handleDeleteTask = async (id) => {
+    setError("")
+    try {
+      await deleteTask(token, id)
+      setTasks(tasks.filter(t => t.id !== id))
+    } catch (err) {
+      setError(err.message || "Could not delete task.")
+    }
   }
 
   const handleLogout = () => {
+    onLogout()
     navigate("/login")
   }
 
@@ -52,6 +79,8 @@ function Dashboard() {
             <span className="badge badge-active">Active</span>
           </div>
 
+          {error && <p style={{ color: "red", fontSize: "12px", textAlign: "center", margin: "10px 0" }}>{error}</p>}
+
           <form onSubmit={handleAddTask} className="add-task-form">
             <input
               type="text"
@@ -68,18 +97,21 @@ function Dashboard() {
               <p className="empty-message">No tasks found. Add one above!</p>
             ) : (
               tasks.map(task => (
-                <div key={task.id} className={`task-item ${task.status}`}>
+                <div key={task.id} className={`task-item ${task.status === "done" ? "completed" : ""}`}>
                   <input
                     type="checkbox"
-                    checked={task.status === "completed"}
-                    onChange={() => toggleTask(task.id)}
+                    checked={task.status === "done"}
+                    onChange={() => toggleTask(task.id, task.status)}
                   />
                   <span className="task-title">{task.title}</span>
-                  <button className="delete-task" onClick={() => deleteTask(task.id)} title="Delete task">×</button>
+                  <button className="delete-task" onClick={() => handleDeleteTask(task.id)} title="Delete task">×</button>
                 </div>
               ))
             )}
           </div>
+          <Link to="/tasks" className="btn-secondary" style={{ display: 'block', textAlign: 'center', marginTop: '10px', textDecoration: 'none' }}>
+            Open Full Task Planner →
+          </Link>
         </div>
 
         <div className="card placeholder-card">
