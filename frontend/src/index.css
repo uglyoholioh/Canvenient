@@ -1,76 +1,293 @@
-:root {
-  --page: #f7f1e7;
-  --surface: #fffdf8;
-  --surface-warm: #fff9f0;
-  --surface-muted: #efe5d3;
-  --ink: #1f1a17;
-  --text-soft: #6a5d52;
-  --border: rgba(74, 59, 41, 0.12);
-  --border-strong: rgba(74, 59, 41, 0.22);
-  --accent: #2f7a72;
-  --danger: #9c3c27;
-  --shadow-soft: 0 18px 48px rgba(73, 54, 34, 0.08);
-  --shadow-accent: 0 16px 32px rgba(47, 122, 114, 0.22);
+@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital,wght@0,400;0,400i;1,400&family=Inter:wght@300;400;500;600&display=swap');
 
-  font: 17px/1.5 "Segoe UI Variable Text", "Segoe UI", sans-serif;
-  color: var(--ink);
-  background:
-    radial-gradient(circle at top, rgba(217, 143, 37, 0.18), transparent 24%),
-    linear-gradient(180deg, #f9f4ea 0%, #f4ede1 100%);
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+:root {
+  --bg: #F5F5D5;
+  --card-bg: #FFFFFF;
+  --primary: #354A2F;
+  --border: #D4D9C8;
+  --text-h: #354A2F;
+  --text: rgba(53, 74, 47, 0.7);
+  --accent: #5C724A;
+  --shadow: 0 8px 32px rgba(53, 74, 47, 0.12);
+
+  /* Fonts */
+  --font-serif: 'Instrument Serif', Georgia, serif;
+  --font-sans: 'Inter', system-ui, sans-serif;
 }
 
 * {
+  margin: 0;
+  padding: 0;
   box-sizing: border-box;
 }
 
 body {
-  margin: 0;
-  min-width: 320px;
-}
-
-#root {
-  min-height: 100svh;
-}
-
-button,
-input,
-select,
-textarea {
-  font: inherit;
+  background-color: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+  min-height: 100vh;
+  overflow-x: hidden;
 }
 
 h1,
 h2,
 h3 {
-  color: var(--ink);
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: var(--font-serif);
+  color: var(--text-h);
+  font-weight: 400;
+  letter-spacing: -0.01em;
 }
 
-h1 {
-  margin: 0;
-  font-size: clamp(2.4rem, 5vw, 4.5rem);
-  line-height: 0.98;
-  letter-spacing: -0.03em;
+.auth-container h2 {
+  font-size: 30px;
 }
 
-h2 {
-  margin: 0;
-  font-size: clamp(1.5rem, 2vw, 2.2rem);
-  line-height: 1.08;
+.auth-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  padding: 24px;
+  background-color: var(--bg);
 }
 
-h3 {
-  font-size: 1.08rem;
+.auth-card {
+  background-color: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 48px 40px;
+  width: 100%;
+  max-width: 420px;
+  box-shadow: var(--shadow);
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
 }
 
-p {
-  margin: 0;
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 
-a {
-  color: inherit;
+.form-group label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text);
+  margin-bottom: 2px;
+}
+
+.form-group input {
+  width: 100%;
+  padding: 12px 16px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-family: var(--font-sans);
+  font-size: 14px;
+  color: var(--text-h);
+  background-color: #FAFAF8;
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.form-group input:focus {
+  border-color: var(--primary);
+  background-color: #FFFFFF;
+  box-shadow: 0 0 0 3px rgba(53, 74, 47, 0.08);
+}
+
+
+
+.button {
+  display: flex;
+  background-color: var(--primary);
+  border: none;
+  border-radius: 5px;
+  color: white;
+  padding: 12px 24px;
+  text-align: center;
+  text-decoration: none;
+  display: inline-block;
+  font-size: 14px;
+  width: 100%;
+  cursor: pointer;
+}
+
+/* Dashboard Layout */
+.dashboard-layout {
+  padding: 40px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.dashboard-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 20px;
+  margin-bottom: 30px;
+}
+
+.dashboard-header h1 {
+  font-size: 32px;
+}
+
+/* Secondary Button (Logout) */
+.btn-secondary {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-h);
+  padding: 8px 16px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.btn-secondary:hover {
+  background-color: var(--border);
+}
+
+/* Grid Layout */
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 20px;
+}
+
+/* Card Design */
+.card {
+  background-color: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 24px;
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.card-header h3 {
+  font-family: var(--font-serif);
+  font-size: 24px;
+  color: var(--text-h);
+}
+
+/* Badges */
+.badge {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 4px 8px;
+  border-radius: 20px;
+}
+
+.badge-active {
+  background-color: rgba(53, 74, 47, 0.1);
+  color: var(--primary);
+}
+
+.badge-progress {
+  background-color: #ECECEC;
+  color: #71716A;
+}
+
+/* Placeholder Cards */
+.card-description {
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--text);
+  margin-bottom: 15px;
+}
+
+.placeholder-graphic {
+  background-color: #FAFAF8;
+  border: 1px dashed var(--border);
+  border-radius: 6px;
+  height: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #8C8C84;
+  font-size: 13px;
+}
+
+/* Add Task Form */
+.add-task-form {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.add-task-form input {
+  flex: 1;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  outline: none;
+  font-size: 14px;
+  background-color: #FAFAF8;
+}
+
+.add-btn {
+  background-color: var(--primary);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  width: 38px;
+  height: 38px;
+  font-size: 20px;
+  cursor: pointer;
+}
+
+/* Task List */
+.task-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.task-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  background-color: #FAFAF8;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+.task-title {
+  flex: 1;
+  font-size: 14px;
+  color: var(--text-h);
+}
+
+.task-item.completed .task-title {
+  text-decoration: line-through;
+  color: #8C8C84;
+}
+
+.delete-task {
+  background: none;
+  border: none;
+  color: #C0C0B8;
+  font-size: 18px;
+  cursor: pointer;
+}
+
+.delete-task:hover {
+  color: #D32F2F;
+}
+
+.empty-message {
+  font-size: 13px;
+  color: #8C8C84;
+  text-align: center;
 }
