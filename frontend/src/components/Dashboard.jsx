@@ -109,7 +109,7 @@ function Dashboard({ token, currentUser, onLogout }) {
               ))
             )}
           </div>
-          <Link to="/tasks" className="btn-secondary" style={{ display: 'block', textAlign: 'center', marginTop: '10px', textDecoration: 'none' }}>
+          <Link to="/planner" className="btn-secondary" style={{ display: 'block', textAlign: 'center', marginTop: '10px', textDecoration: 'none' }}>
             Open Full Task Planner →
           </Link>
         </div>
