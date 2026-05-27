@@ -78,6 +78,14 @@ SCHEMA_STATEMENTS = [
     CREATE INDEX IF NOT EXISTS tasks_user_id_status_idx
     ON tasks (user_id, status)
     """,
+    """
+    CREATE TABLE IF NOT EXISTS user_settings (
+        user_id BIGINT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+        name TEXT NOT NULL DEFAULT '',
+        canvas_token TEXT NOT NULL DEFAULT '',
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+    """,
 ]
 
 
