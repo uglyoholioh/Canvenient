@@ -98,7 +98,7 @@ function App() {
           } 
         />
         <Route 
-          path="/tasks" 
+          path="/planner" 
           element={
             currentUser ? (
               <TaskManagerDashboard token={token} currentUser={currentUser} onLogout={handleLogout} />
