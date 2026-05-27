@@ -1,41 +1,20 @@
-import { useState } from "react"
+import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom"
 import RegisterForm from "./components/RegisterForm"
 import LoginForm from "./components/LoginForm"
+import Dashboard from "./components/Dashboard"
 import "./App.css"
 
 function App() {
-  const [page, setPage] = useState("register")
 
   return (
-    <div>
-      <h1>CanVenient</h1>
-
-      <div>
-        <button onClick={() => setPage("login")} disabled={page === "login"}>
-          Log In
-        </button>
-        <button
-          onClick={() => setPage("register")}
-          disabled={page === "register"}
-        >
-          Register
-        </button>
-      </div>
-
-      {page === "register" && <RegisterForm />}
-
-      {page === "login" && (
-        <LoginForm onLoginSuccess={() => setPage("dashboard")} />
-      )}
-
-      {page === "dashboard" && (
-        <div>
-          <h2>Dashboard</h2>
-          <p>Welcome to CanVenient! You are successfully logged in.</p>
-          <button onClick={() => setPage("login")}>Log Out</button>
-        </div>
-      )}
-    </div>
+    <Router>
+      <Routes>
+        <Route path="/" element={<Navigate to="/login" replace />} />
+        <Route path="/register" element={<RegisterForm />} />
+        <Route path="/login" element={<LoginForm />} />
+        <Route path="/dashboard" element={<Dashboard />} />
+      </Routes>
+    </Router>
   )
 }
 
