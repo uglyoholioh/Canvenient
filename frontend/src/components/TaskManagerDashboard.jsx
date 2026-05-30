@@ -10,6 +10,7 @@ import {
   getAcademicModules,
   getCategories,
   getTasks,
+  syncCanvasTasks,
   updateTask,
 } from "../api"
 
@@ -32,6 +33,13 @@ const emptyModuleForm = {
   code: "",
   name: "",
 }
+
+const priorityLanes = [
+  { value: "urgent", label: "Urgent" },
+  { value: "high", label: "High" },
+  { value: "medium", label: "Medium" },
+  { value: "low", label: "Low" },
+]
 
 function formatDueDate(value) {
   if (!value) {
@@ -69,6 +77,14 @@ function sortTasks(taskList) {
   })
 }
 
+function isPastDue(task) {
+  if (!task.effective_due_at) {
+    return false
+  }
+
+  return new Date(task.effective_due_at).getTime() <= Date.now()
+}
+
 function TaskManagerDashboard({ token, currentUser, onLogout }) {
   const [tasks, setTasks] = useState([])
   const [categories, setCategories] = useState([])
@@ -82,6 +98,8 @@ function TaskManagerDashboard({ token, currentUser, onLogout }) {
   const [error, setError] = useState("")
   const [notice, setNotice] = useState("")
   const [busyKey, setBusyKey] = useState("")
+  const [draggedTaskId, setDraggedTaskId] = useState(null)
+  const [dragOverPriority, setDragOverPriority] = useState("")
   const [currentTime, setCurrentTime] = useState(() => Date.now())
 
   useEffect(() => {
@@ -105,6 +123,22 @@ function TaskManagerDashboard({ token, currentUser, onLogout }) {
         setTasks(taskResults)
         setCategories(categoryResults)
         setAcademicModules(moduleResults)
+
+        if (currentUser?.canvas_token) {
+          try {
+            const syncedTasks = await syncCanvasTasks(token)
+            const syncedModules = await getAcademicModules(token)
+
+            if (!cancelled) {
+              setTasks(syncedTasks)
+              setAcademicModules(syncedModules)
+            }
+          } catch {
+            if (!cancelled) {
+              setNotice("Planner loaded. Canvas sync is available from the button.")
+            }
+          }
+        }
       } catch (loadError) {
         if (!cancelled) {
           setError(loadError.message || "Could not load the Task Manager.")
@@ -121,7 +155,7 @@ function TaskManagerDashboard({ token, currentUser, onLogout }) {
     return () => {
       cancelled = true
     }
-  }, [token])
+  }, [token, currentUser?.canvas_token])
 
   useEffect(() => {
     const timerId = window.setInterval(() => {
@@ -133,26 +167,19 @@ function TaskManagerDashboard({ token, currentUser, onLogout }) {
     }
   }, [])
 
-  const openTasks = tasks.filter((task) => task.status !== "done")
-  const dueSoonTasks = openTasks.filter((task) => {
-    if (!task.effective_due_at) {
-      return false
-    }
-
-    const dueTime = new Date(task.effective_due_at).getTime()
-    const cutoff = currentTime + 1000 * 60 * 60 * 72
-    return dueTime <= cutoff
-  })
-  const plannedHours = openTasks.reduce((total, task) => {
-    return total + (task.estimated_minutes || 0)
-  }, 0)
-
   const visibleTasks = sortTasks(
     tasks.filter((task) => {
-      if (statusFilter === "active" && task.status === "done") {
+      if (statusFilter !== "done" && task.status === "done") {
         return false
       }
-      if (statusFilter === "done" && task.status !== "done") {
+      if (
+        statusFilter !== "done" &&
+        task.source_type === "canvas" &&
+        isPastDue(task)
+      ) {
+        return false
+      }
+      if (statusFilter !== "all" && task.status !== statusFilter) {
         return false
       }
       if (moduleFilter !== "all" && String(task.module_id || "") !== moduleFilter) {
@@ -161,18 +188,51 @@ function TaskManagerDashboard({ token, currentUser, onLogout }) {
       return true
     })
   )
+  const dueSoonTasks = visibleTasks.filter((task) => {
+    if (!task.effective_due_at) {
+      return false
+    }
+
+    const dueTime = new Date(task.effective_due_at).getTime()
+    const cutoff = currentTime + 1000 * 60 * 60 * 72
+    return dueTime <= cutoff
+  })
+  const plannedHours = visibleTasks.reduce((total, task) => {
+    return total + (task.estimated_minutes || 0)
+  }, 0)
+
+  const visibleTasksByPriority = priorityLanes.reduce((groups, lane) => {
+    groups[lane.value] = visibleTasks.filter(
+      (task) => task.priority_manual === lane.value
+    )
+    return groups
+  }, {})
 
   async function reloadTasksOnly() {
+    setBusyKey("canvas-sync")
+    setError("")
+    setNotice("")
+
     try {
-      const refreshedTasks = await getTasks(token)
+      const refreshedTasks = currentUser?.canvas_token
+        ? await syncCanvasTasks(token)
+        : await getTasks(token)
       setTasks(refreshedTasks)
-      setNotice("Tasks refreshed.")
+      setNotice(
+        currentUser?.canvas_token ? "Canvas tasks synced." : "Tasks refreshed."
+      )
     } catch (refreshError) {
       setError(refreshError.message || "Could not refresh tasks.")
+    } finally {
+      setBusyKey("")
     }
   }
 
   async function reloadWorkspace() {
+    if (currentUser?.canvas_token) {
+      await syncCanvasTasks(token)
+    }
+
     const [taskResults, categoryResults, moduleResults] = await Promise.all([
       getTasks(token),
       getCategories(token),
@@ -213,6 +273,35 @@ function TaskManagerDashboard({ token, currentUser, onLogout }) {
     } finally {
       setBusyKey("")
     }
+  }
+
+  function handleTaskDragStart(event, taskId) {
+    setDraggedTaskId(taskId)
+    event.dataTransfer.effectAllowed = "move"
+    event.dataTransfer.setData("text/plain", String(taskId))
+  }
+
+  function handleTaskDragEnd() {
+    setDraggedTaskId(null)
+    setDragOverPriority("")
+  }
+
+  async function handlePriorityDrop(event, priorityValue) {
+    event.preventDefault()
+    const taskId = Number(event.dataTransfer.getData("text/plain") || draggedTaskId)
+    setDragOverPriority("")
+    setDraggedTaskId(null)
+
+    if (!taskId) {
+      return
+    }
+
+    const task = tasks.find((candidate) => candidate.id === taskId)
+    if (!task || task.priority_manual === priorityValue) {
+      return
+    }
+
+    await handleTaskPriorityChange(taskId, priorityValue)
   }
 
   async function handleCategorySubmit(event) {
@@ -377,7 +466,7 @@ function TaskManagerDashboard({ token, currentUser, onLogout }) {
       <section className="summary-grid">
         <article className="summary-card">
           <span>Open tasks</span>
-          <strong>{openTasks.length}</strong>
+          <strong>{visibleTasks.length}</strong>
         </article>
         <article className="summary-card">
           <span>Due within 72h</span>
@@ -601,16 +690,21 @@ function TaskManagerDashboard({ token, currentUser, onLogout }) {
                   <div className="tag-card" key={moduleRecord.id}>
                     <div>
                       <strong>{moduleRecord.code}</strong>
-                      <span>{moduleRecord.name}</span>
+                      {moduleRecord.name &&
+                        moduleRecord.name !== moduleRecord.code && (
+                          <span>{moduleRecord.name}</span>
+                        )}
                     </div>
-                    <button
-                      className="tag-delete"
-                      type="button"
-                      onClick={() => handleDeleteModule(moduleRecord.id)}
-                      disabled={busyKey === `module-delete-${moduleRecord.id}`}
-                    >
-                      Remove
-                    </button>
+                    {moduleRecord.source_type !== "canvas" && (
+                      <button
+                        className="tag-delete"
+                        type="button"
+                        onClick={() => handleDeleteModule(moduleRecord.id)}
+                        disabled={busyKey === `module-delete-${moduleRecord.id}`}
+                      >
+                        Remove
+                      </button>
+                    )}
                   </div>
                 ))}
               </div>
@@ -696,7 +790,8 @@ function TaskManagerDashboard({ token, currentUser, onLogout }) {
                 onChange={(event) => setStatusFilter(event.target.value)}
               >
                 <option value="all">All</option>
-                <option value="active">Active</option>
+                <option value="todo">To do</option>
+                <option value="in_progress">In progress</option>
                 <option value="done">Done</option>
               </select>
             </label>
@@ -715,6 +810,15 @@ function TaskManagerDashboard({ token, currentUser, onLogout }) {
                 ))}
               </select>
             </label>
+
+            <button
+              className="secondary-button compact-button"
+              type="button"
+              onClick={reloadTasksOnly}
+              disabled={busyKey !== "" || !currentUser?.canvas_token}
+            >
+              {busyKey === "canvas-sync" ? "Syncing..." : "Sync Canvas"}
+            </button>
           </div>
         </div>
 
@@ -722,82 +826,143 @@ function TaskManagerDashboard({ token, currentUser, onLogout }) {
           <div className="empty-state">
             <h3>No tasks yet</h3>
             <p>
-              Start with one manual task now. Canvas assignments can map into the
-              same board once OAuth and sync are added.
+              Start with one manual task now, or sync Canvas to bring in your
+              assignments and due dates.
             </p>
           </div>
         ) : (
-          <div className="task-list">
-            {visibleTasks.map((task) => (
-              <article className={`task-card task-${task.status}`} key={task.id}>
-                <div className="task-card-top">
-                  <div>
-                    <p className="task-meta">
-                      {task.module_code || "No module"}
-                      {task.category_name ? ` - ${task.category_name}` : ""}
-                    </p>
-                    <h3>{task.title}</h3>
-                  </div>
-
-                  <button
-                    className="ghost-button"
-                    type="button"
-                    onClick={() => handleDeleteTask(task.id)}
-                    disabled={busyKey === `task-delete-${task.id}`}
-                  >
-                    Delete
-                  </button>
+          <div className="priority-board">
+            {priorityLanes.map((lane) => (
+              <section
+                className={`priority-column ${
+                  dragOverPriority === lane.value ? "drag-over" : ""
+                }`}
+                key={lane.value}
+                onDragOver={(event) => {
+                  event.preventDefault()
+                  event.dataTransfer.dropEffect = "move"
+                  setDragOverPriority(lane.value)
+                }}
+                onDragLeave={() => setDragOverPriority("")}
+                onDrop={(event) => handlePriorityDrop(event, lane.value)}
+              >
+                <div className="priority-column-heading">
+                  <h3>{lane.label}</h3>
+                  <span>{visibleTasksByPriority[lane.value].length}</span>
                 </div>
 
-                {task.description && (
-                  <p className="task-description">{task.description}</p>
-                )}
+                <div className="task-list">
+                  {visibleTasksByPriority[lane.value].length === 0 ? (
+                    <p className="empty-message-subtle">Drop tasks here.</p>
+                  ) : (
+                    visibleTasksByPriority[lane.value].map((task) => (
+                      <article
+                        className={`task-card task-${task.status} ${
+                          draggedTaskId === task.id ? "is-dragging" : ""
+                        }`}
+                        draggable={busyKey === ""}
+                        key={task.id}
+                        onDragStart={(event) =>
+                          handleTaskDragStart(event, task.id)
+                        }
+                        onDragEnd={handleTaskDragEnd}
+                      >
+                        <div className="task-card-top">
+                          <div>
+                            <p className="task-meta">
+                              {task.module_code || "No module"}
+                              {task.category_name
+                                ? ` - ${task.category_name}`
+                                : ""}
+                            </p>
+                            <h3>{task.title}</h3>
+                          </div>
 
-                <div className="task-facts">
-                  <span>
-                    Due: <strong>{formatDueDate(task.effective_due_at)}</strong>
-                  </span>
-                  <span>
-                    Estimate: <strong>{task.estimated_minutes || 0} mins</strong>
-                  </span>
-                  <span>
-                    Suggested: <strong>{task.recommended_priority}</strong>
-                  </span>
+                          {task.source_type !== "canvas" && (
+                            <button
+                              className="ghost-button"
+                              type="button"
+                              onClick={() => handleDeleteTask(task.id)}
+                              disabled={busyKey === `task-delete-${task.id}`}
+                            >
+                              Delete
+                            </button>
+                          )}
+                        </div>
+
+                        {task.description && (
+                          <p className="task-description">
+                            {task.description}
+                          </p>
+                        )}
+
+                        <div className="task-facts">
+                          <span>
+                            Source: <strong>{task.source_type}</strong>
+                          </span>
+                          <span>
+                            Due:{" "}
+                            <strong>{formatDueDate(task.effective_due_at)}</strong>
+                          </span>
+                          <span>
+                            Suggested: <strong>{task.recommended_priority}</strong>
+                          </span>
+                        </div>
+
+                        {task.external_url && (
+                          <a
+                            className="external-task-link"
+                            href={task.external_url}
+                            target="_blank"
+                            rel="noreferrer"
+                          >
+                            Open in Canvas
+                          </a>
+                        )}
+
+                        <div className="task-controls">
+                          <label>
+                            <span>Status</span>
+                            <select
+                              value={task.status}
+                              onChange={(event) =>
+                                handleTaskStatusChange(
+                                  task.id,
+                                  event.target.value
+                                )
+                              }
+                              disabled={busyKey === `task-status-${task.id}`}
+                            >
+                              <option value="todo">To do</option>
+                              <option value="in_progress">In progress</option>
+                              <option value="done">Done</option>
+                            </select>
+                          </label>
+
+                          <label>
+                            <span>Priority</span>
+                            <select
+                              value={task.priority_manual}
+                              onChange={(event) =>
+                                handleTaskPriorityChange(
+                                  task.id,
+                                  event.target.value
+                                )
+                              }
+                              disabled={busyKey === `task-priority-${task.id}`}
+                            >
+                              <option value="urgent">Urgent</option>
+                              <option value="high">High</option>
+                              <option value="medium">Medium</option>
+                              <option value="low">Low</option>
+                            </select>
+                          </label>
+                        </div>
+                      </article>
+                    ))
+                  )}
                 </div>
-
-                <div className="task-controls">
-                  <label>
-                    <span>Status</span>
-                    <select
-                      value={task.status}
-                      onChange={(event) =>
-                        handleTaskStatusChange(task.id, event.target.value)
-                      }
-                      disabled={busyKey === `task-status-${task.id}`}
-                    >
-                      <option value="todo">To do</option>
-                      <option value="in_progress">In progress</option>
-                      <option value="done">Done</option>
-                    </select>
-                  </label>
-
-                  <label>
-                    <span>Priority</span>
-                    <select
-                      value={task.priority_manual}
-                      onChange={(event) =>
-                        handleTaskPriorityChange(task.id, event.target.value)
-                      }
-                      disabled={busyKey === `task-priority-${task.id}`}
-                    >
-                      <option value="low">Low</option>
-                      <option value="medium">Medium</option>
-                      <option value="high">High</option>
-                      <option value="urgent">Urgent</option>
-                    </select>
-                  </label>
-                </div>
-              </article>
+              </section>
             ))}
           </div>
         )}

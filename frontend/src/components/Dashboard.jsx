@@ -19,6 +19,7 @@ function Dashboard({ token, currentUser, onLogout }) {
   const [tasks, setTasks] = useState([])
   const [newTitle, setNewTitle] = useState("")
   const [error, setError] = useState("")
+  const [updatingTaskId, setUpdatingTaskId] = useState(null)
 
   // Canvas data states
   const [courses, setCourses] = useState([])
@@ -68,36 +69,23 @@ function Dashboard({ token, currentUser, onLogout }) {
 
   // Load modal details on demand (specifically for files, others are filtered)
   useEffect(() => {
-    if (!activeModal) return
+    if (!activeModal || activeModal.type !== "files") return
 
-    const { courseId, type } = activeModal
-    
-    if (type === "announcements") {
-      const filtered = announcements.filter(ann => ann.course_id === courseId)
-      setModalItems(filtered)
+    async function loadFiles() {
+      setLoadingModal(true)
       setModalError("")
-      setLoadingModal(false)
-    } else if (type === "assignments") {
-      const filtered = assignments.filter(ass => ass.course_id === courseId)
-      setModalItems(filtered)
-      setModalError("")
-      setLoadingModal(false)
-    } else if (type === "files") {
-      async function loadFiles() {
-        setLoadingModal(true)
-        setModalError("")
-        try {
-          const filesData = await getCanvasFiles(token, courseId)
-          setModalItems(filesData)
-        } catch (err) {
-          setModalError(err.message || "Failed to load course files.")
-        } finally {
-          setLoadingModal(false)
-        }
+      try {
+        const filesData = await getCanvasFiles(token, activeModal.courseId)
+        setModalItems(filesData)
+      } catch (err) {
+        setModalError(err.message || "Failed to load course files.")
+      } finally {
+        setLoadingModal(false)
       }
-      loadFiles()
     }
-  }, [activeModal, announcements, assignments, token])
+
+    loadFiles()
+  }, [activeModal, token])
 
 
   //Load Tasks
@@ -134,20 +122,35 @@ function Dashboard({ token, currentUser, onLogout }) {
 
   const toggleTask = async (id, currentStatus) => {
     setError("")
+    setUpdatingTaskId(id)
     const nextStatus = currentStatus === "done" ? "todo" : "done"
+    const previousTasks = tasks
+    setTasks(current =>
+      current.map(task =>
+        task.id === id ? { ...task, status: nextStatus } : task
+      )
+    )
+
     try {
       const updatedTask = await updateTask(token, id, { status: nextStatus })
-      setTasks(tasks.map(t => t.id === id ? updatedTask : t))
+      setTasks(current => current.map(t => t.id === id ? updatedTask : t))
     } catch (err) {
+      setTasks(previousTasks)
       setError(err.message || "Could not update task.")
+    } finally {
+      setUpdatingTaskId(null)
     }
   }
 
-  const handleDeleteTask = async (id) => {
+  const handleDeleteTask = async (task) => {
+    if (task.source_type === "canvas") {
+      return
+    }
+
     setError("")
     try {
-      await deleteTask(token, id)
-      setTasks(tasks.filter(t => t.id !== id))
+      await deleteTask(token, task.id)
+      setTasks(tasks.filter(t => t.id !== task.id))
     } catch (err) {
       setError(err.message || "Could not delete task.")
     }
@@ -189,6 +192,30 @@ function Dashboard({ token, currentUser, onLogout }) {
   // 3. Extract only the high-priority alerts and deadlines for the Priority Lane
   const priorityAnnouncements = (announcements || []).filter(ann => ann.is_priority)
   const priorityAssignments = (assignments || []).filter(ass => ass.is_priority)
+  const displayedModalItems = !activeModal
+    ? []
+    : activeModal.type === "announcements"
+      ? announcements.filter(ann => ann.course_id === activeModal.courseId)
+      : activeModal.type === "assignments"
+        ? assignments.filter(ass => ass.course_id === activeModal.courseId)
+        : modalItems
+  const upcomingTasks = [...tasks]
+    .filter(task => task.status !== "done")
+    .sort((left, right) => {
+      const leftDue = left.effective_due_at
+        ? new Date(left.effective_due_at).getTime()
+        : Number.POSITIVE_INFINITY
+      const rightDue = right.effective_due_at
+        ? new Date(right.effective_due_at).getTime()
+        : Number.POSITIVE_INFINITY
+
+      if (leftDue !== rightDue) {
+        return leftDue - rightDue
+      }
+
+      return new Date(right.created_at).getTime() - new Date(left.created_at).getTime()
+    })
+    .slice(0, 5)
 
 
   return (
@@ -219,23 +246,51 @@ function Dashboard({ token, currentUser, onLogout }) {
           </form>
 
           <div className="task-list">
-            {tasks.length === 0 ? (
+            {upcomingTasks.length === 0 ? (
               <p className="empty-message">No tasks found. Add one above!</p>
             ) : (
-              tasks.map(task => (
+              upcomingTasks.map(task => (
                 <div key={task.id} className={`task-item ${task.status === "done" ? "completed" : ""}`}>
                   <input
                     type="checkbox"
                     checked={task.status === "done"}
+                    disabled={updatingTaskId === task.id}
                     onChange={() => toggleTask(task.id, task.status)}
                   />
-                  <span className="task-title">{task.title}</span>
-                  <button className="delete-task" onClick={() => handleDeleteTask(task.id)} title="Delete task">×</button>
+                  <span className="task-title">
+                    {task.title}
+                    <small className="task-due-label">{formatDate(task.effective_due_at)}</small>
+                  </span>
+                  {task.source_type !== "canvas" && (
+                    <button
+                      className="delete-task"
+                      onClick={() => handleDeleteTask(task)}
+                      title="Delete task"
+                    >
+                      ×
+                    </button>
+                  )}
                 </div>
               ))
             )}
           </div>
-          <Link to="/planner" className="btn-secondary" style={{ display: 'block', textAlign: 'center', marginTop: '10px', textDecoration: 'none' }}>
+          <Link
+            to="/planner"
+            className="btn-secondary"
+            onClick={(event) => {
+              if (updatingTaskId !== null) {
+                event.preventDefault()
+              }
+            }}
+            style={{
+              display: 'block',
+              textAlign: 'center',
+              marginTop: '10px',
+              textDecoration: 'none',
+              opacity: updatingTaskId !== null ? 0.55 : 1,
+              pointerEvents: updatingTaskId !== null ? 'none' : 'auto',
+            }}
+          >
             Open Full Task Planner →
           </Link>
         </div>
@@ -398,12 +453,12 @@ function Dashboard({ token, currentUser, onLogout }) {
                 </div>
               ) : modalError ? (
                 <p className="error-text">{modalError}</p>
-              ) : modalItems.length === 0 ? (
+              ) : displayedModalItems.length === 0 ? (
                 <p className="empty-message">No items found.</p>
               ) : (
                 <div className="modal-items-list">
                   {activeModal.type === "announcements" && (
-                    modalItems.map(ann => (
+                    displayedModalItems.map(ann => (
                       <div key={ann.id} className="modal-list-item announcement-item">
                         <div className="item-meta">
                           <span className="item-author">{ann.author}</span>
@@ -422,7 +477,7 @@ function Dashboard({ token, currentUser, onLogout }) {
                   )}
 
                   {activeModal.type === "assignments" && (
-                    modalItems.map(ass => (
+                    displayedModalItems.map(ass => (
                       <div key={ass.id} className="modal-list-item assignment-item">
                         <div className="item-meta">
                           <span className="item-date">Due: {formatDate(ass.due_at)}</span>
@@ -441,7 +496,7 @@ function Dashboard({ token, currentUser, onLogout }) {
                   )}
 
                   {activeModal.type === "files" && (
-                    modalItems.map(file => (
+                    displayedModalItems.map(file => (
                       <div key={file.id} className="modal-list-item file-item">
                         <div className="file-icon-wrapper">
                           <FolderOpen size={20} />
