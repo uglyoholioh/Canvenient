@@ -5,6 +5,7 @@ from fastapi import APIRouter, HTTPException, Response, status
 from database import db
 from dependencies import CurrentUser
 from models.task import TaskCreate, TaskOut, TaskPriority, TaskUpdate
+from routes.canvas import list_canvas_assignments
 
 router = APIRouter(prefix="/tasks", tags=["tasks"])
 
@@ -29,6 +30,27 @@ def get_recommended_priority(status: str, effective_due_at: datetime | None) -> 
     if hours_remaining <= 168:
         return "medium"
     return "low"
+
+
+def parse_canvas_datetime(value: str | None) -> datetime | None:
+    if not value:
+        return None
+
+    try:
+        return datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+
+
+def is_past_due(value: datetime | None) -> bool:
+    if value is None:
+        return False
+
+    due_at = value
+    if due_at.tzinfo is None:
+        due_at = due_at.replace(tzinfo=timezone.utc)
+
+    return due_at <= datetime.now(timezone.utc)
 
 
 def build_task(record) -> TaskOut:
@@ -156,6 +178,187 @@ async def list_tasks(current_user: CurrentUser):
         values={"user_id": current_user.id},
     )
     return [build_task(row) for row in rows]
+
+
+@router.post("/sync-canvas", response_model=list[TaskOut])
+async def sync_canvas_tasks(current_user: CurrentUser):
+    await db.execute(
+        query="""
+            DELETE FROM tasks
+            WHERE user_id = :user_id
+                AND source_type = 'canvas'
+                AND COALESCE(due_at_override, source_due_at) <= NOW()
+        """,
+        values={"user_id": current_user.id},
+    )
+
+    try:
+        assignments = await list_canvas_assignments(current_user)
+    except Exception:
+        return await list_tasks(current_user)
+
+    for assignment in assignments:
+        try:
+            course_code = assignment.get("course_code") or "Canvas"
+            course_id = str(assignment.get("course_id") or "")
+            course_url = (
+                f"https://canvas.nus.edu.sg/courses/{course_id}"
+                if course_id
+                else None
+            )
+
+            module_row = await db.fetch_one(
+                query="""
+                    SELECT id, name
+                    FROM academic_modules
+                    WHERE user_id = :user_id AND code = :code
+                    ORDER BY id ASC
+                    LIMIT 1
+                """,
+                values={"user_id": current_user.id, "code": course_code},
+            )
+
+            module_values = {
+                "user_id": current_user.id,
+                "code": course_code,
+                "name": assignment.get("course_name") or course_code,
+                "source_course_id": course_id or None,
+                "external_url": course_url,
+            }
+
+            if module_row:
+                await db.execute(
+                    query="""
+                        UPDATE academic_modules
+                        SET
+                            source_type = 'canvas',
+                            source_course_id = COALESCE(
+                                source_course_id,
+                                :source_course_id
+                            ),
+                            name = CASE
+                                WHEN name = :code THEN :name
+                                ELSE name
+                            END,
+                            external_url = COALESCE(external_url, :external_url)
+                        WHERE id = :module_id AND user_id = :user_id
+                    """,
+                    values={**module_values, "module_id": module_row["id"]},
+                )
+            else:
+                module_row = await db.fetch_one(
+                    query="""
+                        INSERT INTO academic_modules (
+                            user_id,
+                            code,
+                            name,
+                            source_type,
+                            source_course_id,
+                            external_url
+                        )
+                        VALUES (
+                            :user_id,
+                            :code,
+                            :name,
+                            'canvas',
+                            :source_course_id,
+                            :external_url
+                        )
+                        RETURNING id
+                    """,
+                    values=module_values,
+                )
+
+            due_at = parse_canvas_datetime(assignment.get("due_at"))
+            source_id = f"canvas:{course_id}:{assignment.get('id')}"
+            is_submitted = bool(assignment.get("has_submitted"))
+            should_remove_from_planner = is_submitted or is_past_due(due_at)
+            existing = await db.fetch_one(
+                query="""
+                    SELECT id, completed_at
+                    FROM tasks
+                    WHERE user_id = :user_id
+                        AND source_type = 'canvas'
+                        AND source_id = :source_id
+                """,
+                values={"user_id": current_user.id, "source_id": source_id},
+            )
+
+            values = {
+                "user_id": current_user.id,
+                "module_id": module_row["id"],
+                "title": assignment.get("title") or "Untitled Canvas assignment",
+                "description": (assignment.get("description") or "")[:4000],
+                "priority_manual": get_recommended_priority("todo", due_at),
+                "source_id": source_id,
+                "source_due_at": due_at,
+                "external_url": assignment.get("external_url"),
+            }
+
+            if should_remove_from_planner:
+                if existing:
+                    await db.execute(
+                        query="""
+                            DELETE FROM tasks
+                            WHERE id = :task_id AND user_id = :user_id
+                        """,
+                        values={
+                            "task_id": existing["id"],
+                            "user_id": current_user.id,
+                        },
+                    )
+                continue
+
+            if existing:
+                await db.execute(
+                    query="""
+                        UPDATE tasks
+                        SET
+                            module_id = :module_id,
+                            title = :title,
+                            description = :description,
+                            source_due_at = :source_due_at,
+                            external_url = :external_url,
+                            updated_at = NOW()
+                        WHERE id = :task_id AND user_id = :user_id
+                    """,
+                    values={
+                        **values,
+                        "task_id": existing["id"],
+                    },
+                )
+            else:
+                await db.execute(
+                    query="""
+                        INSERT INTO tasks (
+                            user_id,
+                            module_id,
+                            title,
+                            description,
+                            priority_manual,
+                            source_type,
+                            source_id,
+                            source_due_at,
+                            external_url
+                        )
+                        VALUES (
+                            :user_id,
+                            :module_id,
+                            :title,
+                            :description,
+                            :priority_manual,
+                            'canvas',
+                            :source_id,
+                            :source_due_at,
+                            :external_url
+                        )
+                    """,
+                    values=values,
+                )
+        except Exception:
+            continue
+
+    return await list_tasks(current_user)
 
 
 @router.post("", response_model=TaskOut, status_code=status.HTTP_201_CREATED)

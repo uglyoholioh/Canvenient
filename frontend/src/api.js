@@ -157,6 +157,13 @@ export function deleteTask(token, taskId) {
   })
 }
 
+export function syncCanvasTasks(token) {
+  return apiRequest("/tasks/sync-canvas", {
+    method: "POST",
+    token,
+  })
+}
+
 export function getCanvasCourses(token) {
   return apiRequest(`/canvas/courses`, { token }
   )

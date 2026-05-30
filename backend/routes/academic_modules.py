@@ -140,7 +140,7 @@ async def update_academic_module(
 async def delete_academic_module(module_id: int, current_user: CurrentUser):
     existing = await db.fetch_one(
         query="""
-            SELECT id
+            SELECT id, source_type
             FROM academic_modules
             WHERE id = :module_id AND user_id = :user_id
         """,
@@ -149,6 +149,12 @@ async def delete_academic_module(module_id: int, current_user: CurrentUser):
 
     if not existing:
         raise HTTPException(status_code=404, detail="Module not found.")
+
+    if existing["source_type"] == "canvas":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Canvas-synced modules cannot be removed manually.",
+        )
 
     await db.execute(
         query="""
