@@ -8,6 +8,37 @@ import asyncio
 
 router = APIRouter(prefix="/canvas", tags=["canvas"])
 
+
+def has_canvas_submission(submission: dict[str, Any] | None) -> bool:
+    if not submission:
+        return False
+
+    workflow_state = submission.get("workflow_state")
+    return bool(
+        submission.get("submitted_at")
+        or submission.get("graded_at")
+        or submission.get("grade") is not None
+        or submission.get("score") is not None
+        or workflow_state in {"submitted", "graded", "pending_review"}
+    )
+
+
+async def fetch_assignment_submission(
+    client: httpx.AsyncClient, headers: dict, course_id: int, assignment_id: int
+) -> dict[str, Any]:
+    try:
+        response = await client.get(
+            f"https://canvas.nus.edu.sg/api/v1/courses/{course_id}/assignments/{assignment_id}/submissions/self",
+            headers=headers,
+            timeout=5.0,
+        )
+        response.raise_for_status()
+        submission = response.json()
+    except Exception:
+        return {}
+
+    return submission if isinstance(submission, dict) else {}
+
 @router.get("/courses", response_model=list[dict[str, Any]])
 async def list_canvas_courses(current_user: CurrentUser):
     token = current_user.canvas_token
@@ -125,12 +156,16 @@ async def list_canvas_announcements(current_user: CurrentUser):
 
 async def fetch_course_assignments(client: httpx.AsyncClient, headers: dict, course: dict):
     course_id = course["id"]
-    url = f"https://canvas.nus.edu.sg/api/v1/courses/{course_id}/assignments?per_page=30"
+    url = f"https://canvas.nus.edu.sg/api/v1/courses/{course_id}/assignments"
     
     try:
         response = await client.get(
             url,
             headers=headers,
+            params={
+                "per_page": "30",
+                "include[]": "submission",
+            },
             timeout=5.0
         )
         response.raise_for_status()
@@ -143,7 +178,20 @@ async def fetch_course_assignments(client: httpx.AsyncClient, headers: dict, cou
     
     result = []
     for asgn in assignments:
+        assignment_id = asgn.get("id")
+        if assignment_id is None:
+            continue
+
         due_at = asgn.get("due_at")
+        submission = asgn.get("submission") or {}
+        if not has_canvas_submission(submission):
+            submission = await fetch_assignment_submission(
+                client, headers, course_id, assignment_id
+            )
+        has_submitted = bool(
+            asgn.get("has_submitted_submissions")
+            or has_canvas_submission(submission)
+        )
         is_priority = False
 
         if due_at:
@@ -155,15 +203,16 @@ async def fetch_course_assignments(client: httpx.AsyncClient, headers: dict, cou
             except Exception:
                 pass
         result.append({
-            "id": asgn["id"],
+            "id": assignment_id,
             "course_id": course["id"],
             "course_code": course["course_code"],
+            "course_name": course.get("name") or course["course_code"],
             "title": asgn.get("name") or "Untitled Assignment",
             "due_at": due_at,
             "is_priority": is_priority,
-            "external_url": asgn.get("html_url") or f"https://canvas.nus.edu.sg/courses/{course['id']}/assignments/{asgn['id']}",
+            "external_url": asgn.get("html_url") or f"https://canvas.nus.edu.sg/courses/{course['id']}/assignments/{assignment_id}",
             "description": asgn.get("description", "") or "",
-            "has_submitted": asgn.get("has_submitted_submissions", False)
+            "has_submitted": has_submitted
         })
     return result
 
@@ -184,9 +233,14 @@ async def list_canvas_assignments(current_user: CurrentUser):
             fetch_course_assignments(client, headers, course)
             for course in courses
         ]
-        all_results = await asyncio.gather(*tasks)
+        all_results = await asyncio.gather(*tasks, return_exceptions=True)
 
-    flat_list = [item for sublist in all_results for item in sublist]
+    flat_list = [
+        item
+        for sublist in all_results
+        if isinstance(sublist, list)
+        for item in sublist
+    ]
 
     flat_list.sort(key=lambda x: x["due_at"] or "9999-12-31T23:59:59Z")
     
