@@ -180,3 +180,22 @@ export function getCanvasAssignments(token) {
 export function getCanvasFiles(token, courseId) {
   return apiRequest(`/canvas/files?course_id=` + courseId, { token })
 }
+
+export async function importIcs(token, file) {
+  const formData = new FormData();
+  formData.append("file", file);
+  const response = await fetch("/schedule/import/ics", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+    body: formData,
+  })
+
+  if (!response.ok) {
+    const payload = await response.json().catch(() => null);
+    throw new Error(getErrorMessage(payload, "Failed to import schedule."));
+  }
+
+  return response.json();
+}

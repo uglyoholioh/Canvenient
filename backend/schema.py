@@ -29,6 +29,40 @@ SCHEMA_STATEMENTS = [
     )
     """,
     """
+    CREATE TABLE IF NOT EXISTS classes (
+        id BIGSERIAL PRIMARY KEY,
+        user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        module_code TEXT NOT NULL,
+        module_name TEXT NOT NULL,
+        lesson_type TEXT NOT NULL,
+        class_no TEXT,
+        day_of_week int NOT NULL,
+        start_time TIME NOT NULL,
+        end_time TIME NOT NULL,
+        venue TEXT,
+        rrule TEXT,
+        exdates JSONB
+    )
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS user_settings (
+        user_id BIGINT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+        name TEXT NOT NULL DEFAULT '',
+        canvas_token TEXT NOT NULL DEFAULT ''
+    )
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS exams (
+        id BIGSERIAL PRIMARY KEY,
+        user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        module_code TEXT NOT NULL,
+        module_name TEXT NOT NULL,
+        start_at TIMESTAMPTZ NOT NULL,
+        end_at TIMESTAMPTZ NOT NULL,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+    """,
+    """
     CREATE INDEX IF NOT EXISTS categories_user_id_idx
     ON categories (user_id)
     """,
@@ -77,6 +111,14 @@ SCHEMA_STATEMENTS = [
     """
     CREATE INDEX IF NOT EXISTS tasks_user_id_status_idx
     ON tasks (user_id, status)
+    """,
+    """
+    CREATE INDEX IF NOT EXISTS classes_user_id_idx
+    ON classes (user_id)
+    """,
+    """
+    CREATE INDEX IF NOT EXISTS exams_user_id_idx
+    ON exams (user_id)
     """,
 ]
 
