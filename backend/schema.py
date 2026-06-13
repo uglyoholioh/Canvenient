@@ -120,6 +120,196 @@ SCHEMA_STATEMENTS = [
     CREATE INDEX IF NOT EXISTS exams_user_id_idx
     ON exams (user_id)
     """,
+    #comms & grps
+    """
+    CREATE TABLE IF NOT EXISTS communities (
+        id BIGSERIAL PRIMARY KEY,
+        user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        name TEXT NOT NULL,
+        description TEXT NOT NULL DEFAULT '',
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS groups (
+        id BIGSERIAL PRIMARY KEY,
+        user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        c_id BIGINT REFERENCES communities(id) ON DELETE SET NULL,
+        name TEXT NOT NULL,
+        description TEXT NOT NULL DEFAULT '',
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS g_members (
+        g_id BIGINT NOT NULL REFERENCES groups(id) ON DELETE CASCADE,
+        user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        role TEXT NOT NULL DEFAULT 'member',
+        attendance TEXT NOT NULL DEFAULT '',
+        PRIMARY KEY (g_id, user_id)
+    )
+    """,
+    #events
+    """
+    CREATE TABLE IF NOT EXISTS events (
+        id BIGSERIAL PRIMARY KEY,
+        user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        c_id BIGINT REFERENCES communities(id) ON DELETE CASCADE,
+        g_id BIGINT REFERENCES groups(id) ON DELETE CASCADE,
+        module_code TEXT,
+        title TEXT NOT NULL,
+        description TEXT NOT NULL DEFAULT '',
+        venue TEXT,
+        start_at TIMESTAMPTZ NOT NULL,
+        end_at TIMESTAMPTZ,
+        is_all_day BOOLEAN NOT NULL DEFAULT FALSE,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        CONSTRAINT events_has_owner CHECK (c_id IS NOT NULL OR g_id IS NOT NULL)
+    )
+    """,
+    # ── canvas cache ──────────────────────────────────────────────────
+    """
+    CREATE TABLE IF NOT EXISTS canvas_announcements (
+        id BIGSERIAL PRIMARY KEY,
+        user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        module_id BIGINT NOT NULL REFERENCES academic_modules(id) ON DELETE CASCADE,
+        data JSONB NOT NULL,
+        synced_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS canvas_folders (
+        id BIGSERIAL PRIMARY KEY,
+        user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        module_code TEXT NOT NULL,
+        canvas_course_id TEXT NOT NULL,
+        canvas_folder_id TEXT NOT NULL,
+        parent_canvas_folder_id TEXT,
+        name TEXT NOT NULL,
+        full_name TEXT NOT NULL,
+        files_count INT NOT NULL DEFAULT 0,
+        folders_count INT NOT NULL DEFAULT 0,
+        updated_at TIMESTAMPTZ,
+        synced_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS canvas_files (
+        id BIGSERIAL PRIMARY KEY,
+        user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        module_code TEXT NOT NULL,
+        canvas_course_id TEXT NOT NULL,
+        canvas_file_id TEXT NOT NULL,
+        canvas_folder_id TEXT,
+        filename TEXT NOT NULL,
+        content_type TEXT NOT NULL,
+        file_type TEXT NOT NULL,
+        size_bytes INT NOT NULL,
+        canvas_url TEXT NOT NULL,
+        external_url TEXT NOT NULL,
+        thumbnail_url TEXT,
+        locked BOOLEAN,
+        hidden BOOLEAN,
+        created_at_canvas TIMESTAMPTZ NOT NULL,
+        updated_at_canvas TIMESTAMPTZ NOT NULL,
+        metadata JSONB NOT NULL DEFAULT '{}',
+        synced_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+    """,
+    # ── community / group resources ───────────────────────────────────
+    """
+    CREATE TABLE IF NOT EXISTS cg_announcements (
+        id BIGSERIAL PRIMARY KEY,
+        user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        c_id BIGINT REFERENCES communities(id) ON DELETE CASCADE,
+        g_id BIGINT REFERENCES groups(id) ON DELETE CASCADE,
+        title TEXT NOT NULL,
+        body TEXT NOT NULL DEFAULT '',
+        start_at TIMESTAMPTZ,
+        end_at TIMESTAMPTZ,
+        is_all_day BOOLEAN NOT NULL DEFAULT FALSE,
+        venue TEXT,
+        tag TEXT,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        CONSTRAINT cg_announcements_has_owner CHECK (c_id IS NOT NULL OR g_id IS NOT NULL)
+    )
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS cg_files (
+        id BIGSERIAL PRIMARY KEY,
+        user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        c_id BIGINT REFERENCES communities(id) ON DELETE CASCADE,
+        g_id BIGINT REFERENCES groups(id) ON DELETE CASCADE,
+        filename TEXT NOT NULL,
+        file_type TEXT NOT NULL,
+        size_bytes BIGINT NOT NULL,
+        storage_url TEXT NOT NULL,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        CONSTRAINT cg_files_has_owner CHECK (c_id IS NOT NULL OR g_id IS NOT NULL)
+    )
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS cg_forms (
+        id BIGSERIAL PRIMARY KEY,
+        user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        c_id BIGINT REFERENCES communities(id) ON DELETE CASCADE,
+        g_id BIGINT REFERENCES groups(id) ON DELETE CASCADE,
+        title TEXT NOT NULL,
+        description TEXT NOT NULL DEFAULT '',
+        form_type TEXT NOT NULL DEFAULT 'survey',
+        fields JSONB NOT NULL DEFAULT '[]',
+        closes_at TIMESTAMPTZ,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        CONSTRAINT cg_forms_has_owner CHECK (c_id IS NOT NULL OR g_id IS NOT NULL)
+    )
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS cg_form_responses (
+        id BIGSERIAL PRIMARY KEY,
+        form_id BIGINT NOT NULL REFERENCES cg_forms(id) ON DELETE CASCADE,
+        user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        response_data JSONB NOT NULL DEFAULT '{}',
+        submitted_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        UNIQUE (form_id, user_id)
+    )
+    """,
+    # ── indexes for new tables ────────────────────────────────────────
+    """
+    CREATE INDEX IF NOT EXISTS groups_c_id_idx ON groups(c_id)
+    """,
+    """
+    CREATE INDEX IF NOT EXISTS g_members_user_id_idx ON g_members(user_id)
+    """,
+    """
+    CREATE INDEX IF NOT EXISTS events_c_id_idx ON events(c_id)
+    """,
+    """
+    CREATE INDEX IF NOT EXISTS events_g_id_idx ON events(g_id)
+    """,
+    """
+    CREATE INDEX IF NOT EXISTS events_start_at_idx ON events(start_at)
+    """,
+    """
+    CREATE INDEX IF NOT EXISTS cg_announcements_c_id_idx ON cg_announcements(c_id)
+    """,
+    """
+    CREATE INDEX IF NOT EXISTS cg_announcements_g_id_idx ON cg_announcements(g_id)
+    """,
+    """
+    CREATE INDEX IF NOT EXISTS cg_files_c_id_idx ON cg_files(c_id)
+    """,
+    """
+    CREATE INDEX IF NOT EXISTS cg_files_g_id_idx ON cg_files(g_id)
+    """,
+    """
+    CREATE INDEX IF NOT EXISTS cg_forms_c_id_idx ON cg_forms(c_id)
+    """,
+    """
+    CREATE INDEX IF NOT EXISTS cg_forms_g_id_idx ON cg_forms(g_id)
+    """,
 ]
 
 
