@@ -67,17 +67,39 @@ SCHEMA_STATEMENTS = [
     ON categories (user_id)
     """,
     """
+    DO $$
+    BEGIN
+        IF EXISTS (
+            SELECT 1
+            FROM information_schema.columns
+            WHERE table_name = 'academic_modules'
+                AND column_name = 'code'
+        ) AND NOT EXISTS (
+            SELECT 1
+            FROM information_schema.columns
+            WHERE table_name = 'academic_modules'
+                AND column_name = 'module_code'
+        ) THEN
+            ALTER TABLE academic_modules RENAME COLUMN code TO module_code;
+        END IF;
+    END $$;
+    """,
+    """
     CREATE TABLE IF NOT EXISTS academic_modules (
         id BIGSERIAL PRIMARY KEY,
         user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-        code TEXT NOT NULL,
+        module_code TEXT NOT NULL,
         name TEXT NOT NULL,
         source_type TEXT NOT NULL DEFAULT 'manual',
         source_course_id TEXT,
         external_url TEXT,
         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-        UNIQUE (user_id, code)
+        UNIQUE (user_id, module_code)
     )
+    """,
+    """
+    CREATE UNIQUE INDEX IF NOT EXISTS academic_modules_user_module_code_unique
+    ON academic_modules (user_id, module_code)
     """,
     """
     CREATE INDEX IF NOT EXISTS academic_modules_user_id_idx

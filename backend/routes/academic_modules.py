@@ -14,7 +14,7 @@ router = APIRouter(prefix="/academic-modules", tags=["academic-modules"])
 def build_academic_module(record) -> AcademicModuleOut:
     return AcademicModuleOut(
         id=record["id"],
-        code=record["code"],
+        module_code=record["module_code"],
         name=record["name"],
         source_type=record["source_type"],
         source_course_id=record["source_course_id"],
@@ -26,10 +26,10 @@ def build_academic_module(record) -> AcademicModuleOut:
 async def list_academic_modules(current_user: CurrentUser):
     rows = await db.fetch_all(
         query="""
-            SELECT id, code, name, source_type, source_course_id, external_url
+            SELECT id, module_code, name, source_type, source_course_id, external_url
             FROM academic_modules
             WHERE user_id = :user_id
-            ORDER BY code ASC, name ASC
+            ORDER BY module_code ASC, name ASC
         """,
         values={"user_id": current_user.id},
     )
@@ -47,7 +47,7 @@ async def create_academic_module(
             query="""
                 INSERT INTO academic_modules (
                     user_id,
-                    code,
+                    module_code,
                     name,
                     source_type,
                     source_course_id,
@@ -55,17 +55,17 @@ async def create_academic_module(
                 )
                 VALUES (
                     :user_id,
-                    :code,
+                    :module_code,
                     :name,
                     :source_type,
                     :source_course_id,
                     :external_url
                 )
-                RETURNING id, code, name, source_type, source_course_id, external_url
+                RETURNING id, module_code, name, source_type, source_course_id, external_url
             """,
             values={
                 "user_id": current_user.id,
-                "code": payload.code,
+                "module_code": payload.module_code,
                 "name": payload.name,
                 "source_type": payload.source_type,
                 "source_course_id": payload.source_course_id,
@@ -87,7 +87,7 @@ async def update_academic_module(
 ):
     existing = await db.fetch_one(
         query="""
-            SELECT id, code, name, source_type, source_course_id, external_url
+            SELECT id, module_code, name, source_type, source_course_id, external_url
             FROM academic_modules
             WHERE id = :module_id AND user_id = :user_id
         """,
@@ -99,7 +99,7 @@ async def update_academic_module(
 
     updates = payload.model_dump(exclude_unset=True)
     merged = {
-        "code": updates.get("code", existing["code"]),
+        "module_code": updates.get("module_code", existing["module_code"]),
         "name": updates.get("name", existing["name"]),
         "source_type": updates.get("source_type", existing["source_type"]),
         "source_course_id": updates.get(
@@ -113,13 +113,13 @@ async def update_academic_module(
             query="""
                 UPDATE academic_modules
                 SET
-                    code = :code,
+                    module_code = :module_code,
                     name = :name,
                     source_type = :source_type,
                     source_course_id = :source_course_id,
                     external_url = :external_url
                 WHERE id = :module_id AND user_id = :user_id
-                RETURNING id, code, name, source_type, source_course_id, external_url
+                RETURNING id, module_code, name, source_type, source_course_id, external_url
             """,
             values={
                 "module_id": module_id,

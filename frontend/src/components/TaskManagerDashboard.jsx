@@ -30,7 +30,7 @@ const emptyCategoryForm = {
 }
 
 const emptyModuleForm = {
-  code: "",
+  moduleCode: "",
   name: "",
 }
 
@@ -336,13 +336,15 @@ function TaskManagerDashboard({ token, currentUser, onLogout }) {
 
     try {
       const moduleRecord = await createAcademicModule(token, {
-        code: moduleForm.code,
+        module_code: moduleForm.moduleCode,
         name: moduleForm.name,
       })
 
       setAcademicModules((current) =>
         [...current, moduleRecord].sort((left, right) =>
-          `${left.code}${left.name}`.localeCompare(`${right.code}${right.name}`)
+          `${left.module_code}${left.name}`.localeCompare(
+            `${right.module_code}${right.name}`
+          )
         )
       )
       setModuleForm(emptyModuleForm)
@@ -545,7 +547,7 @@ function TaskManagerDashboard({ token, currentUser, onLogout }) {
                   <option value="">None</option>
                   {academicModules.map((moduleRecord) => (
                     <option key={moduleRecord.id} value={moduleRecord.id}>
-                      {moduleRecord.code} - {moduleRecord.name}
+                      {moduleRecord.module_code} - {moduleRecord.name}
                     </option>
                   ))}
                 </select>
@@ -651,11 +653,11 @@ function TaskManagerDashboard({ token, currentUser, onLogout }) {
                 <span>Module code</span>
                 <input
                   type="text"
-                  value={moduleForm.code}
+                  value={moduleForm.moduleCode}
                   onChange={(event) =>
                     setModuleForm((current) => ({
                       ...current,
-                      code: event.target.value,
+                      moduleCode: event.target.value,
                     }))
                   }
                   placeholder="CS2103T"
@@ -689,9 +691,9 @@ function TaskManagerDashboard({ token, currentUser, onLogout }) {
                 {academicModules.map((moduleRecord) => (
                   <div className="tag-card" key={moduleRecord.id}>
                     <div>
-                      <strong>{moduleRecord.code}</strong>
+                      <strong>{moduleRecord.module_code}</strong>
                       {moduleRecord.name &&
-                        moduleRecord.name !== moduleRecord.code && (
+                        moduleRecord.name !== moduleRecord.module_code && (
                           <span>{moduleRecord.name}</span>
                         )}
                     </div>
@@ -805,7 +807,7 @@ function TaskManagerDashboard({ token, currentUser, onLogout }) {
                 <option value="all">All modules</option>
                 {academicModules.map((moduleRecord) => (
                   <option key={moduleRecord.id} value={String(moduleRecord.id)}>
-                    {moduleRecord.code}
+                    {moduleRecord.module_code}
                   </option>
                 ))}
               </select>
