@@ -119,7 +119,7 @@ async def fetch_task_for_user(task_id: int, user_id: int):
                 t.completed_at,
                 t.created_at,
                 t.updated_at,
-                m.code AS module_code,
+                m.module_code AS module_code,
                 m.name AS module_name,
                 c.name AS category_name,
                 c.color AS category_color
@@ -160,7 +160,7 @@ async def list_tasks(current_user: CurrentUser):
                 t.completed_at,
                 t.created_at,
                 t.updated_at,
-                m.code AS module_code,
+                m.module_code AS module_code,
                 m.name AS module_name,
                 c.name AS category_name,
                 c.color AS category_color
@@ -211,16 +211,16 @@ async def sync_canvas_tasks(current_user: CurrentUser):
                 query="""
                     SELECT id, name
                     FROM academic_modules
-                    WHERE user_id = :user_id AND code = :code
+                    WHERE user_id = :user_id AND module_code = :module_code
                     ORDER BY id ASC
                     LIMIT 1
                 """,
-                values={"user_id": current_user.id, "code": course_code},
+                values={"user_id": current_user.id, "module_code": course_code},
             )
 
             module_values = {
                 "user_id": current_user.id,
-                "code": course_code,
+                "module_code": course_code,
                 "name": assignment.get("course_name") or course_code,
                 "source_course_id": course_id or None,
                 "external_url": course_url,
@@ -237,7 +237,7 @@ async def sync_canvas_tasks(current_user: CurrentUser):
                                 :source_course_id
                             ),
                             name = CASE
-                                WHEN name = :code THEN :name
+                                WHEN name = :module_code THEN :name
                                 ELSE name
                             END,
                             external_url = COALESCE(external_url, :external_url)
@@ -250,7 +250,7 @@ async def sync_canvas_tasks(current_user: CurrentUser):
                     query="""
                         INSERT INTO academic_modules (
                             user_id,
-                            code,
+                            module_code,
                             name,
                             source_type,
                             source_course_id,
@@ -258,7 +258,7 @@ async def sync_canvas_tasks(current_user: CurrentUser):
                         )
                         VALUES (
                             :user_id,
-                            :code,
+                            :module_code,
                             :name,
                             'canvas',
                             :source_course_id,
