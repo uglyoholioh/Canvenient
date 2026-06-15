@@ -1,5 +1,7 @@
 const AUTH_TOKEN_KEY = "canvenient.auth.token"
 
+
+// Auth
 function getErrorMessage(payload, fallbackMessage) {
   if (!payload) {
     return fallbackMessage
@@ -157,6 +159,9 @@ export function deleteTask(token, taskId) {
   })
 }
 
+
+//Canvas 
+
 export function syncCanvasTasks(token) {
   return apiRequest("/tasks/sync-canvas", {
     method: "POST",
@@ -181,6 +186,8 @@ export function getCanvasFiles(token, courseId) {
   return apiRequest(`/canvas/files?course_id=` + courseId, { token })
 }
 
+// Schedule
+
 export async function importIcs(token, file) {
   const formData = new FormData();
   formData.append("file", file);
@@ -198,4 +205,8 @@ export async function importIcs(token, file) {
   }
 
   return response.json();
+}
+
+export function getSchedule(token) {
+  return apiRequest("/schedule", { token })
 }
