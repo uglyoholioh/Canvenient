@@ -8,7 +8,9 @@ import {
   getCanvasCourses,
   getCanvasAnnouncements,
   getCanvasAssignments,
-  getCanvasFiles
+  getCanvasFiles,
+  getSchedule,
+  importIcs
 } from "../api"
 
 import { Megaphone, BookOpen, FolderOpen, RefreshCw, ExternalLink } from "lucide-react"
@@ -27,6 +29,11 @@ function Dashboard({ token, currentUser, onLogout }) {
   const [assignments, setAssignments] = useState([])
   const [loadingCanvas, setLoadingCanvas] = useState(false)
   const [canvasError, setCanvasError] = useState("")
+
+  // Schedule states
+  const [schedule, setSchedule] = useState({ classes: [], exams: [], events: [] })
+  const [loadingSchedule, setLoadingSchedule] = useState(false)
+  const [uploadingSchedule, setUploadingSchedule] = useState(false)
 
   // Modal overlays state
   const [activeModal, setActiveModal] = useState(null) // { courseId, courseCode, type }
@@ -87,6 +94,23 @@ function Dashboard({ token, currentUser, onLogout }) {
     loadFiles()
   }, [activeModal, token])
 
+  //Load schedule
+  useEffect(() => {
+    async function loadSchedule() {
+      setLoadingSchedule(true)
+      try {
+        const data = await getSchedule(token)
+        setSchedule(data)
+      } catch (err) {
+        setError(err.message || "Could not load schedule.")
+      } finally {
+        setLoadingSchedule(false)
+      }
+    }
+    if (token) {
+      loadSchedule()
+    }
+  }, [token])
 
   //Load Tasks
   useEffect(() => {
@@ -120,6 +144,84 @@ function Dashboard({ token, currentUser, onLogout }) {
     }
   }
 
+  const handleIcsUpload = async (e) => {
+    const file = e.target.files[0]
+    if (!file) return
+
+    setUploadingSchedule(true)
+    setError("")
+    try {
+      await importIcs(token, file)
+      const data = await getSchedule(token)
+      setSchedule(data)
+    } catch (err) {
+      setError(err.message || "Failed to upload calendar.")
+    } finally {
+      setUploadingSchedule(false)
+    }
+  }
+
+  const getTimeline = () => {
+    const timeline = []
+    const now = new Date()
+
+    if (schedule.events) {
+      schedule.events.forEach(event => {
+        const start = new Date(event.start_at)
+        const end = event.end_at ? new Date(event.end_at) : start
+
+        if (end > now) {
+          timeline.push({
+            id: `event-${event.id}`,
+            title: event.title,
+            type: "event",
+            start_at: start,
+            end_at: end,
+            venue: event.venue || "No venue"
+          })
+        }
+      })
+    }
+
+    if (schedule.exams) {
+      schedule.exams.forEach(exam => {
+        const start = new Date(exam.start_at)
+        const end = exam.end_at ? new Date(exam.end_at) : start
+
+        if (end > now) {
+          timeline.push({
+            id: `exam-${exam.id}`,
+            title: `${exam.module_code} Exam`,
+            type: "exam",
+            start_at: start,
+            end_at: end,
+            venue: "See Exam Venue"
+          })
+        }
+      })
+    }
+
+    if (schedule.classes) {
+      schedule.classes.forEach(cls => {
+        const start = new Date(`${cls.class_date}T${cls.start_time}+08:00`)
+        const end = new Date(`${cls.class_date}T${cls.end_time}+08:00`)
+
+        if (end > now) {
+          timeline.push({
+            id: `class-${cls.id}`,
+            title: `${cls.module_code} ${cls.lesson_type}`,
+            type: "class",
+            start_at: start,
+            end_at: end,
+            venue: cls.venue || "No venue"
+          })
+        }
+      })
+    }
+
+    timeline.sort((a, b) => a.start_at - b.start_at)
+    return timeline
+  }
   const toggleTask = async (id, currentStatus) => {
     setError("")
     setUpdatingTaskId(id)
@@ -216,7 +318,8 @@ function Dashboard({ token, currentUser, onLogout }) {
       return new Date(right.created_at).getTime() - new Date(left.created_at).getTime()
     })
     .slice(0, 5)
-
+  const timelineItems = getTimeline()
+  const hasScheduleData = (schedule.classes && schedule.classes.length > 0) || (schedule.exams && schedule.exams.length > 0)
 
   return (
     <div className="dashboard-layout">
@@ -295,17 +398,63 @@ function Dashboard({ token, currentUser, onLogout }) {
           </Link>
         </div>
 
-        <div className="card placeholder-card">
+        <div className="card schedule-card">
           <div className="card-header">
-            <h3>NUSMods Timetable</h3>
-            <span className="badge badge-progress">In Progress</span>
+            <h3>My Schedule</h3>
+            {hasScheduleData && (
+              <label className="btn-upload-icon" title="Import new .ics calendar">
+                Re-import
+                <input
+                  type="file"
+                  accept=".ics"
+                  onChange={handleIcsUpload}
+                  style={{ display: "none" }}
+                  disabled={uploadingSchedule}
+                />
+              </label>
+            )}
           </div>
-          <p className="card-description">
-            Import your class schedule and view your daily timetable.
-          </p>
-          <div className="placeholder-graphic">
-            <span>Calendar view...</span>
-          </div>
+          {uploadingSchedule ? (
+            <div className="schedule-loading">
+              <RefreshCw className="spin" size={20} />
+              <span>Updating schedule...</span>
+            </div>
+          ) : !hasScheduleData ? (
+            <div className="schedule-empty-state">
+              <p>Import your class timetable to get started.</p>
+              <label className="btn-upload">
+                Import .ics Calendar
+                <input
+                  type="file"
+                  accept=".ics"
+                  onChange={handleIcsUpload}
+                  style={{ display: "none" }}
+                />
+              </label>
+            </div>
+          ) : (
+            <div className="timeline-list">
+              {timelineItems.length === 0 ? (
+                <p className="empty-message">No upcoming classes or exams.</p>
+              ) : (
+                timelineItems.slice(0, 5).map(item => (
+                  <div key={item.id} className={`timeline-item type-${item.type}`}>
+                    <div className="timeline-item-meta">
+                      <span className="timeline-time">
+                        {item.start_at.toLocaleDateString("en-SG", { day: "numeric", month: "short" })}{" "}
+                        {item.start_at.toLocaleTimeString("en-SG", { hour: "2-digit", minute: "2-digit" })}
+                      </span>
+                      <span className={`timeline-badge badge-${item.type}`}>{item.type}</span>
+                    </div>
+                    <div className="timeline-item-body">
+                      <h4 className="timeline-title">{item.title}</h4>
+                      <p className="timeline-venue">{item.venue}</p>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          )}
         </div>
 
         <div className="card placeholder-card">
@@ -355,23 +504,23 @@ function Dashboard({ token, currentUser, onLogout }) {
                     <span className="course-name">{course.name}</span>
                   </div>
                   <div className="course-actions">
-                    <button 
+                    <button
                       onClick={() => setActiveModal({ courseId: course.id, courseCode: course.course_code, type: "announcements" })}
-                      className="action-btn" 
+                      className="action-btn"
                       title="Announcements"
                     >
                       <Megaphone size={16} />
                     </button>
-                    <button 
+                    <button
                       onClick={() => setActiveModal({ courseId: course.id, courseCode: course.course_code, type: "assignments" })}
-                      className="action-btn" 
+                      className="action-btn"
                       title="Assignments"
                     >
                       <BookOpen size={16} />
                     </button>
-                    <button 
+                    <button
                       onClick={() => setActiveModal({ courseId: course.id, courseCode: course.course_code, type: "files" })}
-                      className="action-btn" 
+                      className="action-btn"
                       title="Files"
                     >
                       <FolderOpen size={16} />
@@ -465,9 +614,9 @@ function Dashboard({ token, currentUser, onLogout }) {
                           <span className="item-date">{formatDate(ann.posted_at)}</span>
                         </div>
                         <h4 className="item-title">{ann.title}</h4>
-                        <div 
+                        <div
                           className="ann-body-content"
-                          dangerouslySetInnerHTML={{ __html: ann.body }} 
+                          dangerouslySetInnerHTML={{ __html: ann.body }}
                         />
                         <a href={ann.external_url} target="_blank" rel="noopener noreferrer" className="btn-secondary btn-small inline-flex align-center gap-6 mt-10">
                           Open in Canvas <ExternalLink size={12} />
@@ -507,10 +656,10 @@ function Dashboard({ token, currentUser, onLogout }) {
                             {(file.size / 1024 / 1024).toFixed(2)} MB • {formatDate(file.updated_at)}
                           </span>
                         </div>
-                        <a 
-                          href={file.url} 
-                          target="_blank" 
-                          rel="noopener noreferrer" 
+                        <a
+                          href={file.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
                           className="action-btn"
                           title="Download file"
                         >
