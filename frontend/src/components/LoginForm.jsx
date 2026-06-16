@@ -34,14 +34,15 @@ function LoginForm({ onLoginSuccess }) {
 
     return (
         <div className="auth-container">
-            <div className="auth-card">
+            <div className="card" style={{ maxWidth: "420px", width: "100%", padding: "40px" }}>
                 <h2>Sign in</h2>
-                <form onSubmit={handleSubmit}>
+                <form onSubmit={handleSubmit} className="form">
                     <div className="form-group">
                         <label htmlFor="email">Email Address</label>
                         <input
                             id="email"
                             type="email"
+                            className="form-input"
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
                             placeholder="e.g. EXXXXXXX@u.nus.edu"
@@ -53,15 +54,15 @@ function LoginForm({ onLoginSuccess }) {
                         <input
                             id="password"
                             type="password"
+                            className="form-input"
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
                             placeholder="Enter your password"
                             required
                         />
                     </div>
-                    <br></br>
 
-                    <button type="submit" className="button" disabled={isSubmitting}>
+                    <button type="submit" className="btn btn--primary btn--full" disabled={isSubmitting}>
                         {isSubmitting ? "Logging in..." : "Login"}
                     </button>
                     <p className="auth-footer">
