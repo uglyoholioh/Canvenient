@@ -48,7 +48,7 @@ function RegisterForm() {
 
   return (
     <div className="auth-container">
-      <div className="card" style={{ maxWidth: "420px", width: "100%", padding: "40px" }}>
+      <div className="card auth-card">
         <h2>Create Account</h2>
         <form onSubmit={handleSubmit} className="form">
           <div className="form-group">
@@ -82,7 +82,7 @@ function RegisterForm() {
           </p>
 
           {message && (
-            <p style={{ color: isError ? "red" : "green" }}>{message}</p>
+            <p className={isError ? "text-error" : "text-success"}>{message}</p>
           )}
         </form>
       </div>
