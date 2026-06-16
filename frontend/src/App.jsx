@@ -5,6 +5,7 @@ import LoginForm from "./components/LoginForm"
 import Dashboard from "./components/Dashboard"
 import TaskManagerDashboard from "./components/TaskManagerDashboard"
 import OnboardingForm from "./components/OnboardingForm"
+import Schedule from "./components/Schedule"
 import { getStoredToken, persistToken, clearStoredToken, getCurrentUser } from "./api"
 import { Outlet } from "react-router-dom"
 import Sidebar from "./components/Sidebar"
@@ -79,7 +80,7 @@ function App() {
   if (isCheckingSession) {
     return (
       <main className="auth-container">
-        <section className="card" style={{ textAlign: "center", maxWidth: "420px", width: "100%" }}>
+        <section className="card auth-card text-center">
           <h2>Canvenient</h2>
           <p>Restoring your workspace...</p>
         </section>
@@ -119,6 +120,7 @@ function App() {
         >
           <Route path="/dashboard" element={<Dashboard token={token} currentUser={currentUser} onLogout={handleLogout} />} />
           <Route path="/planner" element={<TaskManagerDashboard token={token} currentUser={currentUser} onLogout={handleLogout} />} />
+          <Route path="/schedule" element={<Schedule token={token} currentUser={currentUser} />} />
         </Route>
       </Routes>
     </Router>

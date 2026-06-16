@@ -210,3 +210,30 @@ export async function importIcs(token, file) {
 export function getSchedule(token) {
   return apiRequest("/schedule", { token })
 }
+
+export function getEvents(token) {
+  return apiRequest("/events", { token })
+}
+
+export function createEvent(token, payload) {
+  return apiRequest("/events", {
+    method: "POST",
+    body: payload,
+    token,
+  })
+}
+
+export function updateEvent(token, eventId, payload) {
+  return apiRequest(`/events/${eventId}`, {
+    method: "PATCH",
+    body: payload,
+    token,
+  })
+}
+
+export function deleteEvent(token, eventId) {
+  return apiRequest(`/events/${eventId}`, {
+    method: "DELETE",
+    token,
+  })
+}
