@@ -74,13 +74,13 @@ SCHEMA_STATEMENTS = [
     CREATE TABLE IF NOT EXISTS academic_modules (
         id BIGSERIAL PRIMARY KEY,
         user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-        code TEXT NOT NULL,
+        module_code TEXT NOT NULL,
         name TEXT NOT NULL,
         source_type TEXT NOT NULL DEFAULT 'manual',
         source_course_id TEXT,
         external_url TEXT,
         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-        UNIQUE (user_id, code)
+        UNIQUE (user_id, module_code)
     )
     """,
     """

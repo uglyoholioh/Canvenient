@@ -15,7 +15,6 @@ import {
 
 import { Megaphone, BookOpen, FolderOpen, RefreshCw, ExternalLink } from "lucide-react"
 
-
 function Dashboard({ token, currentUser, onLogout }) {
   const navigate = useNavigate()
   const [tasks, setTasks] = useState([])
@@ -94,13 +93,13 @@ function Dashboard({ token, currentUser, onLogout }) {
     loadFiles()
   }, [activeModal, token])
 
-  //Load schedule
+  // Load schedule
   useEffect(() => {
     async function loadSchedule() {
       setLoadingSchedule(true)
       try {
         const data = await getSchedule(token)
-        setSchedule(data)
+        setSchedule(data || { classes: [], exams: [], events: [] })
       } catch (err) {
         setError(err.message || "Could not load schedule.")
       } finally {
@@ -112,12 +111,12 @@ function Dashboard({ token, currentUser, onLogout }) {
     }
   }, [token])
 
-  //Load Tasks
+  // Load Tasks
   useEffect(() => {
     async function loadTasks() {
       try {
         const data = await getTasks(token)
-        setTasks(data)
+        setTasks(data || [])
       } catch (err) {
         setError(err.message || "Could not load tasks.")
       }
@@ -153,7 +152,7 @@ function Dashboard({ token, currentUser, onLogout }) {
     try {
       await importIcs(token, file)
       const data = await getSchedule(token)
-      setSchedule(data)
+      setSchedule(data || { classes: [], exams: [], events: [] })
     } catch (err) {
       setError(err.message || "Failed to upload calendar.")
     } finally {
@@ -165,7 +164,7 @@ function Dashboard({ token, currentUser, onLogout }) {
     const timeline = []
     const now = new Date()
 
-    if (schedule.events) {
+    if (schedule?.events) {
       schedule.events.forEach(event => {
         const start = new Date(event.start_at)
         const end = event.end_at ? new Date(event.end_at) : start
@@ -183,7 +182,7 @@ function Dashboard({ token, currentUser, onLogout }) {
       })
     }
 
-    if (schedule.exams) {
+    if (schedule?.exams) {
       schedule.exams.forEach(exam => {
         const start = new Date(exam.start_at)
         const end = exam.end_at ? new Date(exam.end_at) : start
@@ -201,7 +200,7 @@ function Dashboard({ token, currentUser, onLogout }) {
       })
     }
 
-    if (schedule.classes) {
+    if (schedule?.classes) {
       schedule.classes.forEach(cls => {
         const start = new Date(`${cls.class_date}T${cls.start_time}+08:00`)
         const end = new Date(`${cls.class_date}T${cls.end_time}+08:00`)
@@ -222,6 +221,7 @@ function Dashboard({ token, currentUser, onLogout }) {
     timeline.sort((a, b) => a.start_at - b.start_at)
     return timeline
   }
+
   const toggleTask = async (id, currentStatus) => {
     setError("")
     setUpdatingTaskId(id)
@@ -291,17 +291,16 @@ function Dashboard({ token, currentUser, onLogout }) {
     return `${diffDays}d ago`
   }
 
-  // 3. Extract only the high-priority alerts and deadlines for the Priority Lane
   const priorityAnnouncements = (announcements || []).filter(ann => ann.is_priority)
   const priorityAssignments = (assignments || []).filter(ass => ass.is_priority)
   const displayedModalItems = !activeModal
     ? []
     : activeModal.type === "announcements"
-      ? announcements.filter(ann => ann.course_id === activeModal.courseId)
+      ? (announcements || []).filter(ann => ann.course_id === activeModal.courseId)
       : activeModal.type === "assignments"
-        ? assignments.filter(ass => ass.course_id === activeModal.courseId)
-        : modalItems
-  const upcomingTasks = [...tasks]
+        ? (assignments || []).filter(ass => ass.course_id === activeModal.courseId)
+        : (modalItems || [])
+  const upcomingTasks = [...(tasks || [])]
     .filter(task => task.status !== "done")
     .sort((left, right) => {
       const leftDue = left.effective_due_at
@@ -319,58 +318,80 @@ function Dashboard({ token, currentUser, onLogout }) {
     })
     .slice(0, 5)
   const timelineItems = getTimeline()
-  const hasScheduleData = (schedule.classes && schedule.classes.length > 0) || (schedule.exams && schedule.exams.length > 0)
+  const hasScheduleData = (schedule?.classes && schedule.classes.length > 0) || (schedule?.exams && schedule.exams.length > 0)
 
   return (
     <div className="dashboard-layout">
       <header className="dashboard-header">
         <h1>Welcome, {currentUser?.name}</h1>
-        <button onClick={handleLogout} className="btn-secondary">Log Out</button>
+        <button onClick={handleLogout} className="btn btn--secondary">Log Out</button>
       </header>
 
       <main className="dashboard-top-row">
-        <div className="card task-card">
+        <div className="card">
           <div className="card-header">
             <h3>Task Manager</h3>
-            <span className="badge badge-active">Active</span>
+            <span className="badge badge--primary">Active</span>
           </div>
 
           {error && <p style={{ color: "red", fontSize: "12px", textAlign: "center", margin: "10px 0" }}>{error}</p>}
 
-          <form onSubmit={handleAddTask} className="add-task-form">
+          <form onSubmit={handleAddTask} style={{ display: "flex", gap: "10px", marginBottom: "20px" }}>
             <input
               type="text"
+              className="form-input"
               placeholder="Add a new academic task..."
               value={newTitle}
               onChange={(e) => setNewTitle(e.target.value)}
               required
             />
-            <button type="submit" className="add-btn">+</button>
+            <button
+              type="submit"
+              className="btn btn--primary"
+              style={{ width: "38px", height: "38px", padding: 0, fontSize: "20px" }}
+            >
+              +
+            </button>
           </form>
 
-          <div className="task-list">
+          <div className="list" style={{ marginBottom: "15px" }}>
             {upcomingTasks.length === 0 ? (
-              <p className="empty-message">No tasks found. Add one above!</p>
+              <p style={{ fontSize: "13px", color: "var(--text-muted)", textAlign: "center" }}>
+                No tasks found. Add one above!
+              </p>
             ) : (
               upcomingTasks.map(task => (
-                <div key={task.id} className={`task-item ${task.status === "done" ? "completed" : ""}`}>
-                  <input
-                    type="checkbox"
-                    checked={task.status === "done"}
-                    disabled={updatingTaskId === task.id}
-                    onChange={() => toggleTask(task.id, task.status)}
-                  />
-                  <span className="task-title">
-                    {task.title}
-                    <small className="task-due-label">{formatDate(task.effective_due_at)}</small>
-                  </span>
+                <div key={task.id} className="list-item list-item--compact list-item--row">
+                  <div style={{ display: "flex", alignItems: "center", gap: "10px", flex: 1 }}>
+                    <input
+                      type="checkbox"
+                      checked={task.status === "done"}
+                      disabled={updatingTaskId === task.id}
+                      onChange={() => toggleTask(task.id, task.status)}
+                    />
+                    <span
+                      style={{
+                        fontSize: "14px",
+                        color: task.status === "done" ? "var(--text-muted)" : "var(--text-h)",
+                        textDecoration: task.status === "done" ? "line-through" : "none",
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: "2px"
+                      }}
+                    >
+                      {task.title}
+                      <small style={{ fontSize: "11px", color: "var(--text-muted)" }}>
+                        {formatDate(task.effective_due_at)}
+                      </small>
+                    </span>
+                  </div>
                   {task.source_type !== "canvas" && (
                     <button
-                      className="delete-task"
+                      style={{ background: "none", border: "none", color: "var(--text-muted)", fontSize: "18px", cursor: "pointer" }}
                       onClick={() => handleDeleteTask(task)}
                       title="Delete task"
                     >
-                      ×
+                      &times;
                     </button>
                   )}
                 </div>
@@ -379,30 +400,27 @@ function Dashboard({ token, currentUser, onLogout }) {
           </div>
           <Link
             to="/planner"
-            className="btn-secondary"
+            className="btn btn--secondary btn--full"
             onClick={(event) => {
               if (updatingTaskId !== null) {
                 event.preventDefault()
               }
             }}
             style={{
-              display: 'block',
-              textAlign: 'center',
-              marginTop: '10px',
               textDecoration: 'none',
               opacity: updatingTaskId !== null ? 0.55 : 1,
               pointerEvents: updatingTaskId !== null ? 'none' : 'auto',
             }}
           >
-            Open Full Task Planner →
+            Open Full Task Planner &rarr;
           </Link>
         </div>
 
-        <div className="card schedule-card">
+        <div className="card">
           <div className="card-header">
             <h3>My Schedule</h3>
             {hasScheduleData && (
-              <label className="btn-upload-icon" title="Import new .ics calendar">
+              <label className="btn btn--secondary btn--sm" title="Import new .ics calendar" style={{ cursor: "pointer" }}>
                 Re-import
                 <input
                   type="file"
@@ -415,14 +433,14 @@ function Dashboard({ token, currentUser, onLogout }) {
             )}
           </div>
           {uploadingSchedule ? (
-            <div className="schedule-loading">
+            <div className="state-box">
               <RefreshCw className="spin" size={20} />
               <span>Updating schedule...</span>
             </div>
           ) : !hasScheduleData ? (
-            <div className="schedule-empty-state">
+            <div className="state-box state-box--dashed">
               <p>Import your class timetable to get started.</p>
-              <label className="btn-upload">
+              <label className="btn btn--primary" style={{ cursor: "pointer" }}>
                 Import .ics Calendar
                 <input
                   type="file"
@@ -433,18 +451,26 @@ function Dashboard({ token, currentUser, onLogout }) {
               </label>
             </div>
           ) : (
-            <div className="timeline-list">
+            <div className="list list--scrollable">
               {timelineItems.length === 0 ? (
-                <p className="empty-message">No upcoming classes or exams.</p>
+                <p style={{ fontSize: "13px", color: "var(--text-muted)", textAlign: "center" }}>
+                  No upcoming classes or exams.
+                </p>
               ) : (
                 timelineItems.slice(0, 5).map(item => (
-                  <div key={item.id} className={`timeline-item type-${item.type}`}>
-                    <div className="timeline-item-meta">
-                      <span className="timeline-time">
+                  <div key={item.id} className="list-item">
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <span style={{ fontSize: "11px", color: "var(--text-muted)" }}>
                         {item.start_at.toLocaleDateString("en-SG", { day: "numeric", month: "short" })}{" "}
                         {item.start_at.toLocaleTimeString("en-SG", { hour: "2-digit", minute: "2-digit" })}
                       </span>
-                      <span className={`timeline-badge badge-${item.type}`}>{item.type}</span>
+                      <span
+                        className={`badge badge--square badge--${
+                          item.type === "class" ? "primary" : item.type === "exam" ? "danger" : "warning"
+                        }`}
+                      >
+                        {item.type}
+                      </span>
                     </div>
                     <div className="timeline-item-body">
                       <h4 className="timeline-title">{item.title}</h4>
@@ -457,70 +483,76 @@ function Dashboard({ token, currentUser, onLogout }) {
           )}
         </div>
 
-        <div className="card placeholder-card">
+        <div className="card">
           <div className="card-header">
             <h3>Group Scheduler</h3>
-            <span className="badge badge-progress">In Progress</span>
+            <span className="badge badge--muted">In Progress</span>
           </div>
-          <p className="card-description">
+          <p style={{ fontSize: "14px", lineHeight: "1.5", color: "var(--text)", marginBottom: "15px" }}>
             Find common free slots and schedule meetings with your project peers.
           </p>
-          <div className="placeholder-graphic">
+          <div className="state-box state-box--dashed" style={{ height: "80px", padding: 0 }}>
             <span>Scheduling calendar...</span>
           </div>
         </div>
       </main>
+
       <hr className="dashboard-separator" />
+
       <div className="canvas-hub-container">
         <div className="canvas-courses-panel">
-          <div className="panel-header">
+          <div className="panel-header" style={{ marginBottom: "20px" }}>
             <h2>Courses</h2>
-            <p className="panel-subtitle">Access your course resources and materials</p>
+            <p style={{ fontSize: "13px", color: "var(--text-muted)" }}>Access your course resources and materials</p>
           </div>
           {!currentUser?.canvas_token ? (
-            <div className="connect-canvas-card">
-              <h4>Connect Canvas Account</h4>
-              <p>Bring your academic schedule and courses together. Set your API access token during onboarding or in your account setup to get started.</p>
+            <div className="card state-box state-box--dashed" style={{ padding: "30px 24px" }}>
+              <h4 style={{ fontSize: "22px", color: "var(--text-h)", marginBottom: "8px" }}>Connect Canvas Account</h4>
+              <p style={{ maxWidth: "320px", fontSize: "14px", lineHeight: "1.5" }}>
+                Bring your academic schedule and courses together. Set your API access token during onboarding or in your account setup to get started.
+              </p>
             </div>
           ) : loadingCanvas ? (
-            <div className="canvas-loading">
+            <div className="state-box">
               <RefreshCw size={24} className="spin" />
               <span>Fetching courses from Canvas...</span>
             </div>
           ) : canvasError ? (
-            <div className="canvas-error-state">
+            <div className="state-box state-box--dashed">
               <p>{canvasError}</p>
             </div>
           ) : courses.length === 0 ? (
-            <div className="canvas-empty-state">
+            <div className="state-box state-box--dashed">
               <p>You are not enrolled in any active courses.</p>
             </div>
           ) : (
-            <div className="course-list">
+            <div className="list">
               {courses.map(course => (
-                <div key={course.id} className="course-item">
-                  <div className="course-info">
-                    <span className="course-code">{course.course_code}</span>
-                    <span className="course-name">{course.name}</span>
+                <div key={course.id} className="list-item list-item--lg list-item--row list-item--hover">
+                  <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                    <span style={{ fontSize: "22px", fontFamily: "var(--font-serif)", fontWeight: "500", color: "var(--text-h)", lineHeight: "1.1" }}>
+                      {course.course_code}
+                    </span>
+                    <span style={{ fontSize: "12px", color: "var(--text-muted)" }}>{course.name}</span>
                   </div>
-                  <div className="course-actions">
+                  <div style={{ display: "flex", gap: "10px" }}>
                     <button
                       onClick={() => setActiveModal({ courseId: course.id, courseCode: course.course_code, type: "announcements" })}
-                      className="action-btn"
+                      className="btn btn--icon"
                       title="Announcements"
                     >
                       <Megaphone size={16} />
                     </button>
                     <button
                       onClick={() => setActiveModal({ courseId: course.id, courseCode: course.course_code, type: "assignments" })}
-                      className="action-btn"
+                      className="btn btn--icon"
                       title="Assignments"
                     >
                       <BookOpen size={16} />
                     </button>
                     <button
                       onClick={() => setActiveModal({ courseId: course.id, courseCode: course.course_code, type: "files" })}
-                      className="action-btn"
+                      className="btn btn--icon"
                       title="Files"
                     >
                       <FolderOpen size={16} />
@@ -531,51 +563,62 @@ function Dashboard({ token, currentUser, onLogout }) {
             </div>
           )}
         </div>
-        <div className="priority-lane">
-          <div className="panel-header">
+
+        <div className="card card--accent">
+          <div className="panel-header" style={{ marginBottom: "20px" }}>
             <h2>Priority items</h2>
-            <p className="panel-subtitle">Urgent alerts & upcoming deadlines</p>
+            <p style={{ fontSize: "13px", color: "var(--text-muted)" }}>Urgent alerts & upcoming deadlines</p>
           </div>
           {!currentUser?.canvas_token ? (
-            <p className="empty-message-subtle">Connect Canvas to show priority items.</p>
+            <p style={{ fontSize: "13px", color: "var(--text-muted)", fontStyle: "italic", padding: "10px 0" }}>
+              Connect Canvas to show priority items.
+            </p>
           ) : loadingCanvas ? (
-            <div className="canvas-loading">
+            <div className="state-box">
               <RefreshCw size={20} className="spin" />
               <span>Checking priority updates...</span>
             </div>
           ) : (
             <div className="priority-stream">
-              <div className="priority-section">
+              <div>
                 <h4 className="priority-section-title">Critical Alerts</h4>
-                <div className="priority-list">
+                <div className="list list--scrollable">
                   {priorityAnnouncements.length === 0 ? (
-                    <p className="empty-message-subtle">No critical alerts found.</p>
+                    <p style={{ fontSize: "13px", color: "var(--text-muted)", fontStyle: "italic", padding: "10px 0" }}>
+                      No critical alerts found.
+                    </p>
                   ) : (
                     priorityAnnouncements.map(ann => (
-                      <div key={ann.id} className="priority-item announcement-item">
-                        <div className="priority-item-header">
-                          <span className="priority-course">{ann.course_code}</span>
-                          <span className="priority-date">{formatRelativeTime(ann.posted_at)}</span>
+                      <div key={ann.id} className="list-item list-item--md">
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "12px", marginBottom: "8px" }}>
+                          <span className="badge badge--primary">{ann.course_code}</span>
+                          <span style={{ fontSize: "12px", color: "var(--text-muted)" }}>{formatRelativeTime(ann.posted_at)}</span>
                         </div>
-                        <h5 className="priority-title">{ann.title}</h5>
+                        <h5 style={{ fontSize: "15px", fontWeight: "600", color: "var(--text-h)", lineHeight: "1.3" }}>
+                          {ann.title}
+                        </h5>
                       </div>
                     ))
                   )}
                 </div>
               </div>
-              <div className="priority-section">
+              <div>
                 <h4 className="priority-section-title">Upcoming Deadlines (Next 7 Days)</h4>
-                <div className="priority-list">
+                <div className="list list--scrollable">
                   {priorityAssignments.length === 0 ? (
-                    <p className="empty-message-subtle">No upcoming deadlines.</p>
+                    <p style={{ fontSize: "13px", color: "var(--text-muted)", fontStyle: "italic", padding: "10px 0" }}>
+                      No upcoming deadlines.
+                    </p>
                   ) : (
                     priorityAssignments.map(ass => (
-                      <div key={ass.id} className="priority-item assignment-item">
-                        <div className="priority-item-header">
-                          <span className="priority-course">{ass.course_code}</span>
-                          <span className="due-date">Due: {formatDate(ass.due_at)}</span>
+                      <div key={ass.id} className="list-item list-item--md">
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "12px", marginBottom: "8px" }}>
+                          <span className="badge badge--primary">{ass.course_code}</span>
+                          <span className="badge badge--danger">Due: {formatDate(ass.due_at)}</span>
                         </div>
-                        <h5 className="priority-title">{ass.title}</h5>
+                        <h5 style={{ fontSize: "15px", fontWeight: "600", color: "var(--text-h)", lineHeight: "1.3" }}>
+                          {ass.title}
+                        </h5>
                       </div>
                     ))
                   )}
@@ -585,41 +628,50 @@ function Dashboard({ token, currentUser, onLogout }) {
           )}
         </div>
       </div>
+
       {activeModal && (
         <div className="modal-overlay" onClick={() => setActiveModal(null)}>
           <div className="modal-card" onClick={e => e.stopPropagation()}>
             <div className="modal-header">
               <h3>
-                {activeModal.courseCode} — {activeModal.type.charAt(0).toUpperCase() + activeModal.type.slice(1)}
+                {activeModal.courseCode} &mdash; {activeModal.type.charAt(0).toUpperCase() + activeModal.type.slice(1)}
               </h3>
               <button className="close-modal" onClick={() => setActiveModal(null)}>&times;</button>
             </div>
             <div className="modal-body">
               {loadingModal ? (
-                <div className="modal-loading">
+                <div className="state-box">
                   <RefreshCw size={24} className="spin" />
                   <span>Loading resources...</span>
                 </div>
               ) : modalError ? (
-                <p className="error-text">{modalError}</p>
+                <p style={{ color: "var(--error)", fontSize: "14px" }}>{modalError}</p>
               ) : displayedModalItems.length === 0 ? (
-                <p className="empty-message">No items found.</p>
+                <p style={{ fontSize: "13px", color: "var(--text-muted)", textAlign: "center" }}>No items found.</p>
               ) : (
-                <div className="modal-items-list">
+                <div className="list">
                   {activeModal.type === "announcements" && (
                     displayedModalItems.map(ann => (
-                      <div key={ann.id} className="modal-list-item announcement-item">
-                        <div className="item-meta">
-                          <span className="item-author">{ann.author}</span>
-                          <span className="item-date">{formatDate(ann.posted_at)}</span>
+                      <div key={ann.id} className="list-item list-item--md">
+                        <div style={{ display: "flex", justifyContent: "space-between", fontSize: "12px", color: "var(--text-muted)", marginBottom: "8px" }}>
+                          <span>{ann.author}</span>
+                          <span>{formatDate(ann.posted_at)}</span>
                         </div>
-                        <h4 className="item-title">{ann.title}</h4>
+                        <h4 style={{ fontSize: "16px", fontWeight: "600", color: "var(--text-h)", marginBottom: "10px", lineHeight: "1.3" }}>
+                          {ann.title}
+                        </h4>
                         <div
                           className="ann-body-content"
                           dangerouslySetInnerHTML={{ __html: ann.body }}
                         />
-                        <a href={ann.external_url} target="_blank" rel="noopener noreferrer" className="btn-secondary btn-small inline-flex align-center gap-6 mt-10">
-                          Open in Canvas <ExternalLink size={12} />
+                        <a
+                          href={ann.external_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="btn btn--secondary btn--sm"
+                          style={{ display: "inline-flex", alignSelf: "flex-start", marginTop: "10px" }}
+                        >
+                          Open in Canvas <ExternalLink size={12} style={{ marginLeft: "4px" }} />
                         </a>
                       </div>
                     ))
@@ -627,18 +679,26 @@ function Dashboard({ token, currentUser, onLogout }) {
 
                   {activeModal.type === "assignments" && (
                     displayedModalItems.map(ass => (
-                      <div key={ass.id} className="modal-list-item assignment-item">
-                        <div className="item-meta">
-                          <span className="item-date">Due: {formatDate(ass.due_at)}</span>
+                      <div key={ass.id} className="list-item list-item--md">
+                        <div style={{ display: "flex", justifyContent: "space-between", fontSize: "12px", color: "var(--text-muted)", marginBottom: "8px" }}>
+                          <span>Due: {formatDate(ass.due_at)}</span>
                           {ass.has_submitted ? (
-                            <span className="submission-badge submitted">Submitted</span>
+                            <span className="badge badge--success">Submitted</span>
                           ) : (
-                            <span className="submission-badge pending">Not Submitted</span>
+                            <span className="badge badge--danger">Not Submitted</span>
                           )}
                         </div>
-                        <h4 className="item-title">{ass.title}</h4>
-                        <a href={ass.external_url} target="_blank" rel="noopener noreferrer" className="btn-secondary btn-small inline-flex align-center gap-6 mt-10">
-                          Submit on Canvas <ExternalLink size={12} />
+                        <h4 style={{ fontSize: "16px", fontWeight: "600", color: "var(--text-h)", marginBottom: "10px", lineHeight: "1.3" }}>
+                          {ass.title}
+                        </h4>
+                        <a
+                          href={ass.external_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="btn btn--secondary btn--sm"
+                          style={{ display: "inline-flex", alignSelf: "flex-start", marginTop: "10px" }}
+                        >
+                          Submit on Canvas <ExternalLink size={12} style={{ marginLeft: "4px" }} />
                         </a>
                       </div>
                     ))
@@ -646,21 +706,35 @@ function Dashboard({ token, currentUser, onLogout }) {
 
                   {activeModal.type === "files" && (
                     displayedModalItems.map(file => (
-                      <div key={file.id} className="modal-list-item file-item">
-                        <div className="file-icon-wrapper">
-                          <FolderOpen size={20} />
-                        </div>
-                        <div className="file-details">
-                          <h4 className="file-name">{file.display_name}</h4>
-                          <span className="file-meta">
-                            {(file.size / 1024 / 1024).toFixed(2)} MB • {formatDate(file.updated_at)}
-                          </span>
+                      <div key={file.id} className="list-item list-item--md list-item--row">
+                        <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+                          <div
+                            style={{
+                              backgroundColor: "rgba(53, 74, 47, 0.08)",
+                              color: "var(--primary)",
+                              width: "42px",
+                              height: "42px",
+                              borderRadius: "8px",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              flexShrink: 0
+                            }}
+                          >
+                            <FolderOpen size={20} />
+                          </div>
+                          <div className="file-details">
+                            <h4 className="file-name">{file.display_name}</h4>
+                            <span className="file-meta">
+                              {(file.size / 1024 / 1024).toFixed(2)} MB &bull; {formatDate(file.updated_at)}
+                            </span>
+                          </div>
                         </div>
                         <a
                           href={file.url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="action-btn"
+                          className="btn btn--icon"
                           title="Download file"
                         >
                           <ExternalLink size={16} />
@@ -672,7 +746,7 @@ function Dashboard({ token, currentUser, onLogout }) {
               )}
             </div>
             <div className="modal-footer">
-              <button onClick={() => setActiveModal(null)} className="btn-secondary">Close</button>
+              <button onClick={() => setActiveModal(null)} className="btn btn--secondary">Close</button>
             </div>
           </div>
         </div>

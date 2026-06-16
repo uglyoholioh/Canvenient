@@ -6,7 +6,6 @@ import Dashboard from "./components/Dashboard"
 import TaskManagerDashboard from "./components/TaskManagerDashboard"
 import OnboardingForm from "./components/OnboardingForm"
 import { getStoredToken, persistToken, clearStoredToken, getCurrentUser } from "./api"
-import "./App.css"
 import { Outlet } from "react-router-dom"
 import Sidebar from "./components/Sidebar"
 
@@ -79,8 +78,8 @@ function App() {
 
   if (isCheckingSession) {
     return (
-      <main className="auth-shell" style={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "100vh" }}>
-        <section className="auth-card" style={{ textAlign: "center" }}>
+      <main className="auth-container">
+        <section className="card" style={{ textAlign: "center", maxWidth: "420px", width: "100%" }}>
           <h2>Canvenient</h2>
           <p>Restoring your workspace...</p>
         </section>
