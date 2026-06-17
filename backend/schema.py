@@ -45,6 +45,10 @@ SCHEMA_STATEMENTS = [
     )
     """,
     """
+    ALTER TABLE classes
+    ADD COLUMN IF NOT EXISTS class_date DATE
+    """,
+    """
     CREATE TABLE IF NOT EXISTS user_settings (
         user_id BIGINT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
         name TEXT NOT NULL DEFAULT '',
@@ -186,8 +190,7 @@ SCHEMA_STATEMENTS = [
         end_at TIMESTAMPTZ,
         is_all_day BOOLEAN NOT NULL DEFAULT FALSE,
         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-        CONSTRAINT events_has_owner CHECK (c_id IS NOT NULL OR g_id IS NOT NULL)
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
     """,
     # ── canvas cache ──────────────────────────────────────────────────

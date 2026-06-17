@@ -98,115 +98,40 @@ function TaskManagerDashboard({ token, currentUser, onLogout }) {
   const [error, setError] = useState("")
   const [notice, setNotice] = useState("")
   const [busyKey, setBusyKey] = useState("")
-  const [draggedTaskId, setDraggedTaskId] = useState(null)
+  const [draggedTaskId, setDraggedTaskId] = useState("")
   const [dragOverPriority, setDragOverPriority] = useState("")
-  const [currentTime, setCurrentTime] = useState(() => Date.now())
+
+  async function reloadWorkspace() {
+    setIsLoading(true)
+    setError("")
+    setNotice("")
+
+    try {
+      const [allTasks, allCategories, allModules] = await Promise.all([
+        getTasks(token),
+        getCategories(token),
+        getAcademicModules(token),
+      ])
+
+      setTasks(sortTasks(allTasks))
+      setCategories(allCategories.sort((left, right) => left.name.localeCompare(right.name)))
+      setAcademicModules(
+        allModules.sort((left, right) =>
+          `${left.module_code}${left.name}`.localeCompare(`${right.module_code}${right.name}`)
+        )
+      )
+    } catch (loadError) {
+      setError(loadError.message || "Failed to load workspace data.")
+    } finally {
+      setIsLoading(false)
+    }
+  }
 
   useEffect(() => {
-    let cancelled = false
-
-    async function loadWorkspace() {
-      setIsLoading(true)
-      setError("")
-
-      try {
-        const [taskResults, categoryResults, moduleResults] = await Promise.all([
-          getTasks(token),
-          getCategories(token),
-          getAcademicModules(token),
-        ])
-
-        if (cancelled) {
-          return
-        }
-
-        setTasks(taskResults)
-        setCategories(categoryResults)
-        setAcademicModules(moduleResults)
-
-        if (currentUser?.canvas_token) {
-          try {
-            const syncedTasks = await syncCanvasTasks(token)
-            const syncedModules = await getAcademicModules(token)
-
-            if (!cancelled) {
-              setTasks(syncedTasks)
-              setAcademicModules(syncedModules)
-            }
-          } catch {
-            if (!cancelled) {
-              setNotice("Planner loaded. Canvas sync is available from the button.")
-            }
-          }
-        }
-      } catch (loadError) {
-        if (!cancelled) {
-          setError(loadError.message || "Could not load the Task Manager.")
-        }
-      } finally {
-        if (!cancelled) {
-          setIsLoading(false)
-        }
-      }
+    if (token) {
+      reloadWorkspace()
     }
-
-    loadWorkspace()
-
-    return () => {
-      cancelled = true
-    }
-  }, [token, currentUser?.canvas_token])
-
-  useEffect(() => {
-    const timerId = window.setInterval(() => {
-      setCurrentTime(Date.now())
-    }, 60000)
-
-    return () => {
-      window.clearInterval(timerId)
-    }
-  }, [])
-
-  const visibleTasks = sortTasks(
-    tasks.filter((task) => {
-      if (statusFilter !== "done" && task.status === "done") {
-        return false
-      }
-      if (
-        statusFilter !== "done" &&
-        task.source_type === "canvas" &&
-        isPastDue(task)
-      ) {
-        return false
-      }
-      if (statusFilter !== "all" && task.status !== statusFilter) {
-        return false
-      }
-      if (moduleFilter !== "all" && String(task.module_id || "") !== moduleFilter) {
-        return false
-      }
-      return true
-    })
-  )
-  const dueSoonTasks = visibleTasks.filter((task) => {
-    if (!task.effective_due_at) {
-      return false
-    }
-
-    const dueTime = new Date(task.effective_due_at).getTime()
-    const cutoff = currentTime + 1000 * 60 * 60 * 72
-    return dueTime <= cutoff
-  })
-  const plannedHours = visibleTasks.reduce((total, task) => {
-    return total + (task.estimated_minutes || 0)
-  }, 0)
-
-  const visibleTasksByPriority = priorityLanes.reduce((groups, lane) => {
-    groups[lane.value] = visibleTasks.filter(
-      (task) => task.priority_manual === lane.value
-    )
-    return groups
-  }, {})
+  }, [token])
 
   async function reloadTasksOnly() {
     setBusyKey("canvas-sync")
@@ -214,34 +139,15 @@ function TaskManagerDashboard({ token, currentUser, onLogout }) {
     setNotice("")
 
     try {
-      const refreshedTasks = currentUser?.canvas_token
-        ? await syncCanvasTasks(token)
-        : await getTasks(token)
-      setTasks(refreshedTasks)
-      setNotice(
-        currentUser?.canvas_token ? "Canvas tasks synced." : "Tasks refreshed."
-      )
-    } catch (refreshError) {
-      setError(refreshError.message || "Could not refresh tasks.")
+      await syncCanvasTasks(token)
+      const allTasks = await getTasks(token)
+      setTasks(sortTasks(allTasks))
+      setNotice("Synced successfully with Canvas.")
+    } catch (syncError) {
+      setError(syncError.message || "Canvas sync failed.")
     } finally {
       setBusyKey("")
     }
-  }
-
-  async function reloadWorkspace() {
-    if (currentUser?.canvas_token) {
-      await syncCanvasTasks(token)
-    }
-
-    const [taskResults, categoryResults, moduleResults] = await Promise.all([
-      getTasks(token),
-      getCategories(token),
-      getAcademicModules(token),
-    ])
-
-    setTasks(taskResults)
-    setCategories(categoryResults)
-    setAcademicModules(moduleResults)
   }
 
   async function handleTaskSubmit(event) {
@@ -250,53 +156,65 @@ function TaskManagerDashboard({ token, currentUser, onLogout }) {
     setError("")
     setNotice("")
 
-    try {
-      const newTask = await createTask(token, {
-        title: taskForm.title,
-        description: taskForm.description,
-        module_id: taskForm.moduleId ? Number(taskForm.moduleId) : null,
-        category_id: taskForm.categoryId ? Number(taskForm.categoryId) : null,
-        priority_manual: taskForm.priorityManual,
-        estimated_minutes: taskForm.estimatedMinutes
-          ? Number(taskForm.estimatedMinutes)
-          : null,
-        due_at_override: taskForm.dueAtOverride
-          ? new Date(taskForm.dueAtOverride).toISOString()
-          : null,
-      })
+    const payload = {
+      title: taskForm.title.trim(),
+      description: taskForm.description.trim(),
+      status: "todo",
+      priority_manual: taskForm.priorityManual,
+    }
 
-      setTasks((current) => sortTasks([newTask, ...current]))
+    if (taskForm.moduleId) {
+      payload.module_id = Number.parseInt(taskForm.moduleId, 10)
+    }
+    if (taskForm.categoryId) {
+      payload.category_id = Number.parseInt(taskForm.categoryId, 10)
+    }
+    if (taskForm.estimatedMinutes.trim()) {
+      payload.estimated_minutes = Number.parseInt(taskForm.estimatedMinutes, 10)
+    }
+    if (taskForm.dueAtOverride.trim()) {
+      payload.due_at_override = new Date(taskForm.dueAtOverride).toISOString()
+    }
+
+    try {
+      const created = await createTask(token, payload)
+      setTasks((current) => sortTasks([...current, created]))
       setTaskForm(emptyTaskForm)
-      setNotice("Task added to your planner.")
+      setNotice("Task captured.")
     } catch (submitError) {
-      setError(submitError.message || "Could not create the task.")
+      setError(submitError.message || "Could not add task.")
     } finally {
       setBusyKey("")
     }
   }
 
   function handleTaskDragStart(event, taskId) {
+    if (busyKey !== "") {
+      event.preventDefault()
+      return
+    }
     setDraggedTaskId(taskId)
     event.dataTransfer.effectAllowed = "move"
     event.dataTransfer.setData("text/plain", String(taskId))
   }
 
   function handleTaskDragEnd() {
-    setDraggedTaskId(null)
+    setDraggedTaskId("")
     setDragOverPriority("")
   }
 
   async function handlePriorityDrop(event, priorityValue) {
     event.preventDefault()
-    const taskId = Number(event.dataTransfer.getData("text/plain") || draggedTaskId)
     setDragOverPriority("")
-    setDraggedTaskId(null)
 
-    if (!taskId) {
+    const taskIdStr = event.dataTransfer.getData("text/plain")
+    if (!taskIdStr) {
       return
     }
 
-    const task = tasks.find((candidate) => candidate.id === taskId)
+    const taskId = Number.parseInt(taskIdStr, 10)
+    const task = tasks.find((t) => t.id === taskId)
+
     if (!task || task.priority_manual === priorityValue) {
       return
     }
@@ -342,9 +260,7 @@ function TaskManagerDashboard({ token, currentUser, onLogout }) {
 
       setAcademicModules((current) =>
         [...current, moduleRecord].sort((left, right) =>
-          `${left.module_code}${left.name}`.localeCompare(
-            `${right.module_code}${right.name}`
-          )
+          `${left.module_code}${left.name}`.localeCompare(`${right.module_code}${right.name}`)
         )
       )
       setModuleForm(emptyModuleForm)
@@ -434,13 +350,44 @@ function TaskManagerDashboard({ token, currentUser, onLogout }) {
     }
   }
 
+  const visibleTasks = tasks.filter((task) => {
+    if (statusFilter !== "all" && task.status !== statusFilter) {
+      return false
+    }
+    if (moduleFilter !== "all" && String(task.module_id) !== moduleFilter) {
+      return false
+    }
+    return true
+  })
+
+  const visibleTasksByPriority = {
+    urgent: visibleTasks.filter((t) => t.priority_manual === "urgent"),
+    high: visibleTasks.filter((t) => t.priority_manual === "high"),
+    medium: visibleTasks.filter((t) => t.priority_manual === "medium"),
+    low: visibleTasks.filter((t) => t.priority_manual === "low"),
+  }
+
+  const dueSoonTasks = tasks.filter(
+    (task) =>
+      task.status !== "done" &&
+      task.effective_due_at &&
+      new Date(task.effective_due_at).getTime() - Date.now() <= 259200000 &&
+      new Date(task.effective_due_at).getTime() > Date.now()
+  )
+
+  const plannedHours = tasks
+    .filter((task) => task.status !== "done")
+    .reduce((sum, task) => sum + (task.estimated_minutes || 0), 0)
+
   if (isLoading) {
     return (
       <main className="app-shell">
-        <section className="loading-panel">
+        <section className="card card--xl state-box">
           <p className="eyebrow">Task Manager</p>
           <h1>Loading your planning workspace...</h1>
-          <p>We're gathering tasks, modules, and categories for {currentUser.email}.</p>
+          <p style={{ color: "var(--text-muted)" }}>
+            We're gathering tasks, modules, and categories for {currentUser?.email}.
+          </p>
         </section>
       </main>
     )
@@ -448,7 +395,7 @@ function TaskManagerDashboard({ token, currentUser, onLogout }) {
 
   return (
     <main className="app-shell">
-      <section className="hero-panel">
+      <section className="card card--hero" style={{ display: "flex", justifyContent: "space-between", gap: "20px", alignItems: "flex-start" }}>
         <div>
           <p className="eyebrow">CanVenient Task Manager</p>
           <h1>Plan your coursework and personal work here.</h1>
@@ -459,52 +406,66 @@ function TaskManagerDashboard({ token, currentUser, onLogout }) {
             <span>Signed in as</span>
             <strong>{currentUser.email}</strong>
           </div>
-          <button className="secondary-button" type="button" onClick={onLogout}>
+          <button className="btn btn--secondary" type="button" onClick={onLogout}>
             Log Out
           </button>
         </div>
       </section>
 
       <section className="summary-grid">
-        <article className="summary-card">
+        <article className="card card--summary">
           <span>Open tasks</span>
           <strong>{visibleTasks.length}</strong>
         </article>
-        <article className="summary-card">
+        <article className="card card--summary">
           <span>Due within 72h</span>
           <strong>{dueSoonTasks.length}</strong>
         </article>
-        <article className="summary-card">
+        <article className="card card--summary">
           <span>Planned effort</span>
           <strong>{Math.round(plannedHours / 60)} hrs</strong>
         </article>
       </section>
 
       {(error || notice) && (
-        <section className="feedback-row">
-          {error && <p className="status-banner error">{error}</p>}
-          {!error && notice && <p className="status-banner success">{notice}</p>}
+        <section style={{ display: "flex", width: "100%" }}>
+          {error && (
+            <p
+              className="badge badge--danger"
+              style={{ display: "block", width: "100%", padding: "12px", textAlign: "center", borderRadius: "8px" }}
+            >
+              {error}
+            </p>
+          )}
+          {!error && notice && (
+            <p
+              className="badge badge--success"
+              style={{ display: "block", width: "100%", padding: "12px", textAlign: "center", borderRadius: "8px" }}
+            >
+              {notice}
+            </p>
+          )}
         </section>
       )}
 
       <section className="workspace-grid">
-        <article className="panel">
-          <div className="panel-heading">
+        <article className="card card--xl">
+          <div style={{ display: "flex", flexDirection: "column", gap: "12px", marginBottom: "22px" }}>
             <div>
               <p className="eyebrow">Capture</p>
               <h2>Add a task</h2>
             </div>
-            <p className="panel-copy">
-              Link tasks to modules and categories, set a priority, and estimate
-              effort.
+            <p style={{ color: "var(--text)", fontSize: "14px", lineHeight: "1.5" }}>
+              Link tasks to modules and categories, set a priority, and estimate effort.
             </p>
           </div>
 
-          <form className="stack-form" onSubmit={handleTaskSubmit}>
-            <label>
+          <form className="form" onSubmit={handleTaskSubmit}>
+            <label className="form-group">
               <span>Task title</span>
               <input
                 type="text"
+                className="form-input"
                 value={taskForm.title}
                 onChange={(event) =>
                   setTaskForm((current) => ({
@@ -517,9 +478,10 @@ function TaskManagerDashboard({ token, currentUser, onLogout }) {
               />
             </label>
 
-            <label>
+            <label className="form-group">
               <span>Notes</span>
               <textarea
+                className="form-input"
                 rows="3"
                 value={taskForm.description}
                 onChange={(event) =>
@@ -532,10 +494,11 @@ function TaskManagerDashboard({ token, currentUser, onLogout }) {
               />
             </label>
 
-            <div className="form-grid two-up">
-              <label>
+            <div className="form-grid form-grid--2col">
+              <label className="form-group">
                 <span>Module</span>
                 <select
+                  className="form-input"
                   value={taskForm.moduleId}
                   onChange={(event) =>
                     setTaskForm((current) => ({
@@ -553,9 +516,10 @@ function TaskManagerDashboard({ token, currentUser, onLogout }) {
                 </select>
               </label>
 
-              <label>
+              <label className="form-group">
                 <span>Category</span>
                 <select
+                  className="form-input"
                   value={taskForm.categoryId}
                   onChange={(event) =>
                     setTaskForm((current) => ({
@@ -574,10 +538,11 @@ function TaskManagerDashboard({ token, currentUser, onLogout }) {
               </label>
             </div>
 
-            <div className="form-grid three-up">
-              <label>
+            <div className="form-grid form-grid--3col">
+              <label className="form-group">
                 <span>Priority</span>
                 <select
+                  className="form-input"
                   value={taskForm.priorityManual}
                   onChange={(event) =>
                     setTaskForm((current) => ({
@@ -593,10 +558,11 @@ function TaskManagerDashboard({ token, currentUser, onLogout }) {
                 </select>
               </label>
 
-              <label>
+              <label className="form-group">
                 <span>Time needed (mins)</span>
                 <input
                   type="number"
+                  className="form-input"
                   min="0"
                   value={taskForm.estimatedMinutes}
                   onChange={(event) =>
@@ -609,10 +575,11 @@ function TaskManagerDashboard({ token, currentUser, onLogout }) {
                 />
               </label>
 
-              <label>
+              <label className="form-group">
                 <span>Due date</span>
                 <input
                   type="datetime-local"
+                  className="form-input"
                   value={taskForm.dueAtOverride}
                   onChange={(event) =>
                     setTaskForm((current) => ({
@@ -625,7 +592,7 @@ function TaskManagerDashboard({ token, currentUser, onLogout }) {
             </div>
 
             <button
-              className="primary-button"
+              className="btn btn--primary"
               type="submit"
               disabled={busyKey === "task-create"}
             >
@@ -634,25 +601,25 @@ function TaskManagerDashboard({ token, currentUser, onLogout }) {
           </form>
         </article>
 
-        <article className="panel panel-accent">
-          <div className="panel-heading">
+        <article className="card card--xl card--accent">
+          <div style={{ display: "flex", flexDirection: "column", gap: "12px", marginBottom: "22px" }}>
             <div>
               <p className="eyebrow">Structure</p>
               <h2>Modules and categories</h2>
             </div>
-            <p className="panel-copy">
-              Keep academic modules separate from personal categories so Canvas
-              sync can slot into the same structure later.
+            <p style={{ color: "var(--text)", fontSize: "14px", lineHeight: "1.5" }}>
+              Keep academic modules separate from personal categories so Canvas sync can slot into the same structure later.
             </p>
           </div>
 
-          <div className="mini-grid">
-            <form className="stack-form compact" onSubmit={handleModuleSubmit}>
-              <h3>Academic modules</h3>
-              <label>
+          <div className="form-grid form-grid--2col">
+            <form className="form" onSubmit={handleModuleSubmit}>
+              <h3 style={{ fontSize: "20px" }}>Academic modules</h3>
+              <label className="form-group">
                 <span>Module code</span>
                 <input
                   type="text"
+                  className="form-input"
                   value={moduleForm.moduleCode}
                   onChange={(event) =>
                     setModuleForm((current) => ({
@@ -664,10 +631,11 @@ function TaskManagerDashboard({ token, currentUser, onLogout }) {
                   required
                 />
               </label>
-              <label>
+              <label className="form-group">
                 <span>Module name</span>
                 <input
                   type="text"
+                  className="form-input"
                   value={moduleForm.name}
                   onChange={(event) =>
                     setModuleForm((current) => ({
@@ -680,26 +648,28 @@ function TaskManagerDashboard({ token, currentUser, onLogout }) {
                 />
               </label>
               <button
-                className="secondary-button"
+                className="btn btn--secondary"
                 type="submit"
                 disabled={busyKey === "module-create"}
               >
                 {busyKey === "module-create" ? "Saving..." : "Save Module"}
               </button>
 
-              <div className="tag-list">
+              <div className="list" style={{ marginTop: "16px" }}>
                 {academicModules.map((moduleRecord) => (
-                  <div className="tag-card" key={moduleRecord.id}>
-                    <div>
-                      <strong>{moduleRecord.module_code}</strong>
+                  <div className="list-item list-item--compact list-item--row" key={moduleRecord.id}>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "2px", minWidth: 0 }}>
+                      <strong style={{ color: "var(--text-h)" }}>{moduleRecord.module_code}</strong>
                       {moduleRecord.name &&
                         moduleRecord.name !== moduleRecord.module_code && (
-                          <span>{moduleRecord.name}</span>
+                          <span style={{ fontSize: "12px", color: "var(--text-muted)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                            {moduleRecord.name}
+                          </span>
                         )}
                     </div>
                     {moduleRecord.source_type !== "canvas" && (
                       <button
-                        className="tag-delete"
+                        className="btn btn--ghost-danger btn--sm"
                         type="button"
                         onClick={() => handleDeleteModule(moduleRecord.id)}
                         disabled={busyKey === `module-delete-${moduleRecord.id}`}
@@ -712,12 +682,13 @@ function TaskManagerDashboard({ token, currentUser, onLogout }) {
               </div>
             </form>
 
-            <form className="stack-form compact" onSubmit={handleCategorySubmit}>
-              <h3>Personal categories</h3>
-              <label>
+            <form className="form" onSubmit={handleCategorySubmit}>
+              <h3 style={{ fontSize: "20px" }}>Personal categories</h3>
+              <label className="form-group">
                 <span>Category name</span>
                 <input
                   type="text"
+                  className="form-input"
                   value={categoryForm.name}
                   onChange={(event) =>
                     setCategoryForm((current) => ({
@@ -729,10 +700,12 @@ function TaskManagerDashboard({ token, currentUser, onLogout }) {
                   required
                 />
               </label>
-              <label>
+              <label className="form-group">
                 <span>Color</span>
                 <input
                   type="color"
+                  className="form-input"
+                  style={{ height: "45px", padding: "4px" }}
                   value={categoryForm.color}
                   onChange={(event) =>
                     setCategoryForm((current) => ({
@@ -743,26 +716,26 @@ function TaskManagerDashboard({ token, currentUser, onLogout }) {
                 />
               </label>
               <button
-                className="secondary-button"
+                className="btn btn--secondary"
                 type="submit"
                 disabled={busyKey === "category-create"}
               >
                 {busyKey === "category-create" ? "Saving..." : "Save Category"}
               </button>
 
-              <div className="tag-list">
+              <div className="list" style={{ marginTop: "16px" }}>
                 {categories.map((category) => (
-                  <div className="tag-card" key={category.id}>
-                    <div className="category-badge-row">
+                  <div className="list-item list-item--compact list-item--row" key={category.id}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
                       <span
                         className="color-dot"
                         style={{ backgroundColor: category.color }}
                         aria-hidden="true"
                       />
-                      <strong>{category.name}</strong>
+                      <strong style={{ color: "var(--text-h)" }}>{category.name}</strong>
                     </div>
                     <button
-                      className="tag-delete"
+                      className="btn btn--ghost-danger btn--sm"
                       type="button"
                       onClick={() => handleDeleteCategory(category.id)}
                       disabled={busyKey === `category-delete-${category.id}`}
@@ -777,17 +750,19 @@ function TaskManagerDashboard({ token, currentUser, onLogout }) {
         </article>
       </section>
 
-      <section className="panel">
-        <div className="panel-heading split">
+      <section className="card card--xl" style={{ marginTop: "24px" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: "22px", flexWrap: "wrap", gap: "12px" }}>
           <div>
             <p className="eyebrow">Execution</p>
             <h2>Task board</h2>
           </div>
 
-          <div className="toolbar">
-            <label>
+          <div style={{ display: "flex", gap: "12px", flexWrap: "wrap", alignItems: "flex-end", marginLeft: "auto" }}>
+            <label className="form-group">
               <span>Status</span>
               <select
+                className="form-input"
+                style={{ padding: "8px 12px", fontSize: "13px" }}
                 value={statusFilter}
                 onChange={(event) => setStatusFilter(event.target.value)}
               >
@@ -798,9 +773,11 @@ function TaskManagerDashboard({ token, currentUser, onLogout }) {
               </select>
             </label>
 
-            <label>
+            <label className="form-group">
               <span>Module</span>
               <select
+                className="form-input"
+                style={{ padding: "8px 12px", fontSize: "13px" }}
                 value={moduleFilter}
                 onChange={(event) => setModuleFilter(event.target.value)}
               >
@@ -814,7 +791,7 @@ function TaskManagerDashboard({ token, currentUser, onLogout }) {
             </label>
 
             <button
-              className="secondary-button compact-button"
+              className="btn btn--secondary btn--sm"
               type="button"
               onClick={reloadTasksOnly}
               disabled={busyKey !== "" || !currentUser?.canvas_token}
@@ -825,19 +802,18 @@ function TaskManagerDashboard({ token, currentUser, onLogout }) {
         </div>
 
         {visibleTasks.length === 0 ? (
-          <div className="empty-state">
+          <div className="state-box state-box--dashed">
             <h3>No tasks yet</h3>
             <p>
-              Start with one manual task now, or sync Canvas to bring in your
-              assignments and due dates.
+              Start with one manual task now, or sync Canvas to bring in your assignments and due dates.
             </p>
           </div>
         ) : (
-          <div className="priority-board">
+          <div className="planner-board">
             {priorityLanes.map((lane) => (
               <section
-                className={`priority-column ${
-                  dragOverPriority === lane.value ? "drag-over" : ""
+                className={`planner-column ${
+                  dragOverPriority === lane.value ? "planner-column--dragover" : ""
                 }`}
                 key={lane.value}
                 onDragOver={(event) => {
@@ -848,18 +824,20 @@ function TaskManagerDashboard({ token, currentUser, onLogout }) {
                 onDragLeave={() => setDragOverPriority("")}
                 onDrop={(event) => handlePriorityDrop(event, lane.value)}
               >
-                <div className="priority-column-heading">
+                <div className="planner-column-header">
                   <h3>{lane.label}</h3>
                   <span>{visibleTasksByPriority[lane.value].length}</span>
                 </div>
 
-                <div className="task-list">
+                <div className="list">
                   {visibleTasksByPriority[lane.value].length === 0 ? (
-                    <p className="empty-message-subtle">Drop tasks here.</p>
+                    <p style={{ fontSize: "13px", color: "var(--text-muted)", fontStyle: "italic", textAlign: "center", padding: "10px 0" }}>
+                      Drop tasks here.
+                    </p>
                   ) : (
                     visibleTasksByPriority[lane.value].map((task) => (
                       <article
-                        className={`task-card task-${task.status} ${
+                        className={`card--draggable card--status-${task.status === "in_progress" ? "progress" : task.status} ${
                           draggedTaskId === task.id ? "is-dragging" : ""
                         }`}
                         draggable={busyKey === ""}
@@ -869,20 +847,30 @@ function TaskManagerDashboard({ token, currentUser, onLogout }) {
                         }
                         onDragEnd={handleTaskDragEnd}
                       >
-                        <div className="task-card-top">
+                        <div style={{ display: "flex", justifyContent: "space-between", gap: "16px", alignItems: "flex-start" }}>
                           <div>
-                            <p className="task-meta">
+                            <p
+                              style={{
+                                margin: "0 0 10px",
+                                padding: "4px 8px",
+                                backgroundColor: "var(--surface-warm)",
+                                borderRadius: "var(--radius-pill)",
+                                display: "inline-block",
+                                fontSize: "12px",
+                                color: "var(--text-muted)"
+                              }}
+                            >
                               {task.module_code || "No module"}
                               {task.category_name
                                 ? ` - ${task.category_name}`
                                 : ""}
                             </p>
-                            <h3>{task.title}</h3>
+                            <h3 style={{ fontSize: "18px", color: "var(--text-h)" }}>{task.title}</h3>
                           </div>
 
                           {task.source_type !== "canvas" && (
                             <button
-                              className="ghost-button"
+                              className="btn btn--ghost-danger btn--sm"
                               type="button"
                               onClick={() => handleDeleteTask(task.id)}
                               disabled={busyKey === `task-delete-${task.id}`}
@@ -893,27 +881,29 @@ function TaskManagerDashboard({ token, currentUser, onLogout }) {
                         </div>
 
                         {task.description && (
-                          <p className="task-description">
+                          <p style={{ color: "var(--text)", margin: "0", fontSize: "14px", display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
                             {task.description}
                           </p>
                         )}
 
-                        <div className="task-facts">
-                          <span>
-                            Source: <strong>{task.source_type}</strong>
+                        <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
+                          <span style={{ fontSize: "12px", color: "var(--text-muted)" }}>
+                            Source: <strong style={{ color: "var(--text-h)" }}>{task.source_type}</strong>
                           </span>
-                          <span>
+                          <span style={{ fontSize: "12px", color: "var(--text-muted)" }}>
                             Due:{" "}
-                            <strong>{formatDueDate(task.effective_due_at)}</strong>
+                            <strong style={{ color: isPastDue(task) && task.status !== "done" ? "var(--error)" : "var(--text-h)" }}>
+                              {formatDueDate(task.effective_due_at)}
+                            </strong>
                           </span>
-                          <span>
-                            Suggested: <strong>{task.recommended_priority}</strong>
+                          <span style={{ fontSize: "12px", color: "var(--text-muted)" }}>
+                            Suggested: <strong style={{ color: "var(--text-h)" }}>{task.recommended_priority}</strong>
                           </span>
                         </div>
 
                         {task.external_url && (
                           <a
-                            className="external-task-link"
+                            style={{ color: "var(--info)", fontWeight: "700", textDecoration: "none", fontSize: "13px" }}
                             href={task.external_url}
                             target="_blank"
                             rel="noreferrer"
@@ -922,10 +912,12 @@ function TaskManagerDashboard({ token, currentUser, onLogout }) {
                           </a>
                         )}
 
-                        <div className="task-controls">
-                          <label>
+                        <div className="form-grid form-grid--2col" style={{ marginTop: "10px" }}>
+                          <label className="form-group">
                             <span>Status</span>
                             <select
+                              className="form-input"
+                              style={{ padding: "6px 10px", fontSize: "12px" }}
                               value={task.status}
                               onChange={(event) =>
                                 handleTaskStatusChange(
@@ -941,9 +933,11 @@ function TaskManagerDashboard({ token, currentUser, onLogout }) {
                             </select>
                           </label>
 
-                          <label>
+                          <label className="form-group">
                             <span>Priority</span>
                             <select
+                              className="form-input"
+                              style={{ padding: "6px 10px", fontSize: "12px" }}
                               value={task.priority_manual}
                               onChange={(event) =>
                                 handleTaskPriorityChange(

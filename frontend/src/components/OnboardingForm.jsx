@@ -27,18 +27,19 @@ function OnboardingForm({ token, currentUser, onComplete }) {
 
   return (
     <div className="auth-container">
-      <div className="auth-card">
+      <div className="card" style={{ maxWidth: "420px", width: "100%", padding: "40px" }}>
         <h2>Welcome to Canvenient</h2>
-        <p style={{ fontSize: "14px", color: "var(--text)", marginTop: "-16px" }}>
+        <p style={{ fontSize: "14px", color: "var(--text)", marginTop: "-16px", marginBottom: "16px" }}>
           Let&apos;s set up your workspace before we get started.
         </p>
 
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit} className="form">
           <div className="form-group">
             <label htmlFor="name">Your Name</label>
             <input
               id="name"
               type="text"
+              className="form-input"
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="e.g. Alice Smith"
@@ -46,11 +47,12 @@ function OnboardingForm({ token, currentUser, onComplete }) {
             />
           </div>
 
-          <div className="form-group" style={{ marginTop: "16px" }}>
+          <div className="form-group">
             <label htmlFor="canvas-token">Canvas API Token (optional)</label>
             <input
               id="canvas-token"
               type="text"
+              className="form-input"
               value={canvasToken}
               onChange={(e) => setCanvasToken(e.target.value)}
               placeholder="Paste your token here"
@@ -61,13 +63,13 @@ function OnboardingForm({ token, currentUser, onComplete }) {
           </div>
 
           {error && (
-            <p style={{ color: "var(--error)", fontSize: "13px", marginTop: "12px" }}>{error}</p>
+            <p style={{ color: "var(--error)", fontSize: "13px" }}>{error}</p>
           )}
 
           <button
             type="submit"
-            className="button"
-            style={{ marginTop: "24px" }}
+            className="btn btn--primary btn--full"
+            style={{ marginTop: "8px" }}
             disabled={isSubmitting}
           >
             {isSubmitting ? "Saving..." : "Set Up My Workspace"}
