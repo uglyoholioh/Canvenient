@@ -1,9 +1,10 @@
 import { useNavigate, NavLink } from "react-router-dom"
-import { Home, CheckSquare, RefreshCw, Map, Users, LogOut } from "lucide-react"
+import { Home, CheckSquare, RefreshCw, Map, Users, LogOut, FolderOpen } from "lucide-react"
 
 const navigationConfig = [
   { label: "Dashboard", href: "/dashboard", icon: Home },
   { label: "Task Planner", href: "/planner", icon: CheckSquare },
+  { label: "File Viewer", href: "/files", icon: FolderOpen },
   { label: "Canvas Sync (in prog)", href: "#", icon: RefreshCw },
   { label: "NUSMods (in prog)", href: "#", icon: Map },
   { label: "Group Work (in prog)", href: "#", icon: Users },
