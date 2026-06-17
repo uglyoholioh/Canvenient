@@ -45,3 +45,4 @@ class AcademicModuleOut(BaseModel):
     source_type: Literal["manual", "canvas"]
     source_course_id: str | None = None
     external_url: str | None = None
+

@@ -164,3 +164,4 @@ async def delete_academic_module(module_id: int, current_user: CurrentUser):
         values={"module_id": module_id, "user_id": current_user.id},
     )
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
