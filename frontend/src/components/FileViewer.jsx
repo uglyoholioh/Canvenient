@@ -1,232 +1,334 @@
-import { useEffect, useState } from "react"
-import { BookOpen, FileText, RefreshCw, Search } from "lucide-react"
-import { getCanvasCourses, getCanvasFiles } from "../api"
+import { useEffect, useMemo, useState } from "react"
+import {
+  Clock3,
+  Download,
+  Eye,
+  FolderOpen,
+  RefreshCw,
+  Search,
+} from "lucide-react"
+import { getCachedCanvasFiles, syncCanvasFiles } from "../api"
+
+const RECENT_FILES_KEY = "canvenient-recent-files"
+
+function getFileType(file) {
+  const filename = file.filename || file.display_name || ""
+  const extension = filename.split(".").pop()?.toLowerCase()
+
+  if (["pdf"].includes(extension)) return "PDF"
+  if (["doc", "docx"].includes(extension)) return "DOC"
+  if (["ppt", "pptx"].includes(extension)) return "PPT"
+  if (["png", "jpg", "jpeg", "gif", "webp", "svg"].includes(extension)) return "IMG"
+  if (["zip", "rar", "7z", "tar", "gz"].includes(extension)) return "ZIP"
+  if (["xls", "xlsx", "csv"].includes(extension)) return "XLS"
+  return extension?.slice(0, 3).toUpperCase() || "FILE"
+}
+
+function formatFileSize(size) {
+  if (!Number.isFinite(size)) return "Unknown size"
+  if (size < 1024) return `${size} B`
+  if (size < 1024 * 1024) return `${Math.round(size / 1024)} KB`
+  return `${(size / 1024 / 1024).toFixed(1)} MB`
+}
+
+function formatDate(dateStr) {
+  if (!dateStr) return "No date"
+
+  return new Date(dateStr).toLocaleDateString("en-SG", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  })
+}
 
 function FileViewer({ token, currentUser }) {
   const [courses, setCourses] = useState([])
-  const [selectedCourseId, setSelectedCourseId] = useState("")
+  const [selectedCourseId, setSelectedCourseId] = useState("all")
   const [files, setFiles] = useState([])
   const [fileSearch, setFileSearch] = useState("")
-  const [loadingCourses, setLoadingCourses] = useState(false)
+  const [fileType, setFileType] = useState("all")
+  const [sortOrder, setSortOrder] = useState("newest")
+  const [view, setView] = useState("all")
   const [loadingFiles, setLoadingFiles] = useState(false)
-  const [courseError, setCourseError] = useState("")
+  const [syncingFiles, setSyncingFiles] = useState(false)
+  const [syncedAt, setSyncedAt] = useState(null)
   const [fileError, setFileError] = useState("")
+  const [recentFileIds, setRecentFileIds] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem(RECENT_FILES_KEY) || "[]")
+    } catch {
+      return []
+    }
+  })
 
   useEffect(() => {
-    async function loadCourses() {
+    let cancelled = false
+
+    async function loadCachedFiles() {
       if (!token || !currentUser?.canvas_token) {
         setCourses([])
-        setSelectedCourseId("")
-        return
-      }
-
-      setLoadingCourses(true)
-      setCourseError("")
-
-      try {
-        const coursesData = await getCanvasCourses(token)
-        const nextCourses = coursesData || []
-        setCourses(nextCourses)
-        setSelectedCourseId((currentCourseId) => {
-          if (nextCourses.some((course) => String(course.id) === currentCourseId)) {
-            return currentCourseId
-          }
-
-          return nextCourses[0]?.id ? String(nextCourses[0].id) : ""
-        })
-      } catch (err) {
-        setCourseError(err.message || "Failed to load Canvas courses.")
-      } finally {
-        setLoadingCourses(false)
-      }
-    }
-
-    loadCourses()
-  }, [token, currentUser?.canvas_token])
-
-  useEffect(() => {
-    async function loadFiles() {
-      if (!token || !selectedCourseId) {
         setFiles([])
         return
       }
 
       setLoadingFiles(true)
       setFileError("")
-      setFileSearch("")
 
       try {
-        const filesData = await getCanvasFiles(token, selectedCourseId)
-        setFiles(filesData || [])
+        let data = await getCachedCanvasFiles(token)
+        const needsCurrentCourseSnapshot =
+          !data.synced_at || ((data.files || []).length > 0 && (data.courses || []).length === 0)
+        if (needsCurrentCourseSnapshot) {
+          if (!cancelled) setSyncingFiles(true)
+          data = await syncCanvasFiles(token)
+        }
+        if (!cancelled) {
+          setCourses(data.courses || [])
+          setFiles(data.files || [])
+          setSyncedAt(data.synced_at || null)
+        }
       } catch (err) {
-        setFileError(err.message || "Failed to load Canvas files.")
+        if (!cancelled) setFileError(err.message || "Failed to load cached files.")
       } finally {
-        setLoadingFiles(false)
+        if (!cancelled) {
+          setLoadingFiles(false)
+          setSyncingFiles(false)
+        }
       }
     }
 
-    loadFiles()
-  }, [token, selectedCourseId])
+    loadCachedFiles()
+    return () => { cancelled = true }
+  }, [token, currentUser?.canvas_token])
 
-  const selectedCourse = courses.find((course) => String(course.id) === selectedCourseId)
-  const normalizedSearch = fileSearch.trim().toLowerCase()
-  const displayedFiles = files.filter((file) => {
-    if (!normalizedSearch) {
-      return true
+  async function handleCanvasSync() {
+    setSyncingFiles(true)
+    setFileError("")
+
+    try {
+      const data = await syncCanvasFiles(token)
+      const nextCourses = data.courses || []
+      setCourses(nextCourses)
+      setFiles(data.files || [])
+      setSyncedAt(data.synced_at || null)
+      setSelectedCourseId((currentId) =>
+        currentId === "all" || nextCourses.some((course) => String(course.id) === currentId)
+          ? currentId
+          : "all",
+      )
+    } catch (err) {
+      setFileError(err.message || "Canvas file sync failed.")
+    } finally {
+      setSyncingFiles(false)
     }
-
-    return `${file.display_name || ""} ${file.filename || ""}`
-      .toLowerCase()
-      .includes(normalizedSearch)
-  })
-
-  function formatFileSize(size) {
-    if (!Number.isFinite(size)) {
-      return "Unknown size"
-    }
-
-    if (size < 1024 * 1024) {
-      return `${(size / 1024).toFixed(1)} KB`
-    }
-
-    return `${(size / 1024 / 1024).toFixed(2)} MB`
   }
 
-  function formatDate(dateStr) {
-    if (!dateStr) {
-      return "No update date"
-    }
+  const availableTypes = useMemo(
+    () => [...new Set(files.map(getFileType))].sort(),
+    [files],
+  )
 
-    return new Date(dateStr).toLocaleDateString("en-SG", {
-      day: "numeric",
-      month: "short",
-      year: "numeric",
+  const displayedFiles = useMemo(() => {
+    const normalizedSearch = fileSearch.trim().toLowerCase()
+    const recentIds = new Set(recentFileIds.map(String))
+    const nextFiles = files.filter((file) => {
+      const matchesSearch = !normalizedSearch ||
+        `${file.display_name || ""} ${file.filename || ""} ${file.courseCode || ""}`
+          .toLowerCase()
+          .includes(normalizedSearch)
+      const matchesType = fileType === "all" || getFileType(file) === fileType
+      const matchesView = view === "all" || recentIds.has(String(file.id))
+      const matchesCourse = selectedCourseId === "all" || String(file.courseId) === selectedCourseId
+      return matchesSearch && matchesType && matchesView && matchesCourse
+    })
+
+    return nextFiles.sort((a, b) => {
+      if (sortOrder === "name") {
+        return (a.display_name || "").localeCompare(b.display_name || "")
+      }
+
+      const difference = new Date(b.updated_at || 0) - new Date(a.updated_at || 0)
+      return sortOrder === "oldest" ? -difference : difference
+    })
+  }, [fileSearch, fileType, files, recentFileIds, selectedCourseId, sortOrder, view])
+
+  function markAsAccessed(fileId) {
+    setRecentFileIds((currentIds) => {
+      const nextIds = [String(fileId), ...currentIds.filter((id) => String(id) !== String(fileId))].slice(0, 30)
+      localStorage.setItem(RECENT_FILES_KEY, JSON.stringify(nextIds))
+      return nextIds
     })
   }
 
-  return (
-    <div className="dashboard-layout">
-        <header className="dashboard-header">
-            <h1>File Viewer</h1>
-        </header>
+  const emptyMessage = view === "recent"
+    ? "Files you preview or download will appear here."
+    : fileSearch || fileType !== "all"
+      ? "No files match these filters."
+      : files.length === 0
+        ? "No cached files yet. Sync Canvas to load your course files."
+        : "No files found for this course."
 
-        <main className="card">
-            <div className="card-header">
-                <h3>Canvas Files</h3>
-                <span className="badge badge-progress">In Progress</span>
+  const syncLabel = syncedAt
+    ? `Last synced ${formatDate(syncedAt)}`
+    : "Not synced yet"
+
+  return (
+    <div className="dashboard-layout file-viewer-page">
+      <header className="file-viewer-heading">
+        <div>
+          <h1>Course Files</h1>
+          <p>Find and open files synced from your Canvas courses.</p>
+        </div>
+        {currentUser?.canvas_token && (
+          <button
+            type="button"
+            className="btn btn--primary file-sync-button"
+            onClick={handleCanvasSync}
+            disabled={syncingFiles || loadingFiles}
+          >
+            <RefreshCw size={15} className={syncingFiles ? "spin" : ""} />
+            {syncingFiles ? "Syncing..." : "Sync Canvas"}
+          </button>
+        )}
+      </header>
+
+      {!currentUser?.canvas_token ? (
+        <section className="connect-canvas-card file-viewer-state">
+          <FolderOpen size={28} />
+          <h2>Connect Canvas Account</h2>
+          <p>Add your Canvas API token to browse files from your courses.</p>
+        </section>
+      ) : loadingFiles ? (
+        <div className="canvas-loading file-viewer-state">
+          <RefreshCw size={24} className="spin" />
+          <span>{syncingFiles ? "Syncing your Canvas files for the first time..." : "Loading saved course files..."}</span>
+        </div>
+      ) : (
+        <main className="file-browser">
+          <div className="file-view-tabs" aria-label="File views">
+            <button
+              type="button"
+              className={view === "all" ? "active" : ""}
+              onClick={() => setView("all")}
+            >
+              <FolderOpen size={16} /> All Files
+            </button>
+            <button
+              type="button"
+              className={view === "recent" ? "active" : ""}
+              onClick={() => setView("recent")}
+            >
+              <Clock3 size={16} /> Recently Accessed
+            </button>
+          </div>
+
+          <div className="course-filter-list" aria-label="Filter files by course">
+            <button
+              type="button"
+              className={selectedCourseId === "all" ? "active" : ""}
+              onClick={() => setSelectedCourseId("all")}
+            >
+              All Courses
+            </button>
+            {courses.map((course) => (
+              <button
+                key={course.id}
+                type="button"
+                className={String(course.id) === selectedCourseId ? "active" : ""}
+                onClick={() => setSelectedCourseId(String(course.id))}
+                title={course.name}
+              >
+                {course.course_code || course.name}
+              </button>
+            ))}
+          </div>
+
+          <div className="file-controls">
+            <label className="file-search-field">
+              <Search size={17} />
+              <input
+                type="search"
+                value={fileSearch}
+                onChange={(event) => setFileSearch(event.target.value)}
+                placeholder="Search files by name or course..."
+                aria-label="Search files"
+              />
+            </label>
+
+            <div className="file-selects">
+              <select value={fileType} onChange={(event) => setFileType(event.target.value)} aria-label="File type">
+                <option value="all">All Types</option>
+                {availableTypes.map((type) => <option key={type} value={type}>{type}</option>)}
+              </select>
+              <select value={sortOrder} onChange={(event) => setSortOrder(event.target.value)} aria-label="Sort files">
+                <option value="newest">Newest</option>
+                <option value="oldest">Oldest</option>
+                <option value="name">Name</option>
+              </select>
             </div>
 
-            {!currentUser?.canvas_token ? (
-                <div className="connect-canvas-card">
-                    <h4>Connect Canvas Account</h4>
-                    <p>Add your Canvas API token to browse files from your courses.</p>
-                </div>
-            ) : loadingCourses ? (
-                <div className="canvas-loading">
-                    <RefreshCw size={24} className="spin" />
-                    <span>Loading Canvas courses...</span>
-                </div>
-            ) : courseError ? (
-                <div className="canvas-error-state">
-                    <p>{courseError}</p>
-                </div>
-            ) : courses.length === 0 ? (
-                <div className="canvas-empty-state">
-                    <p>No active Canvas courses found.</p>
-                </div>
-            ) : (
-                <div className="file-viewer-grid">
-                    <aside className="file-viewer-sidebar">
-                        <div className="panel-header">
-                            <h2>Courses</h2>
-                            <p className="panel-subtitle">Choose a course to browse its files.</p>
-                        </div>
-                        <div className="course-list">
-                            {courses.map((course) => {
-                                const isSelected = String(course.id) === selectedCourseId
+            <span className="file-sync-status">
+              <RefreshCw size={13} className={syncingFiles ? "spin" : ""} /> {syncingFiles ? "Syncing in background..." : syncLabel}
+            </span>
+          </div>
 
-                                return (
-                                    <button
-                                      key={course.id}
-                                      type="button"
-                                      aria-pressed={isSelected}
-                                      className={`course-item course-select-item ${isSelected ? "active" : ""}`}
-                                      onClick={() => setSelectedCourseId(String(course.id))}
-                                    >
-                                        <div className="course-info">
-                                            <span className="course-code">{course.course_code}</span>
-                                            <span className="course-name">{course.name}</span>
-                                        </div>
-                                        <BookOpen size={18} />
-                                    </button>
-                                )
-                            })}
-                        </div>
-                    </aside>
+          {fileError && files.length > 0 && (
+            <p className="file-sync-error">{fileError} Showing your last saved files.</p>
+          )}
 
-                    <section className="file-viewer-main">
-                        <div className="file-viewer-toolbar">
-                            <div>
-                                <h2>{selectedCourse?.course_code || "Course files"}</h2>
-                                <p className="panel-subtitle">{selectedCourse?.name || "Select a course to view files."}</p>
-                            </div>
-
-                            <label className="file-search-field">
-                                <Search size={16} />
-                                <input
-                                  type="search"
-                                  value={fileSearch}
-                                  onChange={(event) => setFileSearch(event.target.value)}
-                                  placeholder="Search files"
-                                  disabled={loadingFiles || files.length === 0}
-                                />
-                            </label>
-                        </div>
-
-                        {loadingFiles ? (
-                            <div className="canvas-loading">
-                                <RefreshCw size={24} className="spin" />
-                                <span>Loading course files...</span>
-                            </div>
-                        ) : fileError ? (
-                            <div className="canvas-error-state">
-                                <p>{fileError}</p>
-                            </div>
-                        ) : files.length === 0 ? (
-                            <div className="canvas-empty-state">
-                                <p>No files found for this course.</p>
-                            </div>
-                        ) : displayedFiles.length === 0 ? (
-                            <div className="canvas-empty-state">
-                                <p>No files match your search.</p>
-                            </div>
-                        ) : (
-                            <div className="file-list">
-                                {displayedFiles.map((file) => (
-                                    <a
-                                      key={file.id}
-                                      href={file.url}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      className="file-list-item"
-                                    >
-                                        <div className="file-list-icon">
-                                            <FileText size={18} />
-                                        </div>
-                                        <div className="file-details">
-                                            <h4 className="file-name">{file.display_name}</h4>
-                                            <span className="file-meta">
-                                                {formatFileSize(file.size)} • Updated {formatDate(file.updated_at)}
-                                            </span>
-                                        </div>
-                                    </a>
-                                ))}
-                            </div>
-                        )}
-                    </section>
-                </div>
-            )}
+          {fileError && files.length === 0 ? (
+            <div className="canvas-error-state file-viewer-state"><p>{fileError}</p></div>
+          ) : displayedFiles.length === 0 ? (
+            <div className="canvas-empty-state file-viewer-state">
+              <p>{emptyMessage}</p>
+              {files.length === 0 && (
+                <button type="button" className="btn btn--primary" onClick={handleCanvasSync} disabled={syncingFiles}>
+                  <RefreshCw size={15} className={syncingFiles ? "spin" : ""} />
+                  {syncingFiles ? "Syncing..." : "Sync Canvas"}
+                </button>
+              )}
+            </div>
+          ) : (
+            <div className="file-card-grid">
+              {displayedFiles.map((file) => {
+                const type = getFileType(file)
+                return (
+                  <article className="file-card" key={`${file.courseId}-${file.id}`}>
+                    <div className={`file-type-badge file-type-${type.toLowerCase()}`}>{type}</div>
+                    <div className="file-card-content">
+                      <h2 title={file.display_name}>{file.display_name || file.filename}</h2>
+                      <p>{file.courseCode}</p>
+                      <div className="file-card-meta">
+                        <span>{formatFileSize(file.size)}</span>
+                        <span>{formatDate(file.updated_at)}</span>
+                      </div>
+                      <div className="file-card-actions">
+                        <a
+                          href={file.external_url || file.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={() => markAsAccessed(file.id)}
+                        >
+                          <Eye size={14} /> Preview
+                        </a>
+                        <a
+                          href={file.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          download
+                          onClick={() => markAsAccessed(file.id)}
+                        >
+                          <Download size={14} /> Download
+                        </a>
+                      </div>
+                    </div>
+                  </article>
+                )
+              })}
+            </div>
+          )}
         </main>
+      )}
     </div>
   )
 }

@@ -244,6 +244,40 @@ SCHEMA_STATEMENTS = [
         updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
     """,
+    """
+    CREATE TABLE IF NOT EXISTS canvas_sync_state (
+        user_id BIGINT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+        files_synced_at TIMESTAMPTZ
+    )
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS canvas_courses (
+        id BIGSERIAL PRIMARY KEY,
+        user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        canvas_course_id TEXT NOT NULL,
+        course_code TEXT NOT NULL,
+        name TEXT NOT NULL,
+        external_url TEXT NOT NULL,
+        synced_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        UNIQUE (user_id, canvas_course_id)
+    )
+    """,
+    """
+    CREATE INDEX IF NOT EXISTS canvas_courses_user_id_idx
+    ON canvas_courses (user_id)
+    """,
+    """
+    CREATE INDEX IF NOT EXISTS canvas_files_user_id_idx
+    ON canvas_files (user_id)
+    """,
+    """
+    CREATE INDEX IF NOT EXISTS canvas_files_user_course_idx
+    ON canvas_files (user_id, canvas_course_id)
+    """,
+    """
+    CREATE INDEX IF NOT EXISTS canvas_files_user_updated_idx
+    ON canvas_files (user_id, updated_at_canvas DESC)
+    """,
     # ── community / group resources ───────────────────────────────────
     """
     CREATE TABLE IF NOT EXISTS cg_announcements (
