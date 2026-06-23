@@ -186,6 +186,17 @@ export function getCanvasFiles(token, courseId) {
   return apiRequest(`/canvas/files?course_id=` + courseId, { token })
 }
 
+export function getCachedCanvasFiles(token) {
+  return apiRequest("/canvas/cached-files", { token })
+}
+
+export function syncCanvasFiles(token) {
+  return apiRequest("/canvas/sync-files", {
+    method: "POST",
+    token,
+  })
+}
+
 // Schedule
 
 export async function importIcs(token, file) {
