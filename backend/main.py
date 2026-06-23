@@ -9,6 +9,7 @@ from routes.tasks import router as tasks_router
 from routes.canvas import router as canvas_router
 from routes.schedules import router as schedule_router
 from routes.events import router as events_router
+from routes.ai import router as ai_router
 from schema import initialize_schema
 
 
@@ -28,7 +29,7 @@ app.include_router(tasks_router)
 app.include_router(canvas_router)
 app.include_router(schedule_router)
 app.include_router(events_router)
-
+app.include_router(ai_router)
 
 @app.get("/")
 def root():
