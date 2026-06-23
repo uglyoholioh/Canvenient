@@ -14,6 +14,7 @@ import {
 } from "../api"
 
 import { Megaphone, BookOpen, FolderOpen, RefreshCw, ExternalLink } from "lucide-react"
+import AiBrief from "./AiBrief"
 
 function Dashboard({ token, currentUser, onLogout }) {
   const navigate = useNavigate()
@@ -111,18 +112,19 @@ function Dashboard({ token, currentUser, onLogout }) {
     }
   }, [token])
 
+  const fetchTasks = async () => {
+    try {
+      const data = await getTasks(token)
+      setTasks(data || [])
+    } catch (err) {
+      setError(err.message || "Could not load tasks.")
+    }
+  }
+
   // Load Tasks
   useEffect(() => {
-    async function loadTasks() {
-      try {
-        const data = await getTasks(token)
-        setTasks(data || [])
-      } catch (err) {
-        setError(err.message || "Could not load tasks.")
-      }
-    }
     if (token) {
-      loadTasks()
+      fetchTasks()
     }
   }, [token])
 
@@ -326,6 +328,12 @@ function Dashboard({ token, currentUser, onLogout }) {
         <h1>Welcome, {currentUser?.name}</h1>
         <button onClick={handleLogout} className="btn btn--secondary">Log Out</button>
       </header>
+
+      {token && (
+        <div style={{ padding: "0 2rem", marginBottom: "1.5rem" }}>
+          <AiBrief token={token} onTaskCreated={fetchTasks} />
+        </div>
+      )}
 
       <main className="dashboard-top-row">
         <div className="card">

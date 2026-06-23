@@ -1186,3 +1186,24 @@ textarea.form-input {
     flex-direction: column;
   }
 }
+
+.ai-brief-card {
+  border: 1px solid rgba(53, 74, 47, 0.15) !important;
+}
+
+.ai-brief-card input:focus {
+  outline: none;
+  border-color: var(--primary) !important;
+}
+
+.ai-brief-card .user-bubble {
+  align-self: flex-end;
+  background: rgba(53, 74, 47, 0.08);
+  border-bottom-right-radius: 2px !important;
+}
+
+.ai-brief-card .assistant-bubble {
+  align-self: flex-start;
+  background: #ffffff;
+  border-bottom-left-radius: 2px !important;
+}
