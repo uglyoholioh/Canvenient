@@ -11,3 +11,6 @@ skills-lock.json
 run.bat
 testdata/*_current.ics
 
+# Log files
+*.log
+backend/*.log
