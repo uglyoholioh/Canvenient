@@ -334,9 +334,9 @@ function Dashboard({ token, currentUser, onLogout }) {
             <span className="badge badge--primary">Active</span>
           </div>
 
-          {error && <p style={{ color: "red", fontSize: "12px", textAlign: "center", margin: "10px 0" }}>{error}</p>}
+          {error && <p className="text-error text-xs text-center" style={{ margin: "10px 0" }}>{error}</p>}
 
-          <form onSubmit={handleAddTask} style={{ display: "flex", gap: "10px", marginBottom: "20px" }}>
+          <form onSubmit={handleAddTask} className="flex gap-sm mb-lg">
             <input
               type="text"
               className="form-input"
@@ -345,24 +345,20 @@ function Dashboard({ token, currentUser, onLogout }) {
               onChange={(e) => setNewTitle(e.target.value)}
               required
             />
-            <button
-              type="submit"
-              className="btn btn--primary"
-              style={{ width: "38px", height: "38px", padding: 0, fontSize: "20px" }}
-            >
+            <button type="submit" className="btn btn--primary btn--icon">
               +
             </button>
           </form>
 
           <div className="list" style={{ marginBottom: "15px" }}>
             {upcomingTasks.length === 0 ? (
-              <p style={{ fontSize: "13px", color: "var(--text-muted)", textAlign: "center" }}>
+              <p className="text-sm text-muted text-center">
                 No tasks found. Add one above!
               </p>
             ) : (
               upcomingTasks.map(task => (
                 <div key={task.id} className="list-item list-item--compact list-item--row">
-                  <div style={{ display: "flex", alignItems: "center", gap: "10px", flex: 1 }}>
+                  <div className="flex items-center gap-sm flex-1">
                     <input
                       type="checkbox"
                       checked={task.status === "done"}
@@ -370,24 +366,19 @@ function Dashboard({ token, currentUser, onLogout }) {
                       onChange={() => toggleTask(task.id, task.status)}
                     />
                     <span
-                      style={{
-                        fontSize: "14px",
-                        color: task.status === "done" ? "var(--text-muted)" : "var(--text-h)",
-                        textDecoration: task.status === "done" ? "line-through" : "none",
-                        display: "flex",
-                        flexDirection: "column",
-                        gap: "2px"
-                      }}
+                      className={`text-base flex flex-col gap-xs ${task.status === "done" ? "text-muted" : "text-h"}`}
+                      style={{ textDecoration: task.status === "done" ? "line-through" : "none" }}
                     >
                       {task.title}
-                      <small style={{ fontSize: "11px", color: "var(--text-muted)" }}>
+                      <small className="text-xs text-muted">
                         {formatDate(task.effective_due_at)}
                       </small>
                     </span>
                   </div>
                   {task.source_type !== "canvas" && (
                     <button
-                      style={{ background: "none", border: "none", color: "var(--text-muted)", fontSize: "18px", cursor: "pointer" }}
+                      className="text-muted cursor-pointer"
+                      style={{ background: "none", border: "none", fontSize: "18px" }}
                       onClick={() => handleDeleteTask(task)}
                       title="Delete task"
                     >
@@ -400,17 +391,13 @@ function Dashboard({ token, currentUser, onLogout }) {
           </div>
           <Link
             to="/planner"
-            className="btn btn--secondary btn--full"
+            className={`btn btn--secondary btn--full no-underline ${updatingTaskId !== null ? "opacity-55" : ""}`}
             onClick={(event) => {
               if (updatingTaskId !== null) {
                 event.preventDefault()
               }
             }}
-            style={{
-              textDecoration: 'none',
-              opacity: updatingTaskId !== null ? 0.55 : 1,
-              pointerEvents: updatingTaskId !== null ? 'none' : 'auto',
-            }}
+            style={{ pointerEvents: updatingTaskId !== null ? 'none' : 'auto' }}
           >
             Open Full Task Planner &rarr;
           </Link>
@@ -420,7 +407,7 @@ function Dashboard({ token, currentUser, onLogout }) {
           <div className="card-header">
             <h3>My Schedule</h3>
             {hasScheduleData && (
-              <label className="btn btn--secondary btn--sm" title="Import new .ics calendar" style={{ cursor: "pointer" }}>
+              <label className="btn btn--secondary btn--sm cursor-pointer" title="Import new .ics calendar">
                 Re-import
                 <input
                   type="file"
@@ -440,7 +427,7 @@ function Dashboard({ token, currentUser, onLogout }) {
           ) : !hasScheduleData ? (
             <div className="state-box state-box--dashed">
               <p>Import your class timetable to get started.</p>
-              <label className="btn btn--primary" style={{ cursor: "pointer" }}>
+              <label className="btn btn--primary cursor-pointer">
                 Import .ics Calendar
                 <input
                   type="file"
@@ -453,21 +440,20 @@ function Dashboard({ token, currentUser, onLogout }) {
           ) : (
             <div className="list list--scrollable">
               {timelineItems.length === 0 ? (
-                <p style={{ fontSize: "13px", color: "var(--text-muted)", textAlign: "center" }}>
+                <p className="text-sm text-muted text-center">
                   No upcoming classes or exams.
                 </p>
               ) : (
                 timelineItems.slice(0, 5).map(item => (
                   <div key={item.id} className="list-item">
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                      <span style={{ fontSize: "11px", color: "var(--text-muted)" }}>
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs text-muted">
                         {item.start_at.toLocaleDateString("en-SG", { day: "numeric", month: "short" })}{" "}
-                        {item.start_at.toLocaleTimeString("en-SG", { hour: "2-digit", minute: "2-digit" })}
+                        {item.start_at.toLocaleTimeString("en-SG", { hour12: false, hour: "2-digit", minute: "2-digit" })}
                       </span>
                       <span
-                        className={`badge badge--square badge--${
-                          item.type === "class" ? "primary" : item.type === "exam" ? "danger" : "warning"
-                        }`}
+                        className={`badge badge--square badge--${item.type === "class" ? "primary" : item.type === "exam" ? "danger" : "warning"
+                          }`}
                       >
                         {item.type}
                       </span>
@@ -481,6 +467,7 @@ function Dashboard({ token, currentUser, onLogout }) {
               )}
             </div>
           )}
+          <button className="btn btn--secondary btn--full" onClick={() => navigate("/schedule")}>Open Full Schedule</button>
         </div>
 
         <div className="card">
@@ -488,7 +475,7 @@ function Dashboard({ token, currentUser, onLogout }) {
             <h3>Group Scheduler</h3>
             <span className="badge badge--muted">In Progress</span>
           </div>
-          <p style={{ fontSize: "14px", lineHeight: "1.5", color: "var(--text)", marginBottom: "15px" }}>
+          <p className="text-base text" style={{ marginBottom: "15px" }}>
             Find common free slots and schedule meetings with your project peers.
           </p>
           <div className="state-box state-box--dashed" style={{ height: "80px", padding: 0 }}>
@@ -501,14 +488,14 @@ function Dashboard({ token, currentUser, onLogout }) {
 
       <div className="canvas-hub-container">
         <div className="canvas-courses-panel">
-          <div className="panel-header" style={{ marginBottom: "20px" }}>
+          <div className="panel-header mb-lg">
             <h2>Courses</h2>
-            <p style={{ fontSize: "13px", color: "var(--text-muted)" }}>Access your course resources and materials</p>
+            <p className="text-sm text-muted">Access your course resources and materials</p>
           </div>
           {!currentUser?.canvas_token ? (
             <div className="card state-box state-box--dashed" style={{ padding: "30px 24px" }}>
-              <h4 style={{ fontSize: "22px", color: "var(--text-h)", marginBottom: "8px" }}>Connect Canvas Account</h4>
-              <p style={{ maxWidth: "320px", fontSize: "14px", lineHeight: "1.5" }}>
+              <h4 className="text-h mb-sm" style={{ fontSize: "22px" }}>Connect Canvas Account</h4>
+              <p className="text-base" style={{ maxWidth: "320px" }}>
                 Bring your academic schedule and courses together. Set your API access token during onboarding or in your account setup to get started.
               </p>
             </div>
@@ -529,13 +516,13 @@ function Dashboard({ token, currentUser, onLogout }) {
             <div className="list">
               {courses.map(course => (
                 <div key={course.id} className="list-item list-item--lg list-item--row list-item--hover">
-                  <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                  <div className="flex-col gap-xs">
                     <span style={{ fontSize: "22px", fontFamily: "var(--font-serif)", fontWeight: "500", color: "var(--text-h)", lineHeight: "1.1" }}>
                       {course.course_code}
                     </span>
-                    <span style={{ fontSize: "12px", color: "var(--text-muted)" }}>{course.name}</span>
+                    <span className="text-xs text-muted">{course.name}</span>
                   </div>
-                  <div style={{ display: "flex", gap: "10px" }}>
+                  <div className="flex gap-sm">
                     <button
                       onClick={() => setActiveModal({ courseId: course.id, courseCode: course.course_code, type: "announcements" })}
                       className="btn btn--icon"
@@ -565,12 +552,12 @@ function Dashboard({ token, currentUser, onLogout }) {
         </div>
 
         <div className="card card--accent">
-          <div className="panel-header" style={{ marginBottom: "20px" }}>
+          <div className="panel-header mb-lg">
             <h2>Priority items</h2>
-            <p style={{ fontSize: "13px", color: "var(--text-muted)" }}>Urgent alerts & upcoming deadlines</p>
+            <p className="text-sm text-muted">Urgent alerts & upcoming deadlines</p>
           </div>
           {!currentUser?.canvas_token ? (
-            <p style={{ fontSize: "13px", color: "var(--text-muted)", fontStyle: "italic", padding: "10px 0" }}>
+            <p className="text-sm text-muted" style={{ fontStyle: "italic", padding: "10px 0" }}>
               Connect Canvas to show priority items.
             </p>
           ) : loadingCanvas ? (
@@ -584,15 +571,15 @@ function Dashboard({ token, currentUser, onLogout }) {
                 <h4 className="priority-section-title">Critical Alerts</h4>
                 <div className="list list--scrollable">
                   {priorityAnnouncements.length === 0 ? (
-                    <p style={{ fontSize: "13px", color: "var(--text-muted)", fontStyle: "italic", padding: "10px 0" }}>
+                    <p className="text-sm text-muted" style={{ fontStyle: "italic", padding: "10px 0" }}>
                       No critical alerts found.
                     </p>
                   ) : (
                     priorityAnnouncements.map(ann => (
                       <div key={ann.id} className="list-item list-item--md">
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "12px", marginBottom: "8px" }}>
+                        <div className="flex justify-between items-center gap-md mb-sm">
                           <span className="badge badge--primary">{ann.course_code}</span>
-                          <span style={{ fontSize: "12px", color: "var(--text-muted)" }}>{formatRelativeTime(ann.posted_at)}</span>
+                          <span className="text-xs text-muted">{formatRelativeTime(ann.posted_at)}</span>
                         </div>
                         <h5 style={{ fontSize: "15px", fontWeight: "600", color: "var(--text-h)", lineHeight: "1.3" }}>
                           {ann.title}
@@ -612,7 +599,7 @@ function Dashboard({ token, currentUser, onLogout }) {
                   ) : (
                     priorityAssignments.map(ass => (
                       <div key={ass.id} className="list-item list-item--md">
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "12px", marginBottom: "8px" }}>
+                        <div className="flex justify-between items-center gap-md mb-sm">
                           <span className="badge badge--primary">{ass.course_code}</span>
                           <span className="badge badge--danger">Due: {formatDate(ass.due_at)}</span>
                         </div>
@@ -645,15 +632,15 @@ function Dashboard({ token, currentUser, onLogout }) {
                   <span>Loading resources...</span>
                 </div>
               ) : modalError ? (
-                <p style={{ color: "var(--error)", fontSize: "14px" }}>{modalError}</p>
+                <p className="text-base text-error">{modalError}</p>
               ) : displayedModalItems.length === 0 ? (
-                <p style={{ fontSize: "13px", color: "var(--text-muted)", textAlign: "center" }}>No items found.</p>
+                <p className="text-sm text-muted text-center">No items found.</p>
               ) : (
                 <div className="list">
                   {activeModal.type === "announcements" && (
                     displayedModalItems.map(ann => (
                       <div key={ann.id} className="list-item list-item--md">
-                        <div style={{ display: "flex", justifyContent: "space-between", fontSize: "12px", color: "var(--text-muted)", marginBottom: "8px" }}>
+                        <div className="flex justify-between text-xs text-muted mb-sm">
                           <span>{ann.author}</span>
                           <span>{formatDate(ann.posted_at)}</span>
                         </div>
@@ -669,7 +656,7 @@ function Dashboard({ token, currentUser, onLogout }) {
                           target="_blank"
                           rel="noopener noreferrer"
                           className="btn btn--secondary btn--sm"
-                          style={{ display: "inline-flex", alignSelf: "flex-start", marginTop: "10px" }}
+                          className="inline-flex mt-sm" style={{ alignSelf: "flex-start" }}
                         >
                           Open in Canvas <ExternalLink size={12} style={{ marginLeft: "4px" }} />
                         </a>
@@ -680,7 +667,7 @@ function Dashboard({ token, currentUser, onLogout }) {
                   {activeModal.type === "assignments" && (
                     displayedModalItems.map(ass => (
                       <div key={ass.id} className="list-item list-item--md">
-                        <div style={{ display: "flex", justifyContent: "space-between", fontSize: "12px", color: "var(--text-muted)", marginBottom: "8px" }}>
+                        <div className="flex justify-between text-xs text-muted mb-sm">
                           <span>Due: {formatDate(ass.due_at)}</span>
                           {ass.has_submitted ? (
                             <span className="badge badge--success">Submitted</span>
@@ -696,7 +683,7 @@ function Dashboard({ token, currentUser, onLogout }) {
                           target="_blank"
                           rel="noopener noreferrer"
                           className="btn btn--secondary btn--sm"
-                          style={{ display: "inline-flex", alignSelf: "flex-start", marginTop: "10px" }}
+                          className="inline-flex mt-sm" style={{ alignSelf: "flex-start" }}
                         >
                           Submit on Canvas <ExternalLink size={12} style={{ marginLeft: "4px" }} />
                         </a>
@@ -707,7 +694,7 @@ function Dashboard({ token, currentUser, onLogout }) {
                   {activeModal.type === "files" && (
                     displayedModalItems.map(file => (
                       <div key={file.id} className="list-item list-item--md list-item--row">
-                        <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+                        <div className="flex items-center gap-lg">
                           <div
                             style={{
                               backgroundColor: "rgba(53, 74, 47, 0.08)",

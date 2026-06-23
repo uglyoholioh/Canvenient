@@ -34,7 +34,7 @@ function LoginForm({ onLoginSuccess }) {
 
     return (
         <div className="auth-container">
-            <div className="card" style={{ maxWidth: "420px", width: "100%", padding: "40px" }}>
+            <div className="card auth-card">
                 <h2>Sign in</h2>
                 <form onSubmit={handleSubmit} className="form">
                     <div className="form-group">
@@ -70,7 +70,7 @@ function LoginForm({ onLoginSuccess }) {
                     </p>
 
                     {message && (
-                        <p style={{ color: isError ? "red" : "green", fontSize: "14px", textAlign: "center" }}>{message}</p>
+                        <p className={`text-sm text-center ${isError ? "text-error" : "text-success"}`}>{message}</p>
                     )}
                 </form>
             </div>

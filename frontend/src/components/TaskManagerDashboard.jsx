@@ -385,7 +385,7 @@ function TaskManagerDashboard({ token, currentUser, onLogout }) {
         <section className="card card--xl state-box">
           <p className="eyebrow">Task Manager</p>
           <h1>Loading your planning workspace...</h1>
-          <p style={{ color: "var(--text-muted)" }}>
+          <p className="text-muted">
             We're gathering tasks, modules, and categories for {currentUser?.email}.
           </p>
         </section>
@@ -395,7 +395,7 @@ function TaskManagerDashboard({ token, currentUser, onLogout }) {
 
   return (
     <main className="app-shell">
-      <section className="card card--hero" style={{ display: "flex", justifyContent: "space-between", gap: "20px", alignItems: "flex-start" }}>
+      <section className="card card--hero flex justify-between items-start" style={{ gap: "20px" }}>
         <div>
           <p className="eyebrow">CanVenient Task Manager</p>
           <h1>Plan your coursework and personal work here.</h1>
@@ -428,19 +428,19 @@ function TaskManagerDashboard({ token, currentUser, onLogout }) {
       </section>
 
       {(error || notice) && (
-        <section style={{ display: "flex", width: "100%" }}>
+        <section className="flex w-full">
           {error && (
             <p
-              className="badge badge--danger"
-              style={{ display: "block", width: "100%", padding: "12px", textAlign: "center", borderRadius: "8px" }}
+              className="badge badge--danger w-full text-center"
+              style={{ display: "block", padding: "12px", borderRadius: "8px" }}
             >
               {error}
             </p>
           )}
           {!error && notice && (
             <p
-              className="badge badge--success"
-              style={{ display: "block", width: "100%", padding: "12px", textAlign: "center", borderRadius: "8px" }}
+              className="badge badge--success w-full text-center"
+              style={{ display: "block", padding: "12px", borderRadius: "8px" }}
             >
               {notice}
             </p>
@@ -450,12 +450,12 @@ function TaskManagerDashboard({ token, currentUser, onLogout }) {
 
       <section className="workspace-grid">
         <article className="card card--xl">
-          <div style={{ display: "flex", flexDirection: "column", gap: "12px", marginBottom: "22px" }}>
+            <div className="flex-col gap-md" style={{ marginBottom: "22px" }}>
             <div>
               <p className="eyebrow">Capture</p>
               <h2>Add a task</h2>
             </div>
-            <p style={{ color: "var(--text)", fontSize: "14px", lineHeight: "1.5" }}>
+            <p className="text-base text">
               Link tasks to modules and categories, set a priority, and estimate effort.
             </p>
           </div>
@@ -602,12 +602,12 @@ function TaskManagerDashboard({ token, currentUser, onLogout }) {
         </article>
 
         <article className="card card--xl card--accent">
-          <div style={{ display: "flex", flexDirection: "column", gap: "12px", marginBottom: "22px" }}>
+            <div className="flex-col gap-md" style={{ marginBottom: "22px" }}>
             <div>
               <p className="eyebrow">Structure</p>
               <h2>Modules and categories</h2>
             </div>
-            <p style={{ color: "var(--text)", fontSize: "14px", lineHeight: "1.5" }}>
+            <p className="text-base text">
               Keep academic modules separate from personal categories so Canvas sync can slot into the same structure later.
             </p>
           </div>
@@ -658,11 +658,11 @@ function TaskManagerDashboard({ token, currentUser, onLogout }) {
               <div className="list" style={{ marginTop: "16px" }}>
                 {academicModules.map((moduleRecord) => (
                   <div className="list-item list-item--compact list-item--row" key={moduleRecord.id}>
-                    <div style={{ display: "flex", flexDirection: "column", gap: "2px", minWidth: 0 }}>
-                      <strong style={{ color: "var(--text-h)" }}>{moduleRecord.module_code}</strong>
+                    <div className="flex-col gap-xs" style={{ minWidth: 0 }}>
+                      <strong className="text-h">{moduleRecord.module_code}</strong>
                       {moduleRecord.name &&
                         moduleRecord.name !== moduleRecord.module_code && (
-                          <span style={{ fontSize: "12px", color: "var(--text-muted)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                          <span className="text-xs text-muted truncate">
                             {moduleRecord.name}
                           </span>
                         )}
@@ -726,13 +726,13 @@ function TaskManagerDashboard({ token, currentUser, onLogout }) {
               <div className="list" style={{ marginTop: "16px" }}>
                 {categories.map((category) => (
                   <div className="list-item list-item--compact list-item--row" key={category.id}>
-                    <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                    <div className="flex items-center gap-sm">
                       <span
                         className="color-dot"
                         style={{ backgroundColor: category.color }}
                         aria-hidden="true"
                       />
-                      <strong style={{ color: "var(--text-h)" }}>{category.name}</strong>
+                      <strong className="text-h">{category.name}</strong>
                     </div>
                     <button
                       className="btn btn--ghost-danger btn--sm"
@@ -751,18 +751,18 @@ function TaskManagerDashboard({ token, currentUser, onLogout }) {
       </section>
 
       <section className="card card--xl" style={{ marginTop: "24px" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: "22px", flexWrap: "wrap", gap: "12px" }}>
+        <div className="flex justify-between items-end flex-wrap gap-md" style={{ marginBottom: "22px" }}>
           <div>
             <p className="eyebrow">Execution</p>
             <h2>Task board</h2>
           </div>
 
-          <div style={{ display: "flex", gap: "12px", flexWrap: "wrap", alignItems: "flex-end", marginLeft: "auto" }}>
+          <div className="flex gap-md flex-wrap items-end" style={{ marginLeft: "auto" }}>
             <label className="form-group">
               <span>Status</span>
               <select
                 className="form-input"
-                style={{ padding: "8px 12px", fontSize: "13px" }}
+                className="text-sm" style={{ padding: "8px 12px" }}
                 value={statusFilter}
                 onChange={(event) => setStatusFilter(event.target.value)}
               >
@@ -777,7 +777,7 @@ function TaskManagerDashboard({ token, currentUser, onLogout }) {
               <span>Module</span>
               <select
                 className="form-input"
-                style={{ padding: "8px 12px", fontSize: "13px" }}
+                className="text-sm" style={{ padding: "8px 12px" }}
                 value={moduleFilter}
                 onChange={(event) => setModuleFilter(event.target.value)}
               >
@@ -831,7 +831,7 @@ function TaskManagerDashboard({ token, currentUser, onLogout }) {
 
                 <div className="list">
                   {visibleTasksByPriority[lane.value].length === 0 ? (
-                    <p style={{ fontSize: "13px", color: "var(--text-muted)", fontStyle: "italic", textAlign: "center", padding: "10px 0" }}>
+                    <p className="text-sm text-muted text-center" style={{ fontStyle: "italic", padding: "10px 0" }}>
                       Drop tasks here.
                     </p>
                   ) : (
@@ -847,7 +847,7 @@ function TaskManagerDashboard({ token, currentUser, onLogout }) {
                         }
                         onDragEnd={handleTaskDragEnd}
                       >
-                        <div style={{ display: "flex", justifyContent: "space-between", gap: "16px", alignItems: "flex-start" }}>
+                        <div className="flex justify-between items-start gap-lg">
                           <div>
                             <p
                               style={{
@@ -865,7 +865,7 @@ function TaskManagerDashboard({ token, currentUser, onLogout }) {
                                 ? ` - ${task.category_name}`
                                 : ""}
                             </p>
-                            <h3 style={{ fontSize: "18px", color: "var(--text-h)" }}>{task.title}</h3>
+                            <h3 className="text-h" style={{ fontSize: "18px" }}>{task.title}</h3>
                           </div>
 
                           {task.source_type !== "canvas" && (
@@ -881,29 +881,29 @@ function TaskManagerDashboard({ token, currentUser, onLogout }) {
                         </div>
 
                         {task.description && (
-                          <p style={{ color: "var(--text)", margin: "0", fontSize: "14px", display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
+                          <p className="text-base text line-clamp-3">
                             {task.description}
                           </p>
                         )}
 
-                        <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
-                          <span style={{ fontSize: "12px", color: "var(--text-muted)" }}>
-                            Source: <strong style={{ color: "var(--text-h)" }}>{task.source_type}</strong>
+                        <div className="flex gap-md flex-wrap">
+                          <span className="text-xs text-muted">
+                            Source: <strong className="text-h">{task.source_type}</strong>
                           </span>
-                          <span style={{ fontSize: "12px", color: "var(--text-muted)" }}>
+                          <span className="text-xs text-muted">
                             Due:{" "}
-                            <strong style={{ color: isPastDue(task) && task.status !== "done" ? "var(--error)" : "var(--text-h)" }}>
+                            <strong className={isPastDue(task) && task.status !== "done" ? "text-error" : "text-h"}>
                               {formatDueDate(task.effective_due_at)}
                             </strong>
                           </span>
-                          <span style={{ fontSize: "12px", color: "var(--text-muted)" }}>
-                            Suggested: <strong style={{ color: "var(--text-h)" }}>{task.recommended_priority}</strong>
+                          <span className="text-xs text-muted">
+                            Suggested: <strong className="text-h">{task.recommended_priority}</strong>
                           </span>
                         </div>
 
                         {task.external_url && (
                           <a
-                            style={{ color: "var(--info)", fontWeight: "700", textDecoration: "none", fontSize: "13px" }}
+                            className="text-info no-underline text-sm" style={{ fontWeight: "700" }}
                             href={task.external_url}
                             target="_blank"
                             rel="noreferrer"
@@ -917,7 +917,7 @@ function TaskManagerDashboard({ token, currentUser, onLogout }) {
                             <span>Status</span>
                             <select
                               className="form-input"
-                              style={{ padding: "6px 10px", fontSize: "12px" }}
+                              className="text-xs" style={{ padding: "6px 10px" }}
                               value={task.status}
                               onChange={(event) =>
                                 handleTaskStatusChange(
@@ -937,7 +937,7 @@ function TaskManagerDashboard({ token, currentUser, onLogout }) {
                             <span>Priority</span>
                             <select
                               className="form-input"
-                              style={{ padding: "6px 10px", fontSize: "12px" }}
+                              className="text-xs" style={{ padding: "6px 10px" }}
                               value={task.priority_manual}
                               onChange={(event) =>
                                 handleTaskPriorityChange(
