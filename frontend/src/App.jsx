@@ -5,6 +5,7 @@ import LoginForm from "./components/LoginForm"
 import Dashboard from "./components/Dashboard"
 import TaskManagerDashboard from "./components/TaskManagerDashboard"
 import OnboardingForm from "./components/OnboardingForm"
+import FileViewer from "./components/FileViewer"
 import Schedule from "./components/Schedule"
 import { getStoredToken, persistToken, clearStoredToken, getCurrentUser } from "./api"
 import { Outlet } from "react-router-dom"
@@ -120,6 +121,7 @@ function App() {
         >
           <Route path="/dashboard" element={<Dashboard token={token} currentUser={currentUser} onLogout={handleLogout} />} />
           <Route path="/planner" element={<TaskManagerDashboard token={token} currentUser={currentUser} onLogout={handleLogout} />} />
+          <Route path="/files" element={<FileViewer token={token} currentUser={currentUser} onLogout={handleLogout} />} />
           <Route path="/schedule" element={<Schedule token={token} currentUser={currentUser} />} />
         </Route>
       </Routes>
