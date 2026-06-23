@@ -29,6 +29,14 @@ export default defineConfig({
         target: 'http://localhost:8000',
         changeOrigin: true,
       },
+      '/events': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
+      },
+      '/ai': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
+      },
     },
   },
 })

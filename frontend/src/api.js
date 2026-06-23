@@ -237,3 +237,18 @@ export function deleteEvent(token, eventId) {
     token,
   })
 }
+
+export function getAiBrief(token) {
+  return apiRequest("/ai/brief", {
+    method: "POST",
+    token,
+  })
+}
+
+export function sendAiChat(token, payload) {
+  return apiRequest("/ai/chat", {
+    method: "POST",
+    body: payload,
+    token,
+  })
+}
