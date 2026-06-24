@@ -40,3 +40,14 @@ class EventOut(BaseModel):
     module_code: str | None = None
     created_at: datetime
     updated_at: datetime
+
+
+class EventAttendanceUpdate(BaseModel):
+    is_attending: bool
+
+
+class EventAttendanceOut(BaseModel):
+    e_id: int
+    user_id: int
+    is_attending: bool
+

@@ -171,7 +171,37 @@ SCHEMA_STATEMENTS = [
         updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
     """,
-    # ── canvas cache ──────────────────────────────────────────────────
+    """
+    CREATE TABLE IF NOT EXISTS event_attendance(
+        id BIGSERIAL PRIMARY KEY,
+        user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        e_id BIGINT REFERENCES events(id) ON DELETE CASCADE,
+        is_attending BOOLEAN NOT NULL DEFAULT FALSE,
+        UNIQUE (user_id, e_id)
+    )
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS invites(
+        id BIGSERIAL PRIMARY KEY,
+        creator_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        code TEXT NOT NULL UNIQUE,
+        c_id BIGINT REFERENCES communities(id) ON DELETE CASCADE,
+        g_id BIGINT REFERENCES groups(id) ON DELETE CASCADE,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS notifications
+    (
+        id BIGSERIAL PRIMARY KEY,
+        user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        title TEXT NOT NULL,
+        description TEXT NOT NULL,
+        is_read BOOLEAN NOT NULL DEFAULT FALSE,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+    """,
+    #  canvas cache 
     """
     CREATE TABLE IF NOT EXISTS canvas_announcements (
         id BIGSERIAL PRIMARY KEY,
@@ -222,7 +252,7 @@ SCHEMA_STATEMENTS = [
         updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
     """,
-    # ── community / group resources ───────────────────────────────────
+    #  community / group resources 
     """
     CREATE TABLE IF NOT EXISTS cg_announcements (
         id BIGSERIAL PRIMARY KEY,
@@ -279,7 +309,7 @@ SCHEMA_STATEMENTS = [
         UNIQUE (form_id, user_id)
     )
     """,
-    # ── indexes for new tables ────────────────────────────────────────
+    #  indexes for new tables 
     """
     CREATE INDEX IF NOT EXISTS groups_c_id_idx ON groups(c_id)
     """,
