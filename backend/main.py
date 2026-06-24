@@ -10,6 +10,12 @@ from routes.canvas import router as canvas_router
 from routes.schedules import router as schedule_router
 from routes.events import router as events_router
 from routes.ai import router as ai_router
+from routes.communities import router as communities_router
+from routes.groups import router as groups_router
+from routes.invites import router as invites_router
+from routes.forms import router as forms_router
+
+
 from schema import initialize_schema
 
 
@@ -30,6 +36,12 @@ app.include_router(canvas_router)
 app.include_router(schedule_router)
 app.include_router(events_router)
 app.include_router(ai_router)
+app.include_router(communities_router)
+app.include_router(groups_router)
+app.include_router(invites_router)
+app.include_router(forms_router)
+
+
 
 @app.get("/")
 def root():
