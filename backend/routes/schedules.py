@@ -197,7 +197,21 @@ async def list_schedule(current_user: CurrentUser):
         values = {"user_id": current_user.id},
     )
     events = await db.fetch_all(
-        query = "SELECT * FROM events WHERE user_id = :user_id",
+        query = """
+            SELECT DISTINCT e.*,
+                   CASE WHEN ea.is_attending IS NOT NULL THEN ea.is_attending
+                        WHEN e.user_id = :user_id THEN TRUE
+                        ELSE FALSE
+                   END AS is_attending
+            FROM events e
+            LEFT JOIN g_members gm ON gm.g_id = e.g_id
+            LEFT JOIN groups g ON g.c_id = e.c_id
+            LEFT JOIN g_members gm_comm ON gm_comm.g_id = g.id
+            LEFT JOIN event_attendance ea ON ea.e_id = e.id AND ea.user_id = :user_id
+            WHERE e.user_id = :user_id
+               OR gm.user_id = :user_id
+               OR gm_comm.user_id = :user_id
+        """,
         values = {"user_id": current_user.id},
     )
     return {

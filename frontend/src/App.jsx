@@ -7,7 +7,10 @@ import TaskManagerDashboard from "./components/TaskManagerDashboard"
 import OnboardingForm from "./components/OnboardingForm"
 import FileViewer from "./components/FileViewer"
 import Schedule from "./components/Schedule"
-import { getStoredToken, persistToken, clearStoredToken, getCurrentUser } from "./api"
+import Organisations from "./components/Organisations"
+import JoinGroupLink from "./components/JoinGroupLink"
+
+import { getStoredToken, persistToken, clearStoredToken, getCurrentUser, joinGroup } from "./api"
 import { Outlet } from "react-router-dom"
 import Sidebar from "./components/Sidebar"
 
@@ -28,6 +31,24 @@ function App() {
   const [token, setToken] = useState(() => getStoredToken())
   const [currentUser, setCurrentUser] = useState(null)
   const [isCheckingSession, setIsCheckingSession] = useState(Boolean(getStoredToken()))
+
+  useEffect(() => {
+    if (token && currentUser && currentUser.name) {
+      const pendingCode = localStorage.getItem("pending_invite_code")
+      if (pendingCode) {
+        localStorage.removeItem("pending_invite_code")
+        joinGroup(token, pendingCode)
+          .then(() => {
+            sessionStorage.setItem("join_success", "Successfully joined group via invite link!")
+            window.location.href = "/organisations"
+          })
+          .catch((err) => {
+            sessionStorage.setItem("join_error", err.message || "Invalid or expired invite code.")
+            window.location.href = "/organisations"
+          })
+      }
+    }
+  }, [token, currentUser])
 
   useEffect(() => {
     let cancelled = false
@@ -104,6 +125,7 @@ function App() {
             )
           }
         />
+        <Route path="/join/:code" element={<JoinGroupLink token={token} currentUser={currentUser} />} />
         <Route
           element={
             !currentUser ? (
@@ -123,6 +145,7 @@ function App() {
           <Route path="/planner" element={<TaskManagerDashboard token={token} currentUser={currentUser} onLogout={handleLogout} />} />
           <Route path="/files" element={<FileViewer token={token} currentUser={currentUser} onLogout={handleLogout} />} />
           <Route path="/schedule" element={<Schedule token={token} currentUser={currentUser} />} />
+          <Route path="/organisations" element={<Organisations token={token} currentUser={currentUser} />} />
         </Route>
       </Routes>
     </Router>

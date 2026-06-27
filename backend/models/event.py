@@ -12,6 +12,7 @@ class EventCreate(BaseModel):
     c_id: int | None = None
     g_id: int | None = None
     module_code: str | None = Field(default=None, max_length=40)
+    event_type: str | None = Field(default=None, max_length=40)
 
 
 class EventUpdate(BaseModel):
@@ -24,6 +25,7 @@ class EventUpdate(BaseModel):
     c_id: int | None = None
     g_id: int | None = None
     module_code: str | None = Field(default=None, max_length=40)
+    event_type: str | None = Field(default=None, max_length=40)
 
 
 class EventOut(BaseModel):
@@ -38,5 +40,35 @@ class EventOut(BaseModel):
     c_id: int | None = None
     g_id: int | None = None
     module_code: str | None = None
+    event_type: str | None = None
+    is_attending: bool = False
+    rsvp_count: int = 0
+    total_members: int = 0
     created_at: datetime
     updated_at: datetime
+
+
+class EventAttendanceUpdate(BaseModel):
+    is_attending: bool
+
+
+class EventAttendanceOut(BaseModel):
+    e_id: int
+    user_id: int
+    is_attending: bool
+
+
+class AttendanceSummaryRow(BaseModel):
+    user_id: int
+    name: str
+    email: str
+    is_attending: bool
+    attended: bool | None = None
+
+    class Config:
+        from_attributes = True
+
+
+class MarkActualAttendancePayload(BaseModel):
+    user_id: int
+    attended: bool | None
