@@ -71,6 +71,24 @@ SCHEMA_STATEMENTS = [
     ON categories (user_id)
     """,
     """
+    DO $$
+    BEGIN
+        IF EXISTS (
+            SELECT 1
+            FROM information_schema.columns
+            WHERE table_name = 'academic_modules'
+                AND column_name = 'code'
+        ) AND NOT EXISTS (
+            SELECT 1
+            FROM information_schema.columns
+            WHERE table_name = 'academic_modules'
+                AND column_name = 'module_code'
+        ) THEN
+            ALTER TABLE academic_modules RENAME COLUMN code TO module_code;
+        END IF;
+    END $$;
+    """,
+    """
     CREATE TABLE IF NOT EXISTS academic_modules (
         id BIGSERIAL PRIMARY KEY,
         user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -82,6 +100,10 @@ SCHEMA_STATEMENTS = [
         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
         UNIQUE (user_id, module_code)
     )
+    """,
+    """
+    CREATE UNIQUE INDEX IF NOT EXISTS academic_modules_user_module_code_unique
+    ON academic_modules (user_id, module_code)
     """,
     """
     CREATE INDEX IF NOT EXISTS academic_modules_user_id_idx
@@ -252,7 +274,41 @@ SCHEMA_STATEMENTS = [
         updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
     """,
-    #  community / group resources 
+    """
+    CREATE TABLE IF NOT EXISTS canvas_sync_state (
+        user_id BIGINT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+        files_synced_at TIMESTAMPTZ
+    )
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS canvas_courses (
+        id BIGSERIAL PRIMARY KEY,
+        user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        canvas_course_id TEXT NOT NULL,
+        course_code TEXT NOT NULL,
+        name TEXT NOT NULL,
+        external_url TEXT NOT NULL,
+        synced_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        UNIQUE (user_id, canvas_course_id)
+    )
+    """,
+    """
+    CREATE INDEX IF NOT EXISTS canvas_courses_user_id_idx
+    ON canvas_courses (user_id)
+    """,
+    """
+    CREATE INDEX IF NOT EXISTS canvas_files_user_id_idx
+    ON canvas_files (user_id)
+    """,
+    """
+    CREATE INDEX IF NOT EXISTS canvas_files_user_course_idx
+    ON canvas_files (user_id, canvas_course_id)
+    """,
+    """
+    CREATE INDEX IF NOT EXISTS canvas_files_user_updated_idx
+    ON canvas_files (user_id, updated_at_canvas DESC)
+    """,
+    # ── community / group resources ───────────────────────────────────
     """
     CREATE TABLE IF NOT EXISTS cg_announcements (
         id BIGSERIAL PRIMARY KEY,
