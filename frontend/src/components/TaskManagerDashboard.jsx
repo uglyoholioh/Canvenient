@@ -77,12 +77,28 @@ function sortTasks(taskList) {
   })
 }
 
-function isPastDue(task) {
+function isPastDue(task, currentTime) {
   if (!task.effective_due_at) {
     return false
   }
 
-  return new Date(task.effective_due_at).getTime() <= Date.now()
+  return new Date(task.effective_due_at).getTime() <= currentTime
+}
+
+async function loadWorkspaceData(token) {
+  const [allTasks, allCategories, allModules] = await Promise.all([
+    getTasks(token),
+    getCategories(token),
+    getAcademicModules(token),
+  ])
+
+  return {
+    tasks: sortTasks(allTasks),
+    categories: allCategories.sort((left, right) => left.name.localeCompare(right.name)),
+    academicModules: allModules.sort((left, right) =>
+      `${left.module_code}${left.name}`.localeCompare(`${right.module_code}${right.name}`)
+    ),
+  }
 }
 
 function TaskManagerDashboard({ token, currentUser, onLogout }) {
@@ -100,6 +116,7 @@ function TaskManagerDashboard({ token, currentUser, onLogout }) {
   const [busyKey, setBusyKey] = useState("")
   const [draggedTaskId, setDraggedTaskId] = useState("")
   const [dragOverPriority, setDragOverPriority] = useState("")
+  const [currentTime, setCurrentTime] = useState(() => Date.now())
 
   async function reloadWorkspace() {
     setIsLoading(true)
@@ -107,19 +124,10 @@ function TaskManagerDashboard({ token, currentUser, onLogout }) {
     setNotice("")
 
     try {
-      const [allTasks, allCategories, allModules] = await Promise.all([
-        getTasks(token),
-        getCategories(token),
-        getAcademicModules(token),
-      ])
-
-      setTasks(sortTasks(allTasks))
-      setCategories(allCategories.sort((left, right) => left.name.localeCompare(right.name)))
-      setAcademicModules(
-        allModules.sort((left, right) =>
-          `${left.module_code}${left.name}`.localeCompare(`${right.module_code}${right.name}`)
-        )
-      )
+      const workspace = await loadWorkspaceData(token)
+      setTasks(workspace.tasks)
+      setCategories(workspace.categories)
+      setAcademicModules(workspace.academicModules)
     } catch (loadError) {
       setError(loadError.message || "Failed to load workspace data.")
     } finally {
@@ -128,10 +136,32 @@ function TaskManagerDashboard({ token, currentUser, onLogout }) {
   }
 
   useEffect(() => {
-    if (token) {
-      reloadWorkspace()
+    let cancelled = false
+
+    async function loadInitialWorkspace() {
+      try {
+        const workspace = await loadWorkspaceData(token)
+        if (cancelled) return
+        setTasks(workspace.tasks)
+        setCategories(workspace.categories)
+        setAcademicModules(workspace.academicModules)
+      } catch (loadError) {
+        if (!cancelled) {
+          setError(loadError.message || "Failed to load workspace data.")
+        }
+      } finally {
+        if (!cancelled) setIsLoading(false)
+      }
     }
+
+    if (token) loadInitialWorkspace()
+    return () => { cancelled = true }
   }, [token])
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setCurrentTime(Date.now()), 60000)
+    return () => window.clearInterval(timer)
+  }, [])
 
   async function reloadTasksOnly() {
     setBusyKey("canvas-sync")
@@ -371,8 +401,8 @@ function TaskManagerDashboard({ token, currentUser, onLogout }) {
     (task) =>
       task.status !== "done" &&
       task.effective_due_at &&
-      new Date(task.effective_due_at).getTime() - Date.now() <= 259200000 &&
-      new Date(task.effective_due_at).getTime() > Date.now()
+      new Date(task.effective_due_at).getTime() - currentTime <= 259200000 &&
+      new Date(task.effective_due_at).getTime() > currentTime
   )
 
   const plannedHours = tasks
@@ -892,7 +922,7 @@ function TaskManagerDashboard({ token, currentUser, onLogout }) {
                           </span>
                           <span className="text-xs text-muted">
                             Due:{" "}
-                            <strong className={isPastDue(task) && task.status !== "done" ? "text-error" : "text-h"}>
+                            <strong className={isPastDue(task, currentTime) && task.status !== "done" ? "text-error" : "text-h"}>
                               {formatDueDate(task.effective_due_at)}
                             </strong>
                           </span>

@@ -7,14 +7,14 @@ const navigationConfig = [
   { label: "Dashboard", href: "/dashboard", icon: Home },
   { label: "Task Planner", href: "/planner", icon: CheckSquare },
   { label: "Schedule", href: "/schedule", icon: Calendar },
-  { label: "Groups / comms", href: "/organisations", icon: Users },
+  { label: "Groups & Comms", href: "/organisations", icon: Users },
   { label: "File Viewer", href: "/files", icon: FolderOpen },
   { label: "Canvas Sync (in prog)", href: "#", icon: RefreshCw },
   { label: "NUSMods (in prog)", href: "#", icon: Map },
   { label: "Group Work (in prog)", href: "#", icon: Users },
 ]
 
-function Sidebar({ currentUser, onLogout }) {
+function Sidebar({ onLogout }) {
   const navigate = useNavigate()
   const [notifications, setNotifications] = useState([])
   const [showNotifications, setShowNotifications] = useState(false)
@@ -26,14 +26,30 @@ function Sidebar({ currentUser, onLogout }) {
     try {
       const data = await getNotifications(token)
       setNotifications(data || [])
-    } catch {
+    } catch (err) {
+      console.error("Failed to load notifications:", err)
     }
   }
 
   useEffect(() => {
-    loadNotifications()
-    const interval = setInterval(loadNotifications, 10000)
-    return () => clearInterval(interval)
+    let cancelled = false
+
+    async function refreshNotifications() {
+      if (!token) return
+      try {
+        const data = await getNotifications(token)
+        if (!cancelled) setNotifications(data || [])
+      } catch (err) {
+        console.error("Failed to load notifications:", err)
+      }
+    }
+
+    refreshNotifications()
+    const interval = window.setInterval(refreshNotifications, 10000)
+    return () => {
+      cancelled = true
+      window.clearInterval(interval)
+    }
   }, [token])
 
   const handleMarkRead = async (id) => {

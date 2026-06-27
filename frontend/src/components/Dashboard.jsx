@@ -8,7 +8,7 @@ import {
   getCanvasCourses,
   getCanvasAnnouncements,
   getCanvasAssignments,
-  getCanvasFiles,
+  loadCachedCanvasFiles,
   getSchedule,
   importIcs
 } from "../api"
@@ -32,7 +32,6 @@ function Dashboard({ token, currentUser, onLogout }) {
 
   // Schedule states
   const [schedule, setSchedule] = useState({ classes: [], exams: [], events: [] })
-  const [loadingSchedule, setLoadingSchedule] = useState(false)
   const [uploadingSchedule, setUploadingSchedule] = useState(false)
 
   // Modal overlays state
@@ -77,34 +76,36 @@ function Dashboard({ token, currentUser, onLogout }) {
   // Load modal details on demand (specifically for files, others are filtered)
   useEffect(() => {
     if (!activeModal || activeModal.type !== "files") return
+    let cancelled = false
 
     async function loadFiles() {
       setLoadingModal(true)
       setModalError("")
       try {
-        const filesData = await getCanvasFiles(token, activeModal.courseId)
-        setModalItems(filesData)
+        const data = await loadCachedCanvasFiles(token)
+        const courseFiles = (data.files || []).filter(
+          file => String(file.courseId) === String(activeModal.courseId)
+        )
+        if (!cancelled) setModalItems(courseFiles)
       } catch (err) {
-        setModalError(err.message || "Failed to load course files.")
+        if (!cancelled) setModalError(err.message || "Failed to load course files.")
       } finally {
-        setLoadingModal(false)
+        if (!cancelled) setLoadingModal(false)
       }
     }
 
     loadFiles()
+    return () => { cancelled = true }
   }, [activeModal, token])
 
   // Load schedule
   useEffect(() => {
     async function loadSchedule() {
-      setLoadingSchedule(true)
       try {
         const data = await getSchedule(token)
         setSchedule(data || { classes: [], exams: [], events: [] })
       } catch (err) {
         setError(err.message || "Could not load schedule.")
-      } finally {
-        setLoadingSchedule(false)
       }
     }
     if (token) {
@@ -123,9 +124,19 @@ function Dashboard({ token, currentUser, onLogout }) {
 
   // Load Tasks
   useEffect(() => {
-    if (token) {
-      fetchTasks()
+    let cancelled = false
+
+    async function loadTasks() {
+      try {
+        const data = await getTasks(token)
+        if (!cancelled) setTasks(data || [])
+      } catch (err) {
+        if (!cancelled) setError(err.message || "Could not load tasks.")
+      }
     }
+
+    if (token) loadTasks()
+    return () => { cancelled = true }
   }, [token])
 
   const handleAddTask = async (e) => {
@@ -331,7 +342,7 @@ function Dashboard({ token, currentUser, onLogout }) {
 
       {token && (
         <div style={{ padding: "0 2rem", marginBottom: "1.5rem" }}>
-          <AiBrief token={token} onTaskCreated={fetchTasks} />
+          <AiBrief key={token} token={token} onTaskCreated={fetchTasks} />
         </div>
       )}
 
@@ -663,8 +674,8 @@ function Dashboard({ token, currentUser, onLogout }) {
                           href={ann.external_url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="btn btn--secondary btn--sm"
-                          className="inline-flex mt-sm" style={{ alignSelf: "flex-start" }}
+                          className="btn btn--secondary btn--sm inline-flex mt-sm"
+                          style={{ alignSelf: "flex-start" }}
                         >
                           Open in Canvas <ExternalLink size={12} style={{ marginLeft: "4px" }} />
                         </a>
@@ -690,8 +701,8 @@ function Dashboard({ token, currentUser, onLogout }) {
                           href={ass.external_url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="btn btn--secondary btn--sm"
-                          className="inline-flex mt-sm" style={{ alignSelf: "flex-start" }}
+                          className="btn btn--secondary btn--sm inline-flex mt-sm"
+                          style={{ alignSelf: "flex-start" }}
                         >
                           Submit on Canvas <ExternalLink size={12} style={{ marginLeft: "4px" }} />
                         </a>

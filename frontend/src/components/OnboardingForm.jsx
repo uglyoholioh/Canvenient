@@ -1,7 +1,7 @@
 import { useState } from "react"
 import { updateProfile } from "../api"
 
-function OnboardingForm({ token, currentUser, onComplete }) {
+function OnboardingForm({ token, onComplete }) {
   const [name, setName] = useState("")
   const [canvasToken, setCanvasToken] = useState("")
   const [error, setError] = useState("")
