@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import { getSchedule, importIcs, updateEvent, deleteEvent, updateEventAttendance } from "../api"
-import { Upload, RefreshCw, Calendar as CalendarIcon, Grid, List, X, Edit, Trash2, Clock, MapPin } from "lucide-react"
+import { Upload, RefreshCw, Calendar as CalendarIcon, Grid, List, X, Trash2, Clock, MapPin } from "lucide-react"
 import { ThemeProvider, createTheme } from "@mui/material/styles"
 
 import {
@@ -55,7 +55,7 @@ function Schedule({ token }) {
 
   const [activeModal, setActiveModal] = useState(null)
 
-  const loadSchedule = async () => {
+  const loadSchedule = useCallback(async () => {
     if (!token) return
     setLoadingSchedule(true)
     setError("")
@@ -67,14 +67,14 @@ function Schedule({ token }) {
     } finally {
       setLoadingSchedule(false)
     }
-  }
+  }, [token])
 
   useEffect(() => {
     const timer = setTimeout(() => {
       loadSchedule()
     }, 0)
     return () => clearTimeout(timer)
-  }, [token])
+  }, [loadSchedule])
 
   const handleIcsUpload = async (e) => {
     const file = e.target.files[0]

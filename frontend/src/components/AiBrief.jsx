@@ -1,36 +1,42 @@
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { getAiBrief, sendAiChat, createTask } from "../api"
 
+function readCachedBrief() {
+    const cachedBrief = sessionStorage.getItem("user_brief")
+    if (!cachedBrief) {
+        return { brief: null, context: null }
+    }
+
+    const parsed = JSON.parse(cachedBrief)
+    return {
+        brief: parsed.brief,
+        context: parsed.context_snapshot,
+    }
+}
+
+function readCachedMessages() {
+    const cachedChat = sessionStorage.getItem("user_brief_chat")
+    return cachedChat ? JSON.parse(cachedChat) : []
+}
+
 export default function AiBrief({ token, onTaskCreated }) {
-    const [brief, setBrief] = useState(null)
+    const [briefData, setBriefData] = useState(readCachedBrief)
     const [loadBrief, setLoadBrief] = useState(false)
     const [chatInput, setChatInput] = useState("")
-    const [context, setContext] = useState(null)
-    const [messages, setMessages] = useState([])
+    const [messages, setMessages] = useState(readCachedMessages)
     const [chatLoading, setChatLoading] = useState(false)
     const [error, setError] = useState("")
-
-    useEffect(() => {
-        const cachedBrief = sessionStorage.getItem("user_brief")
-        const cachedChat = sessionStorage.getItem("user_brief_chat")
-        
-        if (cachedBrief) {
-            const parsed = JSON.parse(cachedBrief)
-            setBrief(parsed.brief)
-            setContext(parsed.context_snapshot)
-        }
-        if (cachedChat) {
-            setMessages(JSON.parse(cachedChat))
-        }
-    }, [token])
+    const { brief, context } = briefData
 
     const fetchBrief = async () => {
         setLoadBrief(true)
         setError("")
         try {
             const result = await getAiBrief(token)
-            setBrief(result.brief)
-            setContext(result.context_snapshot)
+            setBriefData({
+                brief: result.brief,
+                context: result.context_snapshot,
+            })
             sessionStorage.setItem("user_brief", JSON.stringify(result))
             setMessages([])
             sessionStorage.removeItem("user_brief_chat")
@@ -85,8 +91,7 @@ export default function AiBrief({ token, onTaskCreated }) {
     }
 
     const handleClear = () => {
-        setBrief(null)
-        setContext(null)
+        setBriefData({ brief: null, context: null })
         setMessages([])
         sessionStorage.removeItem("user_brief")
         sessionStorage.removeItem("user_brief_chat")

@@ -76,7 +76,13 @@ function RegisterForm() {
             />
           </div>
 
-          <button type="submit" className="btn btn--primary btn--full">Register</button>
+          <button
+            type="submit"
+            className="btn btn--primary btn--full"
+            disabled={isSubmitting}
+          >
+            {isSubmitting ? "Registering..." : "Register"}
+          </button>
           <p className="auth-footer">
             Already have an account? <Link to="/login">Log In</Link>
           </p>
