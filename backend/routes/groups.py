@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, Response, status
 from database import db
 from dependencies import CurrentUser
-from models.group import GroupCreate, GroupOut, GroupUpdate
+from models.group import GroupCreate, GroupOut, GroupUpdate, GroupMemberOut
 
 router = APIRouter(prefix = "/groups", tags = ["groups"])
 
@@ -49,3 +49,25 @@ async def create_group(payload: GroupCreate, current_user: CurrentUser):
         
         return GroupOut.model_validate(dict(row))
 
+
+@router.get("/{group_id}/members", response_model=list[GroupMemberOut])
+async def get_group_members(group_id: int, current_user: CurrentUser):
+    member_check = await db.fetch_one(
+        query="SELECT role FROM g_members WHERE g_id = :g_id AND user_id = :user_id",
+        values={"g_id": group_id, "user_id": current_user.id}
+    )
+    if not member_check:
+        raise HTTPException(status_code=403, detail="You are not a member of this group.")
+
+    rows = await db.fetch_all(
+        query="""
+            SELECT gm.user_id, COALESCE(us.name, '') AS name, u.email, gm.role
+            FROM g_members gm
+            JOIN users u ON u.id = gm.user_id
+            LEFT JOIN user_settings us ON us.user_id = gm.user_id
+            WHERE gm.g_id = :g_id
+            ORDER BY gm.role DESC, u.email ASC
+        """,
+        values={"g_id": group_id}
+    )
+    return [GroupMemberOut.model_validate(dict(row)) for row in rows]

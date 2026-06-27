@@ -28,6 +28,7 @@ class FormOut(BaseModel):
     form_type: str
     fields: list[dict[str, Any]]
     closes_at: datetime | None = None
+    user_response: dict[str, Any] | None = None
     created_at: datetime
 
 class FormResponseCreate(BaseModel):

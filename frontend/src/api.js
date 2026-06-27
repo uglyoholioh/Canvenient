@@ -252,3 +252,114 @@ export function sendAiChat(token, payload) {
     token,
   })
 }
+
+export function getCommunities(token) {
+  return apiRequest("/communities", { token })
+}
+
+export function createCommunity(token, payload) {
+  return apiRequest("/communities", {
+    method: "POST",
+    body: payload,
+    token,
+  })
+}
+
+export function getGroups(token) {
+  return apiRequest("/groups", { token })
+}
+
+export function getGroupMembers(token, groupId) {
+  return apiRequest(`/groups/${groupId}/members`, { token })
+}
+
+export function createGroup(token, payload) {
+  return apiRequest("/groups", {
+    method: "POST",
+    body: payload,
+    token,
+  })
+}
+
+export function createInvite(token, payload) {
+  return apiRequest("/invites", {
+    method: "POST",
+    body: payload,
+    token,
+  })
+}
+
+export function joinGroup(token, code) {
+  return apiRequest(`/invites/join/${code}`, {
+    method: "POST",
+    token,
+  })
+}
+
+export function getEventAttendance(token, eventId) {
+  return apiRequest(`/events/${eventId}/attendance`, { token })
+}
+
+export function updateEventAttendance(token, eventId, isAttending) {
+  return apiRequest(`/events/${eventId}/attendance`, {
+    method: "POST",
+    body: { is_attending: isAttending },
+    token,
+  })
+}
+
+export function getEventAttendanceSummary(token, eventId) {
+  return apiRequest(`/events/${eventId}/attendance-summary`, { token })
+}
+
+export function markEventActualAttendance(token, eventId, userId, attended) {
+  return apiRequest(`/events/${eventId}/attendance-mark`, {
+    method: "POST",
+    body: { user_id: userId, attended },
+    token,
+  })
+}
+
+export function getForms(token) {
+  return apiRequest("/forms", { token })
+}
+
+export function createForm(token, payload) {
+  return apiRequest("/forms", {
+    method: "POST",
+    body: payload,
+    token,
+  })
+}
+
+export function getForm(token, formId) {
+  return apiRequest(`/forms/${formId}`, { token })
+}
+
+export function submitFormResponse(token, formId, responseData) {
+  return apiRequest(`/forms/${formId}/responses`, {
+    method: "POST",
+    body: { response_data: responseData },
+    token,
+  })
+}
+
+export function getFormResponses(token, formId) {
+  return apiRequest(`/forms/${formId}/responses`, { token })
+}
+
+export function getFormStats(token, formId) {
+  return apiRequest(`/forms/${formId}/stats`, { token })
+}
+
+export function getNotifications(token) {
+  return apiRequest("/notifications", { token })
+}
+
+export function markNotificationAsRead(token, id) {
+  return apiRequest(`/notifications/${id}/read`, { method: "PATCH", token })
+}
+
+export function markAllNotificationsAsRead(token) {
+  return apiRequest("/notifications/read-all", { method: "POST", token })
+}

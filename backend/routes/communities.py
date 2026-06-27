@@ -9,12 +9,16 @@ router = APIRouter(prefix="/communities", tags=["communities"])
 async def get_communities(current_user: CurrentUser):
     rows = await db.fetch_all(
         query = """
+            SELECT c.*
+            FROM communities c
+            WHERE c.user_id = :user_id
+            UNION
             SELECT DISTINCT c.*
             FROM communities c
-            LEFT JOIN groups g ON g.c_id = c.id
-            LEFT JOIN g_members gm ON gm.g_id = g.id
-            WHERE c.user_id = :user_id OR gm.user_id = :user_id
-
+            JOIN groups g ON g.c_id = c.id
+            JOIN g_members gm ON gm.g_id = g.id
+            WHERE gm.user_id = :user_id
+            ORDER BY id
         """,
         values = {"user_id": current_user.id}
     )
