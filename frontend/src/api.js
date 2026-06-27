@@ -197,6 +197,20 @@ export function syncCanvasFiles(token) {
   })
 }
 
+export async function loadCachedCanvasFiles(token, { onSyncRequired } = {}) {
+  let data = await getCachedCanvasFiles(token)
+  const needsCurrentCourseSnapshot =
+    !data.synced_at ||
+    ((data.files || []).length > 0 && (data.courses || []).length === 0)
+
+  if (needsCurrentCourseSnapshot) {
+    onSyncRequired?.()
+    data = await syncCanvasFiles(token)
+  }
+
+  return data
+}
+
 // Schedule
 
 export async function importIcs(token, file) {
@@ -245,6 +259,119 @@ export function updateEvent(token, eventId, payload) {
 export function deleteEvent(token, eventId) {
   return apiRequest(`/events/${eventId}`, {
     method: "DELETE",
+    token,
+  })
+}
+
+export function updateEventAttendance(token, eventId, isAttending) {
+  return apiRequest(`/events/${eventId}/attendance`, {
+    method: "POST",
+    body: { is_attending: isAttending },
+    token,
+  })
+}
+
+export function getEventAttendanceSummary(token, eventId) {
+  return apiRequest(`/events/${eventId}/attendance-summary`, { token })
+}
+
+export function markEventActualAttendance(token, eventId, userId, attended) {
+  return apiRequest(`/events/${eventId}/attendance-mark`, {
+    method: "POST",
+    body: { user_id: userId, attended },
+    token,
+  })
+}
+
+// Communities, groups, invites, and forms
+
+export function getCommunities(token) {
+  return apiRequest("/communities", { token })
+}
+
+export function createCommunity(token, payload) {
+  return apiRequest("/communities", {
+    method: "POST",
+    body: payload,
+    token,
+  })
+}
+
+export function getGroups(token) {
+  return apiRequest("/groups", { token })
+}
+
+export function createGroup(token, payload) {
+  return apiRequest("/groups", {
+    method: "POST",
+    body: payload,
+    token,
+  })
+}
+
+export function getGroupMembers(token, groupId) {
+  return apiRequest(`/groups/${groupId}/members`, { token })
+}
+
+export function createInvite(token, payload) {
+  return apiRequest("/invites", {
+    method: "POST",
+    body: payload,
+    token,
+  })
+}
+
+export function joinGroup(token, code) {
+  return apiRequest(`/invites/join/${encodeURIComponent(code)}`, {
+    method: "POST",
+    token,
+  })
+}
+
+export function getForms(token) {
+  return apiRequest("/forms", { token })
+}
+
+export function createForm(token, payload) {
+  return apiRequest("/forms", {
+    method: "POST",
+    body: payload,
+    token,
+  })
+}
+
+export function submitFormResponse(token, formId, responseData) {
+  return apiRequest(`/forms/${formId}/responses`, {
+    method: "POST",
+    body: { response_data: responseData },
+    token,
+  })
+}
+
+export function getFormResponses(token, formId) {
+  return apiRequest(`/forms/${formId}/responses`, { token })
+}
+
+export function getFormStats(token, formId) {
+  return apiRequest(`/forms/${formId}/stats`, { token })
+}
+
+// Notifications
+
+export function getNotifications(token) {
+  return apiRequest("/notifications", { token })
+}
+
+export function markNotificationAsRead(token, notificationId) {
+  return apiRequest(`/notifications/${notificationId}/read`, {
+    method: "PATCH",
+    token,
+  })
+}
+
+export function markAllNotificationsAsRead(token) {
+  return apiRequest("/notifications/read-all", {
+    method: "POST",
     token,
   })
 }

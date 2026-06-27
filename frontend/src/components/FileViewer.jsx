@@ -7,7 +7,7 @@ import {
   RefreshCw,
   Search,
 } from "lucide-react"
-import { getCachedCanvasFiles, syncCanvasFiles } from "../api"
+import { loadCachedCanvasFiles, syncCanvasFiles } from "../api"
 
 const RECENT_FILES_KEY = "canvenient-recent-files"
 
@@ -75,13 +75,11 @@ function FileViewer({ token, currentUser }) {
       setFileError("")
 
       try {
-        let data = await getCachedCanvasFiles(token)
-        const needsCurrentCourseSnapshot =
-          !data.synced_at || ((data.files || []).length > 0 && (data.courses || []).length === 0)
-        if (needsCurrentCourseSnapshot) {
-          if (!cancelled) setSyncingFiles(true)
-          data = await syncCanvasFiles(token)
-        }
+        const data = await loadCachedCanvasFiles(token, {
+          onSyncRequired: () => {
+            if (!cancelled) setSyncingFiles(true)
+          },
+        })
         if (!cancelled) {
           setCourses(data.courses || [])
           setFiles(data.files || [])
