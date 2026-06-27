@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react"
-import { getSchedule, importIcs, updateEvent, deleteEvent } from "../api"
+import { getSchedule, importIcs, updateEvent, deleteEvent, updateEventAttendance } from "../api"
 import { Upload, RefreshCw, Calendar as CalendarIcon, Grid, List, X, Edit, Trash2, Clock, MapPin } from "lucide-react"
 import { ThemeProvider, createTheme } from "@mui/material/styles"
 
@@ -108,12 +108,26 @@ function Schedule({ token }) {
       }))
     }
     if (schedule.events) {
-      schedule.events.forEach(ev => list.push({
-        id: `event-${ev.id}`, rawId: ev.id, type: "event",
-        title: ev.title, description: ev.description || "", venue: ev.venue || "No Venue",
-        start: new Date(ev.start_at).toISOString(),
-        end: ev.end_at ? new Date(ev.end_at).toISOString() : new Date(ev.start_at).toISOString(),
-      }))
+      schedule.events.forEach(ev => {
+        const isGroupOrComm = ev.c_id != null || ev.g_id != null
+        const isAttending = ev.is_attending
+
+        let className = ""
+        if (isGroupOrComm && !isAttending) {
+          className = "event-pending-rsvp"
+        }
+
+        list.push({
+          id: `event-${ev.id}`, rawId: ev.id, type: "event",
+          title: ev.title, description: ev.description || "", venue: ev.venue || "No Venue",
+          start: new Date(ev.start_at).toISOString(),
+          end: ev.end_at ? new Date(ev.end_at).toISOString() : new Date(ev.start_at).toISOString(),
+          c_id: ev.c_id,
+          g_id: ev.g_id,
+          is_attending: ev.is_attending,
+          className
+        })
+      })
     }
     return list
   }
@@ -146,6 +160,23 @@ function Schedule({ token }) {
       loadSchedule()
     } catch (err) {
       alert(err.message || "Failed to delete.")
+    }
+  }
+
+  const handleUpdateAttendance = async (eventId, isAttending) => {
+    try {
+      await updateEventAttendance(token, eventId, isAttending)
+      setActiveModal(prev => ({
+        ...prev,
+        event: {
+          ...prev.event,
+          is_attending: isAttending,
+          className: (prev.event.c_id || prev.event.g_id) && !isAttending ? "event-pending-rsvp" : ""
+        }
+      }))
+      loadSchedule()
+    } catch (err) {
+      alert(err.message || "Failed to update attendance.")
     }
   }
 
@@ -239,9 +270,37 @@ function Schedule({ token }) {
                 <div className="flex-col gap-xs text-sm text-muted">
                   <span className="flex items-center gap-xs"><Clock size={14} />{new Date(activeModal.event.start).toLocaleString("en-SG")}</span>
                   <span className="flex items-center gap-xs"><MapPin size={14} />{activeModal.event.venue}</span>
+                  {(activeModal.event.c_id || activeModal.event.g_id) && (
+                    <div style={{ marginTop: "12px" }}>
+                      <span className="eyebrow" style={{ display: "block", marginBottom: "6px" }}>RSVP STATUS</span>
+                      <div className="flex items-center gap-md">
+                        <span className={`badge badge--${activeModal.event.is_attending ? "success" : "muted"}`}>
+                          {activeModal.event.is_attending ? "Attending" : "Not Attending"}
+                        </span>
+                        <div className="flex gap-xs">
+                          <button 
+                            type="button"
+                            className={`btn btn--sm ${activeModal.event.is_attending ? "btn--primary" : "btn--outline"}`}
+                            style={{ padding: "4px 8px", fontSize: "11px" }}
+                            onClick={() => handleUpdateAttendance(activeModal.event.rawId, true)}
+                          >
+                            Going
+                          </button>
+                          <button 
+                            type="button"
+                            className={`btn btn--sm ${!activeModal.event.is_attending ? "btn--danger" : "btn--outline"}`}
+                            style={{ padding: "4px 8px", fontSize: "11px" }}
+                            onClick={() => handleUpdateAttendance(activeModal.event.rawId, false)}
+                          >
+                            Not Going
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
                 <div className="modal-footer flex justify-end w-full" style={{ padding: "16px 0 0" }}>
-                  {activeModal.event.type === "event" ?
+                  {activeModal.event.type === "event" && !activeModal.event.c_id && !activeModal.event.g_id ?
                     <button className="btn btn--primary btn--sm" onClick={() => setActiveModal({ ...activeModal, mode: "edit" })}>Edit</button> : null}
                 </div>
               </div>

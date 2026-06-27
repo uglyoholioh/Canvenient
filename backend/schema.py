@@ -343,6 +343,14 @@ SCHEMA_STATEMENTS = [
     """
     CREATE INDEX IF NOT EXISTS cg_forms_g_id_idx ON cg_forms(g_id)
     """,
+    """
+    ALTER TABLE events
+    ADD COLUMN IF NOT EXISTS event_type TEXT
+    """,
+    """
+    ALTER TABLE event_attendance
+    ADD COLUMN IF NOT EXISTS attended BOOLEAN DEFAULT NULL
+    """,
 ]
 
 

@@ -1,4 +1,5 @@
 import json
+from datetime import datetime
 from fastapi import APIRouter, HTTPException, Response, status
 from database import db
 from dependencies import CurrentUser
@@ -12,6 +13,9 @@ def build_form(record) -> dict[str, Any]:
     d = dict(record)
     if isinstance(d.get("fields"), str):
         d["fields"] = json.loads(d["fields"])
+    if "user_response" in d and d["user_response"] is not None:
+        if isinstance(d["user_response"], str):
+            d["user_response"] = json.loads(d["user_response"])
     return d
 
 
@@ -26,11 +30,12 @@ def build_response(record) -> dict[str, Any]:
 async def list_forms(current_user: CurrentUser):
     rows = await db.fetch_all(
         query="""
-            SELECT DISTINCT f.*
+            SELECT DISTINCT f.*, fr.response_data AS user_response
             FROM cg_forms f
             LEFT JOIN g_members gm ON gm.g_id = f.g_id
             LEFT JOIN groups g ON g.c_id = f.c_id
             LEFT JOIN g_members gm_comm ON gm_comm.g_id = g.id
+            LEFT JOIN cg_form_responses fr ON fr.form_id = f.id AND fr.user_id = :user_id
             WHERE f.user_id = :user_id
                OR gm.user_id = :user_id
                OR gm_comm.user_id = :user_id
@@ -135,11 +140,12 @@ async def create_form(payload: FormCreate, current_user: CurrentUser):
 async def get_form(form_id: int, current_user: CurrentUser):
     row = await db.fetch_one(
         query="""
-            SELECT DISTINCT f.*
+            SELECT DISTINCT f.*, fr.response_data AS user_response
             FROM cg_forms f
             LEFT JOIN g_members gm ON gm.g_id = f.g_id
             LEFT JOIN groups g ON g.c_id = f.c_id
             LEFT JOIN g_members gm_comm ON gm_comm.g_id = g.id
+            LEFT JOIN cg_form_responses fr ON fr.form_id = f.id AND fr.user_id = :user_id
             WHERE f.id = :form_id AND (
                 f.user_id = :user_id
                 OR gm.user_id = :user_id

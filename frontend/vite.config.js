@@ -37,6 +37,26 @@ export default defineConfig({
         target: 'http://localhost:8000',
         changeOrigin: true,
       },
+      '/communities': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
+      },
+      '/groups': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
+      },
+      '/invites': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
+      },
+      '/forms': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
+      },
+      '/notifications': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
+      },
     },
   },
 })

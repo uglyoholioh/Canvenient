@@ -1207,3 +1207,10 @@ textarea.form-input {
   background: #ffffff;
   border-bottom-left-radius: 2px !important;
 }
+
+.event-pending-rsvp {
+  opacity: 0.65 !important;
+  border: 1px dashed var(--text-muted) !important;
+  background-color: var(--surface-warm) !important;
+  color: var(--text-muted) !important;
+}
