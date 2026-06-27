@@ -2,7 +2,7 @@ import { useEffect } from "react"
 import { useParams, useNavigate } from "react-router-dom"
 import { joinGroup } from "../api"
 
-function JoinGroupLink({ token, currentUser }) {
+function JoinGroupLink({ token }) {
   const { code } = useParams()
   const navigate = useNavigate()
 
