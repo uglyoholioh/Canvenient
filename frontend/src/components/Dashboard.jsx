@@ -10,10 +10,11 @@ import {
   getCanvasAssignments,
   getCanvasFiles,
   getSchedule,
-  importIcs
+  importIcs,
+  getGroups
 } from "../api"
 
-import { Megaphone, BookOpen, FolderOpen, RefreshCw, ExternalLink } from "lucide-react"
+import { Megaphone, BookOpen, FolderOpen, RefreshCw, ExternalLink, Calendar, FileText } from "lucide-react"
 import AiBrief from "./AiBrief"
 
 function Dashboard({ token, currentUser, onLogout }) {
@@ -34,6 +35,7 @@ function Dashboard({ token, currentUser, onLogout }) {
   const [schedule, setSchedule] = useState({ classes: [], exams: [], events: [] })
   const [loadingSchedule, setLoadingSchedule] = useState(false)
   const [uploadingSchedule, setUploadingSchedule] = useState(false)
+  const [groups, setGroups] = useState([])
 
   // Modal overlays state
   const [activeModal, setActiveModal] = useState(null) // { courseId, courseCode, type }
@@ -126,6 +128,21 @@ function Dashboard({ token, currentUser, onLogout }) {
     if (token) {
       fetchTasks()
     }
+  }, [token])
+
+  // Load Groups
+  useEffect(() => {
+    async function loadGroups() {
+      if (token) {
+        try {
+          const data = await getGroups(token)
+          setGroups(data || [])
+        } catch (err) {
+          console.error("Could not load groups:", err)
+        }
+      }
+    }
+    loadGroups()
   }, [token])
 
   const handleAddTask = async (e) => {
@@ -293,8 +310,13 @@ function Dashboard({ token, currentUser, onLogout }) {
     return `${diffDays}d ago`
   }
 
-  const priorityAnnouncements = (announcements || []).filter(ann => ann.is_priority)
-  const priorityAssignments = (assignments || []).filter(ass => ass.is_priority)
+  const upcomingAssignments = (assignments || [])
+    .filter(ass => {
+      if (!ass.due_at) return false
+      const due = new Date(ass.due_at)
+      return due > new Date() && !ass.has_submitted
+    })
+    .sort((a, b) => new Date(a.due_at) - new Date(b.due_at))
   const displayedModalItems = !activeModal
     ? []
     : activeModal.type === "announcements"
@@ -480,15 +502,67 @@ function Dashboard({ token, currentUser, onLogout }) {
 
         <div className="card">
           <div className="card-header">
-            <h3>Group Scheduler</h3>
-            <span className="badge badge--muted">In Progress</span>
+            <h3>Groups</h3>
           </div>
-          <p className="text-base text" style={{ marginBottom: "15px" }}>
-            Find common free slots and schedule meetings with your project peers.
-          </p>
-          <div className="state-box state-box--dashed" style={{ height: "80px", padding: 0 }}>
-            <span>Scheduling calendar...</span>
-          </div>
+          {groups.length === 0 ? (
+            <div className="state-box state-box--dashed" style={{ height: "120px" }}>
+              <p className="text-sm text-muted">You are not part of any groups yet.</p>
+              <button className="btn btn--primary btn--sm" onClick={() => navigate("/organisations")} style={{ marginTop: "8px" }}>
+                Join / Create Group
+              </button>
+            </div>
+          ) : (
+            <div className="list list--scrollable" style={{ maxHeight: "220px", marginBottom: "15px" }}>
+              {groups.slice(0, 3).map(group => (
+                <div key={group.id} className="list-item" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 12px" }}>
+                  <div className="flex-col" style={{ gap: "2px", minWidth: 0, flex: 1, marginRight: "10px" }}>
+                    <span
+                      onClick={() => navigate("/organisations", { state: { openGroupId: group.id } })}
+                      className="text-sm cursor-pointer truncate"
+                      style={{ color: "var(--text-h)", fontWeight: 600, display: "block" }}
+                      title="Open group page"
+                    >
+                      {group.name}
+                    </span>
+                    {group.description && (
+                      <span className="text-xs text-muted truncate" style={{ display: "block" }}>
+                        {group.description}
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex gap-xs" style={{ flexShrink: 0 }}>
+                    <button
+                      onClick={() => navigate("/organisations", { state: { openGroupId: group.id, openTab: "events" } })}
+                      className="btn btn--icon btn--sm"
+                      style={{ width: "28px", height: "28px" }}
+                      title="Events"
+                    >
+                      <Calendar size={13} />
+                    </button>
+                    <button
+                      onClick={() => navigate("/organisations", { state: { openGroupId: group.id, openTab: "forms" } })}
+                      className="btn btn--icon btn--sm"
+                      style={{ width: "28px", height: "28px" }}
+                      title="Forms"
+                    >
+                      <FileText size={13} />
+                    </button>
+                    <button
+                      onClick={() => navigate("/organisations", { state: { openGroupId: group.id } })}
+                      className="btn btn--icon btn--sm"
+                      style={{ width: "28px", height: "28px" }}
+                      title="Open group page"
+                    >
+                      <ExternalLink size={13} />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+          <button className="btn btn--secondary btn--full" onClick={() => navigate("/organisations")}>
+            View all groups
+          </button>
         </div>
       </main>
 
@@ -561,64 +635,50 @@ function Dashboard({ token, currentUser, onLogout }) {
 
         <div className="card card--accent">
           <div className="panel-header mb-lg">
-            <h2>Priority items</h2>
-            <p className="text-sm text-muted">Urgent alerts & upcoming deadlines</p>
+            <h2>Assignment Deadlines</h2>
+            <p className="text-sm text-muted">Upcoming Canvas assignment deadlines</p>
           </div>
           {!currentUser?.canvas_token ? (
             <p className="text-sm text-muted" style={{ fontStyle: "italic", padding: "10px 0" }}>
-              Connect Canvas to show priority items.
+              Connect Canvas to show deadlines.
             </p>
           ) : loadingCanvas ? (
             <div className="state-box">
               <RefreshCw size={20} className="spin" />
-              <span>Checking priority updates...</span>
+              <span>Checking deadlines...</span>
             </div>
           ) : (
-            <div className="priority-stream">
-              <div>
-                <h4 className="priority-section-title">Critical Alerts</h4>
-                <div className="list list--scrollable">
-                  {priorityAnnouncements.length === 0 ? (
-                    <p className="text-sm text-muted" style={{ fontStyle: "italic", padding: "10px 0" }}>
-                      No critical alerts found.
-                    </p>
-                  ) : (
-                    priorityAnnouncements.map(ann => (
-                      <div key={ann.id} className="list-item list-item--md">
-                        <div className="flex justify-between items-center gap-md mb-sm">
-                          <span className="badge badge--primary">{ann.course_code}</span>
-                          <span className="text-xs text-muted">{formatRelativeTime(ann.posted_at)}</span>
-                        </div>
-                        <h5 style={{ fontSize: "15px", fontWeight: "600", color: "var(--text-h)", lineHeight: "1.3" }}>
-                          {ann.title}
-                        </h5>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </div>
-              <div>
-                <h4 className="priority-section-title">Upcoming Deadlines (Next 7 Days)</h4>
-                <div className="list list--scrollable">
-                  {priorityAssignments.length === 0 ? (
-                    <p style={{ fontSize: "13px", color: "var(--text-muted)", fontStyle: "italic", padding: "10px 0" }}>
-                      No upcoming deadlines.
-                    </p>
-                  ) : (
-                    priorityAssignments.map(ass => (
-                      <div key={ass.id} className="list-item list-item--md">
-                        <div className="flex justify-between items-center gap-md mb-sm">
-                          <span className="badge badge--primary">{ass.course_code}</span>
-                          <span className="badge badge--danger">Due: {formatDate(ass.due_at)}</span>
-                        </div>
-                        <h5 style={{ fontSize: "15px", fontWeight: "600", color: "var(--text-h)", lineHeight: "1.3" }}>
-                          {ass.title}
-                        </h5>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </div>
+            <div className="list list--scrollable" style={{ maxHeight: "360px" }}>
+              {upcomingAssignments.length === 0 ? (
+                <p style={{ fontSize: "13px", color: "var(--text-muted)", fontStyle: "italic", padding: "10px 0" }}>
+                  No upcoming deadlines.
+                </p>
+              ) : (
+                upcomingAssignments.map(ass => (
+                  <div key={ass.id} className="list-item list-item--md" style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                    <div className="flex justify-between items-center gap-md">
+                      <span className="badge badge--primary">{ass.course_code}</span>
+                      <span className="badge badge--danger" style={{ backgroundColor: "rgba(211, 47, 47, 0.1)", color: "var(--error)", border: "none" }}>
+                        Due: {formatDate(ass.due_at)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center gap-md">
+                      <h5 style={{ fontSize: "14px", fontWeight: "600", color: "var(--text-h)", lineHeight: "1.3", margin: 0 }} className="truncate">
+                        {ass.title}
+                      </h5>
+                      <a
+                        href={ass.external_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="btn btn--secondary btn--sm"
+                        style={{ padding: "4px 8px", fontSize: "11px", height: "24px", borderRadius: "4px", flexShrink: 0 }}
+                      >
+                        Canvas
+                      </a>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           )}
         </div>

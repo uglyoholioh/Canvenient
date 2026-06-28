@@ -1,6 +1,6 @@
 import { useNavigate, NavLink } from "react-router-dom"
 import { useState, useEffect } from "react"
-import { Home, CheckSquare, Calendar, Users, LogOut, Bell, RefreshCw, Map, FolderOpen } from "lucide-react"
+import { Home, CheckSquare, Calendar, Users, LogOut, Bell, FolderOpen } from "lucide-react"
 import { getStoredToken, getNotifications, markNotificationAsRead, markAllNotificationsAsRead } from "../api"
 
 const navigationConfig = [
@@ -9,9 +9,6 @@ const navigationConfig = [
   { label: "Schedule", href: "/schedule", icon: Calendar },
   { label: "Groups / comms", href: "/organisations", icon: Users },
   { label: "File Viewer", href: "/files", icon: FolderOpen },
-  { label: "Canvas Sync (in prog)", href: "#", icon: RefreshCw },
-  { label: "NUSMods (in prog)", href: "#", icon: Map },
-  { label: "Group Work (in prog)", href: "#", icon: Users },
 ]
 
 function Sidebar({ currentUser, onLogout }) {
