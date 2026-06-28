@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react"
+import { useLocation } from "react-router-dom"
 import {
   getCommunities, createCommunity,
   getGroups, createGroup,
@@ -523,6 +524,7 @@ function AttendanceModal({ event, summary, onClose, onMarkAttendance }) {
 }
 
 function Organisations({ token, currentUser }) {
+  const location = useLocation()
   const [communities, setCommunities] = useState([])
   const [groups, setGroups] = useState([])
   const [allEvents, setAllEvents] = useState([])
@@ -603,6 +605,24 @@ function Organisations({ token, currentUser }) {
       getGroupMembers(token, activeGroup.id).then(setMembers).catch(() => setMembers([]))
     }
   }, [activeGroup, activeTab])
+
+  useEffect(() => {
+    if (location.state && location.state.openGroupId && groups.length > 0) {
+      const grp = groups.find(g => g.id === location.state.openGroupId)
+      if (grp) {
+        const comm = communities.find(c => c.id === grp.c_id) || null
+        setActiveGroup(grp)
+        setActiveCommunity(comm)
+        setActiveTab(location.state.openTab || "events")
+        setGeneratedInvite("")
+        setFillingForm(null)
+        setViewingFormSubmissions(null)
+        setShowFormBuilder(false)
+        setView("group")
+        setError(""); setSuccess("")
+      }
+    }
+  }, [location.state, groups, communities])
 
   const handleJoinGroup = async (e) => {
     e.preventDefault()
