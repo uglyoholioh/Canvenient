@@ -26,6 +26,7 @@ export default function AiBrief({ token, onTaskCreated }) {
     const [messages, setMessages] = useState(readCachedMessages)
     const [chatLoading, setChatLoading] = useState(false)
     const [error, setError] = useState("")
+    const [addedSuggestions, setAddedSuggestions] = useState([])
     const { brief, context } = briefData
 
     const fetchBrief = async () => {
@@ -74,14 +75,19 @@ export default function AiBrief({ token, onTaskCreated }) {
         }
     }
 
-    const handleAddTask = async (title, priority) => {
+    const handleAddTask = async (idx, title, priority) => {
         setError("")
+        const normPriority = (priority || "medium").toLowerCase().trim()
+        const validPriorities = ["low", "medium", "high", "urgent"]
+        const finalPriority = validPriorities.includes(normPriority) ? normPriority : "medium"
+
         try {
             await createTask(token, {
                 title,
                 status: "todo",
-                priority_manual: priority || "medium"
+                priority_manual: finalPriority
             })
+            setAddedSuggestions(prev => [...prev, idx])
             if (onTaskCreated) {
                 onTaskCreated()
             }
@@ -165,11 +171,12 @@ export default function AiBrief({ token, onTaskCreated }) {
                         </div>
                         {item.type === "task" && (
                             <button 
-                                onClick={() => handleAddTask(item.title, item.priority)} 
-                                className="btn btn--primary btn--sm"
+                                onClick={() => handleAddTask(idx, item.title || item.message, item.priority)} 
+                                className={`btn btn--sm ${addedSuggestions.includes(idx) ? "btn--secondary" : "btn--primary"}`}
                                 style={{ marginLeft: "1rem" }}
+                                disabled={addedSuggestions.includes(idx)}
                             >
-                                Add Task
+                                {addedSuggestions.includes(idx) ? "Added" : "Add Task"}
                             </button>
                         )}
                     </div>
