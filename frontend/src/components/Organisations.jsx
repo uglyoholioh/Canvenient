@@ -4,7 +4,7 @@ import {
   getCommunities, createCommunity,
   getGroups, createGroup,
   createInvite, joinGroup,
-  getEvents, createEvent,
+  getEvents, createEvent, updateEvent, deleteEvent,
   getForms, createForm, submitFormResponse, getFormResponses, getFormStats,
   getGroupMembers,
   getEventAttendanceSummary, markEventActualAttendance,
@@ -133,7 +133,7 @@ function GroupCard({ group, community, nextEvent, latestForm, onClick }) {
   )
 }
 
-function EventCard({ event, isAdmin, onViewAttendance, onRsvp }) {
+function EventCard({ event, isAdmin, onViewAttendance, onRsvp, onEditClick }) {
   return (
     <div className="card flex-col gap-sm" style={{ gap: "8px" }}>
       <TypeBadge value={event.event_type} map={EVENT_TYPES} />
@@ -160,7 +160,10 @@ function EventCard({ event, isAdmin, onViewAttendance, onRsvp }) {
             </span>
           )}
           {isAdmin && (
-            <button className="btn btn--outline btn--sm" onClick={() => onViewAttendance(event)}>View Attendance</button>
+            <div className="flex gap-xs" style={{ marginTop: "4px" }}>
+              <button className="btn btn--outline btn--sm" onClick={() => onViewAttendance(event)}>View Attendance</button>
+              <button className="btn btn--secondary btn--sm" onClick={() => onEditClick(event)}>Edit</button>
+            </div>
           )}
           {!isAdmin && (
             <button
@@ -176,7 +179,7 @@ function EventCard({ event, isAdmin, onViewAttendance, onRsvp }) {
   )
 }
 
-function EventsTab({ upcomingEvents, pastEvents, isAdmin, onCreateClick, onViewAttendance, onRsvp }) {
+function EventsTab({ upcomingEvents, pastEvents, isAdmin, onCreateClick, onViewAttendance, onRsvp, onEditClick }) {
   const [showPast, setShowPast] = useState(false)
   return (
     <div className="flex-col gap-md">
@@ -190,7 +193,7 @@ function EventsTab({ upcomingEvents, pastEvents, isAdmin, onCreateClick, onViewA
       </div>
       {upcomingEvents.length === 0 && <div className="state-box state-box--dashed text-sm">No upcoming events scheduled.</div>}
       {upcomingEvents.map(evt => (
-        <EventCard key={evt.id} event={evt} isAdmin={isAdmin} onViewAttendance={onViewAttendance} onRsvp={onRsvp} />
+        <EventCard key={evt.id} event={evt} isAdmin={isAdmin} onViewAttendance={onViewAttendance} onRsvp={onRsvp} onEditClick={onEditClick} />
       ))}
       {pastEvents.length > 0 && (
         <>
@@ -202,7 +205,7 @@ function EventsTab({ upcomingEvents, pastEvents, isAdmin, onCreateClick, onViewA
             Past Events ({pastEvents.length})
           </button>
           {showPast && pastEvents.map(evt => (
-            <EventCard key={evt.id} event={evt} isAdmin={isAdmin} onViewAttendance={onViewAttendance} onRsvp={onRsvp} />
+            <EventCard key={evt.id} event={evt} isAdmin={isAdmin} onViewAttendance={onViewAttendance} onRsvp={onRsvp} onEditClick={onEditClick} />
           ))}
         </>
       )}
@@ -554,6 +557,15 @@ function Organisations({ token, currentUser }) {
   const [showCreateCommunity, setShowCreateCommunity] = useState(false)
   const [showCreateGroup, setShowCreateGroup] = useState(false)
   const [showEventModal, setShowEventModal] = useState(false)
+  const [showEditEventModal, setShowEditEventModal] = useState(false)
+  const [editEventId, setEditEventId] = useState(null)
+  const [editEventTitle, setEditEventTitle] = useState("")
+  const [editEventDesc, setEditEventDesc] = useState("")
+  const [editEventVenue, setEditEventVenue] = useState("")
+  const [editEventStart, setEditEventStart] = useState("")
+  const [editEventEnd, setEditEventEnd] = useState("")
+  const [editEventType, setEditEventType] = useState("")
+  const [editCustomEventType, setEditCustomEventType] = useState("")
 
   const [inviteCodeInput, setInviteCodeInput] = useState("")
   const [generatedInvite, setGeneratedInvite] = useState("")
@@ -725,6 +737,75 @@ function Organisations({ token, currentUser }) {
       setSuccess("Event created!")
       loadData()
     } catch (err) { setError(err.message || "Failed to create event.") }
+  }
+
+  const handleStartEditEvent = (event) => {
+    const toLocalDateString = (d) => {
+      if (!d) return ""
+      const date = new Date(d)
+      const tzOffset = date.getTimezoneOffset() * 60000;
+      return (new Date(date - tzOffset)).toISOString().slice(0, 16);
+    }
+
+    setEditEventId(event.id)
+    setEditEventTitle(event.title)
+    setEditEventDesc(event.description || "")
+    setEditEventVenue(event.venue || "")
+    setEditEventStart(toLocalDateString(event.start_at))
+    setEditEventEnd(event.end_at ? toLocalDateString(event.end_at) : "")
+    
+    const standardTypes = ["training", "competition", "meeting", "social"]
+    if (!event.event_type) {
+      setEditEventType("")
+      setEditCustomEventType("")
+    } else if (standardTypes.includes(event.event_type)) {
+      setEditEventType(event.event_type)
+      setEditCustomEventType("")
+    } else {
+      setEditEventType("other")
+      setEditCustomEventType(event.event_type)
+    }
+    setShowEditEventModal(true)
+  }
+
+  const handleSaveEditEvent = async (e) => {
+    e.preventDefault()
+    setError(""); setSuccess("")
+    if (!editEventTitle.trim() || !editEventId) return
+    try {
+      const resolvedEventType = editEventType === "other" ? (editCustomEventType.trim() || null) : (editEventType || null)
+      await updateEvent(token, editEventId, {
+        title: editEventTitle,
+        description: editEventDesc,
+        venue: editEventVenue,
+        start_at: new Date(editEventStart).toISOString(),
+        end_at: editEventEnd ? new Date(editEventEnd).toISOString() : null,
+        is_all_day: false,
+        event_type: resolvedEventType,
+        c_id: activeGroup?.c_id || null,
+        g_id: activeGroup?.id || null
+      })
+      setShowEditEventModal(false)
+      setEditEventId(null)
+      setSuccess("Event updated!")
+      loadData()
+    } catch (err) {
+      setError(err.message || "Failed to update event.")
+    }
+  }
+
+  const handleDeleteEvent = async (eventId) => {
+    if (!window.confirm("Delete this event?")) return
+    setError(""); setSuccess("")
+    try {
+      await deleteEvent(token, eventId)
+      setShowEditEventModal(false)
+      setEditEventId(null)
+      setSuccess("Event deleted!")
+      loadData()
+    } catch (err) {
+      setError(err.message || "Failed to delete event.")
+    }
   }
 
   const handleAddField = () => {
@@ -911,6 +992,7 @@ function Organisations({ token, currentUser }) {
               onCreateClick={() => setShowEventModal(true)}
               onViewAttendance={handleViewAttendance}
               onRsvp={handleRsvp}
+              onEditClick={handleStartEditEvent}
             />
           )}
           {activeTab === "forms" && (
@@ -1020,6 +1102,66 @@ function Organisations({ token, currentUser }) {
             onClose={() => setViewingAttendance(null)}
             onMarkAttendance={handleMarkAttendance}
           />
+        )}
+
+        {showEditEventModal && (
+          <Modal title="Edit Event" onClose={() => { setShowEditEventModal(false); setEditEventId(null); }}>
+            <form onSubmit={handleSaveEditEvent} className="form flex-col gap-md">
+              <div className="form-grid form-grid--2col">
+                <div className="form-group">
+                  <label>Event Title</label>
+                  <input type="text" className="form-input" required value={editEventTitle} onChange={e => setEditEventTitle(e.target.value)} />
+                </div>
+                <div className="form-group">
+                  <label>Type</label>
+                  <select className="form-input" value={editEventType} onChange={e => { setEditEventType(e.target.value); setEditCustomEventType("") }}>
+                    <option value="">No type</option>
+                    <option value="training">Training</option>
+                    <option value="competition">Competition</option>
+                    <option value="meeting">Meeting</option>
+                    <option value="social">Social</option>
+                    <option value="other">Other</option>
+                  </select>
+                  {editEventType === "other" && (
+                    <input
+                      type="text"
+                      className="form-input"
+                      style={{ marginTop: "8px" }}
+                      placeholder="Enter custom type..."
+                      value={editCustomEventType}
+                      onChange={e => setEditCustomEventType(e.target.value)}
+                      required
+                    />
+                  )}
+                </div>
+              </div>
+              <div className="form-grid form-grid--2col">
+                <div className="form-group">
+                  <label>Date & Time</label>
+                  <input type="datetime-local" className="form-input" required value={editEventStart} onChange={e => setEditEventStart(e.target.value)} />
+                </div>
+                <div className="form-group">
+                  <label>End (optional)</label>
+                  <input type="datetime-local" className="form-input" value={editEventEnd} onChange={e => setEditEventEnd(e.target.value)} />
+                </div>
+              </div>
+              <div className="form-group">
+                <label>Location</label>
+                <input type="text" className="form-input" value={editEventVenue} onChange={e => setEditEventVenue(e.target.value)} />
+              </div>
+              <div className="form-group">
+                <label>Description</label>
+                <textarea className="form-input" rows={2} value={editEventDesc} onChange={e => setEditEventDesc(e.target.value)} />
+              </div>
+              <div className="flex justify-between items-center w-full">
+                <button type="button" className="btn btn--danger btn--sm" onClick={() => handleDeleteEvent(editEventId)}>Delete Event</button>
+                <div className="flex gap-sm">
+                  <button type="submit" className="btn btn--primary btn--sm">Save Changes</button>
+                  <button type="button" className="btn btn--secondary btn--sm" onClick={() => { setShowEditEventModal(false); setEditEventId(null); }}>Cancel</button>
+                </div>
+              </div>
+            </form>
+          </Modal>
         )}
       </main>
     )
