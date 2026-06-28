@@ -11,7 +11,8 @@ import {
   loadCachedCanvasFiles,
   getSchedule,
   importIcs,
-  getGroups
+  getGroups,
+  createEvent
 } from "../api"
 
 import { Megaphone, BookOpen, FolderOpen, RefreshCw, ExternalLink, Calendar, FileText } from "lucide-react"
@@ -35,6 +36,12 @@ function Dashboard({ token, currentUser, onLogout }) {
   const [schedule, setSchedule] = useState({ classes: [], exams: [], events: [] })
   const [uploadingSchedule, setUploadingSchedule] = useState(false)
   const [groups, setGroups] = useState([])
+  const [showEventModal, setShowEventModal] = useState(false)
+  const [eventTitle, setEventTitle] = useState("")
+  const [eventVenue, setEventVenue] = useState("")
+  const [eventDesc, setEventDesc] = useState("")
+  const [eventStart, setEventStart] = useState("")
+  const [eventEnd, setEventEnd] = useState("")
 
   // Modal overlays state
   const [activeModal, setActiveModal] = useState(null) // { courseId, courseCode, type }
@@ -187,6 +194,36 @@ function Dashboard({ token, currentUser, onLogout }) {
       setError(err.message || "Failed to upload calendar.")
     } finally {
       setUploadingSchedule(false)
+    }
+  }
+
+  const handleCreatePersonalEvent = async (e) => {
+    e.preventDefault()
+    if (!eventTitle.trim() || !eventStart) return
+    setError("")
+    try {
+      await createEvent(token, {
+        title: eventTitle,
+        description: eventDesc,
+        venue: eventVenue,
+        start_at: new Date(eventStart).toISOString(),
+        end_at: eventEnd ? new Date(eventEnd).toISOString() : null,
+        is_all_day: false,
+        c_id: null,
+        g_id: null,
+        module_code: null,
+        event_type: null
+      })
+      setEventTitle("")
+      setEventVenue("")
+      setEventDesc("")
+      setEventStart("")
+      setEventEnd("")
+      setShowEventModal(false)
+      const data = await getSchedule(token)
+      setSchedule(data || { classes: [], exams: [], events: [] })
+    } catch (err) {
+      setError(err.message || "Failed to create event.")
     }
   }
 
@@ -447,18 +484,23 @@ function Dashboard({ token, currentUser, onLogout }) {
         <div className="card">
           <div className="card-header">
             <h3>My Schedule</h3>
-            {hasScheduleData && (
-              <label className="btn btn--secondary btn--sm cursor-pointer" title="Import new .ics calendar">
-                Re-import
-                <input
-                  type="file"
-                  accept=".ics"
-                  onChange={handleIcsUpload}
-                  style={{ display: "none" }}
-                  disabled={uploadingSchedule}
-                />
-              </label>
-            )}
+            <div className="flex gap-xs items-center">
+              <button onClick={() => setShowEventModal(true)} className="btn btn--secondary btn--sm">
+                + New Event
+              </button>
+              {hasScheduleData && (
+                <label className="btn btn--secondary btn--sm cursor-pointer" title="Import new .ics calendar">
+                  Re-import
+                  <input
+                    type="file"
+                    accept=".ics"
+                    onChange={handleIcsUpload}
+                    style={{ display: "none" }}
+                    disabled={uploadingSchedule}
+                  />
+                </label>
+              )}
+            </div>
           </div>
           {uploadingSchedule ? (
             <div className="state-box">
@@ -814,6 +856,45 @@ function Dashboard({ token, currentUser, onLogout }) {
             <div className="modal-footer">
               <button onClick={() => setActiveModal(null)} className="btn btn--secondary">Close</button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {showEventModal && (
+        <div className="modal-overlay" onClick={() => setShowEventModal(false)}>
+          <div className="modal-card" onClick={e => e.stopPropagation()} style={{ maxWidth: "480px" }}>
+            <div className="modal-header">
+              <h3>New Personal Event</h3>
+              <button className="close-modal" onClick={() => setShowEventModal(false)}>&times;</button>
+            </div>
+            <form onSubmit={handleCreatePersonalEvent} className="form modal-body">
+              <div className="form-group">
+                <label>Event Title</label>
+                <input type="text" className="form-input" required value={eventTitle} onChange={e => setEventTitle(e.target.value)} />
+              </div>
+              <div className="form-group">
+                <label>Venue (optional)</label>
+                <input type="text" className="form-input" value={eventVenue} onChange={e => setEventVenue(e.target.value)} />
+              </div>
+              <div className="form-grid form-grid--2col">
+                <div className="form-group">
+                  <label>Start Date & Time</label>
+                  <input type="datetime-local" className="form-input" required value={eventStart} onChange={e => setEventStart(e.target.value)} />
+                </div>
+                <div className="form-group">
+                  <label>End (optional)</label>
+                  <input type="datetime-local" className="form-input" value={eventEnd} onChange={e => setEventEnd(e.target.value)} />
+                </div>
+              </div>
+              <div className="form-group">
+                <label>Description (optional)</label>
+                <textarea className="form-input" rows={3} value={eventDesc} onChange={e => setEventDesc(e.target.value)} />
+              </div>
+              <div className="modal-footer flex gap-sm" style={{ padding: "16px 0 0" }}>
+                <button type="button" className="btn btn--secondary" onClick={() => setShowEventModal(false)}>Cancel</button>
+                <button type="submit" className="btn btn--primary">Create Event</button>
+              </div>
+            </form>
           </div>
         </div>
       )}

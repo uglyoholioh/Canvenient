@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react"
-import { getSchedule, importIcs, updateEvent, deleteEvent, updateEventAttendance } from "../api"
-import { Upload, RefreshCw, Calendar as CalendarIcon, Grid, List, X, Trash2, Clock, MapPin } from "lucide-react"
+import { getSchedule, importIcs, createEvent, updateEvent, deleteEvent, updateEventAttendance } from "../api"
+import { Upload, RefreshCw, Calendar as CalendarIcon, Grid, List, X, Edit, Trash2, Clock, MapPin } from "lucide-react"
 import { ThemeProvider, createTheme } from "@mui/material/styles"
 
 import {
@@ -132,6 +132,30 @@ function Schedule({ token }) {
     return list
   }
 
+  const handleCreatePersonalEvent = async (e) => {
+    e.preventDefault()
+    const { event } = activeModal
+    if (!event.title.trim() || !event.start) return
+    try {
+      await createEvent(token, {
+        title: event.title,
+        description: event.description || "",
+        venue: event.venue || "",
+        start_at: new Date(event.start).toISOString(),
+        end_at: event.end ? new Date(event.end).toISOString() : null,
+        is_all_day: false,
+        c_id: null,
+        g_id: null,
+        module_code: null,
+        event_type: null
+      })
+      setActiveModal(null)
+      loadSchedule()
+    } catch (err) {
+      alert(err.message || "Failed to create personal event.")
+    }
+  }
+
   const handleSaveEdit = async (e) => {
     e.preventDefault()
     const { event } = activeModal
@@ -194,6 +218,9 @@ function Schedule({ token }) {
             <button className={`btn btn--sm ${viewMode === "week" ? "btn--primary" : "btn--outline"}`} onClick={() => setViewMode("week")}><Grid size={14} style={{ marginRight: "4px" }} />Week</button>
             <button className={`btn btn--sm ${viewMode === "agenda" ? "btn--primary" : "btn--outline"}`} onClick={() => setViewMode("agenda")}><List size={14} style={{ marginRight: "4px" }} />Agenda</button>
           </div>
+          <button className="btn btn--primary" onClick={() => setActiveModal({ mode: "create", event: { title: "", start: "", end: "", venue: "", description: "" } })} style={{ display: "inline-flex", alignItems: "center" }}>
+            + New Event
+          </button>
           <label className="btn btn--secondary cursor-pointer">
             <Upload size={14} style={{ marginRight: "6px" }} />Import .ics
             <input type="file" accept=".ics" onChange={handleIcsUpload} style={{ display: "none" }} disabled={uploadingSchedule} />
@@ -231,11 +258,73 @@ function Schedule({ token }) {
         <div className="modal-overlay" onClick={() => setActiveModal(null)}>
           <div className="modal-card" onClick={(e) => e.stopPropagation()} style={{ maxWidth: "450px" }}>
             <div className="modal-header">
-              <h3>{activeModal.mode === "edit" ? "Edit Event" : "Event Details"}</h3>
+              <h3>
+                {activeModal.mode === "create"
+                  ? "New Personal Event"
+                  : activeModal.mode === "edit"
+                  ? "Edit Event"
+                  : "Event Details"}
+              </h3>
               <button className="close-modal" onClick={() => setActiveModal(null)}><X size={18} /></button>
             </div>
 
-            {activeModal.mode === "edit" ? (
+            {activeModal.mode === "create" ? (
+              <form onSubmit={handleCreatePersonalEvent} className="form modal-body">
+                <div className="form-group">
+                  <label>Title</label>
+                  <input
+                    type="text"
+                    className="form-input"
+                    value={activeModal.event.title}
+                    onChange={(e) => setActiveModal({ ...activeModal, event: { ...activeModal.event, title: e.target.value } })}
+                    required
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Venue (optional)</label>
+                  <input
+                    type="text"
+                    className="form-input"
+                    value={activeModal.event.venue}
+                    onChange={(e) => setActiveModal({ ...activeModal, event: { ...activeModal.event, venue: e.target.value } })}
+                  />
+                </div>
+                <div className="form-grid form-grid--2col" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                  <div className="form-group">
+                    <label>Start Date & Time</label>
+                    <input
+                      type="datetime-local"
+                      className="form-input"
+                      value={activeModal.event.start}
+                      onChange={(e) => setActiveModal({ ...activeModal, event: { ...activeModal.event, start: e.target.value } })}
+                      required
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>End (optional)</label>
+                    <input
+                      type="datetime-local"
+                      className="form-input"
+                      value={activeModal.event.end}
+                      onChange={(e) => setActiveModal({ ...activeModal, event: { ...activeModal.event, end: e.target.value } })}
+                    />
+                  </div>
+                </div>
+                <div className="form-group">
+                  <label>Description (optional)</label>
+                  <textarea
+                    className="form-input"
+                    value={activeModal.event.description}
+                    onChange={(e) => setActiveModal({ ...activeModal, event: { ...activeModal.event, description: e.target.value } })}
+                    rows={2}
+                  />
+                </div>
+                <div className="modal-footer flex justify-end gap-sm" style={{ padding: "16px 0 0" }}>
+                  <button type="button" className="btn btn--secondary" onClick={() => setActiveModal(null)}>Cancel</button>
+                  <button type="submit" className="btn btn--primary">Create</button>
+                </div>
+              </form>
+            ) : activeModal.mode === "edit" ? (
               <form onSubmit={handleSaveEdit} className="form modal-body">
                 <div className="form-group">
                   <label>Title</label>
