@@ -94,7 +94,7 @@ function Schedule({ token }) {
     const list = []
     if (schedule.classes) {
       schedule.classes.forEach(c => list.push({
-        id: `class-${c.id}`, rawId: c.id, type: "class",
+        id: `class-${c.id}`, eventId: c.id, type: "class",
         title: `${c.module_code} ${c.lesson_type}`, description: c.module_name, venue: c.venue || "No Venue",
         start: new Date(`${c.class_date}T${c.start_time}`).toISOString(),
         end: new Date(`${c.class_date}T${c.end_time}`).toISOString(),
@@ -102,7 +102,7 @@ function Schedule({ token }) {
     }
     if (schedule.exams) {
       schedule.exams.forEach(e => list.push({
-        id: `exam-${e.id}`, rawId: e.id, type: "exam",
+        id: `exam-${e.id}`, eventId: e.id, type: "exam",
         title: `${e.module_code} Exam`, description: e.module_name, venue: "See Exam Venue",
         start: new Date(e.start_at).toISOString(), end: new Date(e.end_at).toISOString(),
       }))
@@ -118,7 +118,7 @@ function Schedule({ token }) {
         }
 
         list.push({
-          id: `event-${ev.id}`, rawId: ev.id, type: "event",
+          id: `event-${ev.id}`, eventId: ev.id, type: "event",
           title: ev.title, description: ev.description || "", venue: ev.venue || "No Venue",
           start: new Date(ev.start_at).toISOString(),
           end: ev.end_at ? new Date(ev.end_at).toISOString() : new Date(ev.start_at).toISOString(),
@@ -160,7 +160,7 @@ function Schedule({ token }) {
     e.preventDefault()
     const { event } = activeModal
     try {
-      await updateEvent(token, event.rawId, {
+      await updateEvent(token, event.eventId, {
         title: event.title,
         description: event.description,
         venue: event.venue,
@@ -179,7 +179,7 @@ function Schedule({ token }) {
   const handleDelete = async () => {
     if (!window.confirm("Delete this event?")) return
     try {
-      await deleteEvent(token, activeModal.event.rawId)
+      await deleteEvent(token, activeModal.event.eventId)
       setActiveModal(null)
       loadSchedule()
     } catch (err) {
@@ -371,7 +371,7 @@ function Schedule({ token }) {
                             type="button"
                             className={`btn btn--sm ${activeModal.event.is_attending ? "btn--primary" : "btn--outline"}`}
                             style={{ padding: "4px 8px", fontSize: "11px" }}
-                            onClick={() => handleUpdateAttendance(activeModal.event.rawId, true)}
+                            onClick={() => handleUpdateAttendance(activeModal.event.eventId, true)}
                           >
                             Going
                           </button>
@@ -379,7 +379,7 @@ function Schedule({ token }) {
                             type="button"
                             className={`btn btn--sm ${!activeModal.event.is_attending ? "btn--danger" : "btn--outline"}`}
                             style={{ padding: "4px 8px", fontSize: "11px" }}
-                            onClick={() => handleUpdateAttendance(activeModal.event.rawId, false)}
+                            onClick={() => handleUpdateAttendance(activeModal.event.eventId, false)}
                           >
                             Not Going
                           </button>
