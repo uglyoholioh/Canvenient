@@ -29,6 +29,22 @@ const FORM_TYPES = {
   "sign-up": { label: "SIGN-UP", bg: "#E8F5E9", color: "#2E7D32" },
 }
 
+async function fetchOrganisationData(token) {
+  const [communities, groups, events, forms] = await Promise.all([
+    getCommunities(token),
+    getGroups(token),
+    getEvents(token),
+    getForms(token),
+  ])
+
+  return {
+    communities: communities || [],
+    groups: groups || [],
+    events: events || [],
+    forms: forms || [],
+  }
+}
+
 function getInitials(name, email) {
   const src = (name && name.trim()) ? name.trim() : (email || "")
   return src.slice(0, 2).toUpperCase() || "?"
@@ -581,30 +597,59 @@ function Organisations({ token, currentUser }) {
   const [attendanceSummary, setAttendanceSummary] = useState([])
 
   async function loadData() {
-    const sMsg = sessionStorage.getItem("join_success")
-    const eMsg = sessionStorage.getItem("join_error")
-    if (sMsg) { setSuccess(sMsg); sessionStorage.removeItem("join_success") }
-    if (eMsg) { setError(eMsg); sessionStorage.removeItem("join_error") }
     try {
-      const [comms, grps, evts, frms] = await Promise.all([
-        getCommunities(token), getGroups(token), getEvents(token), getForms(token)
-      ])
-      setCommunities(comms || [])
-      setGroups(grps || [])
-      setAllEvents(evts || [])
-      setAllForms(frms || [])
+      const data = await fetchOrganisationData(token)
+      setCommunities(data.communities)
+      setGroups(data.groups)
+      setAllEvents(data.events)
+      setAllForms(data.forms)
     } catch {
       setError("Failed to load data from server.")
     }
   }
 
-  useEffect(() => { loadData() }, [token])
+  useEffect(() => {
+    let cancelled = false
+    const joinSuccess = sessionStorage.getItem("join_success")
+    const joinError = sessionStorage.getItem("join_error")
+    sessionStorage.removeItem("join_success")
+    sessionStorage.removeItem("join_error")
+
+    async function loadInitialData() {
+      try {
+        const data = await fetchOrganisationData(token)
+        if (cancelled) return
+        setCommunities(data.communities)
+        setGroups(data.groups)
+        setAllEvents(data.events)
+        setAllForms(data.forms)
+        if (joinSuccess) setSuccess(joinSuccess)
+        if (joinError) setError(joinError)
+      } catch {
+        if (!cancelled) setError("Failed to load data from server.")
+      }
+    }
+
+    loadInitialData()
+    return () => { cancelled = true }
+  }, [token])
 
   useEffect(() => {
-    if (activeGroup && activeTab === "members") {
-      getGroupMembers(token, activeGroup.id).then(setMembers).catch(() => setMembers([]))
+    if (!activeGroup || activeTab !== "members") return
+    let cancelled = false
+
+    async function loadMembers() {
+      try {
+        const data = await getGroupMembers(token, activeGroup.id)
+        if (!cancelled) setMembers(data)
+      } catch {
+        if (!cancelled) setMembers([])
+      }
     }
-  }, [activeGroup, activeTab])
+
+    loadMembers()
+    return () => { cancelled = true }
+  }, [activeGroup, activeTab, token])
 
   useEffect(() => {
     if (location.state && location.state.openGroupId && groups.length > 0) {
