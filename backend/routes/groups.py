@@ -9,7 +9,7 @@ router = APIRouter(prefix = "/groups", tags = ["groups"])
 async def get_groups(current_user: CurrentUser):
     rows = await db.fetch_all(
         query = """
-            SELECT g.*
+            SELECT g.*, gm.role
             FROM groups g
             JOIN g_members gm ON gm.g_id = g.id
             WHERE gm.user_id = :user_id
@@ -63,7 +63,9 @@ async def create_group(payload: GroupCreate, current_user: CurrentUser):
             }
         )
         
-        return GroupOut.model_validate(dict(row))
+        group_dict = dict(row)
+        group_dict["role"] = "admin"
+        return GroupOut.model_validate(group_dict)
 
 
 @router.get("/{group_id}/members", response_model=list[GroupMemberOut])

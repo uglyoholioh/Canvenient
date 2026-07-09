@@ -18,6 +18,8 @@ class GroupOut(BaseModel):
     name: str
     description: str
     c_id: int | None
+    role: str = "member"
+
 
 
 class GroupMemberOut(BaseModel):

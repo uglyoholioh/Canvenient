@@ -913,7 +913,10 @@ function Organisations({ token, currentUser }) {
   }
 
   const communityMap = Object.fromEntries(communities.map(c => [c.id, c]))
-  const isAdmin = activeGroup && groups.find(g => g.id === activeGroup.id)?.user_id === currentUser?.id
+  const isAdmin = activeGroup && (
+    groups.find(g => g.id === activeGroup.id)?.role === "admin" ||
+    groups.find(g => g.id === activeGroup.id)?.user_id === currentUser?.id
+  )
   const groupEvents = allEvents.filter(e => e.g_id === activeGroup?.id)
   const groupForms = allForms.filter(f => f.g_id === activeGroup?.id)
   const now = new Date()
