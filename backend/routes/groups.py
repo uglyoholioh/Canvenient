@@ -89,3 +89,83 @@ async def get_group_members(group_id: int, current_user: CurrentUser):
         values={"g_id": group_id}
     )
     return [GroupMemberOut.model_validate(dict(row)) for row in rows]
+
+
+@router.patch("/{group_id}", response_model=GroupOut)
+async def update_group(group_id: int, payload: GroupUpdate, current_user: CurrentUser):
+    existing = await db.fetch_one(
+        query="SELECT * FROM groups WHERE id = :id",
+        values={"id": group_id}
+    )
+    if not existing:
+        raise HTTPException(status_code=404, detail="Group not found.")
+        
+    member = await db.fetch_one(
+        query="SELECT role FROM g_members WHERE g_id = :g_id AND user_id = :user_id",
+        values={"g_id": group_id, "user_id": current_user.id}
+    )
+    if not member or member["role"] != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only group admins can update group settings."
+        )
+        
+    updates = payload.model_dump(exclude_unset=True)
+    name = updates.get("name")
+    if name is not None:
+        name = name.strip()
+        if not name:
+            raise HTTPException(status_code=400, detail="Group name cannot be empty.")
+    else:
+        name = existing["name"]
+        
+    description = updates.get("description") if "description" in updates else existing["description"]
+    if description is None:
+        description = ""
+        
+    row = await db.fetch_one(
+        query="""
+            UPDATE groups
+            SET name = :name, description = :description
+            WHERE id = :id
+            RETURNING *
+        """,
+        values={"id": group_id, "name": name, "description": description}
+    )
+    
+    group_dict = dict(row)
+    group_dict["role"] = member["role"]
+    return GroupOut.model_validate(group_dict)
+
+
+@router.delete("/{group_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_group(group_id: int, current_user: CurrentUser):
+    existing = await db.fetch_one(
+        query="SELECT * FROM groups WHERE id = :id",
+        values={"id": group_id}
+    )
+    if not existing:
+        raise HTTPException(status_code=404, detail="Group not found.")
+        
+    # Check if they are the group creator or community owner
+    is_authorized = existing["user_id"] == current_user.id
+    if not is_authorized and existing["c_id"] is not None:
+        comm = await db.fetch_one(
+            query="SELECT user_id FROM communities WHERE id = :c_id",
+            values={"c_id": existing["c_id"]}
+        )
+        if comm and comm["user_id"] == current_user.id:
+            is_authorized = True
+            
+    if not is_authorized:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only the group creator or community owner can delete this group."
+        )
+        
+    await db.execute(
+        query="DELETE FROM groups WHERE id = :id",
+        values={"id": group_id}
+    )
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
