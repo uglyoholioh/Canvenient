@@ -18,6 +18,31 @@ import {
 } from "../api"
 
 import { Megaphone, BookOpen, FolderOpen, RefreshCw, ExternalLink, Calendar, FileText, Edit } from "lucide-react"
+
+// Module colour mapping (shared with Schedule.jsx)
+const SCHEDULER_COLORS = ['red', 'pink', 'purple', 'indigo', 'blue', 'teal', 'green', 'lime', 'amber', 'orange', 'grey']
+const COLOR_CSS_MAP = {
+  red: { bg: 'rgba(211,47,47,0.1)', color: '#D32F2F' },
+  pink: { bg: 'rgba(194,24,91,0.1)', color: '#C2185B' },
+  purple: { bg: 'rgba(123,31,162,0.1)', color: '#7B1FA2' },
+  indigo: { bg: 'rgba(57,73,171,0.1)', color: '#3949AB' },
+  blue: { bg: 'rgba(21,101,192,0.1)', color: '#1565C0' },
+  teal: { bg: 'rgba(0,121,107,0.1)', color: '#007975' },
+  green: { bg: 'rgba(46,125,50,0.1)', color: '#2E7D32' },
+  lime: { bg: 'rgba(85,139,47,0.1)', color: '#558B2F' },
+  amber: { bg: 'rgba(255,143,0,0.1)', color: '#FF8F00' },
+  orange: { bg: 'rgba(230,81,0,0.1)', color: '#E65100' },
+  grey: { bg: 'rgba(117,117,117,0.1)', color: '#757575' },
+}
+function getModuleColor(moduleCode) {
+  if (!moduleCode) return null
+  let hash = 0
+  for (let i = 0; i < moduleCode.length; i++) {
+    hash = ((hash << 5) - hash) + moduleCode.charCodeAt(i)
+    hash |= 0
+  }
+  return SCHEDULER_COLORS[Math.abs(hash) % SCHEDULER_COLORS.length]
+}
 import AiBrief from "./AiBrief"
 
 function Dashboard({ token, currentUser, onLogout }) {
@@ -328,7 +353,8 @@ function Dashboard({ token, currentUser, onLogout }) {
             type: "exam",
             start_at: start,
             end_at: end,
-            venue: "See Exam Venue"
+            venue: "See Exam Venue",
+            moduleCode: exam.module_code,
           })
         }
       })
@@ -346,7 +372,8 @@ function Dashboard({ token, currentUser, onLogout }) {
             type: "class",
             start_at: start,
             end_at: end,
-            venue: cls.venue || "No venue"
+            venue: cls.venue || "No venue",
+            moduleCode: cls.module_code,
           })
         }
       })
@@ -612,12 +639,18 @@ function Dashboard({ token, currentUser, onLogout }) {
                             <Edit size={12} style={{ color: "var(--text-muted)", cursor: "pointer" }} />
                           </button>
                         )}
-                        <span
-                          className={`badge badge--square badge--${item.type === "class" ? "primary" : item.type === "exam" ? "danger" : "warning"
-                            }`}
-                        >
-                          {item.type}
-                        </span>
+                        {item.type === "event" ? (
+                          <span className="badge badge--square badge--warning">
+                            {item.type}
+                          </span>
+                        ) : (
+                          <span className="badge badge--square" style={{
+                            backgroundColor: (COLOR_CSS_MAP[getModuleColor(item.moduleCode)] || COLOR_CSS_MAP.grey).bg,
+                            color: (COLOR_CSS_MAP[getModuleColor(item.moduleCode)] || COLOR_CSS_MAP.grey).color,
+                          }}>
+                            {item.moduleCode || item.type}
+                          </span>
+                        )}
                       </div>
                     </div>
                     <div className="timeline-item-body">

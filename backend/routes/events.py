@@ -174,9 +174,13 @@ async def update_event(event_id: int, payload: EventUpdate, current_user: Curren
         raise HTTPException(status_code=404, detail="Event not found.")
 
     updates = payload.model_dump(exclude_unset=True)
+    description_val = updates.get("description") if "description" in updates else existing["description"]
+    if description_val is None:
+        description_val = ""
+
     merged = {
         "title": updates.get("title", existing["title"]),
-        "description": updates.get("description", existing["description"]),
+        "description": description_val,
         "venue": updates.get("venue", existing["venue"]),
         "start_at": updates.get("start_at", existing["start_at"]),
         "end_at": updates.get("end_at", existing["end_at"]),
