@@ -20,6 +20,22 @@ async def get_groups(current_user: CurrentUser):
 
 @router.post("", response_model = GroupOut, status_code = status.HTTP_201_CREATED)
 async def create_group(payload: GroupCreate, current_user: CurrentUser):
+    # Verify community exists and belongs to the current user
+    comm = await db.fetch_one(
+        query="SELECT user_id FROM communities WHERE id = :c_id",
+        values={"c_id": payload.c_id}
+    )
+    if not comm:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Community not found."
+        )
+    if comm["user_id"] != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only the community creator can create groups in this community."
+        )
+
     async with db.transaction():
         row = await db.fetch_one(
             query = """
