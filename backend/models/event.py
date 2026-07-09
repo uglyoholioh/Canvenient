@@ -1,10 +1,10 @@
 from datetime import datetime
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 class EventCreate(BaseModel):
     title: str = Field(..., min_length=1, max_length=160)
-    description: str = Field(default="", max_length=4000)
+    description: str | None = Field(default="", max_length=4000)
     venue: str | None = Field(default=None, max_length=255)
     start_at: datetime
     end_at: datetime | None = None
@@ -13,6 +13,13 @@ class EventCreate(BaseModel):
     g_id: int | None = None
     module_code: str | None = Field(default=None, max_length=40)
     event_type: str | None = Field(default=None, max_length=40)
+
+    @field_validator("description", mode="before")
+    @classmethod
+    def convert_null_to_empty_string(cls, v):
+        if v is None:
+            return ""
+        return v
 
 
 class EventUpdate(BaseModel):
@@ -26,6 +33,13 @@ class EventUpdate(BaseModel):
     g_id: int | None = None
     module_code: str | None = Field(default=None, max_length=40)
     event_type: str | None = Field(default=None, max_length=40)
+
+    @field_validator("description", mode="before")
+    @classmethod
+    def convert_null_to_empty_string(cls, v):
+        if v is None:
+            return ""
+        return v
 
 
 class EventOut(BaseModel):
@@ -46,6 +60,14 @@ class EventOut(BaseModel):
     total_members: int = 0
     created_at: datetime
     updated_at: datetime
+
+    @field_validator("description", mode="before")
+    @classmethod
+    def convert_null_to_empty_string(cls, v):
+        if v is None:
+            return ""
+        return v
+
 
 
 class EventAttendanceUpdate(BaseModel):
