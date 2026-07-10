@@ -1,10 +1,8 @@
-import { useEffect, useState } from "react"
+import { useEffect, useState } from "react";
 
 import {
-  createAcademicModule,
   createCategory,
   createTask,
-  deleteAcademicModule,
   deleteCategory,
   deleteTask,
   getAcademicModules,
@@ -12,7 +10,7 @@ import {
   getTasks,
   syncCanvasTasks,
   updateTask,
-} from "../api"
+} from "../api";
 
 const emptyTaskForm = {
   title: "",
@@ -20,69 +18,74 @@ const emptyTaskForm = {
   moduleId: "",
   categoryId: "",
   priorityManual: "medium",
-  estimatedMinutes: "",
   dueAtOverride: "",
-}
+};
 
 const emptyCategoryForm = {
   name: "",
   color: "#2F7A72",
-}
+};
 
-const emptyModuleForm = {
-  moduleCode: "",
-  name: "",
-}
+const categoryColorPresets = [
+  { label: "Teal", value: "#2F7A72" },
+  { label: "Blue", value: "#3B6EA8" },
+  { label: "Purple", value: "#7656A6" },
+  { label: "Rose", value: "#B85C70" },
+  { label: "Orange", value: "#C8753D" },
+  { label: "Gold", value: "#B6922E" },
+];
 
 const priorityLanes = [
   { value: "urgent", label: "Urgent" },
   { value: "high", label: "High" },
   { value: "medium", label: "Medium" },
   { value: "low", label: "Low" },
-]
+];
 
 function formatDueDate(value) {
   if (!value) {
-    return "No due date"
+    return "No due date";
   }
 
   return new Date(value).toLocaleString([], {
     dateStyle: "medium",
     timeStyle: "short",
-  })
+  });
 }
 
 function sortTasks(taskList) {
   return [...taskList].sort((left, right) => {
     if (left.status === "done" && right.status !== "done") {
-      return 1
+      return 1;
     }
 
     if (left.status !== "done" && right.status === "done") {
-      return -1
+      return -1;
     }
 
     const leftDue = left.effective_due_at
       ? new Date(left.effective_due_at).getTime()
-      : Number.POSITIVE_INFINITY
+      : Number.POSITIVE_INFINITY;
     const rightDue = right.effective_due_at
       ? new Date(right.effective_due_at).getTime()
-      : Number.POSITIVE_INFINITY
+      : Number.POSITIVE_INFINITY;
 
     if (leftDue !== rightDue) {
-      return leftDue - rightDue
+      return leftDue - rightDue;
     }
 
-    return new Date(right.created_at).getTime() - new Date(left.created_at).getTime()
-  })
+    return (
+      new Date(right.created_at).getTime() - new Date(left.created_at).getTime()
+    );
+  });
 }
 
 function isPastDue(task, currentTime) {
   if (!task.effective_due_at) {
-    return false
+    return false;
   }
 
-  return new Date(task.effective_due_at).getTime() <= currentTime
+  return new Date(task.effective_due_at).getTime() <= currentTime;
 }
 
 async function loadWorkspaceData(token) {
@@ -90,324 +93,292 @@ async function loadWorkspaceData(token) {
     getTasks(token),
     getCategories(token),
     getAcademicModules(token),
-  ])
+  ]);
 
   return {
     tasks: sortTasks(allTasks),
-    categories: allCategories.sort((left, right) => left.name.localeCompare(right.name)),
-    academicModules: allModules.sort((left, right) =>
-      `${left.module_code}${left.name}`.localeCompare(`${right.module_code}${right.name}`)
+    categories: allCategories.sort((left, right) =>
+      left.name.localeCompare(right.name),
     ),
-  }
+    academicModules: allModules.sort((left, right) =>
+      `${left.module_code}${left.name}`.localeCompare(
+        `${right.module_code}${right.name}`,
+      ),
+    ),
+  };
 }
 
 function TaskManagerDashboard({ token, currentUser, onLogout }) {
-  const [tasks, setTasks] = useState([])
-  const [categories, setCategories] = useState([])
-  const [academicModules, setAcademicModules] = useState([])
-  const [taskForm, setTaskForm] = useState(emptyTaskForm)
-  const [categoryForm, setCategoryForm] = useState(emptyCategoryForm)
-  const [moduleForm, setModuleForm] = useState(emptyModuleForm)
-  const [statusFilter, setStatusFilter] = useState("all")
-  const [moduleFilter, setModuleFilter] = useState("all")
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState("")
-  const [notice, setNotice] = useState("")
-  const [busyKey, setBusyKey] = useState("")
-  const [draggedTaskId, setDraggedTaskId] = useState("")
-  const [dragOverPriority, setDragOverPriority] = useState("")
-  const [currentTime, setCurrentTime] = useState(() => Date.now())
+  const [tasks, setTasks] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [academicModules, setAcademicModules] = useState([]);
+  const [taskForm, setTaskForm] = useState(emptyTaskForm);
+  const [categoryForm, setCategoryForm] = useState(emptyCategoryForm);
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [moduleFilter, setModuleFilter] = useState("all");
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
+  const [busyKey, setBusyKey] = useState("");
+  const [draggedTaskId, setDraggedTaskId] = useState("");
+  const [dragOverPriority, setDragOverPriority] = useState("");
+  const [currentTime, setCurrentTime] = useState(() => Date.now());
 
   async function reloadWorkspace() {
-    setIsLoading(true)
-    setError("")
-    setNotice("")
+    setIsLoading(true);
+    setError("");
+    setNotice("");
 
     try {
-      const workspace = await loadWorkspaceData(token)
-      setTasks(workspace.tasks)
-      setCategories(workspace.categories)
-      setAcademicModules(workspace.academicModules)
+      const workspace = await loadWorkspaceData(token);
+      setTasks(workspace.tasks);
+      setCategories(workspace.categories);
+      setAcademicModules(workspace.academicModules);
     } catch (loadError) {
-      setError(loadError.message || "Failed to load workspace data.")
+      setError(loadError.message || "Failed to load workspace data.");
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
   }
 
   useEffect(() => {
-    let cancelled = false
+    let cancelled = false;
 
     async function loadInitialWorkspace() {
       try {
-        const workspace = await loadWorkspaceData(token)
-        if (cancelled) return
-        setTasks(workspace.tasks)
-        setCategories(workspace.categories)
-        setAcademicModules(workspace.academicModules)
+        const workspace = await loadWorkspaceData(token);
+        if (cancelled) return;
+        setTasks(workspace.tasks);
+        setCategories(workspace.categories);
+        setAcademicModules(workspace.academicModules);
       } catch (loadError) {
         if (!cancelled) {
-          setError(loadError.message || "Failed to load workspace data.")
+          setError(loadError.message || "Failed to load workspace data.");
         }
       } finally {
-        if (!cancelled) setIsLoading(false)
+        if (!cancelled) setIsLoading(false);
       }
     }
 
-    if (token) loadInitialWorkspace()
-    return () => { cancelled = true }
-  }, [token])
+    if (token) loadInitialWorkspace();
+    return () => {
+      cancelled = true;
+    };
+  }, [token]);
 
   useEffect(() => {
-    const timer = window.setInterval(() => setCurrentTime(Date.now()), 60000)
-    return () => window.clearInterval(timer)
-  }, [])
+    const timer = window.setInterval(() => setCurrentTime(Date.now()), 60000);
+    return () => window.clearInterval(timer);
+  }, []);
 
   async function reloadTasksOnly() {
-    setBusyKey("canvas-sync")
-    setError("")
-    setNotice("")
+    setBusyKey("canvas-sync");
+    setError("");
+    setNotice("");
 
     try {
-      await syncCanvasTasks(token)
-      const allTasks = await getTasks(token)
-      setTasks(sortTasks(allTasks))
-      setNotice("Synced successfully with Canvas.")
+      await syncCanvasTasks(token);
+      const workspace = await loadWorkspaceData(token);
+      setTasks(workspace.tasks);
+      setCategories(workspace.categories);
+      setAcademicModules(workspace.academicModules);
+      setNotice("Synced successfully with Canvas.");
     } catch (syncError) {
-      setError(syncError.message || "Canvas sync failed.")
+      setError(syncError.message || "Canvas sync failed.");
     } finally {
-      setBusyKey("")
+      setBusyKey("");
     }
   }
 
   async function handleTaskSubmit(event) {
-    event.preventDefault()
-    setBusyKey("task-create")
-    setError("")
-    setNotice("")
+    event.preventDefault();
+    setBusyKey("task-create");
+    setError("");
+    setNotice("");
 
     const payload = {
       title: taskForm.title.trim(),
       description: taskForm.description.trim(),
       status: "todo",
       priority_manual: taskForm.priorityManual,
-    }
+    };
 
     if (taskForm.moduleId) {
-      payload.module_id = Number.parseInt(taskForm.moduleId, 10)
+      payload.module_id = Number.parseInt(taskForm.moduleId, 10);
     }
     if (taskForm.categoryId) {
-      payload.category_id = Number.parseInt(taskForm.categoryId, 10)
-    }
-    if (taskForm.estimatedMinutes.trim()) {
-      payload.estimated_minutes = Number.parseInt(taskForm.estimatedMinutes, 10)
+      payload.category_id = Number.parseInt(taskForm.categoryId, 10);
     }
     if (taskForm.dueAtOverride.trim()) {
-      payload.due_at_override = new Date(taskForm.dueAtOverride).toISOString()
+      payload.due_at_override = new Date(taskForm.dueAtOverride).toISOString();
     }
 
     try {
-      const created = await createTask(token, payload)
-      setTasks((current) => sortTasks([...current, created]))
-      setTaskForm(emptyTaskForm)
-      setNotice("Task captured.")
+      const created = await createTask(token, payload);
+      setTasks((current) => sortTasks([...current, created]));
+      setTaskForm(emptyTaskForm);
+      setNotice("Task captured.");
     } catch (submitError) {
-      setError(submitError.message || "Could not add task.")
+      setError(submitError.message || "Could not add task.");
     } finally {
-      setBusyKey("")
+      setBusyKey("");
     }
   }
 
   function handleTaskDragStart(event, taskId) {
     if (busyKey !== "") {
-      event.preventDefault()
-      return
+      event.preventDefault();
+      return;
     }
-    setDraggedTaskId(taskId)
-    event.dataTransfer.effectAllowed = "move"
-    event.dataTransfer.setData("text/plain", String(taskId))
+    setDraggedTaskId(taskId);
+    event.dataTransfer.effectAllowed = "move";
+    event.dataTransfer.setData("text/plain", String(taskId));
   }
 
   function handleTaskDragEnd() {
-    setDraggedTaskId("")
-    setDragOverPriority("")
+    setDraggedTaskId("");
+    setDragOverPriority("");
   }
 
   async function handlePriorityDrop(event, priorityValue) {
-    event.preventDefault()
-    setDragOverPriority("")
+    event.preventDefault();
+    setDragOverPriority("");
 
-    const taskIdStr = event.dataTransfer.getData("text/plain")
+    const taskIdStr = event.dataTransfer.getData("text/plain");
     if (!taskIdStr) {
-      return
+      return;
     }
 
-    const taskId = Number.parseInt(taskIdStr, 10)
-    const task = tasks.find((t) => t.id === taskId)
+    const taskId = Number.parseInt(taskIdStr, 10);
+    const task = tasks.find((t) => t.id === taskId);
 
     if (!task || task.priority_manual === priorityValue) {
-      return
+      return;
     }
 
-    await handleTaskPriorityChange(taskId, priorityValue)
+    await handleTaskPriorityChange(taskId, priorityValue);
   }
 
   async function handleCategorySubmit(event) {
-    event.preventDefault()
-    setBusyKey("category-create")
-    setError("")
-    setNotice("")
+    event.preventDefault();
+    setBusyKey("category-create");
+    setError("");
+    setNotice("");
 
     try {
       const category = await createCategory(token, {
         name: categoryForm.name,
         color: categoryForm.color,
-      })
+      });
 
       setCategories((current) =>
-        [...current, category].sort((left, right) => left.name.localeCompare(right.name))
-      )
-      setCategoryForm(emptyCategoryForm)
-      setNotice("Category added.")
+        [...current, category].sort((left, right) =>
+          left.name.localeCompare(right.name),
+        ),
+      );
+      setCategoryForm(emptyCategoryForm);
+      setNotice("Category added.");
     } catch (submitError) {
-      setError(submitError.message || "Could not create the category.")
+      setError(submitError.message || "Could not create the category.");
     } finally {
-      setBusyKey("")
-    }
-  }
-
-  async function handleModuleSubmit(event) {
-    event.preventDefault()
-    setBusyKey("module-create")
-    setError("")
-    setNotice("")
-
-    try {
-      const moduleRecord = await createAcademicModule(token, {
-        module_code: moduleForm.moduleCode,
-        name: moduleForm.name,
-      })
-
-      setAcademicModules((current) =>
-        [...current, moduleRecord].sort((left, right) =>
-          `${left.module_code}${left.name}`.localeCompare(`${right.module_code}${right.name}`)
-        )
-      )
-      setModuleForm(emptyModuleForm)
-      setNotice("Module saved for future task linking.")
-    } catch (submitError) {
-      setError(submitError.message || "Could not create the module.")
-    } finally {
-      setBusyKey("")
+      setBusyKey("");
     }
   }
 
   async function handleTaskStatusChange(taskId, statusValue) {
-    setBusyKey(`task-status-${taskId}`)
-    setError("")
+    setBusyKey(`task-status-${taskId}`);
+    setError("");
 
     try {
-      const updated = await updateTask(token, taskId, { status: statusValue })
+      const updated = await updateTask(token, taskId, { status: statusValue });
       setTasks((current) =>
-        sortTasks(current.map((task) => (task.id === taskId ? updated : task)))
-      )
+        sortTasks(current.map((task) => (task.id === taskId ? updated : task))),
+      );
     } catch (updateError) {
-      setError(updateError.message || "Could not update the task.")
+      setError(updateError.message || "Could not update the task.");
     } finally {
-      setBusyKey("")
+      setBusyKey("");
     }
   }
 
   async function handleTaskPriorityChange(taskId, priorityValue) {
-    setBusyKey(`task-priority-${taskId}`)
-    setError("")
+    setBusyKey(`task-priority-${taskId}`);
+    setError("");
 
     try {
       const updated = await updateTask(token, taskId, {
         priority_manual: priorityValue,
-      })
+      });
       setTasks((current) =>
-        sortTasks(current.map((task) => (task.id === taskId ? updated : task)))
-      )
+        sortTasks(current.map((task) => (task.id === taskId ? updated : task))),
+      );
     } catch (updateError) {
-      setError(updateError.message || "Could not update the task.")
+      setError(updateError.message || "Could not update the task.");
     } finally {
-      setBusyKey("")
+      setBusyKey("");
     }
   }
 
   async function handleDeleteTask(taskId) {
-    setBusyKey(`task-delete-${taskId}`)
-    setError("")
+    setBusyKey(`task-delete-${taskId}`);
+    setError("");
 
     try {
-      await deleteTask(token, taskId)
-      setTasks((current) => current.filter((task) => task.id !== taskId))
+      await deleteTask(token, taskId);
+      setTasks((current) => current.filter((task) => task.id !== taskId));
     } catch (deleteError) {
-      setError(deleteError.message || "Could not remove the task.")
+      setError(deleteError.message || "Could not remove the task.");
     } finally {
-      setBusyKey("")
+      setBusyKey("");
     }
   }
 
   async function handleDeleteCategory(categoryId) {
-    setBusyKey(`category-delete-${categoryId}`)
-    setError("")
+    setBusyKey(`category-delete-${categoryId}`);
+    setError("");
 
     try {
-      await deleteCategory(token, categoryId)
-      await reloadWorkspace()
-      setNotice("Category removed. Tasks linked to it were kept.")
+      await deleteCategory(token, categoryId);
+      await reloadWorkspace();
+      setNotice("Category removed. Tasks linked to it were kept.");
     } catch (deleteError) {
-      setError(deleteError.message || "Could not remove the category.")
+      setError(deleteError.message || "Could not remove the category.");
     } finally {
-      setBusyKey("")
-    }
-  }
-
-  async function handleDeleteModule(moduleId) {
-    setBusyKey(`module-delete-${moduleId}`)
-    setError("")
-
-    try {
-      await deleteAcademicModule(token, moduleId)
-      await reloadWorkspace()
-      setNotice("Module removed. Tasks linked to it were kept.")
-    } catch (deleteError) {
-      setError(deleteError.message || "Could not remove the module.")
-    } finally {
-      setBusyKey("")
+      setBusyKey("");
     }
   }
 
   const visibleTasks = tasks.filter((task) => {
     if (statusFilter !== "all" && task.status !== statusFilter) {
-      return false
+      return false;
     }
     if (moduleFilter !== "all" && String(task.module_id) !== moduleFilter) {
-      return false
+      return false;
     }
-    return true
-  })
+    return true;
+  });
 
   const visibleTasksByPriority = {
     urgent: visibleTasks.filter((t) => t.priority_manual === "urgent"),
     high: visibleTasks.filter((t) => t.priority_manual === "high"),
     medium: visibleTasks.filter((t) => t.priority_manual === "medium"),
     low: visibleTasks.filter((t) => t.priority_manual === "low"),
-  }
+  };
 
   const dueSoonTasks = tasks.filter(
     (task) =>
       task.status !== "done" &&
       task.effective_due_at &&
       new Date(task.effective_due_at).getTime() - currentTime <= 259200000 &&
-      new Date(task.effective_due_at).getTime() > currentTime
-  )
+      new Date(task.effective_due_at).getTime() > currentTime,
+  );
 
-  const plannedHours = tasks
-    .filter((task) => task.status !== "done")
-    .reduce((sum, task) => sum + (task.estimated_minutes || 0), 0)
+  const completedTaskCount = tasks.filter(
+    (task) => task.status === "done",
+  ).length;
+  const completionPercentage = tasks.length
+    ? Math.round((completedTaskCount / tasks.length) * 100)
+    : 0;
 
   if (isLoading) {
     return (
@@ -416,16 +387,20 @@ function TaskManagerDashboard({ token, currentUser, onLogout }) {
           <p className="eyebrow">Task Manager</p>
           <h1>Loading your planning workspace...</h1>
           <p className="text-muted">
-            We're gathering tasks, modules, and categories for {currentUser?.email}.
+            We're gathering tasks, modules, and categories for{" "}
+            {currentUser?.email}.
           </p>
         </section>
       </main>
-    )
+    );
   }
 
   return (
     <main className="app-shell">
-      <section className="card card--hero flex justify-between items-start" style={{ gap: "20px" }}>
+      <section
+        className="card card--hero flex justify-between items-start"
+        style={{ gap: "20px" }}
+      >
         <div>
           <p className="eyebrow">CanVenient Task Manager</p>
           <h1>Plan your coursework and personal work here.</h1>
@@ -436,24 +411,49 @@ function TaskManagerDashboard({ token, currentUser, onLogout }) {
             <span>Signed in as</span>
             <strong>{currentUser.email}</strong>
           </div>
-          <button className="btn btn--secondary" type="button" onClick={onLogout}>
+          <button
+            className="btn btn--secondary"
+            type="button"
+            onClick={onLogout}
+          >
             Log Out
           </button>
         </div>
       </section>
 
       <section className="summary-grid">
-        <article className="card card--summary">
-          <span>Open tasks</span>
-          <strong>{visibleTasks.length}</strong>
+        <article className="card card--summary task-completion-card">
+          <div
+            className="task-completion-wheel"
+            style={{ "--completion": `${completionPercentage * 3.6}deg` }}
+            role="img"
+            aria-label={`${completionPercentage}% of tasks completed`}
+          >
+            <div className="task-completion-wheel__center">
+              <strong>{completionPercentage}%</strong>
+            </div>
+          </div>
+          <div className="task-completion-copy">
+            <span>Tasks completed</span>
+            <strong>
+              {completedTaskCount} / {tasks.length}
+            </strong>
+            <small>{tasks.length - completedTaskCount} not done</small>
+          </div>
         </article>
-        <article className="card card--summary">
-          <span>Due within 72h</span>
-          <strong>{dueSoonTasks.length}</strong>
-        </article>
-        <article className="card card--summary">
-          <span>Planned effort</span>
-          <strong>{Math.round(plannedHours / 60)} hrs</strong>
+        <article className="card card--summary due-soon-card">
+          <div className="due-soon-card__icon" aria-hidden="true">
+            !
+          </div>
+          <div className="due-soon-card__copy">
+            <span>Due within 72 hours</span>
+            <strong>{dueSoonTasks.length}</strong>
+            <small>
+              {dueSoonTasks.length === 1
+                ? "task needs your attention"
+                : "tasks need your attention"}
+            </small>
+          </div>
         </article>
       </section>
 
@@ -480,13 +480,14 @@ function TaskManagerDashboard({ token, currentUser, onLogout }) {
 
       <section className="workspace-grid">
         <article className="card card--xl">
-            <div className="flex-col gap-md" style={{ marginBottom: "22px" }}>
+          <div className="flex-col gap-md" style={{ marginBottom: "22px" }}>
             <div>
               <p className="eyebrow">Capture</p>
               <h2>Add a task</h2>
             </div>
             <p className="text-base text">
-              Link tasks to modules and categories, set a priority, and estimate effort.
+              Link tasks to modules and categories, set a priority, and choose a
+              due date.
             </p>
           </div>
 
@@ -568,7 +569,7 @@ function TaskManagerDashboard({ token, currentUser, onLogout }) {
               </label>
             </div>
 
-            <div className="form-grid form-grid--3col">
+            <div className="form-grid form-grid--2col">
               <label className="form-group">
                 <span>Priority</span>
                 <select
@@ -586,23 +587,6 @@ function TaskManagerDashboard({ token, currentUser, onLogout }) {
                   <option value="high">High</option>
                   <option value="urgent">Urgent</option>
                 </select>
-              </label>
-
-              <label className="form-group">
-                <span>Time needed (mins)</span>
-                <input
-                  type="number"
-                  className="form-input"
-                  min="0"
-                  value={taskForm.estimatedMinutes}
-                  onChange={(event) =>
-                    setTaskForm((current) => ({
-                      ...current,
-                      estimatedMinutes: event.target.value,
-                    }))
-                  }
-                  placeholder="90"
-                />
               </label>
 
               <label className="form-group">
@@ -632,110 +616,67 @@ function TaskManagerDashboard({ token, currentUser, onLogout }) {
         </article>
 
         <article className="card card--xl card--accent">
-            <div className="flex-col gap-md" style={{ marginBottom: "22px" }}>
+          <div className="flex-col gap-md" style={{ marginBottom: "22px" }}>
             <div>
               <p className="eyebrow">Structure</p>
-              <h2>Modules and categories</h2>
+              <h2>Personal categories</h2>
             </div>
             <p className="text-base text">
-              Keep academic modules separate from personal categories so Canvas sync can slot into the same structure later.
+              Create colour-coded categories to organise tasks in a way that
+              works for you.
             </p>
           </div>
 
-          <div className="form-grid form-grid--2col">
-            <form className="form" onSubmit={handleModuleSubmit}>
-              <h3 style={{ fontSize: "20px" }}>Academic modules</h3>
-              <label className="form-group">
-                <span>Module code</span>
-                <input
-                  type="text"
-                  className="form-input"
-                  value={moduleForm.moduleCode}
-                  onChange={(event) =>
-                    setModuleForm((current) => ({
-                      ...current,
-                      moduleCode: event.target.value,
-                    }))
-                  }
-                  placeholder="CS2103T"
-                  required
-                />
-              </label>
-              <label className="form-group">
-                <span>Module name</span>
-                <input
-                  type="text"
-                  className="form-input"
-                  value={moduleForm.name}
-                  onChange={(event) =>
-                    setModuleForm((current) => ({
-                      ...current,
-                      name: event.target.value,
-                    }))
-                  }
-                  placeholder="Software Engineering"
-                  required
-                />
-              </label>
-              <button
-                className="btn btn--secondary"
-                type="submit"
-                disabled={busyKey === "module-create"}
-              >
-                {busyKey === "module-create" ? "Saving..." : "Save Module"}
-              </button>
-
-              <div className="list" style={{ marginTop: "16px" }}>
-                {academicModules.map((moduleRecord) => (
-                  <div className="list-item list-item--compact list-item--row" key={moduleRecord.id}>
-                    <div className="flex-col gap-xs" style={{ minWidth: 0 }}>
-                      <strong className="text-h">{moduleRecord.module_code}</strong>
-                      {moduleRecord.name &&
-                        moduleRecord.name !== moduleRecord.module_code && (
-                          <span className="text-xs text-muted truncate">
-                            {moduleRecord.name}
-                          </span>
-                        )}
-                    </div>
-                    {moduleRecord.source_type !== "canvas" && (
-                      <button
-                        className="btn btn--ghost-danger btn--sm"
-                        type="button"
-                        onClick={() => handleDeleteModule(moduleRecord.id)}
-                        disabled={busyKey === `module-delete-${moduleRecord.id}`}
-                      >
-                        Remove
-                      </button>
-                    )}
-                  </div>
+          <form className="form" onSubmit={handleCategorySubmit}>
+            <label className="form-group">
+              <span>Category name</span>
+              <input
+                type="text"
+                className="form-input"
+                value={categoryForm.name}
+                onChange={(event) =>
+                  setCategoryForm((current) => ({
+                    ...current,
+                    name: event.target.value,
+                  }))
+                }
+                placeholder="Revision"
+                required
+              />
+            </label>
+            <fieldset className="form-group category-color-fieldset">
+              <legend>Category colour</legend>
+              <div className="category-color-presets">
+                {categoryColorPresets.map((preset) => (
+                  <button
+                    className={`category-color-swatch${
+                      categoryForm.color.toLowerCase() ===
+                      preset.value.toLowerCase()
+                        ? " category-color-swatch--selected"
+                        : ""
+                    }`}
+                    type="button"
+                    key={preset.value}
+                    style={{ "--swatch-color": preset.value }}
+                    onClick={() =>
+                      setCategoryForm((current) => ({
+                        ...current,
+                        color: preset.value,
+                      }))
+                    }
+                    aria-label={`Use ${preset.label}`}
+                    aria-pressed={
+                      categoryForm.color.toLowerCase() ===
+                      preset.value.toLowerCase()
+                    }
+                    title={preset.label}
+                  />
                 ))}
               </div>
-            </form>
-
-            <form className="form" onSubmit={handleCategorySubmit}>
-              <h3 style={{ fontSize: "20px" }}>Personal categories</h3>
-              <label className="form-group">
-                <span>Category name</span>
-                <input
-                  type="text"
-                  className="form-input"
-                  value={categoryForm.name}
-                  onChange={(event) =>
-                    setCategoryForm((current) => ({
-                      ...current,
-                      name: event.target.value,
-                    }))
-                  }
-                  placeholder="Revision"
-                  required
-                />
-              </label>
-              <label className="form-group">
-                <span>Color</span>
+              <label className="category-custom-color">
+                <span>Custom colour</span>
                 <input
                   type="color"
-                  className="form-input"
-                  style={{ height: "45px", padding: "4px" }}
                   value={categoryForm.color}
                   onChange={(event) =>
                     setCategoryForm((current) => ({
@@ -744,55 +685,71 @@ function TaskManagerDashboard({ token, currentUser, onLogout }) {
                     }))
                   }
                 />
+                <code>{categoryForm.color.toUpperCase()}</code>
               </label>
-              <button
-                className="btn btn--secondary"
-                type="submit"
-                disabled={busyKey === "category-create"}
-              >
-                {busyKey === "category-create" ? "Saving..." : "Save Category"}
-              </button>
+            </fieldset>
+            <button
+              className="btn btn--secondary"
+              type="submit"
+              disabled={busyKey === "category-create"}
+            >
+              {busyKey === "category-create" ? "Saving..." : "Save Category"}
+            </button>
 
-              <div className="list" style={{ marginTop: "16px" }}>
-                {categories.map((category) => (
-                  <div className="list-item list-item--compact list-item--row" key={category.id}>
-                    <div className="flex items-center gap-sm">
-                      <span
-                        className="color-dot"
-                        style={{ backgroundColor: category.color }}
-                        aria-hidden="true"
-                      />
-                      <strong className="text-h">{category.name}</strong>
-                    </div>
-                    <button
-                      className="btn btn--ghost-danger btn--sm"
-                      type="button"
-                      onClick={() => handleDeleteCategory(category.id)}
-                      disabled={busyKey === `category-delete-${category.id}`}
-                    >
-                      Remove
-                    </button>
+            <div className="list" style={{ marginTop: "16px" }}>
+              {categories.length === 0 && (
+                <p className="text-sm text-muted">
+                  Your categories will appear here.
+                </p>
+              )}
+              {categories.map((category) => (
+                <div
+                  className="list-item list-item--compact list-item--row"
+                  key={category.id}
+                >
+                  <div className="flex items-center gap-sm">
+                    <span
+                      className="color-dot"
+                      style={{ backgroundColor: category.color }}
+                      aria-hidden="true"
+                    />
+                    <strong className="text-h">{category.name}</strong>
                   </div>
-                ))}
-              </div>
-            </form>
-          </div>
+                  <button
+                    className="btn btn--ghost-danger btn--sm"
+                    type="button"
+                    onClick={() => handleDeleteCategory(category.id)}
+                    disabled={busyKey === `category-delete-${category.id}`}
+                  >
+                    Remove
+                  </button>
+                </div>
+              ))}
+            </div>
+          </form>
         </article>
       </section>
 
       <section className="card card--xl" style={{ marginTop: "24px" }}>
-        <div className="flex justify-between items-end flex-wrap gap-md" style={{ marginBottom: "22px" }}>
+        <div
+          className="flex justify-between items-end flex-wrap gap-md"
+          style={{ marginBottom: "22px" }}
+        >
           <div>
             <p className="eyebrow">Execution</p>
             <h2>Task board</h2>
           </div>
 
-          <div className="flex gap-md flex-wrap items-end" style={{ marginLeft: "auto" }}>
+          <div
+            className="flex gap-md flex-wrap items-end"
+            style={{ marginLeft: "auto" }}
+          >
             <label className="form-group">
               <span>Status</span>
               <select
                 className="form-input"
-                className="text-sm" style={{ padding: "8px 12px" }}
+                className="text-sm"
+                style={{ padding: "8px 12px" }}
                 value={statusFilter}
                 onChange={(event) => setStatusFilter(event.target.value)}
               >
@@ -807,7 +764,8 @@ function TaskManagerDashboard({ token, currentUser, onLogout }) {
               <span>Module</span>
               <select
                 className="form-input"
-                className="text-sm" style={{ padding: "8px 12px" }}
+                className="text-sm"
+                style={{ padding: "8px 12px" }}
                 value={moduleFilter}
                 onChange={(event) => setModuleFilter(event.target.value)}
               >
@@ -835,7 +793,8 @@ function TaskManagerDashboard({ token, currentUser, onLogout }) {
           <div className="state-box state-box--dashed">
             <h3>No tasks yet</h3>
             <p>
-              Start with one manual task now, or sync Canvas to bring in your assignments and due dates.
+              Start with one manual task now, or sync Canvas to bring in your
+              assignments and due dates.
             </p>
           </div>
         ) : (
@@ -843,13 +802,15 @@ function TaskManagerDashboard({ token, currentUser, onLogout }) {
             {priorityLanes.map((lane) => (
               <section
                 className={`planner-column ${
-                  dragOverPriority === lane.value ? "planner-column--dragover" : ""
+                  dragOverPriority === lane.value
+                    ? "planner-column--dragover"
+                    : ""
                 }`}
                 key={lane.value}
                 onDragOver={(event) => {
-                  event.preventDefault()
-                  event.dataTransfer.dropEffect = "move"
-                  setDragOverPriority(lane.value)
+                  event.preventDefault();
+                  event.dataTransfer.dropEffect = "move";
+                  setDragOverPriority(lane.value);
                 }}
                 onDragLeave={() => setDragOverPriority("")}
                 onDrop={(event) => handlePriorityDrop(event, lane.value)}
@@ -861,7 +822,10 @@ function TaskManagerDashboard({ token, currentUser, onLogout }) {
 
                 <div className="list">
                   {visibleTasksByPriority[lane.value].length === 0 ? (
-                    <p className="text-sm text-muted text-center" style={{ fontStyle: "italic", padding: "10px 0" }}>
+                    <p
+                      className="text-sm text-muted text-center"
+                      style={{ fontStyle: "italic", padding: "10px 0" }}
+                    >
                       Drop tasks here.
                     </p>
                   ) : (
@@ -887,7 +851,7 @@ function TaskManagerDashboard({ token, currentUser, onLogout }) {
                                 borderRadius: "var(--radius-pill)",
                                 display: "inline-block",
                                 fontSize: "12px",
-                                color: "var(--text-muted)"
+                                color: "var(--text-muted)",
                               }}
                             >
                               {task.module_code || "No module"}
@@ -895,7 +859,9 @@ function TaskManagerDashboard({ token, currentUser, onLogout }) {
                                 ? ` - ${task.category_name}`
                                 : ""}
                             </p>
-                            <h3 className="text-h" style={{ fontSize: "18px" }}>{task.title}</h3>
+                            <h3 className="text-h" style={{ fontSize: "18px" }}>
+                              {task.title}
+                            </h3>
                           </div>
 
                           {task.source_type !== "canvas" && (
@@ -918,22 +884,36 @@ function TaskManagerDashboard({ token, currentUser, onLogout }) {
 
                         <div className="flex gap-md flex-wrap">
                           <span className="text-xs text-muted">
-                            Source: <strong className="text-h">{task.source_type}</strong>
+                            Source:{" "}
+                            <strong className="text-h">
+                              {task.source_type}
+                            </strong>
                           </span>
                           <span className="text-xs text-muted">
                             Due:{" "}
-                            <strong className={isPastDue(task, currentTime) && task.status !== "done" ? "text-error" : "text-h"}>
+                            <strong
+                              className={
+                                isPastDue(task, currentTime) &&
+                                task.status !== "done"
+                                  ? "text-error"
+                                  : "text-h"
+                              }
+                            >
                               {formatDueDate(task.effective_due_at)}
                             </strong>
                           </span>
                           <span className="text-xs text-muted">
-                            Suggested: <strong className="text-h">{task.recommended_priority}</strong>
+                            Suggested:{" "}
+                            <strong className="text-h">
+                              {task.recommended_priority}
+                            </strong>
                           </span>
                         </div>
 
                         {task.external_url && (
                           <a
-                            className="text-info no-underline text-sm" style={{ fontWeight: "700" }}
+                            className="text-info no-underline text-sm"
+                            style={{ fontWeight: "700" }}
                             href={task.external_url}
                             target="_blank"
                             rel="noreferrer"
@@ -942,17 +922,17 @@ function TaskManagerDashboard({ token, currentUser, onLogout }) {
                           </a>
                         )}
 
-                        <div className="form-grid form-grid--2col" style={{ marginTop: "10px" }}>
+                        <div style={{ marginTop: "10px" }}>
                           <label className="form-group">
                             <span>Status</span>
                             <select
-                              className="form-input"
-                              className="text-xs" style={{ padding: "6px 10px" }}
+                              className="form-input text-xs"
+                              style={{ padding: "6px 10px" }}
                               value={task.status}
                               onChange={(event) =>
                                 handleTaskStatusChange(
                                   task.id,
-                                  event.target.value
+                                  event.target.value,
                                 )
                               }
                               disabled={busyKey === `task-status-${task.id}`}
@@ -960,27 +940,6 @@ function TaskManagerDashboard({ token, currentUser, onLogout }) {
                               <option value="todo">To do</option>
                               <option value="in_progress">In progress</option>
                               <option value="done">Done</option>
-                            </select>
-                          </label>
-
-                          <label className="form-group">
-                            <span>Priority</span>
-                            <select
-                              className="form-input"
-                              className="text-xs" style={{ padding: "6px 10px" }}
-                              value={task.priority_manual}
-                              onChange={(event) =>
-                                handleTaskPriorityChange(
-                                  task.id,
-                                  event.target.value
-                                )
-                              }
-                              disabled={busyKey === `task-priority-${task.id}`}
-                            >
-                              <option value="urgent">Urgent</option>
-                              <option value="high">High</option>
-                              <option value="medium">Medium</option>
-                              <option value="low">Low</option>
                             </select>
                           </label>
                         </div>
@@ -994,7 +953,7 @@ function TaskManagerDashboard({ token, currentUser, onLogout }) {
         )}
       </section>
     </main>
-  )
+  );
 }
 
-export default TaskManagerDashboard
+export default TaskManagerDashboard;
