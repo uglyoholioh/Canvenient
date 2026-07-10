@@ -1,89 +1,88 @@
-const AUTH_TOKEN_KEY = "canvenient.auth.token"
-
+const AUTH_TOKEN_KEY = "canvenient.auth.token";
 
 // Auth
 function getErrorMessage(payload, fallbackMessage) {
   if (!payload) {
-    return fallbackMessage
+    return fallbackMessage;
   }
 
   if (typeof payload.detail === "string") {
-    return payload.detail
+    return payload.detail;
   }
 
   if (typeof payload.message === "string") {
-    return payload.message
+    return payload.message;
   }
 
-  return fallbackMessage
+  return fallbackMessage;
 }
 
 async function apiRequest(path, { method = "GET", body, token } = {}) {
-  const headers = {}
+  const headers = {};
 
   if (body !== undefined) {
-    headers["Content-Type"] = "application/json"
+    headers["Content-Type"] = "application/json";
   }
 
   if (token) {
-    headers.Authorization = `Bearer ${token}`
+    headers.Authorization = `Bearer ${token}`;
   }
 
   const response = await fetch(path, {
     method,
     headers,
     body: body !== undefined ? JSON.stringify(body) : undefined,
-  })
+  });
 
   if (response.status === 204) {
-    return null
+    return null;
   }
 
   const isJson = response.headers
     .get("content-type")
-    ?.includes("application/json")
-  const payload = isJson ? await response.json() : null
+    ?.includes("application/json");
+  const payload = isJson ? await response.json() : null;
 
   if (!response.ok) {
-    throw new Error(getErrorMessage(payload, "Request failed."))
+    throw new Error(getErrorMessage(payload, "Request failed."));
   }
 
-  return payload
+  return payload;
 }
 
 export function getStoredToken() {
-  return window.localStorage.getItem(AUTH_TOKEN_KEY) || ""
+  return window.localStorage.getItem(AUTH_TOKEN_KEY) || "";
 }
 
 export function persistToken(token) {
   if (!token) {
-    window.localStorage.removeItem(AUTH_TOKEN_KEY)
-    return
+    window.localStorage.removeItem(AUTH_TOKEN_KEY);
+    return;
   }
 
-  window.localStorage.setItem(AUTH_TOKEN_KEY, token)
+  window.localStorage.setItem(AUTH_TOKEN_KEY, token);
 }
 
 export function clearStoredToken() {
-  window.localStorage.removeItem(AUTH_TOKEN_KEY)
+  window.localStorage.removeItem(AUTH_TOKEN_KEY);
 }
 
 export function register(credentials) {
   return apiRequest("/auth/register", {
     method: "POST",
     body: credentials,
-  })
+  });
 }
 
 export function login(credentials) {
   return apiRequest("/auth/login", {
     method: "POST",
     body: credentials,
-  })
+  });
 }
 
 export function getCurrentUser(token) {
-  return apiRequest("/auth/me", { token })
+  return apiRequest("/auth/me", { token });
 }
 
 export function updateProfile(token, payload) {
@@ -91,11 +90,11 @@ export function updateProfile(token, payload) {
     method: "PATCH",
     body: payload,
     token,
-  })
+  });
 }
 
 export function getCategories(token) {
-  return apiRequest("/categories", { token })
+  return apiRequest("/categories", { token });
 }
 
 export function createCategory(token, payload) {
@@ -103,37 +102,22 @@ export function createCategory(token, payload) {
     method: "POST",
     body: payload,
     token,
-  })
+  });
 }
 
 export function deleteCategory(token, categoryId) {
   return apiRequest(`/categories/${categoryId}`, {
     method: "DELETE",
     token,
-  })
+  });
 }
 
 export function getAcademicModules(token) {
-  return apiRequest("/academic-modules", { token })
-}
-
-export function createAcademicModule(token, payload) {
-  return apiRequest("/academic-modules", {
-    method: "POST",
-    body: payload,
-    token,
-  })
-}
-
-export function deleteAcademicModule(token, moduleId) {
-  return apiRequest(`/academic-modules/${moduleId}`, {
-    method: "DELETE",
-    token,
-  })
+  return apiRequest("/academic-modules", { token });
 }
 
 export function getTasks(token) {
-  return apiRequest("/tasks", { token })
+  return apiRequest("/tasks", { token });
 }
 
 export function createTask(token, payload) {
@@ -141,7 +125,7 @@ export function createTask(token, payload) {
     method: "POST",
     body: payload,
     token,
-  })
+  });
 }
 
 export function updateTask(token, taskId, payload) {
@@ -149,66 +133,64 @@ export function updateTask(token, taskId, payload) {
     method: "PATCH",
     body: payload,
     token,
-  })
+  });
 }
 
 export function deleteTask(token, taskId) {
   return apiRequest(`/tasks/${taskId}`, {
     method: "DELETE",
     token,
-  })
+  });
 }
 
-
-//Canvas 
+//Canvas
 
 export function syncCanvasTasks(token) {
   return apiRequest("/tasks/sync-canvas", {
     method: "POST",
     token,
-  })
+  });
 }
 
 export function getCanvasCourses(token) {
-  return apiRequest(`/canvas/courses`, { token }
-  )
+  return apiRequest(`/canvas/courses`, { token });
 }
 
 export function getCanvasAnnouncements(token) {
-  return apiRequest(`/canvas/announcements`, { token })
+  return apiRequest(`/canvas/announcements`, { token });
 }
 
 export function getCanvasAssignments(token) {
-  return apiRequest(`/canvas/assignments`, { token })
+  return apiRequest(`/canvas/assignments`, { token });
 }
 
 export function getCanvasFiles(token, courseId) {
-  return apiRequest(`/canvas/files?course_id=` + courseId, { token })
+  return apiRequest(`/canvas/files?course_id=` + courseId, { token });
 }
 
 export function getCachedCanvasFiles(token) {
-  return apiRequest("/canvas/cached-files", { token })
+  return apiRequest("/canvas/cached-files", { token });
 }
 
 export function syncCanvasFiles(token) {
   return apiRequest("/canvas/sync-files", {
     method: "POST",
     token,
-  })
+  });
 }
 
 export async function loadCachedCanvasFiles(token, { onSyncRequired } = {}) {
-  let data = await getCachedCanvasFiles(token)
+  let data = await getCachedCanvasFiles(token);
   const needsCurrentCourseSnapshot =
     !data.synced_at ||
-    ((data.files || []).length > 0 && (data.courses || []).length === 0)
+    ((data.files || []).length > 0 && (data.courses || []).length === 0);
 
   if (needsCurrentCourseSnapshot) {
-    onSyncRequired?.()
-    data = await syncCanvasFiles(token)
+    onSyncRequired?.();
+    data = await syncCanvasFiles(token);
   }
 
-  return data
+  return data;
 }
 
 // Schedule
@@ -222,7 +204,7 @@ export async function importIcs(token, file) {
       Authorization: `Bearer ${token}`,
     },
     body: formData,
-  })
+  });
 
   if (!response.ok) {
     const payload = await response.json().catch(() => null);
@@ -233,11 +215,11 @@ export async function importIcs(token, file) {
 }
 
 export function getSchedule(token) {
-  return apiRequest("/schedule", { token })
+  return apiRequest("/schedule", { token });
 }
 
 export function getEvents(token) {
-  return apiRequest("/events", { token })
+  return apiRequest("/events", { token });
 }
 
 export function createEvent(token, payload) {
@@ -245,7 +227,7 @@ export function createEvent(token, payload) {
     method: "POST",
     body: payload,
     token,
-  })
+  });
 }
 
 export function updateEvent(token, eventId, payload) {
@@ -253,14 +235,14 @@ export function updateEvent(token, eventId, payload) {
     method: "PATCH",
     body: payload,
     token,
-  })
+  });
 }
 
 export function deleteEvent(token, eventId) {
   return apiRequest(`/events/${eventId}`, {
     method: "DELETE",
     token,
-  })
+  });
 }
 
 export function updateEventAttendance(token, eventId, isAttending) {
@@ -268,15 +250,15 @@ export function updateEventAttendance(token, eventId, isAttending) {
     method: "POST",
     body: { is_attending: isAttending },
     token,
-  })
+  });
 }
 
 export function getEventAttendance(token, eventId) {
-  return apiRequest(`/events/${eventId}/attendance`, { token })
+  return apiRequest(`/events/${eventId}/attendance`, { token });
 }
 
 export function getEventAttendanceSummary(token, eventId) {
-  return apiRequest(`/events/${eventId}/attendance-summary`, { token })
+  return apiRequest(`/events/${eventId}/attendance-summary`, { token });
 }
 
 export function markEventActualAttendance(token, eventId, userId, attended) {
@@ -284,13 +266,13 @@ export function markEventActualAttendance(token, eventId, userId, attended) {
     method: "POST",
     body: { user_id: userId, attended },
     token,
-  })
+  });
 }
 
 // Communities, groups, invites, and forms
 
 export function getCommunities(token) {
-  return apiRequest("/communities", { token })
+  return apiRequest("/communities", { token });
 }
 
 export function createCommunity(token, payload) {
@@ -298,11 +280,11 @@ export function createCommunity(token, payload) {
     method: "POST",
     body: payload,
     token,
-  })
+  });
 }
 
 export function getGroups(token) {
-  return apiRequest("/groups", { token })
+  return apiRequest("/groups", { token });
 }
 
 export function createGroup(token, payload) {
@@ -310,11 +292,11 @@ export function createGroup(token, payload) {
     method: "POST",
     body: payload,
     token,
-  })
+  });
 }
 
 export function getGroupMembers(token, groupId) {
-  return apiRequest(`/groups/${groupId}/members`, { token })
+  return apiRequest(`/groups/${groupId}/members`, { token });
 }
 
 export function createInvite(token, payload) {
@@ -322,22 +304,22 @@ export function createInvite(token, payload) {
     method: "POST",
     body: payload,
     token,
-  })
+  });
 }
 
 export function joinGroup(token, code) {
   return apiRequest(`/invites/join/${encodeURIComponent(code)}`, {
     method: "POST",
     token,
-  })
+  });
 }
 
 export function getForms(token) {
-  return apiRequest("/forms", { token })
+  return apiRequest("/forms", { token });
 }
 
 export function getForm(token, formId) {
-  return apiRequest(`/forms/${formId}`, { token })
+  return apiRequest(`/forms/${formId}`, { token });
 }
 
 export function createForm(token, payload) {
@@ -345,7 +327,7 @@ export function createForm(token, payload) {
     method: "POST",
     body: payload,
     token,
-  })
+  });
 }
 
 export function submitFormResponse(token, formId, responseData) {
@@ -353,42 +335,42 @@ export function submitFormResponse(token, formId, responseData) {
     method: "POST",
     body: { response_data: responseData },
     token,
-  })
+  });
 }
 
 export function getFormResponses(token, formId) {
-  return apiRequest(`/forms/${formId}/responses`, { token })
+  return apiRequest(`/forms/${formId}/responses`, { token });
 }
 
 export function getFormStats(token, formId) {
-  return apiRequest(`/forms/${formId}/stats`, { token })
+  return apiRequest(`/forms/${formId}/stats`, { token });
 }
 
 // Notifications
 
 export function getNotifications(token) {
-  return apiRequest("/notifications", { token })
+  return apiRequest("/notifications", { token });
 }
 
 export function markNotificationAsRead(token, notificationId) {
   return apiRequest(`/notifications/${notificationId}/read`, {
     method: "PATCH",
     token,
-  })
+  });
 }
 
 export function markAllNotificationsAsRead(token) {
   return apiRequest("/notifications/read-all", {
     method: "POST",
     token,
-  })
+  });
 }
 
 export function getAiBrief(token) {
   return apiRequest("/ai/brief", {
     method: "POST",
     token,
-  })
+  });
 }
 
 export function sendAiChat(token, payload) {
@@ -396,5 +378,5 @@ export function sendAiChat(token, payload) {
     method: "POST",
     body: payload,
     token,
-  })
+  });
 }
