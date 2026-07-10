@@ -1,11 +1,11 @@
-from asyncio import coroutines
+import asyncio
+from datetime import datetime, timedelta, timezone
+from typing import Any
+
 import httpx
-from fastapi import APIRouter, HTTPException, status
 from database import db
 from dependencies import CurrentUser
-from typing import Any
-from datetime import datetime, timedelta, timezone
-import asyncio
+from fastapi import APIRouter, HTTPException
 
 router = APIRouter(prefix="/canvas", tags=["canvas"])
 
@@ -29,7 +29,8 @@ async def fetch_assignment_submission(
 ) -> dict[str, Any]:
     try:
         response = await client.get(
-            f"https://canvas.nus.edu.sg/api/v1/courses/{course_id}/assignments/{assignment_id}/submissions/self",
+            "https://canvas.nus.edu.sg/api/v1/courses/"
+            f"{course_id}/assignments/{assignment_id}/submissions/self",
             headers=headers,
             timeout=5.0,
         )
@@ -40,6 +41,7 @@ async def fetch_assignment_submission(
 
     return submission if isinstance(submission, dict) else {}
 
+
 @router.get("/courses", response_model=list[dict[str, Any]])
 async def list_canvas_courses(current_user: CurrentUser):
     token = current_user.canvas_token
@@ -49,9 +51,10 @@ async def list_canvas_courses(current_user: CurrentUser):
     try:
         async with httpx.AsyncClient() as client:
             response = await client.get(
-                "https://canvas.nus.edu.sg/api/v1/courses?enrollment_state=active&per_page=50",
-                headers = headers,
-                timeout = 5.0
+                "https://canvas.nus.edu.sg/api/v1/courses"
+                "?enrollment_state=active&per_page=50",
+                headers=headers,
+                timeout=5.0,
             )
 
             response.raise_for_status()
@@ -65,12 +68,14 @@ async def list_canvas_courses(current_user: CurrentUser):
     result = []
     for c in courses:
         if "course_code" in c and "id" in c:
-            result.append({
-                "id": c["id"],
-                "course_code": c["course_code"],
-                "name": c.get("name") or c["course_code"],
-                "external_url": f"https://canvas.nus.edu.sg/courses/{c['id']}"
-            })
+            result.append(
+                {
+                    "id": c["id"],
+                    "course_code": c["course_code"],
+                    "name": c.get("name") or c["course_code"],
+                    "external_url": f"https://canvas.nus.edu.sg/courses/{c['id']}",
+                }
+            )
     return result
 
 
@@ -85,11 +90,11 @@ async def list_canvas_announcements(current_user: CurrentUser):
         return []
 
     context_codes = [f"course_{c['id']}" for c in courses]
-    
+
     start_date_str = (datetime.now(timezone.utc) - timedelta(days=30)).isoformat()
 
     headers = {"Authorization": f"Bearer {token}"}
-    
+
     params = [("context_codes[]", code) for code in context_codes]
     params.append(("start_date", start_date_str))
     params.append(("per_page", "50"))
@@ -132,9 +137,21 @@ async def list_canvas_announcements(current_user: CurrentUser):
         is_priority = any(
             k in text
             for k in [
-                "exam", "quiz", "test", "midterm", "finals", "assessment",
-                "due", "deadline", "submit", "submission", "extension",
-                "cancelled", "postponed", "urgent", "important"
+                "exam",
+                "quiz",
+                "test",
+                "midterm",
+                "finals",
+                "assessment",
+                "due",
+                "deadline",
+                "submit",
+                "submission",
+                "extension",
+                "cancelled",
+                "postponed",
+                "urgent",
+                "important",
             ]
         )
 
@@ -148,17 +165,23 @@ async def list_canvas_announcements(current_user: CurrentUser):
                 "posted_at": ann.get("posted_at"),
                 "author": ann.get("author", {}).get("display_name") or "Instructor",
                 "is_priority": is_priority,
-                "external_url": f"https://canvas.nus.edu.sg/courses/{course_id}/discussion_topics/{ann['id']}",
+                "external_url": (
+                    f"https://canvas.nus.edu.sg/courses/{course_id}"
+                    f"/discussion_topics/{ann['id']}"
+                ),
             }
         )
 
     result.sort(key=lambda x: x["posted_at"] or "", reverse=True)
     return result
 
-async def fetch_course_assignments(client: httpx.AsyncClient, headers: dict, course: dict):
+
+async def fetch_course_assignments(
+    client: httpx.AsyncClient, headers: dict, course: dict
+):
     course_id = course["id"]
     url = f"https://canvas.nus.edu.sg/api/v1/courses/{course_id}/assignments"
-    
+
     try:
         response = await client.get(
             url,
@@ -167,16 +190,16 @@ async def fetch_course_assignments(client: httpx.AsyncClient, headers: dict, cou
                 "per_page": "30",
                 "include[]": "submission",
             },
-            timeout=5.0
+            timeout=5.0,
         )
         response.raise_for_status()
         assignments = response.json()
     except Exception:
         return []
-    
+
     if not isinstance(assignments, list):
         return []
-    
+
     result = []
     for asgn in assignments:
         assignment_id = asgn.get("id")
@@ -190,8 +213,7 @@ async def fetch_course_assignments(client: httpx.AsyncClient, headers: dict, cou
                 client, headers, course_id, assignment_id
             )
         has_submitted = bool(
-            asgn.get("has_submitted_submissions")
-            or has_canvas_submission(submission)
+            asgn.get("has_submitted_submissions") or has_canvas_submission(submission)
         )
         is_priority = False
 
@@ -203,19 +225,26 @@ async def fetch_course_assignments(client: httpx.AsyncClient, headers: dict, cou
                 is_priority = now <= due_date <= (now + timedelta(days=7))
             except Exception:
                 pass
-        result.append({
-            "id": assignment_id,
-            "course_id": course["id"],
-            "course_code": course["course_code"],
-            "course_name": course.get("name") or course["course_code"],
-            "title": asgn.get("name") or "Untitled Assignment",
-            "due_at": due_at,
-            "is_priority": is_priority,
-            "external_url": asgn.get("html_url") or f"https://canvas.nus.edu.sg/courses/{course['id']}/assignments/{assignment_id}",
-            "description": asgn.get("description", "") or "",
-            "has_submitted": has_submitted
-        })
+        result.append(
+            {
+                "id": assignment_id,
+                "course_id": course["id"],
+                "course_code": course["course_code"],
+                "course_name": course.get("name") or course["course_code"],
+                "title": asgn.get("name") or "Untitled Assignment",
+                "due_at": due_at,
+                "is_priority": is_priority,
+                "external_url": asgn.get("html_url")
+                or (
+                    f"https://canvas.nus.edu.sg/courses/{course['id']}"
+                    f"/assignments/{assignment_id}"
+                ),
+                "description": asgn.get("description", "") or "",
+                "has_submitted": has_submitted,
+            }
+        )
     return result
+
 
 @router.get("/assignments", response_model=list[dict[str, Any]])
 async def list_canvas_assignments(current_user: CurrentUser):
@@ -228,23 +257,19 @@ async def list_canvas_assignments(current_user: CurrentUser):
         return []
 
     headers = {"Authorization": f"Bearer {token}"}
-    
+
     async with httpx.AsyncClient() as client:
         tasks = [
-            fetch_course_assignments(client, headers, course)
-            for course in courses
+            fetch_course_assignments(client, headers, course) for course in courses
         ]
         all_results = await asyncio.gather(*tasks, return_exceptions=True)
 
     flat_list = [
-        item
-        for sublist in all_results
-        if isinstance(sublist, list)
-        for item in sublist
+        item for sublist in all_results if isinstance(sublist, list) for item in sublist
     ]
 
     flat_list.sort(key=lambda x: x["due_at"] or "9999-12-31T23:59:59Z")
-    
+
     return flat_list
 
 
@@ -258,7 +283,8 @@ async def list_canvas_files(course_id: int, current_user: CurrentUser):
     async with httpx.AsyncClient() as client:
         try:
             response = await client.get(
-                f"https://canvas.nus.edu.sg/api/v1/courses/{course_id}/files?per_page=50&sort=updated_at&order=desc",
+                f"https://canvas.nus.edu.sg/api/v1/courses/{course_id}/files"
+                "?per_page=50&sort=updated_at&order=desc",
                 headers=headers,
                 timeout=5.0,
             )
@@ -345,10 +371,16 @@ async def list_cached_canvas_files(current_user: CurrentUser):
     )
     course_rows = await db.fetch_all(
         query="""
-            SELECT canvas_course_id, course_code, name, external_url
-            FROM canvas_courses
+            SELECT
+                source_course_id AS canvas_course_id,
+                module_code AS course_code,
+                name,
+                external_url
+            FROM academic_modules
             WHERE user_id = :user_id
-            ORDER BY course_code ASC
+                AND source_type = 'canvas'
+                AND source_course_id IS NOT NULL
+            ORDER BY module_code ASC
         """,
         values={"user_id": current_user.id},
     )
@@ -425,7 +457,9 @@ async def sync_canvas_files(current_user: CurrentUser):
     cached_files = []
     for course, files in successful_results:
         for file in files:
-            filename = file.get("display_name") or file.get("filename") or "Untitled file"
+            filename = (
+                file.get("display_name") or file.get("filename") or "Untitled file"
+            )
             updated_at = parse_canvas_file_datetime(
                 file.get("updated_at") or file.get("created_at"),
                 now,
@@ -441,12 +475,16 @@ async def sync_canvas_files(current_user: CurrentUser):
                         str(file["folder_id"]) if file.get("folder_id") else None
                     ),
                     "filename": filename,
-                    "content_type": file.get("content-type") or "application/octet-stream",
+                    "content_type": file.get("content-type")
+                    or "application/octet-stream",
                     "file_type": get_file_type(filename),
                     "size_bytes": int(file.get("size") or 0),
                     "canvas_url": file.get("url") or file.get("html_url") or "",
                     "external_url": file.get("html_url")
-                    or f"https://canvas.nus.edu.sg/courses/{course['id']}/files/{file.get('id')}",
+                    or (
+                        f"https://canvas.nus.edu.sg/courses/{course['id']}"
+                        f"/files/{file.get('id')}"
+                    ),
                     "thumbnail_url": file.get("thumbnail_url"),
                     "locked": bool(file.get("locked")),
                     "hidden": bool(file.get("hidden")),
@@ -456,31 +494,6 @@ async def sync_canvas_files(current_user: CurrentUser):
             )
 
     async with db.transaction():
-        await db.execute(
-            query="DELETE FROM canvas_courses WHERE user_id = :user_id",
-            values={"user_id": current_user.id},
-        )
-        await db.execute_many(
-            query="""
-                INSERT INTO canvas_courses (
-                    user_id, canvas_course_id, course_code, name, external_url
-                )
-                VALUES (
-                    :user_id, :canvas_course_id, :course_code, :name, :external_url
-                )
-            """,
-            values=[
-                {
-                    "user_id": current_user.id,
-                    "canvas_course_id": str(course["id"]),
-                    "course_code": course["course_code"],
-                    "name": course["name"],
-                    "external_url": course["external_url"],
-                }
-                for course in courses
-            ],
-        )
-
         current_course_ids = {str(course["id"]) for course in courses}
         cached_course_rows = await db.fetch_all(
             query="""

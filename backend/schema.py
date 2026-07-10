@@ -1,6 +1,5 @@
 from database import db
 
-
 SCHEMA_STATEMENTS = [
     """
     CREATE TABLE IF NOT EXISTS users (
@@ -94,7 +93,7 @@ SCHEMA_STATEMENTS = [
         user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
         module_code TEXT NOT NULL,
         name TEXT NOT NULL,
-        source_type TEXT NOT NULL DEFAULT 'manual',
+        source_type TEXT NOT NULL DEFAULT 'canvas',
         source_course_id TEXT,
         external_url TEXT,
         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -110,6 +109,29 @@ SCHEMA_STATEMENTS = [
     ON academic_modules (user_id)
     """,
     """
+    DELETE FROM academic_modules
+    WHERE source_type <> 'canvas'
+    """,
+    """
+    ALTER TABLE academic_modules
+    ALTER COLUMN source_type SET DEFAULT 'canvas'
+    """,
+    """
+    DO $$
+    BEGIN
+        IF NOT EXISTS (
+            SELECT 1
+            FROM pg_constraint
+            WHERE conname = 'academic_modules_canvas_source_only'
+                AND conrelid = 'academic_modules'::regclass
+        ) THEN
+            ALTER TABLE academic_modules
+            ADD CONSTRAINT academic_modules_canvas_source_only
+            CHECK (source_type = 'canvas');
+        END IF;
+    END $$;
+    """,
+    """
     CREATE TABLE IF NOT EXISTS tasks (
         id BIGSERIAL PRIMARY KEY,
         user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -119,7 +141,9 @@ SCHEMA_STATEMENTS = [
         description TEXT NOT NULL DEFAULT '',
         status TEXT NOT NULL DEFAULT 'todo',
         priority_manual TEXT NOT NULL DEFAULT 'medium',
-        estimated_minutes INTEGER CHECK (estimated_minutes IS NULL OR estimated_minutes >= 0),
+        estimated_minutes INTEGER CHECK (
+            estimated_minutes IS NULL OR estimated_minutes >= 0
+        ),
         source_type TEXT NOT NULL DEFAULT 'manual',
         source_id TEXT,
         source_due_at TIMESTAMPTZ,
@@ -146,7 +170,7 @@ SCHEMA_STATEMENTS = [
     CREATE INDEX IF NOT EXISTS exams_user_id_idx
     ON exams (user_id)
     """,
-    #comms & grps
+    # comms & grps
     """
     CREATE TABLE IF NOT EXISTS communities (
         id BIGSERIAL PRIMARY KEY,
@@ -175,7 +199,7 @@ SCHEMA_STATEMENTS = [
         PRIMARY KEY (g_id, user_id)
     )
     """,
-    #events
+    # events
     """
     CREATE TABLE IF NOT EXISTS events (
         id BIGSERIAL PRIMARY KEY,
@@ -223,7 +247,7 @@ SCHEMA_STATEMENTS = [
         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
     """,
-    #  canvas cache 
+    #  canvas cache
     """
     CREATE TABLE IF NOT EXISTS canvas_announcements (
         id BIGSERIAL PRIMARY KEY,
@@ -281,20 +305,35 @@ SCHEMA_STATEMENTS = [
     )
     """,
     """
-    CREATE TABLE IF NOT EXISTS canvas_courses (
-        id BIGSERIAL PRIMARY KEY,
-        user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-        canvas_course_id TEXT NOT NULL,
-        course_code TEXT NOT NULL,
-        name TEXT NOT NULL,
-        external_url TEXT NOT NULL,
-        synced_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-        UNIQUE (user_id, canvas_course_id)
-    )
-    """,
-    """
-    CREATE INDEX IF NOT EXISTS canvas_courses_user_id_idx
-    ON canvas_courses (user_id)
+    DO $$
+    BEGIN
+        IF to_regclass('canvas_courses') IS NOT NULL THEN
+            INSERT INTO academic_modules (
+                user_id,
+                module_code,
+                name,
+                source_type,
+                source_course_id,
+                external_url
+            )
+            SELECT
+                user_id,
+                course_code,
+                name,
+                'canvas',
+                canvas_course_id,
+                external_url
+            FROM canvas_courses
+            ON CONFLICT (user_id, module_code)
+            DO UPDATE SET
+                name = EXCLUDED.name,
+                source_type = 'canvas',
+                source_course_id = EXCLUDED.source_course_id,
+                external_url = EXCLUDED.external_url;
+
+            DROP TABLE canvas_courses;
+        END IF;
+    END $$;
     """,
     """
     CREATE INDEX IF NOT EXISTS canvas_files_user_id_idx
@@ -323,7 +362,9 @@ SCHEMA_STATEMENTS = [
         venue TEXT,
         tag TEXT,
         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-        CONSTRAINT cg_announcements_has_owner CHECK (c_id IS NOT NULL OR g_id IS NOT NULL)
+        CONSTRAINT cg_announcements_has_owner CHECK (
+            c_id IS NOT NULL OR g_id IS NOT NULL
+        )
     )
     """,
     """
@@ -365,7 +406,7 @@ SCHEMA_STATEMENTS = [
         UNIQUE (form_id, user_id)
     )
     """,
-    #  indexes for new tables 
+    #  indexes for new tables
     """
     CREATE INDEX IF NOT EXISTS groups_c_id_idx ON groups(c_id)
     """,

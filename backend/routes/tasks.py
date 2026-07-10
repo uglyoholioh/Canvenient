@@ -1,16 +1,17 @@
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, HTTPException, Response, status
-
 from database import db
 from dependencies import CurrentUser
+from fastapi import APIRouter, HTTPException, Response, status
 from models.task import TaskCreate, TaskOut, TaskPriority, TaskUpdate
-from routes.canvas import list_canvas_assignments
+from routes.canvas import list_canvas_assignments, list_canvas_courses
 
 router = APIRouter(prefix="/tasks", tags=["tasks"])
 
 
-def get_recommended_priority(status: str, effective_due_at: datetime | None) -> TaskPriority:
+def get_recommended_priority(
+    status: str, effective_due_at: datetime | None
+) -> TaskPriority:
     if status == "done":
         return "low"
 
@@ -192,6 +193,42 @@ async def sync_canvas_tasks(current_user: CurrentUser):
         values={"user_id": current_user.id},
     )
 
+    courses = await list_canvas_courses(current_user)
+    for course in courses:
+        await db.execute(
+            query="""
+                INSERT INTO academic_modules (
+                    user_id,
+                    module_code,
+                    name,
+                    source_type,
+                    source_course_id,
+                    external_url
+                )
+                VALUES (
+                    :user_id,
+                    :module_code,
+                    :name,
+                    'canvas',
+                    :source_course_id,
+                    :external_url
+                )
+                ON CONFLICT (user_id, module_code)
+                DO UPDATE SET
+                    name = EXCLUDED.name,
+                    source_type = 'canvas',
+                    source_course_id = EXCLUDED.source_course_id,
+                    external_url = EXCLUDED.external_url
+            """,
+            values={
+                "user_id": current_user.id,
+                "module_code": course["course_code"],
+                "name": course["name"],
+                "source_course_id": str(course["id"]),
+                "external_url": course["external_url"],
+            },
+        )
+
     try:
         assignments = await list_canvas_assignments(current_user)
     except Exception:
@@ -202,9 +239,7 @@ async def sync_canvas_tasks(current_user: CurrentUser):
             course_code = assignment.get("course_code") or "Canvas"
             course_id = str(assignment.get("course_id") or "")
             course_url = (
-                f"https://canvas.nus.edu.sg/courses/{course_id}"
-                if course_id
-                else None
+                f"https://canvas.nus.edu.sg/courses/{course_id}" if course_id else None
             )
 
             module_row = await db.fetch_one(
@@ -376,9 +411,7 @@ async def create_task(payload: TaskCreate, current_user: CurrentUser):
         "Category not found.",
     )
 
-    completed_at = (
-        datetime.now(timezone.utc) if payload.status == "done" else None
-    )
+    completed_at = datetime.now(timezone.utc) if payload.status == "done" else None
 
     row = await db.fetch_one(
         query="""
@@ -500,9 +533,7 @@ async def update_task(task_id: int, payload: TaskUpdate, current_user: CurrentUs
             ),
             "source_type": updates.get("source_type", existing["source_type"]),
             "source_id": updates.get("source_id", existing["source_id"]),
-            "source_due_at": updates.get(
-                "source_due_at", existing["source_due_at"]
-            ),
+            "source_due_at": updates.get("source_due_at", existing["source_due_at"]),
             "due_at_override": updates.get(
                 "due_at_override", existing["due_at_override"]
             ),
