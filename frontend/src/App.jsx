@@ -9,6 +9,7 @@ import FileViewer from "./components/FileViewer"
 import Schedule from "./components/Schedule"
 import Organisations from "./components/Organisations"
 import JoinGroupLink from "./components/JoinGroupLink"
+import Settings from "./components/Settings"
 
 import { getStoredToken, persistToken, clearStoredToken, getCurrentUser, joinGroup } from "./api"
 import { Outlet } from "react-router-dom"
@@ -87,6 +88,18 @@ function App() {
     }
   }, [token])
 
+  useEffect(() => {
+    if (currentUser && currentUser.theme) {
+      if (currentUser.theme === "default") {
+        document.documentElement.removeAttribute("data-theme")
+      } else {
+        document.documentElement.setAttribute("data-theme", currentUser.theme)
+      }
+    } else {
+      document.documentElement.removeAttribute("data-theme")
+    }
+  }, [currentUser])
+
   const handleLoginSuccess = (session) => {
     persistToken(session.access_token)
     setToken(session.access_token)
@@ -146,6 +159,7 @@ function App() {
           <Route path="/files" element={<FileViewer token={token} currentUser={currentUser} onLogout={handleLogout} />} />
           <Route path="/schedule" element={<Schedule token={token} currentUser={currentUser} />} />
           <Route path="/organisations" element={<Organisations token={token} currentUser={currentUser} />} />
+          <Route path="/settings" element={<Settings token={token} currentUser={currentUser} onUpdateProfile={(updatedUser) => setCurrentUser(updatedUser)} />} />
         </Route>
       </Routes>
     </Router>

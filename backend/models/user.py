@@ -16,11 +16,13 @@ class UserSummary(BaseModel):
     email: EmailStr
     name: str = ""
     canvas_token: str = ""
+    theme: str = "default"
 
 
 class ProfileUpdate(BaseModel):
     name: str = Field(..., min_length=1)
     canvas_token: str = Field(default="")
+    theme: str = Field(default="default")
 
 
 class UserOut(UserSummary):

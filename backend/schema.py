@@ -407,6 +407,10 @@ SCHEMA_STATEMENTS = [
     ALTER TABLE event_attendance
     ADD COLUMN IF NOT EXISTS attended BOOLEAN DEFAULT NULL
     """,
+    """
+    ALTER TABLE user_settings
+    ADD COLUMN IF NOT EXISTS theme TEXT NOT NULL DEFAULT 'default'
+    """,
 ]
 
 
