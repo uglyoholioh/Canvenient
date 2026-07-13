@@ -12,10 +12,37 @@ import {
   getSchedule,
   importIcs,
   getGroups,
-  createEvent
+  createEvent,
+  updateEvent,
+  deleteEvent
 } from "../api"
 
-import { Megaphone, BookOpen, FolderOpen, RefreshCw, ExternalLink, Calendar, FileText } from "lucide-react"
+import { Megaphone, BookOpen, FolderOpen, RefreshCw, ExternalLink, Calendar, FileText, Edit } from "lucide-react"
+
+// Module colour mapping (shared with Schedule.jsx)
+const SCHEDULER_COLORS = ['red', 'pink', 'purple', 'indigo', 'blue', 'teal', 'green', 'lime', 'amber', 'orange', 'grey']
+const COLOR_CSS_MAP = {
+  red: { bg: 'rgba(211,47,47,0.1)', color: '#D32F2F' },
+  pink: { bg: 'rgba(194,24,91,0.1)', color: '#C2185B' },
+  purple: { bg: 'rgba(123,31,162,0.1)', color: '#7B1FA2' },
+  indigo: { bg: 'rgba(57,73,171,0.1)', color: '#3949AB' },
+  blue: { bg: 'rgba(21,101,192,0.1)', color: '#1565C0' },
+  teal: { bg: 'rgba(0,121,107,0.1)', color: '#007975' },
+  green: { bg: 'rgba(46,125,50,0.1)', color: '#2E7D32' },
+  lime: { bg: 'rgba(85,139,47,0.1)', color: '#558B2F' },
+  amber: { bg: 'rgba(255,143,0,0.1)', color: '#FF8F00' },
+  orange: { bg: 'rgba(230,81,0,0.1)', color: '#E65100' },
+  grey: { bg: 'rgba(117,117,117,0.1)', color: '#757575' },
+}
+function getModuleColor(moduleCode) {
+  if (!moduleCode) return null
+  let hash = 0
+  for (let i = 0; i < moduleCode.length; i++) {
+    hash = ((hash << 5) - hash) + moduleCode.charCodeAt(i)
+    hash |= 0
+  }
+  return SCHEDULER_COLORS[Math.abs(hash) % SCHEDULER_COLORS.length]
+}
 import AiBrief from "./AiBrief"
 
 function Dashboard({ token, currentUser, onLogout }) {
@@ -42,6 +69,8 @@ function Dashboard({ token, currentUser, onLogout }) {
   const [eventDesc, setEventDesc] = useState("")
   const [eventStart, setEventStart] = useState("")
   const [eventEnd, setEventEnd] = useState("")
+  const [showEditEventModal, setShowEditEventModal] = useState(false)
+  const [editingEvent, setEditingEvent] = useState(null)
 
   // Modal overlays state
   const [activeModal, setActiveModal] = useState(null) // { courseId, courseCode, type }
@@ -227,6 +256,65 @@ function Dashboard({ token, currentUser, onLogout }) {
     }
   }
 
+  const handleStartEditEvent = (item) => {
+    const toLocalDateString = (d) => {
+      if (!d) return ""
+      const date = new Date(d)
+      const tzOffset = date.getTimezoneOffset() * 60000;
+      const localISOTime = (new Date(date - tzOffset)).toISOString().slice(0, 16);
+      return localISOTime;
+    }
+
+    setEditingEvent({
+      id: item.eventId,
+      title: item.title,
+      venue: item.venue === "No venue" ? "" : item.venue,
+      description: item.description || "",
+      start: toLocalDateString(item.start_at),
+      end: item.end_at && item.end_at !== item.start_at ? toLocalDateString(item.end_at) : ""
+    })
+    setShowEditEventModal(true)
+  }
+
+  const handleSaveEditEvent = async (e) => {
+    e.preventDefault()
+    if (!editingEvent.title.trim() || !editingEvent.start) return
+    setError("")
+    try {
+      await updateEvent(token, editingEvent.id, {
+        title: editingEvent.title,
+        description: editingEvent.description,
+        venue: editingEvent.venue,
+        start_at: new Date(editingEvent.start).toISOString(),
+        end_at: editingEvent.end ? new Date(editingEvent.end).toISOString() : null,
+        is_all_day: false,
+        module_code: null,
+        c_id: null,
+        g_id: null
+      })
+      setShowEditEventModal(false)
+      setEditingEvent(null)
+      const data = await getSchedule(token)
+      setSchedule(data || { classes: [], exams: [], events: [] })
+    } catch (err) {
+      setError(err.message || "Failed to update event.")
+    }
+  }
+
+  const handleDeleteEvent = async (eventId) => {
+    if (!window.confirm("Delete this event?")) return
+    setError("")
+    try {
+      await deleteEvent(token, eventId)
+      setShowEditEventModal(false)
+      setEditingEvent(null)
+      const data = await getSchedule(token)
+      setSchedule(data || { classes: [], exams: [], events: [] })
+    } catch (err) {
+      setError(err.message || "Failed to delete event.")
+    }
+  }
+
   const getTimeline = () => {
     const timeline = []
     const now = new Date()
@@ -239,11 +327,15 @@ function Dashboard({ token, currentUser, onLogout }) {
         if (end > now) {
           timeline.push({
             id: `event-${event.id}`,
+            eventId: event.id,
             title: event.title,
             type: "event",
             start_at: start,
             end_at: end,
-            venue: event.venue || "No venue"
+            venue: event.venue || "No venue",
+            description: event.description || "",
+            c_id: event.c_id,
+            g_id: event.g_id
           })
         }
       })
@@ -261,7 +353,8 @@ function Dashboard({ token, currentUser, onLogout }) {
             type: "exam",
             start_at: start,
             end_at: end,
-            venue: "See Exam Venue"
+            venue: "See Exam Venue",
+            moduleCode: exam.module_code,
           })
         }
       })
@@ -279,7 +372,8 @@ function Dashboard({ token, currentUser, onLogout }) {
             type: "class",
             start_at: start,
             end_at: end,
-            venue: cls.venue || "No venue"
+            venue: cls.venue || "No venue",
+            moduleCode: cls.module_code,
           })
         }
       })
@@ -529,17 +623,35 @@ function Dashboard({ token, currentUser, onLogout }) {
               ) : (
                 timelineItems.slice(0, 5).map(item => (
                   <div key={item.id} className="list-item">
-                    <div className="flex justify-between items-center">
+                    <div className="flex justify-between items-center w-full">
                       <span className="text-xs text-muted">
                         {item.start_at.toLocaleDateString("en-SG", { day: "numeric", month: "short" })}{" "}
                         {item.start_at.toLocaleTimeString("en-SG", { hour12: false, hour: "2-digit", minute: "2-digit" })}
                       </span>
-                      <span
-                        className={`badge badge--square badge--${item.type === "class" ? "primary" : item.type === "exam" ? "danger" : "warning"
-                          }`}
-                      >
-                        {item.type}
-                      </span>
+                      <div className="flex items-center gap-xs">
+                        {item.type === "event" && !item.c_id && !item.g_id && (
+                          <button
+                            onClick={() => handleStartEditEvent(item)}
+                            className="btn btn--icon btn--sm"
+                            title="Edit Event"
+                            style={{ height: "18px", width: "18px", padding: 0, border: "none", background: "none" }}
+                          >
+                            <Edit size={12} style={{ color: "var(--text-muted)", cursor: "pointer" }} />
+                          </button>
+                        )}
+                        {item.type === "event" ? (
+                          <span className="badge badge--square badge--warning">
+                            {item.type}
+                          </span>
+                        ) : (
+                          <span className="badge badge--square" style={{
+                            backgroundColor: (COLOR_CSS_MAP[getModuleColor(item.moduleCode)] || COLOR_CSS_MAP.grey).bg,
+                            color: (COLOR_CSS_MAP[getModuleColor(item.moduleCode)] || COLOR_CSS_MAP.grey).color,
+                          }}>
+                            {item.moduleCode || item.type}
+                          </span>
+                        )}
+                      </div>
                     </div>
                     <div className="timeline-item-body">
                       <h4 className="timeline-title">{item.title}</h4>
@@ -893,6 +1005,89 @@ function Dashboard({ token, currentUser, onLogout }) {
               <div className="modal-footer flex gap-sm" style={{ padding: "16px 0 0" }}>
                 <button type="button" className="btn btn--secondary" onClick={() => setShowEventModal(false)}>Cancel</button>
                 <button type="submit" className="btn btn--primary">Create Event</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {showEditEventModal && editingEvent && (
+        <div className="modal-overlay" onClick={() => { setShowEditEventModal(false); setEditingEvent(null); }}>
+          <div className="modal-card" onClick={e => e.stopPropagation()} style={{ maxWidth: "480px" }}>
+            <div className="modal-header">
+              <h3>Edit Personal Event</h3>
+              <button className="close-modal" onClick={() => { setShowEditEventModal(false); setEditingEvent(null); }}>&times;</button>
+            </div>
+            <form onSubmit={handleSaveEditEvent} className="form modal-body">
+              <div className="form-group">
+                <label>Event Title</label>
+                <input
+                  type="text"
+                  className="form-input"
+                  required
+                  value={editingEvent.title}
+                  onChange={e => setEditingEvent({ ...editingEvent, title: e.target.value })}
+                />
+              </div>
+              <div className="form-group">
+                <label>Venue (optional)</label>
+                <input
+                  type="text"
+                  className="form-input"
+                  value={editingEvent.venue}
+                  onChange={e => setEditingEvent({ ...editingEvent, venue: e.target.value })}
+                />
+              </div>
+              <div className="form-grid form-grid--2col">
+                <div className="form-group">
+                  <label>Start Date & Time</label>
+                  <input
+                    type="datetime-local"
+                    className="form-input"
+                    required
+                    value={editingEvent.start}
+                    onChange={e => setEditingEvent({ ...editingEvent, start: e.target.value })}
+                  />
+                </div>
+                <div className="form-group">
+                  <label>End (optional)</label>
+                  <input
+                    type="datetime-local"
+                    className="form-input"
+                    value={editingEvent.end}
+                    onChange={e => setEditingEvent({ ...editingEvent, end: e.target.value })}
+                  />
+                </div>
+              </div>
+              <div className="form-group">
+                <label>Description (optional)</label>
+                <textarea
+                  className="form-input"
+                  rows={3}
+                  value={editingEvent.description}
+                  onChange={e => setEditingEvent({ ...editingEvent, description: e.target.value })}
+                />
+              </div>
+              <div className="modal-footer flex justify-between w-full" style={{ padding: "16px 0 0" }}>
+                <button
+                  type="button"
+                  className="btn btn--danger"
+                  onClick={() => handleDeleteEvent(editingEvent.id)}
+                >
+                  Delete
+                </button>
+                <div className="flex gap-sm">
+                  <button
+                    type="button"
+                    className="btn btn--secondary"
+                    onClick={() => { setShowEditEventModal(false); setEditingEvent(null); }}
+                  >
+                    Cancel
+                  </button>
+                  <button type="submit" className="btn btn--primary">
+                    Save Changes
+                  </button>
+                </div>
               </div>
             </form>
           </div>

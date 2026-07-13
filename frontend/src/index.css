@@ -32,6 +32,95 @@
   --radius-pill: 999px;
 }
 
+/* Themes */
+:root[data-theme='ocean'] {
+  --bg: #E0F2F1;
+  --bg-rgb: 224, 242, 241;
+  --surface: #FFFFFF;
+  --surface-muted: #F2FAF9;
+  --surface-warm: #E4F3F1;
+  --primary: #005A50;
+  --primary-rgb: 0, 90, 80;
+  --accent: #00897B;
+  --border: #B2DFDB;
+  --border-strong: #80CBC4;
+  --text-h: #004D40;
+  --text: rgba(0, 77, 64, 0.75);
+  --text-muted: #75A49E;
+  --shadow: 0 8px 32px rgba(0, 90, 80, 0.08);
+  --shadow-soft: 0 4px 16px rgba(0, 90, 80, 0.04);
+}
+
+:root[data-theme='sunset'] {
+  --bg: #FFF3E0;
+  --bg-rgb: 255, 243, 224;
+  --surface: #FFFFFF;
+  --surface-muted: #FFFBF5;
+  --surface-warm: #FCEFD9;
+  --primary: #C54B00;
+  --primary-rgb: 197, 75, 0;
+  --accent: #E65100;
+  --border: #FFE0B2;
+  --border-strong: #FFCC80;
+  --text-h: #8C2D00;
+  --text: rgba(140, 45, 0, 0.75);
+  --text-muted: #B88066;
+  --shadow: 0 8px 32px rgba(197, 75, 0, 0.08);
+  --shadow-soft: 0 4px 16px rgba(197, 75, 0, 0.04);
+}
+
+:root[data-theme='amethyst'] {
+  --bg: #F3E5F5;
+  --bg-rgb: 243, 229, 245;
+  --surface: #FFFFFF;
+  --surface-muted: #FAF5FC;
+  --surface-warm: #EFE0F2;
+  --primary: #4A148C;
+  --primary-rgb: 74, 20, 140;
+  --accent: #7B1FA2;
+  --border: #E1BEE7;
+  --border-strong: #CE93D8;
+  --text-h: #31006F;
+  --text: rgba(74, 20, 140, 0.75);
+  --text-muted: #9E74A6;
+  --shadow: 0 8px 32px rgba(74, 20, 140, 0.08);
+  --shadow-soft: 0 4px 16px rgba(74, 20, 140, 0.04);
+}
+
+:root[data-theme='midnight'] {
+  --bg: #0C0D10;
+  --bg-rgb: 12, 13, 16;
+  --surface: #14161F;
+  --surface-muted: #1A1D2B;
+  --surface-warm: #202436;
+  --primary: #64DFDF;
+  --primary-rgb: 100, 223, 223;
+  --accent: #72EFDD;
+  --border: #232738;
+  --border-strong: #333852;
+  --text-h: #F8F9FA;
+  --text: rgba(248, 249, 250, 0.75);
+  --text-muted: #7E869B;
+  --shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  --shadow-soft: 0 4px 16px rgba(0, 0, 0, 0.2);
+}
+
+:root[data-theme='midnight'] .sidebar-container {
+  background-color: #14161F;
+  border-right: 1px solid var(--border);
+}
+:root[data-theme='midnight'] .menu-link {
+  color: rgba(255, 255, 255, 0.5);
+}
+:root[data-theme='midnight'] .menu-link:hover {
+  color: #FFFFFF;
+  background-color: rgba(255, 255, 255, 0.08);
+}
+:root[data-theme='midnight'] .menu-link.active {
+  color: var(--primary);
+  background-color: var(--bg);
+}
+
 /* reset */
 * {
   margin: 0;
@@ -44,6 +133,7 @@ body {
   font-family: var(--font-sans);
   min-height: 100vh;
   overflow-x: hidden;
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 h1,
 h2,
@@ -661,7 +751,7 @@ p {
     background-color 0.2s ease;
   &:focus {
     border-color: var(--primary);
-    background-color: #ffffff;
+    background-color: var(--surface);
     box-shadow: 0 0 0 3px rgba(var(--primary-rgb), 0.08);
   }
   &textarea {
