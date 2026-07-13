@@ -12,6 +12,35 @@ import { MonthView } from "@mui/x-scheduler/month-view"
 import { WeekView } from "@mui/x-scheduler/week-view"
 import { AgendaView } from "@mui/x-scheduler/agenda-view"
 
+// MUI Scheduler supports these event colours
+const SCHEDULER_COLORS = ['red', 'pink', 'purple', 'indigo', 'blue', 'teal', 'green', 'lime', 'amber', 'orange', 'grey']
+
+// Map SchedulerEventColor to CSS {bg, color} for badge styling
+const COLOR_CSS_MAP = {
+  red: { bg: 'rgba(211,47,47,0.1)', color: '#D32F2F' },
+  pink: { bg: 'rgba(194,24,91,0.1)', color: '#C2185B' },
+  purple: { bg: 'rgba(123,31,162,0.1)', color: '#7B1FA2' },
+  indigo: { bg: 'rgba(57,73,171,0.1)', color: '#3949AB' },
+  blue: { bg: 'rgba(21,101,192,0.1)', color: '#1565C0' },
+  teal: { bg: 'rgba(0,121,107,0.1)', color: '#007975' },
+  green: { bg: 'rgba(46,125,50,0.1)', color: '#2E7D32' },
+  lime: { bg: 'rgba(85,139,47,0.1)', color: '#558B2F' },
+  amber: { bg: 'rgba(255,143,0,0.1)', color: '#FF8F00' },
+  orange: { bg: 'rgba(230,81,0,0.1)', color: '#E65100' },
+  grey: { bg: 'rgba(117,117,117,0.1)', color: '#757575' },
+}
+
+// Deterministically assign a scheduler colour to each module code
+function getModuleColor(moduleCode) {
+  if (!moduleCode) return null
+  let hash = 0
+  for (let i = 0; i < moduleCode.length; i++) {
+    hash = ((hash << 5) - hash) + moduleCode.charCodeAt(i)
+    hash |= 0
+  }
+  return SCHEDULER_COLORS[Math.abs(hash) % SCHEDULER_COLORS.length]
+}
+
 const scheduleTheme = createTheme({
   components: {
     MuiEventDialog: {
@@ -94,17 +123,21 @@ function Schedule({ token }) {
     const list = []
     if (schedule.classes) {
       schedule.classes.forEach(c => list.push({
-        id: `class-${c.id}`, rawId: c.id, type: "class",
+        id: `class-${c.id}`, eventId: c.id, type: "class",
         title: `${c.module_code} ${c.lesson_type}`, description: c.module_name, venue: c.venue || "No Venue",
         start: new Date(`${c.class_date}T${c.start_time}`).toISOString(),
         end: new Date(`${c.class_date}T${c.end_time}`).toISOString(),
+        color: getModuleColor(c.module_code),
+        moduleCode: c.module_code,
       }))
     }
     if (schedule.exams) {
       schedule.exams.forEach(e => list.push({
-        id: `exam-${e.id}`, rawId: e.id, type: "exam",
+        id: `exam-${e.id}`, eventId: e.id, type: "exam",
         title: `${e.module_code} Exam`, description: e.module_name, venue: "See Exam Venue",
         start: new Date(e.start_at).toISOString(), end: new Date(e.end_at).toISOString(),
+        color: getModuleColor(e.module_code),
+        moduleCode: e.module_code,
       }))
     }
     if (schedule.events) {
@@ -118,7 +151,7 @@ function Schedule({ token }) {
         }
 
         list.push({
-          id: `event-${ev.id}`, rawId: ev.id, type: "event",
+          id: `event-${ev.id}`, eventId: ev.id, type: "event",
           title: ev.title, description: ev.description || "", venue: ev.venue || "No Venue",
           start: new Date(ev.start_at).toISOString(),
           end: ev.end_at ? new Date(ev.end_at).toISOString() : new Date(ev.start_at).toISOString(),
@@ -160,7 +193,7 @@ function Schedule({ token }) {
     e.preventDefault()
     const { event } = activeModal
     try {
-      await updateEvent(token, event.rawId, {
+      await updateEvent(token, event.eventId, {
         title: event.title,
         description: event.description,
         venue: event.venue,
@@ -179,7 +212,7 @@ function Schedule({ token }) {
   const handleDelete = async () => {
     if (!window.confirm("Delete this event?")) return
     try {
-      await deleteEvent(token, activeModal.event.rawId)
+      await deleteEvent(token, activeModal.event.eventId)
       setActiveModal(null)
       loadSchedule()
     } catch (err) {
@@ -348,9 +381,19 @@ function Schedule({ token }) {
               </form>
             ) : (
               <div className="modal-body flex-col gap-md">
-                <span className={`badge badge--square badge--${activeModal.event.type === "class" ? "primary" : activeModal.event.type === "exam" ? "danger" : "warning"}`} style={{ alignSelf: "flex-start" }}>
-                  {activeModal.event.type}
-                </span>
+                {activeModal.event.type === "event" ? (
+                  <span className="badge badge--square badge--warning" style={{ alignSelf: "flex-start" }}>
+                    {activeModal.event.type}
+                  </span>
+                ) : (
+                  <span className="badge badge--square" style={{
+                    alignSelf: "flex-start",
+                    backgroundColor: (COLOR_CSS_MAP[getModuleColor(activeModal.event.moduleCode)] || COLOR_CSS_MAP.grey).bg,
+                    color: (COLOR_CSS_MAP[getModuleColor(activeModal.event.moduleCode)] || COLOR_CSS_MAP.grey).color,
+                  }}>
+                    {activeModal.event.moduleCode || activeModal.event.type}
+                  </span>
+                )}
                 <h4 style={{ fontSize: "20px", fontWeight: "600" }}>{activeModal.event.title}</h4>
                 {activeModal.event.description && <p className="text-sm">{activeModal.event.description}</p>}
 
@@ -371,7 +414,7 @@ function Schedule({ token }) {
                             type="button"
                             className={`btn btn--sm ${activeModal.event.is_attending ? "btn--primary" : "btn--outline"}`}
                             style={{ padding: "4px 8px", fontSize: "11px" }}
-                            onClick={() => handleUpdateAttendance(activeModal.event.rawId, true)}
+                            onClick={() => handleUpdateAttendance(activeModal.event.eventId, true)}
                           >
                             Going
                           </button>
@@ -379,7 +422,7 @@ function Schedule({ token }) {
                             type="button"
                             className={`btn btn--sm ${!activeModal.event.is_attending ? "btn--danger" : "btn--outline"}`}
                             style={{ padding: "4px 8px", fontSize: "11px" }}
-                            onClick={() => handleUpdateAttendance(activeModal.event.rawId, false)}
+                            onClick={() => handleUpdateAttendance(activeModal.event.eventId, false)}
                           >
                             Not Going
                           </button>

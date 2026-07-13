@@ -16,6 +16,7 @@ def build_user_summary(record) -> UserSummary:
         email=record["email"],
         name=record["name"] or "",
         canvas_token=record["canvas_token"] or "",
+        theme=record["theme"] or "default",
     )
 
 
@@ -50,7 +51,8 @@ async def login(data: UserLogin):
     query = """
         SELECT u.id, u.email, u.hashed_password,
                COALESCE(s.name, '')         AS name,
-               COALESCE(s.canvas_token, '') AS canvas_token
+               COALESCE(s.canvas_token, '') AS canvas_token,
+               COALESCE(s.theme, 'default') AS theme
         FROM users u
         LEFT JOIN user_settings s ON s.user_id = u.id
         WHERE LOWER(u.email) = LOWER(:email)
@@ -75,17 +77,19 @@ async def get_current_session_user(current_user: CurrentUser):
 async def update_profile(data: ProfileUpdate, current_user: CurrentUser):
     await db.execute(
         query="""
-            INSERT INTO user_settings (user_id, name, canvas_token)
-            VALUES (:user_id, :name, :canvas_token)
+            INSERT INTO user_settings (user_id, name, canvas_token, theme)
+            VALUES (:user_id, :name, :canvas_token, :theme)
             ON CONFLICT (user_id)
             DO UPDATE SET
                 name = EXCLUDED.name,
-                canvas_token = EXCLUDED.canvas_token
+                canvas_token = EXCLUDED.canvas_token,
+                theme = EXCLUDED.theme
         """,
         values={
             "user_id": current_user.id,
             "name": data.name,
             "canvas_token": data.canvas_token,
+            "theme": data.theme,
         },
     )
     return UserSummary(
@@ -93,4 +97,5 @@ async def update_profile(data: ProfileUpdate, current_user: CurrentUser):
         email=current_user.email,
         name=data.name,
         canvas_token=data.canvas_token,
+        theme=data.theme,
     )

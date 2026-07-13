@@ -27,7 +27,8 @@ async def get_current_user(
         query="""
             SELECT u.id, u.email,
                    COALESCE(s.name, '')         AS name,
-                   COALESCE(s.canvas_token, '') AS canvas_token
+                   COALESCE(s.canvas_token, '') AS canvas_token,
+                   COALESCE(s.theme, 'default') AS theme
             FROM users u
             LEFT JOIN user_settings s ON s.user_id = u.id
             WHERE u.id = :user_id
@@ -47,6 +48,7 @@ async def get_current_user(
         email=user["email"],
         name=user["name"],
         canvas_token=user["canvas_token"],
+        theme=user["theme"],
     )
 
 
