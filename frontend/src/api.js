@@ -380,3 +380,30 @@ export function sendAiChat(token, payload) {
     token,
   });
 }
+
+// Study timer
+export function getStudySessions(token) {
+  return apiRequest("/study-sessions", { token });
+}
+
+export function createStudySession(token, payload) {
+  return apiRequest("/study-sessions", { method: "POST", body: payload, token });
+}
+
+export function completeStudySession(token, sessionId, payload) {
+  return apiRequest(`/study-sessions/${sessionId}/complete`, {
+    method: "PATCH", body: payload, token,
+  });
+}
+
+export function cancelStudySession(token, sessionId) {
+  return apiRequest(`/study-sessions/${sessionId}/cancel`, { method: "PATCH", token });
+}
+
+export function getStudySummary(token) {
+  return apiRequest("/study-sessions/summary", { token });
+}
+
+export function getStudyLeaderboard(token, period = "week") {
+  return apiRequest(`/study-sessions/leaderboard?period=${period}`, { token });
+}
