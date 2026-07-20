@@ -575,15 +575,15 @@ function Dashboard({ token, currentUser, onLogout }) {
           </Link>
         </div>
 
-        <div className="card">
+        <div className="card dashboard-schedule-card">
           <div className="card-header">
             <h3>My Schedule</h3>
-            <div className="flex gap-xs items-center">
-              <button onClick={() => setShowEventModal(true)} className="btn btn--secondary btn--sm">
+            <div className="schedule-card-actions">
+              <button onClick={() => setShowEventModal(true)} className="btn btn--secondary schedule-card-button">
                 + New Event
               </button>
               {hasScheduleData && (
-                <label className="btn btn--secondary btn--sm cursor-pointer" title="Import new .ics calendar">
+                <label className="btn btn--secondary schedule-card-button cursor-pointer" title="Import new .ics calendar">
                   Re-import
                   <input
                     type="file"
@@ -662,7 +662,7 @@ function Dashboard({ token, currentUser, onLogout }) {
               )}
             </div>
           )}
-          <button className="btn btn--secondary btn--full" onClick={() => navigate("/schedule")}>Open Full Schedule</button>
+          <button className="btn btn--secondary schedule-card-footer-button" onClick={() => navigate("/schedule")}>Open Full Schedule</button>
         </div>
 
         <div className="card">
