@@ -15,6 +15,7 @@ from routes.groups import router as groups_router
 from routes.invites import router as invites_router
 from routes.forms import router as forms_router
 from routes.notifications import router as notifications_router
+from routes.study_sessions import router as study_sessions_router
 
 
 from schema import initialize_schema
@@ -42,6 +43,7 @@ app.include_router(groups_router)
 app.include_router(invites_router)
 app.include_router(forms_router)
 app.include_router(notifications_router)
+app.include_router(study_sessions_router)
 
 
 

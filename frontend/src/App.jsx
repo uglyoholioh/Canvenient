@@ -10,6 +10,7 @@ import Schedule from "./components/Schedule"
 import Organisations from "./components/Organisations"
 import JoinGroupLink from "./components/JoinGroupLink"
 import Settings from "./components/Settings"
+import StudyTimer from "./components/StudyTimer"
 
 import { getStoredToken, persistToken, clearStoredToken, getCurrentUser, joinGroup } from "./api"
 import { Outlet } from "react-router-dom"
@@ -160,6 +161,7 @@ function App() {
           <Route path="/schedule" element={<Schedule token={token} currentUser={currentUser} />} />
           <Route path="/organisations" element={<Organisations token={token} currentUser={currentUser} />} />
           <Route path="/settings" element={<Settings token={token} currentUser={currentUser} onUpdateProfile={(updatedUser) => setCurrentUser(updatedUser)} />} />
+          <Route path="/study" element={<StudyTimer token={token} currentUser={currentUser} />} />
         </Route>
       </Routes>
     </Router>
