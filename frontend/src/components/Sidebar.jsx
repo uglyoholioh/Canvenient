@@ -1,11 +1,12 @@
 import { useNavigate, NavLink } from "react-router-dom"
 import { useState, useEffect } from "react"
-import { Home, CheckSquare, Calendar, Users, LogOut, Bell, FolderOpen, Settings } from "lucide-react"
+import { Home, CheckSquare, Calendar, Users, LogOut, Bell, FolderOpen, Settings, Timer } from "lucide-react"
 import { getStoredToken, getNotifications, markNotificationAsRead, markAllNotificationsAsRead } from "../api"
 
 const navigationConfig = [
   { label: "Dashboard", href: "/dashboard", icon: Home },
   { label: "Task Planner", href: "/planner", icon: CheckSquare },
+  { label: "Study Timer", href: "/study", icon: Timer },
   { label: "Schedule", href: "/schedule", icon: Calendar },
   { label: "Groups & Comms", href: "/organisations", icon: Users },
   { label: "File Viewer", href: "/files", icon: FolderOpen },

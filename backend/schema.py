@@ -452,6 +452,31 @@ SCHEMA_STATEMENTS = [
     ALTER TABLE user_settings
     ADD COLUMN IF NOT EXISTS theme TEXT NOT NULL DEFAULT 'default'
     """,
+    """
+    CREATE TABLE IF NOT EXISTS study_sessions (
+        id BIGSERIAL PRIMARY KEY,
+        user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        task_id BIGINT REFERENCES tasks(id) ON DELETE SET NULL,
+        module_id BIGINT REFERENCES academic_modules(id) ON DELETE SET NULL,
+        category_id BIGINT REFERENCES categories(id) ON DELETE SET NULL,
+        title TEXT NOT NULL,
+        planned_minutes INTEGER NOT NULL CHECK (planned_minutes BETWEEN 1 AND 480),
+        actual_seconds INTEGER NOT NULL DEFAULT 0 CHECK (actual_seconds >= 0),
+        pause_count INTEGER NOT NULL DEFAULT 0 CHECK (pause_count >= 0),
+        status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'completed', 'cancelled')),
+        started_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        ended_at TIMESTAMPTZ,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+    """,
+    """
+    CREATE UNIQUE INDEX IF NOT EXISTS study_sessions_one_active_per_user
+    ON study_sessions (user_id) WHERE status = 'active'
+    """,
+    """
+    CREATE INDEX IF NOT EXISTS study_sessions_user_ended_idx
+    ON study_sessions (user_id, ended_at DESC)
+    """,
 ]
 
 
