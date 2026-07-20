@@ -744,12 +744,10 @@ function TaskManagerDashboard({ token, currentUser, onLogout }) {
             className="flex gap-md flex-wrap items-end"
             style={{ marginLeft: "auto" }}
           >
-            <label className="form-group">
+            <label className="form-group planner-filter">
               <span>Status</span>
               <select
-                className="form-input"
-                className="text-sm"
-                style={{ padding: "8px 12px" }}
+                className="form-input text-sm themed-select planner-filter-select"
                 value={statusFilter}
                 onChange={(event) => setStatusFilter(event.target.value)}
               >
@@ -760,12 +758,10 @@ function TaskManagerDashboard({ token, currentUser, onLogout }) {
               </select>
             </label>
 
-            <label className="form-group">
+            <label className="form-group planner-filter planner-filter--module">
               <span>Module</span>
               <select
-                className="form-input"
-                className="text-sm"
-                style={{ padding: "8px 12px" }}
+                className="form-input text-sm themed-select planner-filter-select"
                 value={moduleFilter}
                 onChange={(event) => setModuleFilter(event.target.value)}
               >
@@ -876,12 +872,6 @@ function TaskManagerDashboard({ token, currentUser, onLogout }) {
                           )}
                         </div>
 
-                        {task.description && (
-                          <p className="text-base text line-clamp-3">
-                            {task.description}
-                          </p>
-                        )}
-
                         <div className="flex gap-md flex-wrap">
                           <span className="text-xs text-muted">
                             Source:{" "}
@@ -923,11 +913,10 @@ function TaskManagerDashboard({ token, currentUser, onLogout }) {
                         )}
 
                         <div style={{ marginTop: "10px" }}>
-                          <label className="form-group">
+                          <label className="form-group task-status-control">
                             <span>Status</span>
                             <select
-                              className="form-input text-xs"
-                              style={{ padding: "6px 10px" }}
+                              className={`form-input text-xs themed-select task-status-select status-${task.status}`}
                               value={task.status}
                               onChange={(event) =>
                                 handleTaskStatusChange(

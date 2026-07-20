@@ -166,11 +166,11 @@ function Sidebar({ onLogout }) {
           backgroundColor: "var(--surface)",
           border: "1px solid var(--border)"
         }}>
-          <div className="flex justify-between items-center" style={{ borderBottom: "1px solid var(--border)", paddingBottom: "8px" }}>
-            <h4 style={{ fontSize: "16px", fontWeight: "600" }}>Notifications</h4>
-            <div className="flex gap-sm">
-              <button className="btn btn--secondary btn--sm" onClick={handleMarkAllRead}>Mark all read</button>
-              <button className="btn btn--secondary btn--sm" onClick={() => setShowNotifications(false)}>Close</button>
+          <div className="notification-popup-header">
+            <h4>Notifications</h4>
+            <div className="notification-popup-actions">
+              <button className="btn btn--secondary notification-popup-button" onClick={handleMarkAllRead}>Mark all read</button>
+              <button className="btn btn--secondary notification-popup-button" onClick={() => setShowNotifications(false)}>Close</button>
             </div>
           </div>
           <div className="list list--scrollable" style={{ flex: 1, maxHeight: "350px", gap: "8px" }}>
