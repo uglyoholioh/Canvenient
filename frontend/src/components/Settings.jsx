@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react"
-import { User, Key, Palette, Check, Loader2, Info } from "lucide-react"
-import { updateProfile } from "../api"
+import { User, Key, Palette, Check, Loader2, Info, Send } from "lucide-react"
+import { claimTelegramLink, getTelegramLink, unlinkTelegram, updateProfile } from "../api"
 
 const THEMES = [
   {
@@ -57,6 +57,47 @@ function Settings({ token, currentUser, onUpdateProfile }) {
   const [showToken, setShowToken] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [message, setMessage] = useState({ text: "", type: "" }) // 'success' | 'error'
+  const [telegramCode, setTelegramCode] = useState("")
+  const [telegramStatus, setTelegramStatus] = useState(null)
+  const [isUpdatingTelegram, setIsUpdatingTelegram] = useState(false)
+
+  useEffect(() => {
+    let active = true
+    getTelegramLink(token)
+      .then((status) => active && setTelegramStatus(status))
+      .catch(() => active && setTelegramStatus({ linked: false }))
+    return () => { active = false }
+  }, [token])
+
+  const handleTelegramClaim = async () => {
+    if (!telegramCode.trim()) return
+    setIsUpdatingTelegram(true)
+    setMessage({ text: "", type: "" })
+    try {
+      const status = await claimTelegramLink(token, telegramCode.trim())
+      setTelegramStatus(status)
+      setTelegramCode("")
+      setMessage({ text: "Telegram connected successfully!", type: "success" })
+    } catch (err) {
+      setMessage({ text: err.message || "Failed to connect Telegram.", type: "error" })
+    } finally {
+      setIsUpdatingTelegram(false)
+    }
+  }
+
+  const handleTelegramUnlink = async () => {
+    setIsUpdatingTelegram(true)
+    setMessage({ text: "", type: "" })
+    try {
+      await unlinkTelegram(token)
+      setTelegramStatus({ ...telegramStatus, linked: false })
+      setMessage({ text: "Telegram disconnected.", type: "success" })
+    } catch (err) {
+      setMessage({ text: err.message || "Failed to disconnect Telegram.", type: "error" })
+    } finally {
+      setIsUpdatingTelegram(false)
+    }
+  }
 
   // Live preview theme
   const handleThemePreview = (themeId) => {
@@ -191,6 +232,53 @@ function Settings({ token, currentUser, onUpdateProfile }) {
                 </span>
               </div>
             </div>
+          </section>
+
+          {/* Telegram integration */}
+          <section className="card" style={{ padding: "24px", display: "flex", flexDirection: "column", gap: "20px" }}>
+            <div className="flex items-center gap-md" style={{ borderBottom: "1px solid var(--border)", paddingBottom: "12px" }}>
+              <Send size={22} className="text-h" />
+              <h3 style={{ fontSize: "1.5rem" }}>Telegram Bot</h3>
+            </div>
+
+            {telegramStatus?.linked ? (
+              <div className="flex justify-between items-center gap-md" style={{ flexWrap: "wrap" }}>
+                <div>
+                  <strong>Connected</strong>
+                  <p className="text-sm text-muted mt-sm">Your Telegram account can access your Canvenient tasks and schedule.</p>
+                </div>
+                <button type="button" className="btn btn--ghost-danger" disabled={isUpdatingTelegram} onClick={handleTelegramUnlink}>
+                  Disconnect
+                </button>
+              </div>
+            ) : (
+              <div className="form-group">
+                <p className="text-sm text">
+                  1. Open {telegramStatus?.bot_username ? `@${telegramStatus.bot_username}` : "the Canvenient bot"} and send <strong>/start</strong>.<br />
+                  2. Enter the connection code it sends you below. Codes expire after 15 minutes.
+                </p>
+                <div className="flex gap-sm" style={{ alignItems: "stretch", flexWrap: "wrap" }}>
+                  <input
+                    type="text"
+                    className="form-input"
+                    value={telegramCode}
+                    onChange={(event) => setTelegramCode(event.target.value.toUpperCase())}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter") {
+                        event.preventDefault()
+                        handleTelegramClaim()
+                      }
+                    }}
+                    placeholder="CV-XXXXXXXX"
+                    autoComplete="one-time-code"
+                    style={{ flex: "1 1 220px", textTransform: "uppercase" }}
+                  />
+                  <button type="button" className="btn btn--primary" disabled={isUpdatingTelegram || !telegramCode.trim()} onClick={handleTelegramClaim}>
+                    {isUpdatingTelegram ? <Loader2 className="animate-spin" size={18} /> : "Connect Telegram"}
+                  </button>
+                </div>
+              </div>
+            )}
           </section>
 
           {/* Themes */}
