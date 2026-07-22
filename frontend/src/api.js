@@ -44,7 +44,9 @@ async function apiRequest(path, { method = "GET", body, token } = {}) {
   const payload = isJson ? await response.json() : null;
 
   if (!response.ok) {
-    throw new Error(getErrorMessage(payload, "Request failed."));
+    throw new Error(
+      getErrorMessage(payload, `Request failed (${response.status}).`),
+    );
   }
 
   return payload;
@@ -91,6 +93,22 @@ export function updateProfile(token, payload) {
     body: payload,
     token,
   });
+}
+
+export function getTelegramLink(token) {
+  return apiRequest("/telegram/link", { token });
+}
+
+export function claimTelegramLink(token, code) {
+  return apiRequest("/telegram/claim", {
+    method: "POST",
+    body: { code },
+    token,
+  });
+}
+
+export function unlinkTelegram(token) {
+  return apiRequest("/telegram/link", { method: "DELETE", token });
 }
 
 export function getCategories(token) {
