@@ -1,5 +1,15 @@
 const AUTH_TOKEN_KEY = "canvenient.auth.token";
 
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/+$/, "");
+
+function buildUrl(path) {
+  if (path.startsWith("http://") || path.startsWith("https://")) {
+    return path;
+  }
+  const cleanPath = path.startsWith("/") ? path : `/${path}`;
+  return API_BASE_URL ? `${API_BASE_URL}${cleanPath}` : cleanPath;
+}
+
 // Auth
 function getErrorMessage(payload, fallbackMessage) {
   if (!payload) {
@@ -28,7 +38,8 @@ async function apiRequest(path, { method = "GET", body, token } = {}) {
     headers.Authorization = `Bearer ${token}`;
   }
 
-  const response = await fetch(path, {
+  const url = buildUrl(path);
+  const response = await fetch(url, {
     method,
     headers,
     body: body !== undefined ? JSON.stringify(body) : undefined,
@@ -198,7 +209,8 @@ export async function loadCachedCanvasFiles(token, { onSyncRequired } = {}) {
 export async function importIcs(token, file) {
   const formData = new FormData();
   formData.append("file", file);
-  const response = await fetch("/schedule/import/ics", {
+  const url = buildUrl("/schedule/import/ics");
+  const response = await fetch(url, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${token}`,
