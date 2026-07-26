@@ -72,6 +72,10 @@ pip install -r requirements.txt
 Create a file named `.env` inside the `backend` directory. **Do not commit this file to Git.**
 ```env
 DATABASE_URL=postgresql://postgres:[PASSWORD]@db.ipxessavsczgldxelzph.supabase.co:5432/postgres
+# Telegram bot (optional)
+TELEGRAM_BOT_TOKEN=123456:replace-with-botfather-token
+TELEGRAM_BOT_USERNAME=your_bot_username
+TELEGRAM_WEBHOOK_SECRET=replace-with-a-random-secret
 ```
 Ask a team member for the active Supabase PostgreSQL connection string.
 
@@ -80,6 +84,19 @@ Ask a team member for the active Supabase PostgreSQL connection string.
 uvicorn main:app --reload
 ```
 The API runs at `http://127.0.0.1:8000`. Verify it is working by visiting `http://127.0.0.1:8000/health` in your browser — you should see `{"status": "ok"}`.
+
+### Telegram Bot Foundation
+
+1. Create a bot with BotFather and configure the three environment variables above.
+2. Expose the backend over HTTPS, then register `https://your-host/telegram/webhook`
+   with Telegram's `setWebhook`, passing the same `TELEGRAM_WEBHOOK_SECRET` as
+   `secret_token`.
+3. Send `/start` to the bot. It replies with a connection code valid for 15 minutes.
+4. While logged in, open Canvenient Settings and enter the code under Telegram Bot.
+
+The settings screen claims the code through `POST /telegram/claim`. The milestone bot supports `/today`, `/week`, `/deadlines`, `/tasks`,
+`/done <task id>`, and `/help`. Link status is available from `GET /telegram/link`,
+and `DELETE /telegram/link` disconnects the account.
 
 ---
 

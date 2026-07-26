@@ -247,6 +247,23 @@ SCHEMA_STATEMENTS = [
         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
     """,
+    """
+    CREATE TABLE IF NOT EXISTS telegram_links (
+        user_id BIGINT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+        chat_id BIGINT UNIQUE,
+        linked_at TIMESTAMPTZ,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS telegram_pending_links (
+        chat_id BIGINT PRIMARY KEY,
+        code TEXT NOT NULL UNIQUE,
+        expires_at TIMESTAMPTZ NOT NULL,
+        failed_attempts INTEGER NOT NULL DEFAULT 0,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+    """,
     #  canvas cache
     """
     CREATE TABLE IF NOT EXISTS canvas_announcements (
