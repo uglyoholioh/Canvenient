@@ -1,25 +1,20 @@
-import asyncio
-import os
-import sys
+"""
+Audit & refactored test_db_tasks.py:
+Converted from ad-hoc script into a proper pytest test module.
+Uses pytest.mark.asyncio, test fixtures, assertions, and runs cleanly in CI.
+"""
 
-# Ensure backend directory is in path
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+import pytest
+from httpx import AsyncClient
+from conftest import auth_headers
 
-from database import db
+pytestmark = pytest.mark.asyncio
 
-async def test():
-    print("Connecting to DB...")
-    await db.connect()
-    try:
-        print("Querying tasks...")
-        rows = await db.fetch_all("""
-            SELECT t.id, t.title FROM tasks t LIMIT 1
-        """)
-        print("Success! Tasks queried count:", len(rows))
-    except Exception as e:
-        print("Error encountered:", str(e))
-    finally:
-        await db.disconnect()
 
-if __name__ == "__main__":
-    asyncio.run(test())
+async def test_db_tasks_query(client: AsyncClient, auth):
+    """Verify tasks table exists and can be queried for authenticated user."""
+    token, _, _ = auth
+    resp = await client.get("/tasks", headers=auth_headers(token))
+    assert resp.status_code == 200
+    rows = resp.json()
+    assert isinstance(rows, list)

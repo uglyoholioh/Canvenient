@@ -178,20 +178,21 @@ async def update_event(event_id: int, payload: EventUpdate, current_user: Curren
     if description_val is None:
         description_val = ""
 
+    existing_dict = dict(existing)
     merged = {
-        "title": updates.get("title", existing["title"]),
+        "title": updates.get("title", existing_dict["title"]),
         "description": description_val,
-        "venue": updates.get("venue", existing["venue"]),
-        "start_at": updates.get("start_at", existing["start_at"]),
-        "end_at": updates.get("end_at", existing["end_at"]),
-        "is_all_day": updates.get("is_all_day", existing["is_all_day"]),
-        "c_id": updates.get("c_id", existing["c_id"]),
-        "g_id": updates.get("g_id", existing["g_id"]),
-        "module_code": updates.get("module_code", existing["module_code"]),
-        "event_type": updates.get("event_type", existing.get("event_type")),
+        "venue": updates.get("venue", existing_dict["venue"]),
+        "start_at": updates.get("start_at", existing_dict["start_at"]),
+        "end_at": updates.get("end_at", existing_dict["end_at"]),
+        "is_all_day": updates.get("is_all_day", existing_dict["is_all_day"]),
+        "c_id": updates.get("c_id", existing_dict["c_id"]),
+        "g_id": updates.get("g_id", existing_dict["g_id"]),
+        "module_code": updates.get("module_code", existing_dict["module_code"]),
+        "event_type": updates.get("event_type", existing_dict.get("event_type")),
     }
 
-    row = await db.fetch_one(
+    await db.execute(
         query="""
             UPDATE events
             SET
@@ -205,15 +206,18 @@ async def update_event(event_id: int, payload: EventUpdate, current_user: Curren
                 g_id = :g_id,
                 module_code = :module_code,
                 event_type = :event_type,
-                updated_at = NOW()
+                updated_at = CURRENT_TIMESTAMP
             WHERE id = :event_id AND user_id = :user_id
-            RETURNING *
         """,
         values={
             "event_id": event_id,
             "user_id": current_user.id,
             **merged,
         },
+    )
+    row = await db.fetch_one(
+        query="SELECT * FROM events WHERE id = :event_id",
+        values={"event_id": event_id},
     )
     rec_dict = dict(row)
     rec_dict["rsvp_count"] = 0
