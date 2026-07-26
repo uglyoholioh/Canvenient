@@ -9,6 +9,8 @@ skills-lock.json
 
 # Local scripts and generated calendars
 run.bat
+setup-tunnel.bat
+backend/start-backend.bat
 testdata/*_current.ics
 
 # Log files
