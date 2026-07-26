@@ -498,5 +498,34 @@ SCHEMA_STATEMENTS = [
 
 
 async def initialize_schema() -> None:
+    is_sqlite = "sqlite" in str(db.url).lower()
     for statement in SCHEMA_STATEMENTS:
-        await db.execute(query=statement)
+        if is_sqlite:
+            stmt_stripped = statement.strip()
+            # Skip PL/pgSQL blocks, column type alters, constraints, and Postgres-specific views
+            if (
+                stmt_stripped.startswith("DO $$")
+                or "ALTER COLUMN" in stmt_stripped
+                or "ADD CONSTRAINT" in stmt_stripped
+                or ("ON CONFLICT" in stmt_stripped and "DO UPDATE SET" in stmt_stripped)
+                or "information_schema" in stmt_stripped
+            ):
+                continue
+            
+            # Format SQLite compatible SQL
+            stmt = (
+                statement.replace("BIGSERIAL PRIMARY KEY", "INTEGER PRIMARY KEY AUTOINCREMENT")
+                .replace("TIMESTAMPTZ", "DATETIME")
+                .replace("BYTEA", "BLOB")
+                .replace("DEFAULT NOW()", "DEFAULT CURRENT_TIMESTAMP")
+                .replace("JSONB", "JSON")
+                .replace("ADD COLUMN IF NOT EXISTS", "ADD COLUMN")
+            )
+            try:
+                await db.execute(query=stmt)
+            except Exception:
+                pass
+        else:
+            await db.execute(query=statement)
+
+

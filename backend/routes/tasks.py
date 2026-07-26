@@ -514,7 +514,7 @@ async def update_task(task_id: int, payload: TaskUpdate, current_user: CurrentUs
                 due_at_override = :due_at_override,
                 external_url = :external_url,
                 completed_at = :completed_at,
-                updated_at = NOW()
+                updated_at = CURRENT_TIMESTAMP
             WHERE id = :task_id AND user_id = :user_id
         """,
         values={
