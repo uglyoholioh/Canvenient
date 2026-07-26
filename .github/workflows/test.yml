@@ -51,7 +51,7 @@ jobs:
       - name: Install frontend dependencies
         run: |
           cd frontend
-          npm install --no-audit
+          npm install --no-package-lock
 
       - name: Run Vitest suite
         run: |
