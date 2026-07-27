@@ -94,36 +94,44 @@ async def webhook(
     if not chat_id or not text.startswith("/"):
         return Response(status_code=status.HTTP_204_NO_CONTENT)
 
-    command = text.strip().split()[0].split("@", 1)[0].lower()
-    if command in {"/start", "/link"}:
-        code = generate_connection_code()
-        await db.execute(
-            query="""
-                INSERT INTO telegram_pending_links (chat_id, code, expires_at)
-                VALUES (:chat_id, :code, NOW() + INTERVAL '15 minutes')
-                ON CONFLICT (chat_id) DO UPDATE SET
-                    code = EXCLUDED.code,
-                    expires_at = EXCLUDED.expires_at,
-                    failed_attempts = 0,
-                    created_at = NOW()
-            """,
-            values={"chat_id": chat_id, "code": code},
-        )
-        reply = (
-            f"Your Canvenient connection code is:\n\n{code}\n\n"
-            "Enter it under Settings → Telegram within 15 minutes. "
-            "Never share this code with anyone."
-        )
-    else:
-        link = await db.fetch_one(
-            query="SELECT user_id FROM telegram_links WHERE chat_id = :chat_id",
-            values={"chat_id": chat_id},
-        )
-        reply = (
-            await handle_command(link["user_id"], text)
-            if link
-            else "Send /start to receive a Canvenient connection code."
-        )
+    try:
+        command = text.strip().split()[0].split("@", 1)[0].lower()
+        if command in {"/start", "/link"}:
+            code = generate_connection_code()
+            await db.execute(
+                query="""
+                    INSERT INTO telegram_pending_links (chat_id, code, expires_at)
+                    VALUES (:chat_id, :code, NOW() + INTERVAL '15 minutes')
+                    ON CONFLICT (chat_id) DO UPDATE SET
+                        code = EXCLUDED.code,
+                        expires_at = EXCLUDED.expires_at,
+                        failed_attempts = 0,
+                        created_at = NOW()
+                """,
+                values={"chat_id": chat_id, "code": code},
+            )
+            reply = (
+                f"Your Canvenient connection code is:\n\n{code}\n\n"
+                "Enter it under Settings → Telegram within 15 minutes. "
+                "Never share this code with anyone."
+            )
+        else:
+            link = await db.fetch_one(
+                query="SELECT user_id FROM telegram_links WHERE chat_id = :chat_id",
+                values={"chat_id": chat_id},
+            )
+            reply = (
+                await handle_command(link["user_id"], text)
+                if link
+                else "Send /start to receive a Canvenient connection code."
+            )
 
-    await send_message(chat_id, reply)
+        await send_message(chat_id, reply)
+    except Exception as err:
+        print(f"[Telegram Webhook Error]: {err}")
+        try:
+            await send_message(chat_id, f"⚠️ Error processing command: {err}")
+        except Exception:
+            pass
+
     return Response(status_code=status.HTTP_204_NO_CONTENT)
