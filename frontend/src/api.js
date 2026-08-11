@@ -39,24 +39,56 @@ async function apiRequest(path, { method = "GET", body, token } = {}) {
   }
 
   const url = buildUrl(path);
-  const response = await fetch(url, {
-    method,
-    headers,
-    body: body !== undefined ? JSON.stringify(body) : undefined,
-  });
+  let response;
+  try {
+    response = await fetch(url, {
+      method,
+      headers,
+      body: body !== undefined ? JSON.stringify(body) : undefined,
+    });
+  } catch (err) {
+    throw new Error(
+      `Could not connect to server at ${url}. Please check your backend connection.`,
+    );
+  }
 
   if (response.status === 204) {
     return null;
   }
 
-  const isJson = response.headers
-    .get("content-type")
-    ?.includes("application/json");
-  const payload = isJson ? await response.json() : null;
+  const contentType = response.headers.get("content-type") || "";
+  const isJson = contentType.includes("application/json");
+
+  let payload = null;
+  if (isJson) {
+    try {
+      payload = await response.json();
+    } catch {
+      payload = null;
+    }
+  }
 
   if (!response.ok) {
+    if (payload) {
+      throw new Error(
+        getErrorMessage(payload, `Request failed (${response.status}).`),
+      );
+    }
+    if (contentType.includes("text/html")) {
+      throw new Error(
+        `Request to backend failed (${response.status}). Received HTML response instead of JSON. Ensure VITE_API_BASE_URL is configured correctly in your deployment settings.`,
+      );
+    }
+    throw new Error(`Request failed (${response.status}).`);
+  }
+
+  if (!payload && isJson) {
+    throw new Error("Server returned an empty or invalid JSON response.");
+  }
+
+  if (!payload && !isJson && response.status !== 204) {
     throw new Error(
-      getErrorMessage(payload, `Request failed (${response.status}).`),
+      "Received non-JSON response from server. Please verify that VITE_API_BASE_URL points to your live backend API URL.",
     );
   }
 
@@ -228,20 +260,41 @@ export async function importIcs(token, file) {
   const formData = new FormData();
   formData.append("file", file);
   const url = buildUrl("/schedule/import/ics");
-  const response = await fetch(url, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-    body: formData,
-  });
-
-  if (!response.ok) {
-    const payload = await response.json().catch(() => null);
-    throw new Error(getErrorMessage(payload, "Failed to import schedule."));
+  let response;
+  try {
+    response = await fetch(url, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      body: formData,
+    });
+  } catch {
+    throw new Error(
+      `Could not connect to server at ${url}. Please check your backend connection.`,
+    );
   }
 
-  return response.json();
+  const contentType = response.headers.get("content-type") || "";
+  const isJson = contentType.includes("application/json");
+  let payload = null;
+  if (isJson) {
+    try {
+      payload = await response.json();
+    } catch {
+      payload = null;
+    }
+  }
+
+  if (!response.ok) {
+    throw new Error(getErrorMessage(payload, `Failed to import schedule (${response.status}).`));
+  }
+
+  if (!payload && !isJson) {
+    throw new Error("Received non-JSON response from server when importing schedule.");
+  }
+
+  return payload;
 }
 
 export function getSchedule(token) {
