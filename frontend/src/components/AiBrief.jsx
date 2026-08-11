@@ -29,11 +29,11 @@ export default function AiBrief({ token, onTaskCreated }) {
     const [addedSuggestions, setAddedSuggestions] = useState([])
     const { brief, context } = briefData
 
-    const fetchBrief = async () => {
+    const fetchBrief = async (forceRefresh = false) => {
         setLoadBrief(true)
         setError("")
         try {
-            const result = await getAiBrief(token)
+            const result = await getAiBrief(token, forceRefresh)
             setBriefData({
                 brief: result.brief,
                 context: result.context_snapshot,
@@ -135,7 +135,7 @@ export default function AiBrief({ token, onTaskCreated }) {
                     <span style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>Today: {context?.current_date}</span>
                 </div>
                 <div style={{ display: "flex", gap: "0.5rem" }}>
-                    <button onClick={fetchBrief} className="btn btn--secondary btn--sm">Refresh</button>
+                    <button onClick={() => fetchBrief(true)} className="btn btn--secondary btn--sm">Refresh</button>
                     <button onClick={handleClear} className="btn btn--secondary btn--sm">Clear</button>
                 </div>
             </div>

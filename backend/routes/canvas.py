@@ -1,3 +1,4 @@
+import json
 import asyncio
 from datetime import datetime, timedelta, timezone
 from typing import Any
@@ -5,9 +6,69 @@ from typing import Any
 import httpx
 from database import db
 from dependencies import CurrentUser
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query
 
 router = APIRouter(prefix="/canvas", tags=["canvas"])
+
+CANVAS_CACHE_TTL_MINUTES = 15
+
+
+async def get_canvas_cache(user_id: int, cache_key: str) -> tuple[Any | None, datetime | None]:
+    try:
+        row = await db.fetch_one(
+            query="""
+                SELECT data, synced_at
+                FROM canvas_api_cache
+                WHERE user_id = :user_id AND cache_key = :cache_key
+            """,
+            values={"user_id": user_id, "cache_key": cache_key},
+        )
+        if not row:
+            return None, None
+        raw_data = row["data"]
+        data = json.loads(raw_data) if isinstance(raw_data, str) else raw_data
+        synced_at = row["synced_at"]
+        if isinstance(synced_at, str):
+            synced_at = datetime.fromisoformat(synced_at.replace("Z", "+00:00"))
+        return data, synced_at
+    except Exception:
+        return None, None
+
+
+async def save_canvas_cache(user_id: int, cache_key: str, data: Any) -> None:
+    try:
+        is_sqlite = "sqlite" in str(db.url).lower()
+        json_data = json.dumps(data)
+        if is_sqlite:
+            await db.execute(
+                query="""
+                    INSERT INTO canvas_api_cache (user_id, cache_key, data, synced_at)
+                    VALUES (:user_id, :cache_key, :data, CURRENT_TIMESTAMP)
+                    ON CONFLICT (user_id, cache_key)
+                    DO UPDATE SET data = EXCLUDED.data, synced_at = CURRENT_TIMESTAMP
+                """,
+                values={"user_id": user_id, "cache_key": cache_key, "data": json_data},
+            )
+        else:
+            await db.execute(
+                query="""
+                    INSERT INTO canvas_api_cache (user_id, cache_key, data, synced_at)
+                    VALUES (:user_id, :cache_key, :data, NOW())
+                    ON CONFLICT (user_id, cache_key)
+                    DO UPDATE SET data = EXCLUDED.data, synced_at = NOW()
+                """,
+                values={"user_id": user_id, "cache_key": cache_key, "data": json_data},
+            )
+    except Exception:
+        pass
+
+
+def is_cache_fresh(synced_at: datetime | None, ttl_minutes: int = CANVAS_CACHE_TTL_MINUTES) -> bool:
+    if not synced_at:
+        return False
+    if synced_at.tzinfo is None:
+        synced_at = synced_at.replace(tzinfo=timezone.utc)
+    return (datetime.now(timezone.utc) - synced_at) < timedelta(minutes=ttl_minutes)
 
 
 def has_canvas_submission(submission: dict[str, Any] | None) -> bool:
@@ -43,10 +104,19 @@ async def fetch_assignment_submission(
 
 
 @router.get("/courses", response_model=list[dict[str, Any]])
-async def list_canvas_courses(current_user: CurrentUser):
+async def list_canvas_courses(
+    current_user: CurrentUser,
+    force_refresh: bool = Query(False),
+):
     token = current_user.canvas_token
     if not token:
         return []
+
+    if not force_refresh:
+        cached_data, synced_at = await get_canvas_cache(current_user.id, "courses")
+        if cached_data is not None and is_cache_fresh(synced_at):
+            return cached_data
+
     headers = {"Authorization": f"Bearer {token}"}
     try:
         async with httpx.AsyncClient() as client:
@@ -60,10 +130,14 @@ async def list_canvas_courses(current_user: CurrentUser):
             response.raise_for_status()
             courses = response.json()
     except Exception:
+        stale_data, _ = await get_canvas_cache(current_user.id, "courses")
+        if stale_data is not None:
+            return stale_data
         return []
 
     if not isinstance(courses, list):
-        return []
+        stale_data, _ = await get_canvas_cache(current_user.id, "courses")
+        return stale_data if stale_data is not None else []
 
     result = []
     for c in courses:
@@ -76,18 +150,29 @@ async def list_canvas_courses(current_user: CurrentUser):
                     "external_url": f"https://canvas.nus.edu.sg/courses/{c['id']}",
                 }
             )
+
+    await save_canvas_cache(current_user.id, "courses", result)
     return result
 
 
 @router.get("/announcements", response_model=list[dict[str, Any]])
-async def list_canvas_announcements(current_user: CurrentUser):
+async def list_canvas_announcements(
+    current_user: CurrentUser,
+    force_refresh: bool = Query(False),
+):
     token = current_user.canvas_token
     if not token:
         return []
 
-    courses = await list_canvas_courses(current_user)
+    if not force_refresh:
+        cached_data, synced_at = await get_canvas_cache(current_user.id, "announcements")
+        if cached_data is not None and is_cache_fresh(synced_at):
+            return cached_data
+
+    courses = await list_canvas_courses(current_user, force_refresh=force_refresh)
     if not courses:
-        return []
+        stale_data, _ = await get_canvas_cache(current_user.id, "announcements")
+        return stale_data if stale_data is not None else []
 
     context_codes = [f"course_{c['id']}" for c in courses]
 
@@ -110,10 +195,14 @@ async def list_canvas_announcements(current_user: CurrentUser):
             response.raise_for_status()
             announcements = response.json()
     except Exception:
+        stale_data, _ = await get_canvas_cache(current_user.id, "announcements")
+        if stale_data is not None:
+            return stale_data
         return []
 
     if not isinstance(announcements, list):
-        return []
+        stale_data, _ = await get_canvas_cache(current_user.id, "announcements")
+        return stale_data if stale_data is not None else []
 
     result = []
     for ann in announcements:
@@ -173,6 +262,7 @@ async def list_canvas_announcements(current_user: CurrentUser):
         )
 
     result.sort(key=lambda x: x["posted_at"] or "", reverse=True)
+    await save_canvas_cache(current_user.id, "announcements", result)
     return result
 
 
@@ -247,29 +337,44 @@ async def fetch_course_assignments(
 
 
 @router.get("/assignments", response_model=list[dict[str, Any]])
-async def list_canvas_assignments(current_user: CurrentUser):
+async def list_canvas_assignments(
+    current_user: CurrentUser,
+    force_refresh: bool = Query(False),
+):
     token = current_user.canvas_token
     if not token:
         return []
 
-    courses = await list_canvas_courses(current_user)
+    if not force_refresh:
+        cached_data, synced_at = await get_canvas_cache(current_user.id, "assignments")
+        if cached_data is not None and is_cache_fresh(synced_at):
+            return cached_data
+
+    courses = await list_canvas_courses(current_user, force_refresh=force_refresh)
     if not courses:
-        return []
+        stale_data, _ = await get_canvas_cache(current_user.id, "assignments")
+        return stale_data if stale_data is not None else []
 
     headers = {"Authorization": f"Bearer {token}"}
 
-    async with httpx.AsyncClient() as client:
-        tasks = [
-            fetch_course_assignments(client, headers, course) for course in courses
-        ]
-        all_results = await asyncio.gather(*tasks, return_exceptions=True)
+    try:
+        async with httpx.AsyncClient() as client:
+            tasks = [
+                fetch_course_assignments(client, headers, course) for course in courses
+            ]
+            all_results = await asyncio.gather(*tasks, return_exceptions=True)
+    except Exception:
+        stale_data, _ = await get_canvas_cache(current_user.id, "assignments")
+        if stale_data is not None:
+            return stale_data
+        return []
 
     flat_list = [
         item for sublist in all_results if isinstance(sublist, list) for item in sublist
     ]
 
     flat_list.sort(key=lambda x: x["due_at"] or "9999-12-31T23:59:59Z")
-
+    await save_canvas_cache(current_user.id, "assignments", flat_list)
     return flat_list
 
 

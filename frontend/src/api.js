@@ -213,16 +213,19 @@ export function syncCanvasTasks(token) {
   });
 }
 
-export function getCanvasCourses(token) {
-  return apiRequest(`/canvas/courses`, { token });
+export function getCanvasCourses(token, forceRefresh = false) {
+  const query = forceRefresh ? "?force_refresh=true" : "";
+  return apiRequest(`/canvas/courses${query}`, { token });
 }
 
-export function getCanvasAnnouncements(token) {
-  return apiRequest(`/canvas/announcements`, { token });
+export function getCanvasAnnouncements(token, forceRefresh = false) {
+  const query = forceRefresh ? "?force_refresh=true" : "";
+  return apiRequest(`/canvas/announcements${query}`, { token });
 }
 
-export function getCanvasAssignments(token) {
-  return apiRequest(`/canvas/assignments`, { token });
+export function getCanvasAssignments(token, forceRefresh = false) {
+  const query = forceRefresh ? "?force_refresh=true" : "";
+  return apiRequest(`/canvas/assignments${query}`, { token });
 }
 
 export function getCanvasFiles(token, courseId) {
@@ -449,8 +452,9 @@ export function markAllNotificationsAsRead(token) {
   });
 }
 
-export function getAiBrief(token) {
-  return apiRequest("/ai/brief", {
+export function getAiBrief(token, forceRefresh = false) {
+  const query = forceRefresh ? "?force_refresh=true" : "";
+  return apiRequest(`/ai/brief${query}`, {
     method: "POST",
     token,
   });

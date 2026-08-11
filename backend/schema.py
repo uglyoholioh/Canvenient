@@ -328,6 +328,23 @@ SCHEMA_STATEMENTS = [
     )
     """,
     """
+    CREATE TABLE IF NOT EXISTS canvas_api_cache (
+        user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        cache_key TEXT NOT NULL,
+        data JSONB NOT NULL,
+        synced_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        PRIMARY KEY (user_id, cache_key)
+    )
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS ai_brief_cache (
+        user_id BIGINT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+        brief_data JSONB NOT NULL,
+        context_snapshot JSONB NOT NULL,
+        synced_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+    """,
+    """
     DO $$
     BEGIN
         IF to_regclass('canvas_courses') IS NOT NULL THEN
