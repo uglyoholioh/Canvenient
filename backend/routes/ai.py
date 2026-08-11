@@ -1,10 +1,9 @@
 import asyncio
-from fastapi import APIRouter
 import os
 import httpx
 from typing import List, Dict, Any, Optional
-from fastapi import HTTPException, status
-from datetime import date
+from fastapi import APIRouter, HTTPException, status, Query
+from datetime import date, datetime, timedelta, timezone
 from database import db
 from dependencies import CurrentUser
 from routes.canvas import list_canvas_announcements
@@ -15,6 +14,70 @@ from pydantic import BaseModel
 
 MODEL_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent"
 #use Gemini flash 2.0 free tier for now
+
+AI_BRIEF_CACHE_TTL_MINUTES = 60
+
+
+async def get_ai_brief_cache(user_id: int) -> tuple[dict | None, dict | None, datetime | None]:
+    try:
+        row = await db.fetch_one(
+            query="""
+                SELECT brief_data, context_snapshot, synced_at
+                FROM ai_brief_cache
+                WHERE user_id = :user_id
+            """,
+            values={"user_id": user_id},
+        )
+        if not row:
+            return None, None, None
+        b_data = row["brief_data"]
+        c_snap = row["context_snapshot"]
+        brief_data = json.loads(b_data) if isinstance(b_data, str) else b_data
+        context_snapshot = json.loads(c_snap) if isinstance(c_snap, str) else c_snap
+        synced_at = row["synced_at"]
+        if isinstance(synced_at, str):
+            synced_at = datetime.fromisoformat(synced_at.replace("Z", "+00:00"))
+        return brief_data, context_snapshot, synced_at
+    except Exception:
+        return None, None, None
+
+
+async def save_ai_brief_cache(user_id: int, brief_data: dict, context_snapshot: dict) -> None:
+    try:
+        is_sqlite = "sqlite" in str(db.url).lower()
+        b_json = json.dumps(brief_data)
+        c_json = json.dumps(context_snapshot)
+        if is_sqlite:
+            await db.execute(
+                query="""
+                    INSERT INTO ai_brief_cache (user_id, brief_data, context_snapshot, synced_at)
+                    VALUES (:user_id, :brief_data, :context_snapshot, CURRENT_TIMESTAMP)
+                    ON CONFLICT (user_id)
+                    DO UPDATE SET brief_data = EXCLUDED.brief_data, context_snapshot = EXCLUDED.context_snapshot, synced_at = CURRENT_TIMESTAMP
+                """,
+                values={"user_id": user_id, "brief_data": b_json, "context_snapshot": c_json},
+            )
+        else:
+            await db.execute(
+                query="""
+                    INSERT INTO ai_brief_cache (user_id, brief_data, context_snapshot, synced_at)
+                    VALUES (:user_id, :brief_data, :context_snapshot, NOW())
+                    ON CONFLICT (user_id)
+                    DO UPDATE SET brief_data = EXCLUDED.brief_data, context_snapshot = EXCLUDED.context_snapshot, synced_at = NOW()
+                """,
+                values={"user_id": user_id, "brief_data": b_json, "context_snapshot": c_json},
+            )
+    except Exception:
+        pass
+
+
+def is_ai_brief_fresh(synced_at: datetime | None, ttl_minutes: int = AI_BRIEF_CACHE_TTL_MINUTES) -> bool:
+    if not synced_at:
+        return False
+    if synced_at.tzinfo is None:
+        synced_at = synced_at.replace(tzinfo=timezone.utc)
+    return (datetime.now(timezone.utc) - synced_at) < timedelta(minutes=ttl_minutes)
+
 
 async def call_ai(
     contents: List[Dict[str, Any]],
@@ -61,7 +124,15 @@ async def call_ai(
 router = APIRouter(prefix = "/ai", tags = ["ai"])
 
 @router.post("/brief")
-async def generate_brief(current_user: CurrentUser):
+async def generate_brief(current_user: CurrentUser, force_refresh: bool = Query(False)):
+    if not force_refresh:
+        cached_brief, cached_context, synced_at = await get_ai_brief_cache(current_user.id)
+        if cached_brief is not None and cached_context is not None and is_ai_brief_fresh(synced_at):
+            return {
+                "brief": cached_brief,
+                "context_snapshot": cached_context
+            }
+
     try:
         #fetching uncompleted tasks
         tasks_query = """
@@ -109,7 +180,7 @@ async def generate_brief(current_user: CurrentUser):
             db.fetch_all(query=classes_query, values={"user_id": current_user.id}),
             db.fetch_all(query=exams_query, values={"user_id": current_user.id}),
             db.fetch_all(query=events_query, values={"user_id": current_user.id}),
-            list_canvas_announcements(current_user)
+            list_canvas_announcements(current_user, force_refresh=force_refresh)
         )
 
         # formatting for API call
@@ -210,11 +281,18 @@ async def generate_brief(current_user: CurrentUser):
                 detail=f"Could not parse structured LLM response: {str(e)}"
             )
 
+        await save_ai_brief_cache(current_user.id, structured_brief, context)
         return {
             "brief": structured_brief,
             "context_snapshot": context
         }
     except Exception as e:
+        stale_brief, stale_context, _ = await get_ai_brief_cache(current_user.id)
+        if stale_brief is not None and stale_context is not None:
+            return {
+                "brief": stale_brief,
+                "context_snapshot": stale_context
+            }
         print("DIAGNOSTIC ERROR TRACE:")
         traceback.print_exc()
         raise e
