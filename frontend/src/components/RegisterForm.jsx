@@ -1,5 +1,6 @@
 import { useState } from "react"
 import { useNavigate, Link } from "react-router-dom"
+import { register } from "../api"
 
 function RegisterForm() {
   const navigate = useNavigate()
@@ -16,28 +17,12 @@ function RegisterForm() {
     setIsSubmitting(true)
 
     try {
-      const response = await fetch('/auth/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
-      })
-
-      const data = await response.json()
-
-      if (response.ok) {
-        setMessage("Registration successful! Redirecting to login...")
-        setIsError(false)
-        setTimeout(() => {
-          navigate("/login")
-        }, 1500)
-      }
-      else {
-        const errorMessage = typeof data.detail === 'object'
-          ? "Invalid email or password format."
-          : data.detail || "Registration failed"
-        setMessage(errorMessage)
-        setIsError(true)
-      }
+      await register({ email, password })
+      setMessage("Registration successful! Redirecting to login...")
+      setIsError(false)
+      setTimeout(() => {
+        navigate("/login")
+      }, 1500)
     } catch (error) {
       setMessage(error.message || "Could not connect to the server.")
       setIsError(true)
