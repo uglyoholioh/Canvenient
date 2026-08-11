@@ -1,3 +1,4 @@
+import asyncio
 import os
 
 import httpx
@@ -6,16 +7,33 @@ from database import db
 from telegram_formatting import HELP_TEXT, format_items
 
 
-async def send_message(chat_id: int, text: str) -> None:
+async def send_message(chat_id: int, text: str, retries: int = 3) -> None:
     token = os.getenv("TELEGRAM_BOT_TOKEN")
     if not token:
         raise RuntimeError("TELEGRAM_BOT_TOKEN is not configured")
+    url = f"https://api.telegram.org/bot{token}/sendMessage"
+    payload = {"chat_id": chat_id, "text": text}
+
     async with httpx.AsyncClient(timeout=10) as client:
-        response = await client.post(
-            f"https://api.telegram.org/bot{token}/sendMessage",
-            json={"chat_id": chat_id, "text": text},
-        )
-        response.raise_for_status()
+        for attempt in range(retries):
+            try:
+                response = await client.post(url, json=payload)
+                if response.status_code == 429:
+                    data = (
+                        response.json()
+                        if response.headers.get("content-type", "").startswith("application/json")
+                        else {}
+                    )
+                    retry_after = data.get("parameters", {}).get("retry_after", 1)
+                    await asyncio.sleep(retry_after)
+                    continue
+
+                response.raise_for_status()
+                return
+            except (httpx.HTTPStatusError, httpx.RequestError) as err:
+                if attempt == retries - 1:
+                    raise err
+                await asyncio.sleep(0.5 * (2 ** attempt))
 
 
 async def _tasks(user_id: int, interval: str | None = None) -> list:

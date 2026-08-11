@@ -264,6 +264,12 @@ SCHEMA_STATEMENTS = [
         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
     """,
+    """
+    CREATE TABLE IF NOT EXISTS telegram_processed_updates (
+        update_id BIGINT PRIMARY KEY,
+        processed_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+    """,
     #  canvas cache
     """
     CREATE TABLE IF NOT EXISTS canvas_announcements (
