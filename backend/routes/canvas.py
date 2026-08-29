@@ -1,5 +1,6 @@
 import json
 import asyncio
+import base64
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
@@ -7,10 +8,42 @@ import httpx
 from database import db
 from dependencies import CurrentUser
 from fastapi import APIRouter, HTTPException, Query
+from pydantic import BaseModel
 
 router = APIRouter(prefix="/canvas", tags=["canvas"])
 
 CANVAS_CACHE_TTL_MINUTES = 15
+
+
+class CanvasSubmissionRequest(BaseModel):
+    type: str
+    content: str = ""
+    filename: str | None = None
+    content_type: str | None = None
+
+
+async def require_canvas_course(current_user: CurrentUser, course_id: int) -> dict[str, Any]:
+    courses = await list_canvas_courses(current_user)
+    course = next((item for item in courses if int(item["id"]) == course_id), None)
+    if not course:
+        raise HTTPException(status_code=404, detail="Canvas course not found.")
+    return course
+
+
+def canvas_error_detail(response: httpx.Response, fallback: str) -> str:
+    try:
+        payload = response.json()
+        if isinstance(payload, dict):
+            if isinstance(payload.get("message"), str):
+                return payload["message"]
+            errors = payload.get("errors")
+            if isinstance(errors, list) and errors:
+                first = errors[0]
+                if isinstance(first, dict) and isinstance(first.get("message"), str):
+                    return first["message"]
+    except Exception:
+        pass
+    return fallback
 
 
 async def get_canvas_cache(user_id: int, cache_key: str) -> tuple[Any | None, datetime | None]:
@@ -376,6 +409,230 @@ async def list_canvas_assignments(
     flat_list.sort(key=lambda x: x["due_at"] or "9999-12-31T23:59:59Z")
     await save_canvas_cache(current_user.id, "assignments", flat_list)
     return flat_list
+
+
+@router.get("/assignments/{assignment_id}", response_model=dict[str, Any])
+async def get_canvas_assignment(
+    assignment_id: int,
+    course_id: int,
+    current_user: CurrentUser,
+):
+    token = current_user.canvas_token
+    if not token:
+        raise HTTPException(status_code=400, detail="Connect Canvas in Settings first.")
+    course = await require_canvas_course(current_user, course_id)
+    headers = {"Authorization": f"Bearer {token}"}
+    async with httpx.AsyncClient() as client:
+        response = await client.get(
+            f"https://canvas.nus.edu.sg/api/v1/courses/{course_id}/assignments/{assignment_id}",
+            headers=headers,
+            params=[("include[]", "submission")],
+            timeout=10.0,
+        )
+    if not response.is_success:
+        raise HTTPException(
+            status_code=response.status_code,
+            detail=canvas_error_detail(response, "Could not load this Canvas assignment."),
+        )
+    assignment = response.json()
+    submission = assignment.get("submission") or {}
+    if not has_canvas_submission(submission):
+        async with httpx.AsyncClient() as client:
+            submission = await fetch_assignment_submission(
+                client, headers, course_id, assignment_id
+            )
+    return {
+        "id": assignment_id,
+        "course_id": course_id,
+        "course_code": course["course_code"],
+        "course_name": course.get("name") or course["course_code"],
+        "title": assignment.get("name") or "Untitled Assignment",
+        "description": assignment.get("description") or "",
+        "due_at": assignment.get("due_at"),
+        "points_possible": assignment.get("points_possible"),
+        "submission_types": assignment.get("submission_types") or [],
+        "allowed_extensions": assignment.get("allowed_extensions") or [],
+        "has_submitted": has_canvas_submission(submission),
+        "submission": submission,
+        "external_url": assignment.get("html_url"),
+    }
+
+
+@router.post("/assignments/{assignment_id}/submit", response_model=dict[str, Any])
+async def submit_canvas_assignment(
+    assignment_id: int,
+    course_id: int,
+    data: CanvasSubmissionRequest,
+    current_user: CurrentUser,
+):
+    token = current_user.canvas_token
+    if not token:
+        raise HTTPException(status_code=400, detail="Connect Canvas in Settings first.")
+    await require_canvas_course(current_user, course_id)
+    headers = {"Authorization": f"Bearer {token}"}
+    submit_url = (
+        f"https://canvas.nus.edu.sg/api/v1/courses/{course_id}"
+        f"/assignments/{assignment_id}/submissions"
+    )
+
+    async with httpx.AsyncClient(follow_redirects=True) as client:
+        if data.type == "text_entry":
+            if not data.content.strip():
+                raise HTTPException(status_code=422, detail="Submission text is required.")
+            payload: list[tuple[str, str]] = [
+                ("submission[submission_type]", "online_text_entry"),
+                ("submission[body]", data.content),
+            ]
+        elif data.type == "online_url":
+            if not data.content.strip():
+                raise HTTPException(status_code=422, detail="Submission URL is required.")
+            payload = [
+                ("submission[submission_type]", "online_url"),
+                ("submission[url]", data.content),
+            ]
+        elif data.type == "file_upload":
+            if not data.filename or not data.content:
+                raise HTTPException(status_code=422, detail="A file is required.")
+            try:
+                file_bytes = base64.b64decode(data.content, validate=True)
+            except Exception as exc:
+                raise HTTPException(status_code=422, detail="The uploaded file is invalid.") from exc
+            if len(file_bytes) > 25 * 1024 * 1024:
+                raise HTTPException(status_code=413, detail="Files must be 25 MB or smaller.")
+            upload_init = await client.post(
+                f"{submit_url}/self/files",
+                headers=headers,
+                data={
+                    "name": data.filename,
+                    "size": str(len(file_bytes)),
+                    "content_type": data.content_type or "application/octet-stream",
+                },
+                timeout=15.0,
+            )
+            if not upload_init.is_success:
+                raise HTTPException(
+                    status_code=upload_init.status_code,
+                    detail=canvas_error_detail(upload_init, "Canvas could not start the file upload."),
+                )
+            upload_data = upload_init.json()
+            upload_response = await client.post(
+                upload_data["upload_url"],
+                data=upload_data.get("upload_params") or {},
+                files={
+                    "file": (
+                        data.filename,
+                        file_bytes,
+                        data.content_type or "application/octet-stream",
+                    )
+                },
+                timeout=60.0,
+            )
+            if not upload_response.is_success:
+                raise HTTPException(
+                    status_code=upload_response.status_code,
+                    detail="Canvas could not upload the selected file.",
+                )
+            uploaded_file = upload_response.json()
+            file_id = uploaded_file.get("id")
+            if not file_id:
+                raise HTTPException(status_code=502, detail="Canvas did not return an uploaded file ID.")
+            payload = [
+                ("submission[submission_type]", "online_upload"),
+                ("submission[file_ids][]", str(file_id)),
+            ]
+        else:
+            raise HTTPException(status_code=422, detail="Unsupported Canvas submission type.")
+
+        response = await client.post(
+            submit_url,
+            headers=headers,
+            data=payload,
+            timeout=30.0,
+        )
+    if not response.is_success:
+        raise HTTPException(
+            status_code=response.status_code,
+            detail=canvas_error_detail(response, "Canvas rejected the submission."),
+        )
+    await db.execute(
+        query="DELETE FROM canvas_api_cache WHERE user_id = :user_id AND cache_key = 'assignments'",
+        values={"user_id": current_user.id},
+    )
+    return {"ok": True, "submission": response.json()}
+
+
+async def fetch_course_grades(
+    client: httpx.AsyncClient,
+    headers: dict[str, str],
+    course: dict[str, Any],
+) -> dict[str, Any]:
+    course_id = course["id"]
+    enrollment_request = client.get(
+        f"https://canvas.nus.edu.sg/api/v1/courses/{course_id}/enrollments",
+        headers=headers,
+        params=[("user_id", "self"), ("type[]", "StudentEnrollment")],
+        timeout=10.0,
+    )
+    submissions_request = client.get(
+        f"https://canvas.nus.edu.sg/api/v1/courses/{course_id}/students/submissions",
+        headers=headers,
+        params=[("student_ids[]", "self"), ("include[]", "assignment"), ("per_page", "100")],
+        timeout=15.0,
+    )
+    enrollment_response, submissions_response = await asyncio.gather(
+        enrollment_request, submissions_request
+    )
+    enrollments = enrollment_response.json() if enrollment_response.is_success else []
+    submissions = submissions_response.json() if submissions_response.is_success else []
+    enrollment = enrollments[0] if isinstance(enrollments, list) and enrollments else {}
+    grades = enrollment.get("grades") or {}
+    assignment_rows = []
+    if isinstance(submissions, list):
+        for submission in submissions:
+            assignment = submission.get("assignment") or {}
+            assignment_rows.append(
+                {
+                    "id": assignment.get("id") or submission.get("assignment_id"),
+                    "title": assignment.get("name") or "Untitled Assignment",
+                    "score": submission.get("score"),
+                    "grade": submission.get("grade"),
+                    "points_possible": assignment.get("points_possible"),
+                    "workflow_state": submission.get("workflow_state"),
+                    "submitted_at": submission.get("submitted_at"),
+                }
+            )
+    return {
+        "course_id": course_id,
+        "course_code": course["course_code"],
+        "course_name": course.get("name") or course["course_code"],
+        "current_score": grades.get("current_score"),
+        "current_grade": grades.get("current_grade"),
+        "final_score": grades.get("final_score"),
+        "final_grade": grades.get("final_grade"),
+        "assignments": assignment_rows,
+    }
+
+
+@router.get("/grades", response_model=list[dict[str, Any]])
+async def list_canvas_grades(
+    current_user: CurrentUser,
+    course_id: int | None = None,
+):
+    token = current_user.canvas_token
+    if not token:
+        return []
+    courses = await list_canvas_courses(current_user)
+    if course_id is not None:
+        courses = [course for course in courses if int(course["id"]) == course_id]
+        if not courses:
+            raise HTTPException(status_code=404, detail="Canvas course not found.")
+    headers = {"Authorization": f"Bearer {token}"}
+    async with httpx.AsyncClient() as client:
+        results = await asyncio.gather(
+            *(fetch_course_grades(client, headers, course) for course in courses),
+            return_exceptions=True,
+        )
+    return [result for result in results if isinstance(result, dict)]
 
 
 @router.get("/files", response_model=list[dict[str, Any]])
