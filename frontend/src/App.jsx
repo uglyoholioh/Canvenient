@@ -1,108 +1,61 @@
 import { useEffect, useState } from "react"
-import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom"
+import { BrowserRouter as Router, Routes, Route, Navigate, Outlet } from "react-router-dom"
 import RegisterForm from "./components/RegisterForm"
 import LoginForm from "./components/LoginForm"
-import Dashboard from "./components/Dashboard"
-import TaskManagerDashboard from "./components/TaskManagerDashboard"
-import OnboardingForm from "./components/OnboardingForm"
-import FileViewer from "./components/FileViewer"
-import Schedule from "./components/Schedule"
-import Organisations from "./components/Organisations"
-import JoinGroupLink from "./components/JoinGroupLink"
-import Settings from "./components/Settings"
-import StudyTimer from "./components/StudyTimer"
+import WorkspaceLayout from "./components/WorkspaceLayout"
+import "./components/auth.css"
 
-import { getStoredToken, persistToken, clearStoredToken, getCurrentUser, joinGroup } from "./api"
-import { Outlet } from "react-router-dom"
-import Sidebar from "./components/Sidebar"
-
-function Layout({ currentUser, onLogout }) {
-  return (
-    <div className="app-layout">
-      <Sidebar currentUser={currentUser} onLogout={onLogout} />
-
-      <div className="app-content">
-        <Outlet />
-      </div>
-    </div>
-  )
-}
-
+import {
+  getStoredToken,
+  persistToken,
+  clearStoredToken,
+  getStoredUser,
+  persistUser,
+  getCurrentUser,
+} from "./api"
 
 function App() {
   const [token, setToken] = useState(() => getStoredToken())
-  const [currentUser, setCurrentUser] = useState(null)
-  const [isCheckingSession, setIsCheckingSession] = useState(Boolean(getStoredToken()))
-
-  useEffect(() => {
-    if (token && currentUser && currentUser.name) {
-      const pendingCode = localStorage.getItem("pending_invite_code")
-      if (pendingCode) {
-        localStorage.removeItem("pending_invite_code")
-        joinGroup(token, pendingCode)
-          .then(() => {
-            sessionStorage.setItem("join_success", "Successfully joined group via invite link!")
-            window.location.href = "/organisations"
-          })
-          .catch((err) => {
-            sessionStorage.setItem("join_error", err.message || "Invalid or expired invite code.")
-            window.location.href = "/organisations"
-          })
-      }
-    }
-  }, [token, currentUser])
+  const [currentUser, setCurrentUser] = useState(() => getStoredUser())
+  const [isCheckingSession, setIsCheckingSession] = useState(
+    () => Boolean(getStoredToken()) && !getStoredUser()
+  )
 
   useEffect(() => {
     let cancelled = false
-
     async function restoreSession() {
       if (!token) {
         setCurrentUser(null)
         setIsCheckingSession(false)
         return
       }
-
-      setIsCheckingSession(true)
-
       try {
         const user = await getCurrentUser(token)
         if (!cancelled) {
           setCurrentUser(user)
+          persistUser(user)
         }
       } catch {
-        clearStoredToken()
         if (!cancelled) {
+          clearStoredToken()
           setToken("")
           setCurrentUser(null)
         }
       } finally {
-        if (!cancelled) {
-          setIsCheckingSession(false)
-        }
+        if (!cancelled) setIsCheckingSession(false)
       }
     }
-
     restoreSession()
-
-    return () => {
-      cancelled = true
-    }
+    return () => { cancelled = true }
   }, [token])
 
   useEffect(() => {
-    if (currentUser && currentUser.theme) {
-      if (currentUser.theme === "default") {
-        document.documentElement.removeAttribute("data-theme")
-      } else {
-        document.documentElement.setAttribute("data-theme", currentUser.theme)
-      }
-    } else {
-      document.documentElement.removeAttribute("data-theme")
-    }
-  }, [currentUser])
+    document.documentElement.setAttribute("data-theme", "dark")
+  }, [])
 
   const handleLoginSuccess = (session) => {
     persistToken(session.access_token)
+    persistUser(session.user)
     setToken(session.access_token)
     setCurrentUser(session.user)
   }
@@ -115,10 +68,10 @@ function App() {
 
   if (isCheckingSession) {
     return (
-      <main className="auth-container">
-        <section className="card auth-card text-center">
-          <h2>Canvenient</h2>
-          <p>Restoring your workspace...</p>
+      <main className="retro-auth-container">
+        <section className="retro-auth-card text-center">
+          <h2 className="font-serif">Canvenient</h2>
+          <p className="text-muted text-sm mt-xs">Loading terminal...</p>
         </section>
       </main>
     )
@@ -133,36 +86,23 @@ function App() {
           path="/login"
           element={
             currentUser ? (
-              <Navigate to="/dashboard" replace />
+              <Navigate to="/workspace" replace />
             ) : (
               <LoginForm onLoginSuccess={handleLoginSuccess} />
             )
           }
         />
-        <Route path="/join/:code" element={<JoinGroupLink token={token} currentUser={currentUser} />} />
         <Route
+          path="/workspace"
           element={
             !currentUser ? (
               <Navigate to="/login" replace />
-            ) : !currentUser.name ? (
-              <OnboardingForm
-                token={token}
-                currentUser={currentUser}
-                onComplete={(updatedUser) => setCurrentUser(updatedUser)}
-              />
             ) : (
-              <Layout currentUser={currentUser} onLogout={handleLogout} />
+              <WorkspaceLayout token={token} user={currentUser} onLogout={handleLogout} />
             )
           }
-        >
-          <Route path="/dashboard" element={<Dashboard token={token} currentUser={currentUser} onLogout={handleLogout} />} />
-          <Route path="/planner" element={<TaskManagerDashboard token={token} currentUser={currentUser} onLogout={handleLogout} />} />
-          <Route path="/files" element={<FileViewer token={token} currentUser={currentUser} onLogout={handleLogout} />} />
-          <Route path="/schedule" element={<Schedule token={token} currentUser={currentUser} />} />
-          <Route path="/organisations" element={<Organisations token={token} currentUser={currentUser} />} />
-          <Route path="/settings" element={<Settings token={token} currentUser={currentUser} onUpdateProfile={(updatedUser) => setCurrentUser(updatedUser)} />} />
-          <Route path="/study" element={<StudyTimer token={token} currentUser={currentUser} />} />
-        </Route>
+        />
+        <Route path="*" element={<Navigate to="/workspace" replace />} />
       </Routes>
     </Router>
   )

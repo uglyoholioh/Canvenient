@@ -49,6 +49,7 @@ async function apiRequest(path, { method = "GET", body, token } = {}) {
   } catch (err) {
     throw new Error(
       `Could not connect to server at ${url}. Please check your backend connection.`,
+      { cause: err },
     );
   }
 
@@ -226,6 +227,23 @@ export function getCanvasAnnouncements(token, forceRefresh = false) {
 export function getCanvasAssignments(token, forceRefresh = false) {
   const query = forceRefresh ? "?force_refresh=true" : "";
   return apiRequest(`/canvas/assignments${query}`, { token });
+}
+
+export function getCanvasAssignment(token, courseId, assignmentId) {
+  return apiRequest(`/canvas/assignments/${assignmentId}?course_id=${encodeURIComponent(courseId)}`, { token });
+}
+
+export function submitCanvasAssignment(token, courseId, assignmentId, payload) {
+  return apiRequest(`/canvas/assignments/${assignmentId}/submit?course_id=${encodeURIComponent(courseId)}`, {
+    method: "POST",
+    body: payload,
+    token,
+  });
+}
+
+export function getCanvasGrades(token, courseId) {
+  const query = courseId ? `?course_id=${encodeURIComponent(courseId)}` : "";
+  return apiRequest(`/canvas/grades${query}`, { token });
 }
 
 export function getCanvasFiles(token, courseId) {
@@ -493,4 +511,30 @@ export function getStudySummary(token) {
 
 export function getStudyLeaderboard(token, period = "week") {
   return apiRequest(`/study-sessions/leaderboard?period=${period}`, { token });
+}
+
+export function getNotes(token) { return apiRequest("/notes", { token }); }
+export function createNote(payload, token) { return apiRequest("/notes", { method: "POST", body: payload, token }); }
+export function updateNote(noteId, payload, token) { return apiRequest(`/notes/${noteId}`, { method: "PATCH", body: payload, token }); }
+export function deleteNote(noteId, token) { return apiRequest(`/notes/${noteId}`, { method: "DELETE", token }); }
+
+export function getFolders(token) { return apiRequest("/folders", { token }); }
+export function createFolder(payload, token) { return apiRequest("/folders", { method: "POST", body: payload, token }); }
+export function updateFolder(id, payload, token) { return apiRequest(`/folders/${id}`, { method: "PATCH", body: payload, token }); }
+export function deleteFolder(id, token) { return apiRequest(`/folders/${id}`, { method: "DELETE", token }); }
+
+export function getStoredUser() {
+  const user = window.localStorage.getItem("canvenient.user");
+  return user ? JSON.parse(user) : null;
+}
+
+export function persistUser(user) {
+  window.localStorage.setItem("canvenient.user", JSON.stringify(user));
+}
+
+export function syncCanvasAssignments(token) {
+  return apiRequest("/canvas/sync-assignments", {
+    method: "POST",
+    token,
+  });
 }

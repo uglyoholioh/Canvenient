@@ -18,6 +18,8 @@ from routes.forms import router as forms_router
 from routes.notifications import router as notifications_router
 from routes.study_sessions import router as study_sessions_router
 from routes.telegram import router as telegram_router
+from routes.notes import router as notes_router
+from routes.folders import router as folders_router
 
 
 from schema import initialize_schema
@@ -35,7 +37,7 @@ app = FastAPI(lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origin_regex=r".*",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -55,6 +57,8 @@ app.include_router(forms_router)
 app.include_router(notifications_router)
 app.include_router(study_sessions_router)
 app.include_router(telegram_router)
+app.include_router(notes_router)
+app.include_router(folders_router)
 
 
 

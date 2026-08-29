@@ -1,3 +1,5 @@
+// React is required by the test JSX transform.
+// eslint-disable-next-line no-unused-vars
 import React from 'react'
 import { render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
@@ -17,6 +19,6 @@ describe('LoginForm Component', () => {
     expect(screen.getByRole('heading', { name: /sign in/i })).toBeInTheDocument()
     expect(screen.getByLabelText(/email address/i)).toBeInTheDocument()
     expect(screen.getByLabelText(/password/i)).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /login/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /sign in/i })).toBeInTheDocument()
   })
 })

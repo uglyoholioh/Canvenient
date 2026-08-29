@@ -10,7 +10,7 @@ router = APIRouter(prefix="/tasks", tags=["tasks"])
 
 
 def get_recommended_priority(
-    status: str, effective_due_at: datetime | None
+    status: str, effective_due_at: datetime | str | None
 ) -> TaskPriority:
     if status == "done":
         return "low"
@@ -18,8 +18,18 @@ def get_recommended_priority(
     if effective_due_at is None:
         return "medium"
 
+    if isinstance(effective_due_at, str):
+        try:
+            effective_due_at = datetime.fromisoformat(effective_due_at.replace("Z", "+00:00"))
+        except Exception:
+            return "medium"
+
+    due_at = effective_due_at
+    if due_at.tzinfo is None:
+        due_at = due_at.replace(tzinfo=timezone.utc)
+
     now = datetime.now(timezone.utc)
-    delta = effective_due_at - now
+    delta = due_at - now
     hours_remaining = delta.total_seconds() / 3600
 
     if hours_remaining <= 0:
@@ -43,9 +53,15 @@ def parse_canvas_datetime(value: str | None) -> datetime | None:
         return None
 
 
-def is_past_due(value: datetime | None) -> bool:
+def is_past_due(value: datetime | str | None) -> bool:
     if value is None:
         return False
+
+    if isinstance(value, str):
+        try:
+            value = datetime.fromisoformat(value.replace("Z", "+00:00"))
+        except Exception:
+            return False
 
     due_at = value
     if due_at.tzinfo is None:
@@ -54,8 +70,27 @@ def is_past_due(value: datetime | None) -> bool:
     return due_at <= datetime.now(timezone.utc)
 
 
+def ensure_utc(dt: datetime | str | None) -> datetime | None:
+    if dt is None:
+        return None
+    if isinstance(dt, str):
+        try:
+            dt = datetime.fromisoformat(dt.replace("Z", "+00:00"))
+        except Exception:
+            return None
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return dt
+
+
 def build_task(record) -> TaskOut:
-    effective_due_at = record["due_at_override"] or record["source_due_at"]
+    source_due_at = ensure_utc(record["source_due_at"])
+    due_at_override = ensure_utc(record["due_at_override"])
+    effective_due_at = due_at_override or source_due_at
+    created_at = ensure_utc(record["created_at"]) or datetime.now(timezone.utc)
+    updated_at = ensure_utc(record["updated_at"]) or datetime.now(timezone.utc)
+    completed_at = ensure_utc(record["completed_at"])
+
     return TaskOut(
         id=record["id"],
         title=record["title"],
@@ -68,8 +103,8 @@ def build_task(record) -> TaskOut:
         estimated_minutes=record["estimated_minutes"],
         source_type=record["source_type"],
         source_id=record["source_id"],
-        source_due_at=record["source_due_at"],
-        due_at_override=record["due_at_override"],
+        source_due_at=source_due_at,
+        due_at_override=due_at_override,
         effective_due_at=effective_due_at,
         external_url=record["external_url"],
         module_id=record["module_id"],
@@ -78,9 +113,9 @@ def build_task(record) -> TaskOut:
         category_id=record["category_id"],
         category_name=record["category_name"],
         category_color=record["category_color"],
-        completed_at=record["completed_at"],
-        created_at=record["created_at"],
-        updated_at=record["updated_at"],
+        completed_at=completed_at,
+        created_at=created_at,
+        updated_at=updated_at,
     )
 
 

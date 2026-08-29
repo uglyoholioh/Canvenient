@@ -1,6 +1,8 @@
 import { useState } from "react"
 import { useNavigate, Link } from "react-router-dom"
+import { Sparkles, Loader2 } from "lucide-react"
 import { register } from "../api"
+import "./auth.css"
 
 function RegisterForm() {
   const navigate = useNavigate()
@@ -18,63 +20,77 @@ function RegisterForm() {
 
     try {
       await register({ email, password })
-      setMessage("Registration successful! Redirecting to login...")
+      setMessage("Account created. Redirecting...")
       setIsError(false)
       setTimeout(() => {
         navigate("/login")
       }, 1500)
     } catch (error) {
-      setMessage(error.message || "Could not connect to the server.")
+      setMessage(error.message || "Connection refused.")
       setIsError(true)
-    } finally {
       setIsSubmitting(false)
     }
   }
 
   return (
-    <div className="auth-container">
-      <div className="card auth-card">
-        <h2>Create Account</h2>
-        <form onSubmit={handleSubmit} className="form">
-          <div className="form-group">
-            <label htmlFor="email">Email Address</label>
+    <div className="retro-auth-container">
+      <div className="retro-auth-card">
+        <div className="retro-auth-header">
+          <Sparkles size={28} color="var(--accent)" style={{ marginBottom: '16px' }} />
+          <h2 className="retro-auth-title">Register</h2>
+          <p className="retro-auth-subtitle">Join the workspace</p>
+        </div>
+
+        <form onSubmit={handleSubmit}>
+          <div className="retro-form-group">
+            <label className="retro-label" htmlFor="email">Email Address</label>
             <input
               id="email"
               type="email"
-              className="form-input"
+              className="retro-input"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="e.g. EXXXXXXX@u.nus.edu"
+              placeholder="hello@university.edu"
               required
             />
           </div>
-          <div className="form-group">
-            <label htmlFor="password">Password</label>
+          <div className="retro-form-group">
+            <label className="retro-label" htmlFor="password">Password</label>
             <input
               id="password"
               type="password"
-              className="form-input"
+              className="retro-input"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="Create a password"
+              placeholder="••••••••"
               required
             />
           </div>
 
+          {message && (
+            <p className={`text-sm text-center mb-sm ${isError ? "text-error" : "text-success"}`}>
+              {message}
+            </p>
+          )}
+
           <button
             type="submit"
-            className="btn btn--primary btn--full"
+            className="retro-btn"
             disabled={isSubmitting}
           >
-            {isSubmitting ? "Registering..." : "Register"}
+            {isSubmitting ? (
+              <><Loader2 size={16} className="retro-icon-spin" /> Registering...</>
+            ) : (
+              "Create Account"
+            )}
           </button>
-          <p className="auth-footer">
-            Already have an account? <Link to="/login">Log In</Link>
-          </p>
 
-          {message && (
-            <p className={isError ? "text-error" : "text-success"}>{message}</p>
-          )}
+          <div className="retro-footer">
+            Already have an account?{" "}
+            <Link to="/login" className="retro-link">
+              Sign In
+            </Link>
+          </div>
         </form>
       </div>
     </div>
