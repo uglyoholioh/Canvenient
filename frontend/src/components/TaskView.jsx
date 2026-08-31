@@ -3,8 +3,8 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { BookOpen, Calendar, CheckCircle, Flag, Plus } from "lucide-react";
 import { getTasks, updateTask } from "../api";
-import TaskInputBar from "./TaskInputBar";
 import { useWorkspaceToolbar } from "./WorkspaceToolbarContext";
+import { useQuickCapture } from "./QuickCaptureContext";
 
 function normalizeDate(value) {
   if (!value) return null;
@@ -63,6 +63,7 @@ function priorityColor(priority) {
 }
 
 export default function TaskView({ token }) {
+  const { openQuickCapture } = useQuickCapture();
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
@@ -96,6 +97,17 @@ export default function TaskView({ token }) {
   }, []);
   useEffect(() => { itemRefs.current[selectedIndex]?.focus(); }, [selectedIndex]);
   useEffect(() => { if (editingId) editRef.current?.focus(); }, [editingId]);
+  useEffect(() => {
+    const handleCreated = (event) => {
+      if (!event.detail) return;
+      setTasks((current) => sortPendingTasks([
+        ...current.filter((task) => task.id !== event.detail.id),
+        event.detail,
+      ]));
+    };
+    window.addEventListener("canvenient-task-created", handleCreated);
+    return () => window.removeEventListener("canvenient-task-created", handleCreated);
+  }, []);
 
   const completeTask = useCallback(async (task) => {
     await updateTask(token, task.id, { status: "done" });
@@ -113,8 +125,8 @@ export default function TaskView({ token }) {
   const toolbarConfig = useMemo(() => ({
     title: "Tasks",
     subtitle: loading ? "Loading" : `${tasks.length} pending`,
-    actions: <button type="button" className="mac-toolbar-action" onClick={() => window.dispatchEvent(new CustomEvent("canvenient-focus-task-input"))}><Plus size={14} />New Task</button>,
-  }), [loading, tasks.length]);
+    actions: <button type="button" className="mac-toolbar-action" onClick={() => openQuickCapture({ mode: "task" })}><Plus size={14} />New Task</button>,
+  }), [loading, openQuickCapture, tasks.length]);
   useWorkspaceToolbar(toolbarConfig);
 
   useEffect(() => {
@@ -162,7 +174,7 @@ export default function TaskView({ token }) {
             <button type="button" onClick={loadTasks}>Retry</button>
           </div>
         ) : tasks.length === 0 ? (
-          <div className="empty-state"><strong>No tasks pending</strong><span>Type below to add a task, note, or command.</span></div>
+          <div className="empty-state"><strong>No tasks pending</strong><span>Use Quick Capture to add one without leaving this view.</span></div>
         ) : tasks.map((task, index) => {
           const selected = selectedIndex === index;
           const editing = editingId === task.id;
@@ -195,7 +207,6 @@ export default function TaskView({ token }) {
           );
         })}
       </div>
-      <TaskInputBar token={token} onTaskCreated={(task) => setTasks((current) => sortPendingTasks([...current, task]))} />
     </div>
   );
 }

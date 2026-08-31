@@ -73,10 +73,62 @@ export default function ModuleCard({
   onDragStart,
   onDragEnd,
   onReorder,
+  cardRef,
+  browseActive = false,
+  onBrowseFocus,
+  onBrowseMove,
+  onQuickCapture,
 }) {
   const [resizing, setResizing] = React.useState(false);
+  const localCardRef = React.useRef(null);
   const resizeSession = React.useRef(null);
   const moveSession = React.useRef(null);
+
+  const setCardRef = React.useCallback((element) => {
+    localCardRef.current = element;
+    cardRef?.(element);
+  }, [cardRef]);
+
+  const enterCard = () => {
+    const firstControl = localCardRef.current?.querySelector(
+      ".dashboard-module-body button:not([disabled]), .dashboard-module-body input:not([disabled]), .dashboard-module-body textarea:not([disabled]), .dashboard-module-body select:not([disabled])",
+    ) || localCardRef.current?.querySelector(".dashboard-module-header button:not([disabled])");
+    firstControl?.focus();
+  };
+
+  const handleBrowseKeyDown = (event) => {
+    const browsingCard = event.target === event.currentTarget;
+    if (browsingCard && ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) {
+      event.preventDefault();
+      onBrowseMove?.(event.key);
+      return;
+    }
+    if (browsingCard && ["Enter", "F2"].includes(event.key)) {
+      event.preventDefault();
+      enterCard();
+      return;
+    }
+    if (browsingCard && event.key.toLowerCase() === "o") {
+      event.preventDefault();
+      onViewFull?.();
+      return;
+    }
+    if (browsingCard && event.key.toLowerCase() === "c") {
+      event.preventDefault();
+      onToggle?.();
+      return;
+    }
+    if (browsingCard && event.key.toLowerCase() === "n") {
+      event.preventDefault();
+      onQuickCapture?.();
+      return;
+    }
+    if (!browsingCard && event.key === "Escape") {
+      event.preventDefault();
+      event.stopPropagation();
+      localCardRef.current?.focus();
+    }
+  };
 
   React.useEffect(() => () => {
     resizeSession.current?.cleanup?.();
@@ -341,10 +393,18 @@ export default function ModuleCard({
 
   return (
     <section
+      ref={setCardRef}
       className={`dashboard-module ${collapsed ? "is-collapsed" : ""} ${editing ? "is-editing" : ""} ${dragging ? "is-dragging" : ""} ${resizing ? "is-resizing" : ""} ${className}`}
       data-module={moduleId}
+      data-quick-capture-browse="true"
       data-columns={size.columns}
       data-rows={size.rows}
+      tabIndex={browseActive ? 0 : -1}
+      aria-label={`${title} dashboard card. Use arrow keys to move, Enter to interact, N for a new task, O to open, or C to collapse.`}
+      onFocus={(event) => {
+        if (event.target === event.currentTarget) onBrowseFocus?.();
+      }}
+      onKeyDown={handleBrowseKeyDown}
       style={{
         "--dashboard-card-columns": size.columns,
         "--dashboard-card-rows": size.rows,

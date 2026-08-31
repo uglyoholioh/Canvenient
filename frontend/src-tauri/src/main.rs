@@ -179,8 +179,8 @@ fn native_menu() -> Menu {
         .add_native_item(MenuItem::Quit);
 
     let file_menu = Menu::new()
-        .add_item(CustomMenuItem::new("new-task", "New Task").accelerator("CmdOrCtrl+N"))
-        .add_item(CustomMenuItem::new("new-note", "New Note").accelerator("CmdOrCtrl+Shift+N"))
+        .add_item(CustomMenuItem::new("new-task", "New Task"))
+        .add_item(CustomMenuItem::new("new-note", "New Note"))
         .add_native_item(MenuItem::Separator)
         .add_item(CustomMenuItem::new("import-timetable", "Import Timetable…").accelerator("CmdOrCtrl+O"))
         .add_native_item(MenuItem::Separator)
@@ -202,7 +202,7 @@ fn native_menu() -> Menu {
         .add_item(CustomMenuItem::new("view-canvas", "Canvas").accelerator("CmdOrCtrl+4"))
         .add_item(CustomMenuItem::new("view-notes", "Notes").accelerator("CmdOrCtrl+5"))
         .add_native_item(MenuItem::Separator)
-        .add_item(CustomMenuItem::new("search", "Search…").accelerator("CmdOrCtrl+K"))
+        .add_item(CustomMenuItem::new("search", "Search…"))
         .add_item(CustomMenuItem::new("toggle-sidebar", "Toggle Sidebar"))
         .add_native_item(MenuItem::Separator)
         .add_native_item(MenuItem::EnterFullScreen);

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { CalendarClock, Check, Pencil, Trash2 } from "lucide-react";
+import { CalendarClock, Check, Pencil, Plus, Trash2 } from "lucide-react";
 import { deleteTask, getTasks, updateTask } from "../../api";
 
 function taskDueDate(task) {
@@ -21,7 +21,7 @@ function taskCreatedTime(task) {
   return Number.isNaN(date.getTime()) ? 0 : date.getTime();
 }
 
-export default function TasksModule({ token, refreshKey = 0 }) {
+export default function TasksModule({ token, refreshKey = 0, onAddTask }) {
   const [tasks, setTasks] = useState([]);
   const [filter, setFilter] = useState("all");
   const [expandedId, setExpandedId] = useState(null);
@@ -74,8 +74,11 @@ export default function TasksModule({ token, refreshKey = 0 }) {
 
   return (
     <div className="tasks-module">
-      <div className="module-filter-tabs" role="tablist">
-        {["all", "today", "overdue", "priority"].map((value) => <button type="button" key={value} className={filter === value ? "is-active" : ""} onClick={() => setFilter(value)}>{value}</button>)}
+      <div className="tasks-module-controls">
+        <div className="module-filter-tabs" role="tablist" aria-label="Task filters">
+          {["all", "today", "overdue", "priority"].map((value) => <button type="button" role="tab" aria-selected={filter === value} key={value} className={filter === value ? "is-active" : ""} onClick={() => setFilter(value)}>{value}</button>)}
+        </div>
+        <button type="button" className="module-quick-add" onClick={onAddTask}><Plus size={12} />Add</button>
       </div>
       {error ? <div className="module-error">{error}</div> : visibleTasks.length === 0 ? <div className="module-empty">Nothing in this view.</div> : (
         <div className="module-list">

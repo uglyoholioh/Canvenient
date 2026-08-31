@@ -3,18 +3,66 @@ import { Moon, Sun, Monitor, Database, Keyboard, PanelLeft, MoveHorizontal, Pale
 import DashboardCustomizer from "./dashboard/DashboardCustomizer";
 import { readDashboardConfig, readDashboardLayout, saveDashboardConfig, saveDashboardLayout } from "./dashboard/dashboardConfig";
 import { applyModulePalette, getModuleColors, updateModuleColor } from "../api";
+import {
+  DEFAULT_KEYBOARD_SHORTCUTS,
+  formatShortcut,
+  readKeyboardShortcuts,
+  saveKeyboardShortcuts,
+  shortcutFromKeyboardEvent,
+} from "../keyboardShortcuts";
 
 const getSidebarBehavior = () => {
   const stored = localStorage.getItem('canvenient-sidebar-mode');
   return ['hover', 'pinned', 'hidden'].includes(stored) ? stored : 'hover';
 };
 
+function ShortcutRecorder({ allowShiftOnly = false, description, label, onChange, onReset, value }) {
+  const [recording, setRecording] = useState(false);
+
+  const handleKeyDown = (event) => {
+    if (!recording) return;
+    event.preventDefault();
+    event.stopPropagation();
+    if (event.key === "Escape") {
+      setRecording(false);
+      return;
+    }
+    if (event.key === "Backspace" || event.key === "Delete") {
+      onReset();
+      setRecording(false);
+      return;
+    }
+    const next = shortcutFromKeyboardEvent(event);
+    const hasModifier = event.metaKey || event.ctrlKey || event.altKey || (allowShiftOnly && event.shiftKey);
+    if (!next || (!hasModifier && !/^F\d{1,2}$/.test(event.key))) return;
+    onChange(next);
+    setRecording(false);
+  };
+
+  return (
+    <div className="settings-shortcut-row">
+      <div><strong>{label}</strong><small>{description}</small></div>
+      <div className="settings-shortcut-actions">
+        <button
+          type="button"
+          className={recording ? "is-recording" : ""}
+          aria-label={recording ? `Recording ${label}` : `Change ${label}`}
+          onClick={() => setRecording(true)}
+          onKeyDown={handleKeyDown}
+        >{recording ? "Press shortcut…" : formatShortcut(value)}</button>
+        <button type="button" className="settings-shortcut-reset" onClick={onReset}>Reset</button>
+      </div>
+    </div>
+  );
+}
+
 export default function SettingsView({ token }) {
   const [theme, setTheme] = useState(localStorage.getItem('canvenient-theme') || 'system');
   const [sidebarBehavior, setSidebarBehavior] = useState(getSidebarBehavior);
   const [sidebarWidth, setSidebarWidth] = useState(() => parseInt(localStorage.getItem('canvenient-sidebar-width') || '250', 10));
   const [checkboxStyle, setCheckboxStyle] = useState(localStorage.getItem('canvenient-checkbox-style') || 'brackets');
-  const [defaultMode, setDefaultMode] = useState(localStorage.getItem('canvenient-default-mode') || 'task');
+  const [shortcutConfig, setShortcutConfig] = useState(readKeyboardShortcuts);
+  const [shortcutError, setShortcutError] = useState("");
   const [canvasToken, setCanvasToken] = useState("");
   const [dashboardLayout, setDashboardLayout] = useState(readDashboardLayout);
   const [dashboardConfig, setDashboardConfig] = useState(readDashboardConfig);
@@ -62,13 +110,6 @@ export default function SettingsView({ token }) {
     window.dispatchEvent(new Event('settings-updated'));
   };
 
-  const handleDefaultModeChange = (e) => {
-    const val = e.target.value;
-    setDefaultMode(val);
-    localStorage.setItem('canvenient-default-mode', val);
-    window.dispatchEvent(new Event('settings-updated'));
-  };
-
   const handleDashboardLayoutChange = (layout) => {
     setDashboardLayout(layout);
     saveDashboardLayout(layout);
@@ -105,8 +146,15 @@ export default function SettingsView({ token }) {
     }
   };
 
-  const handleChangeHotkey = () => {
-    alert("Customizing the global hotkey is currently unsupported by the native backend. This will be added in a future update!");
+  const updateShortcut = (name, value) => {
+    const duplicate = Object.entries(shortcutConfig).find(([key, shortcut]) => key !== name && typeof shortcut === "string" && shortcut === value);
+    if (duplicate) {
+      const labels = { quickTask: "Quick task", quickNote: "Quick note", search: "Search", browseCapture: "Browse capture" };
+      setShortcutError(`${formatShortcut(value)} is already assigned to ${labels[duplicate[0]]}.`);
+      return;
+    }
+    setShortcutError("");
+    setShortcutConfig((current) => saveKeyboardShortcuts({ ...current, [name]: value }));
   };
 
   return (
@@ -263,49 +311,22 @@ export default function SettingsView({ token }) {
             </div>
           </div>
 
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px', backgroundColor: 'var(--surface)' }}>
-            <div>
-              <div style={{ color: 'var(--text-h)', fontWeight: '500' }}>Default Input Mode</div>
-              <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>The starting mode of the main input bar</div>
-            </div>
-            <select 
-              value={defaultMode} 
-              onChange={handleDefaultModeChange}
-              style={{ padding: '6px 12px', backgroundColor: 'var(--bg)', border: '1px solid var(--border-strong)', borderRadius: '4px', color: 'var(--text-h)', outline: 'none', cursor: 'pointer' }}
-              tabIndex={0}
-            >
-              <option value="command">Command Mode</option>
-              <option value="task">Task Mode</option>
-              <option value="note">Note Mode</option>
-            </select>
-          </div>
-
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px', backgroundColor: 'var(--surface)' }}>
-            <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-              <div style={{ padding: '8px', backgroundColor: 'var(--surface-muted)', borderRadius: '4px', color: 'var(--text-muted)' }}>
-                <Keyboard size={20} />
-              </div>
-              <div>
-                <div style={{ color: 'var(--text-h)', fontWeight: '500' }}>Global Hotkey</div>
-                <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Shortcut to instantly show/hide the app</div>
-              </div>
-            </div>
-            
-            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-              <div style={{ padding: '6px 12px', backgroundColor: 'var(--surface-muted)', borderRadius: '4px', fontFamily: 'var(--font-mono)', fontSize: '12px', color: 'var(--text)', border: '1px solid var(--border-strong)' }}>
-                Cmd + J
-              </div>
-              <button 
-                onClick={handleChangeHotkey}
-                style={{ padding: '6px 12px', backgroundColor: 'transparent', border: '1px solid var(--border-strong)', color: 'var(--text-h)', borderRadius: '4px', cursor: 'pointer', fontSize: '12px', fontWeight: '500' }}
-                onMouseEnter={e => e.currentTarget.style.backgroundColor = 'var(--surface-hover)'}
-                onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
-              >
-                Edit
-              </button>
-            </div>
-          </div>
         </div>
+      </section>
+
+      <section className="settings-shortcuts-section">
+        <div className="settings-section-heading">
+          <div><Keyboard size={15} /><h2>Keyboard shortcuts</h2></div>
+          <p>Click a shortcut, then press the replacement. Changes apply immediately.</p>
+        </div>
+        <div className="settings-shortcuts-panel">
+          <ShortcutRecorder label="Quick task" description="Open the capture dock in task mode" value={shortcutConfig.quickTask} onChange={(value) => updateShortcut("quickTask", value)} onReset={() => updateShortcut("quickTask", DEFAULT_KEYBOARD_SHORTCUTS.quickTask)} />
+          <ShortcutRecorder label="Quick note" description="Open the same dock in note mode" value={shortcutConfig.quickNote} onChange={(value) => updateShortcut("quickNote", value)} onReset={() => updateShortcut("quickNote", DEFAULT_KEYBOARD_SHORTCUTS.quickNote)} />
+          <ShortcutRecorder label="Search" description="Open workspace search" value={shortcutConfig.search} onChange={(value) => updateShortcut("search", value)} onReset={() => updateShortcut("search", DEFAULT_KEYBOARD_SHORTCUTS.search)} />
+          <ShortcutRecorder allowShiftOnly label="Browse capture" description="Open a task from a dashboard card or Canvas detail" value={shortcutConfig.browseCapture} onChange={(value) => updateShortcut("browseCapture", value)} onReset={() => updateShortcut("browseCapture", DEFAULT_KEYBOARD_SHORTCUTS.browseCapture)} />
+        </div>
+        {shortcutError && <div className="settings-shortcut-error" role="alert">{shortcutError}</div>}
+        <p className="settings-shortcut-footnote">The system-wide show/hide shortcut remains ⌘J.</p>
       </section>
 
       <section style={{ marginBottom: '40px' }}>

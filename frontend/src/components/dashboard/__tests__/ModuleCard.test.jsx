@@ -260,4 +260,35 @@ describe("ModuleCard resizing", () => {
     expect(onReorder).toHaveBeenCalledWith("schedule");
     expect(onDragEnd).toHaveBeenCalledOnce();
   });
+
+  it("supports spatial browse commands and returns from card controls with Escape", () => {
+    const onBrowseMove = vi.fn();
+    const onQuickCapture = vi.fn();
+    const { container } = render(
+      <ModuleCard
+        moduleId="tasks"
+        icon={TestIcon}
+        title="Tasks"
+        browseActive
+        onBrowseMove={onBrowseMove}
+        onQuickCapture={onQuickCapture}
+        onToggle={() => {}}
+      >
+        <button type="button">First task control</button>
+      </ModuleCard>,
+    );
+    const card = container.querySelector(".dashboard-module");
+    const control = screen.getByRole("button", { name: "First task control" });
+
+    card.focus();
+    fireEvent.keyDown(card, { key: "ArrowRight" });
+    fireEvent.keyDown(card, { key: "n" });
+    expect(onBrowseMove).toHaveBeenCalledWith("ArrowRight");
+    expect(onQuickCapture).toHaveBeenCalledOnce();
+
+    fireEvent.keyDown(card, { key: "Enter" });
+    expect(control).toHaveFocus();
+    fireEvent.keyDown(control, { key: "Escape" });
+    expect(card).toHaveFocus();
+  });
 });

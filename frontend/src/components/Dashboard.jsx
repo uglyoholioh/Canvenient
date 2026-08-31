@@ -1,6 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { BookOpen, CalendarDays, Check, CheckSquare, Columns3, FileText, Grid3X3, LayoutGrid, Pencil, SlidersHorizontal, X } from "lucide-react";
-import TaskInputBar from "./TaskInputBar";
 import CanvasDrawer from "./drawers/CanvasDrawer";
 import NoteDrawer from "./drawers/NoteDrawer";
 import CanvasModule from "./dashboard/CanvasModule";
@@ -11,6 +10,7 @@ import TasksModule from "./dashboard/TasksModule";
 import DashboardCustomizer from "./dashboard/DashboardCustomizer";
 import { readDashboardConfig, readDashboardLayout, saveDashboardConfig, saveDashboardLayout } from "./dashboard/dashboardConfig";
 import { useWorkspaceToolbar } from "./WorkspaceToolbarContext";
+import { useQuickCapture } from "./QuickCaptureContext";
 
 const DASHBOARD_FONT_VALUES = {
   sans: "-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', sans-serif",
@@ -24,6 +24,7 @@ function initialCollapsedState() {
 }
 
 export default function Dashboard({ token, user, onNavigate }) {
+  const { openQuickCapture } = useQuickCapture();
   const [collapsed, setCollapsed] = useState(initialCollapsedState);
   const [activeNote, setActiveNote] = useState(null);
   const [activeCanvasItem, setActiveCanvasItem] = useState(null);
@@ -35,6 +36,8 @@ export default function Dashboard({ token, user, onNavigate }) {
   const [isEditingLayout, setIsEditingLayout] = useState(false);
   const [draggedModule, setDraggedModule] = useState(null);
   const [previewTracks, setPreviewTracks] = useState(null);
+  const [activeModuleId, setActiveModuleId] = useState("tasks");
+  const moduleRefs = useRef(new Map());
 
   useEffect(() => {
     const syncSettings = () => { setLayout(readDashboardLayout()); setConfig(readDashboardConfig()); };
@@ -43,6 +46,17 @@ export default function Dashboard({ token, user, onNavigate }) {
     return () => {
       window.removeEventListener("storage", syncSettings);
       window.removeEventListener("dashboard-settings-updated", syncSettings);
+    };
+  }, []);
+
+  useEffect(() => {
+    const refreshTasks = () => setTaskRefreshKey((key) => key + 1);
+    const refreshNotes = () => setNoteRefreshKey((key) => key + 1);
+    window.addEventListener("canvenient-task-created", refreshTasks);
+    window.addEventListener("canvenient-note-created", refreshNotes);
+    return () => {
+      window.removeEventListener("canvenient-task-created", refreshTasks);
+      window.removeEventListener("canvenient-note-created", refreshNotes);
     };
   }, []);
 
@@ -75,7 +89,7 @@ export default function Dashboard({ token, user, onNavigate }) {
       icon: CheckSquare,
       title: "Tasks",
       onViewFull: () => onNavigate("tasks"),
-      body: <TasksModule token={token} refreshKey={taskRefreshKey} />,
+      body: <TasksModule token={token} refreshKey={taskRefreshKey} onAddTask={() => openQuickCapture({ mode: "task" })} />,
     },
     schedule: {
       icon: CalendarDays,
@@ -97,7 +111,44 @@ export default function Dashboard({ token, user, onNavigate }) {
     },
   };
 
-  const visibleModules = config.order.filter((moduleId) => !config.hidden.includes(moduleId));
+  const visibleModules = useMemo(
+    () => config.order.filter((moduleId) => !config.hidden.includes(moduleId)),
+    [config.hidden, config.order],
+  );
+
+  const effectiveActiveModuleId = visibleModules.includes(activeModuleId)
+    ? activeModuleId
+    : visibleModules[0] || null;
+
+  const moveBrowseFocus = useCallback((moduleId, key) => {
+    if (key === "Home" || key === "End") {
+      const targetId = key === "Home" ? visibleModules[0] : visibleModules[visibleModules.length - 1];
+      if (targetId) moduleRefs.current.get(targetId)?.focus();
+      return;
+    }
+    const current = moduleRefs.current.get(moduleId);
+    const currentRect = current?.getBoundingClientRect();
+    if (!currentRect) return;
+    const currentCenter = { x: currentRect.left + currentRect.width / 2, y: currentRect.top + currentRect.height / 2 };
+    const candidates = visibleModules.flatMap((candidateId) => {
+      if (candidateId === moduleId) return [];
+      const element = moduleRefs.current.get(candidateId);
+      const rect = element?.getBoundingClientRect();
+      if (!rect) return [];
+      const center = { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+      const dx = center.x - currentCenter.x;
+      const dy = center.y - currentCenter.y;
+      const inDirection = key === "ArrowRight" ? dx > 1
+        : key === "ArrowLeft" ? dx < -1
+          : key === "ArrowDown" ? dy > 1
+            : dy < -1;
+      if (!inDirection) return [];
+      const primary = key === "ArrowRight" || key === "ArrowLeft" ? Math.abs(dx) : Math.abs(dy);
+      const cross = key === "ArrowRight" || key === "ArrowLeft" ? Math.abs(dy) : Math.abs(dx);
+      return [{ id: candidateId, score: primary + cross * 0.35 }];
+    }).sort((a, b) => a.score - b.score);
+    if (candidates[0]) moduleRefs.current.get(candidates[0].id)?.focus();
+  }, [visibleModules]);
 
   const moveModule = (moduleId, direction) => {
     const index = config.order.indexOf(moduleId);
@@ -173,6 +224,14 @@ export default function Dashboard({ token, user, onNavigate }) {
         moduleId={moduleId}
         icon={module.icon}
         title={module.title}
+        cardRef={(element) => {
+          if (element) moduleRefs.current.set(moduleId, element);
+          else moduleRefs.current.delete(moduleId);
+        }}
+        browseActive={effectiveActiveModuleId === moduleId}
+        onBrowseFocus={() => setActiveModuleId(moduleId)}
+        onBrowseMove={(key) => moveBrowseFocus(moduleId, key)}
+        onQuickCapture={() => openQuickCapture({ mode: "task" })}
         collapsed={collapsed[moduleId]}
         onToggle={() => toggle(moduleId)}
         onViewFull={module.onViewFull}
@@ -208,7 +267,6 @@ export default function Dashboard({ token, user, onNavigate }) {
           {visibleModules.length === 0 && <div className="dashboard-no-modules">No modules are visible. Use the customize button to add one.</div>}
         </div>
       </div>
-      <TaskInputBar token={token} onTaskCreated={() => setTaskRefreshKey((key) => key + 1)} onNoteCreated={(note) => { setNoteRefreshKey((key) => key + 1); setActiveNote(note); }} />
       <NoteDrawer note={activeNote} token={token} onClose={() => setActiveNote(null)} />
       <CanvasDrawer key={activeCanvasItem ? `${activeCanvasItem.itemType}-${activeCanvasItem.course_id}-${activeCanvasItem.id}` : "empty"} item={activeCanvasItem} token={token} onClose={() => setActiveCanvasItem(null)} />
     </div>

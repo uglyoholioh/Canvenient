@@ -1,5 +1,7 @@
-import { useEffect, useRef, useState } from "react";
-import { BookOpen, Calendar, ChevronDown, Clock, Flag, Plus } from "lucide-react";
+// React is required by the test JSX transform.
+// eslint-disable-next-line no-unused-vars
+import React, { useEffect, useRef, useState } from "react";
+import { BookOpen, Calendar, ChevronDown, Clock, Flag, Plus, X } from "lucide-react";
 import { createNote, createTask, getAcademicModules } from "../api";
 
 function focusProperty(index) {
@@ -200,10 +202,46 @@ function parseDueDate(dateType, customDate, time) {
   return date.toISOString();
 }
 
-export default function TaskInputBar({ token, onTaskCreated, onNoteCreated, autoFocus = true }) {
+function normalizedMode(value) {
+  return value === "note" ? "note" : "task";
+}
+
+function contextModuleId(context, modules) {
+  if (!context) return "";
+  const match = modules.find((module) => (
+    String(module.id) === String(context.moduleId || "")
+    || String(module.canvas_course_id || "") === String(context.courseId || "")
+    || module.module_code === context.courseCode
+  ));
+  return match ? String(match.id) : "";
+}
+
+function contextDueValues(context) {
+  if (!context?.dueAt) return { dateType: "", customDate: "", time: "" };
+  const due = new Date(context.dueAt);
+  if (Number.isNaN(due.getTime())) return { dateType: "", customDate: "", time: "" };
+  const day = String(due.getDate()).padStart(2, "0");
+  const month = String(due.getMonth() + 1).padStart(2, "0");
+  const hours = String(due.getHours()).padStart(2, "0");
+  const minutes = String(due.getMinutes()).padStart(2, "0");
+  return { dateType: "custom", customDate: `${day}/${month}`, time: `${hours}:${minutes}` };
+}
+
+export default function TaskInputBar({
+  token,
+  onTaskCreated,
+  onNoteCreated,
+  autoFocus = true,
+  isOpen = true,
+  initialMode,
+  context = null,
+  onContextClear,
+  onClose,
+  variant = "inline",
+}) {
   const [modules, setModules] = useState([]);
   const [inputValue, setInputValue] = useState("");
-  const [inputMode, setInputMode] = useState(() => localStorage.getItem("canvenient-default-mode") || "task");
+  const [inputMode, setInputMode] = useState(() => normalizedMode(initialMode));
   const [dateType, setDateType] = useState("");
   const [customDate, setCustomDate] = useState("");
   const [time, setTime] = useState("");
@@ -214,17 +252,39 @@ export default function TaskInputBar({ token, onTaskCreated, onNoteCreated, auto
   const textareaRef = useRef(null);
 
   useEffect(() => { getAcademicModules(token).then(setModules).catch(() => setModules([])); }, [token]);
-  useEffect(() => { if (autoFocus) textareaRef.current?.focus(); }, [autoFocus]);
+  useEffect(() => {
+    if (!isOpen || !autoFocus) return;
+    requestAnimationFrame(() => textareaRef.current?.focus());
+  }, [autoFocus, isOpen]);
+  useEffect(() => {
+    // The requested global shortcut mode is the authoritative mode each time the dock opens.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (isOpen) setInputMode(normalizedMode(initialMode));
+  }, [initialMode, isOpen]);
   useEffect(() => {
     const focusInput = () => textareaRef.current?.focus();
     window.addEventListener("canvenient-focus-task-input", focusInput);
     return () => window.removeEventListener("canvenient-focus-task-input", focusInput);
   }, []);
+  // Canvas context initializes editable form defaults; subsequent user edits stay local.
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
-    const updateSettings = () => { if (!inputValue) setInputMode(localStorage.getItem("canvenient-default-mode") || "task"); };
-    window.addEventListener("settings-updated", updateSettings);
-    return () => window.removeEventListener("settings-updated", updateSettings);
-  }, [inputValue]);
+    if (!context) {
+      setDateType("");
+      setCustomDate("");
+      setTime("");
+      return;
+    }
+    const due = contextDueValues(context);
+    setDateType(due.dateType);
+    setCustomDate(due.customDate);
+    setTime(due.time);
+  }, [context]);
+  useEffect(() => {
+    // The linked course may arrive after the Canvas detail, so resolve it independently.
+    setModuleId(context ? contextModuleId(context, modules) : "");
+  }, [context, modules]);
+  /* eslint-enable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (!textareaRef.current) return;
     textareaRef.current.style.height = "auto";
@@ -232,8 +292,23 @@ export default function TaskInputBar({ token, onTaskCreated, onNoteCreated, auto
   }, [inputValue]);
 
   const reset = () => {
-    setInputValue(""); setDateType(""); setCustomDate(""); setTime(""); setPriority("medium"); setModuleId(""); setError("");
+    const due = contextDueValues(context);
+    setInputValue("");
+    setDateType(due.dateType);
+    setCustomDate(due.customDate);
+    setTime(due.time);
+    setPriority("medium");
+    setModuleId(contextModuleId(context, modules));
+    setError("");
     requestAnimationFrame(() => textareaRef.current?.focus());
+  };
+
+  const clearContext = () => {
+    setDateType("");
+    setCustomDate("");
+    setTime("");
+    setModuleId("");
+    onContextClear?.();
   };
 
   const submit = async () => {
@@ -250,6 +325,12 @@ export default function TaskInputBar({ token, onTaskCreated, onNoteCreated, auto
         const dueAt = parseDueDate(dateType, customDate, time);
         if (dueAt) payload.due_at_override = dueAt;
         if (moduleId) payload.module_id = Number(moduleId);
+        if (context?.externalUrl) payload.external_url = context.externalUrl;
+        if (context?.type === "assignment" && context.id != null) {
+          payload.source_type = "canvas";
+          payload.source_id = String(context.id);
+          if (context.dueAt) payload.source_due_at = context.dueAt;
+        }
         const task = await createTask(token, payload);
         onTaskCreated?.(task);
       }
@@ -262,10 +343,9 @@ export default function TaskInputBar({ token, onTaskCreated, onNoteCreated, auto
   };
 
   const handleInputKeyDown = (event) => {
-    if (!inputValue && event.key === "Tab") {
+    if (event.key === "Escape" && onClose) {
       event.preventDefault();
-      const modes = ["task", "note", "command"];
-      setInputMode(modes[(modes.indexOf(inputMode) + 1) % modes.length]);
+      onClose();
     } else if (event.key === "Enter" && !event.shiftKey) {
       event.preventDefault();
       submit();
@@ -281,12 +361,53 @@ export default function TaskInputBar({ token, onTaskCreated, onNoteCreated, auto
   };
 
   return (
-    <div className="task-input-shell">
-      <div className="task-input-card">
+    <div
+      className={`task-input-shell is-${variant} ${isOpen ? "is-open" : "is-closed"}`}
+      aria-hidden={!isOpen}
+      inert={isOpen ? undefined : true}
+    >
+      <div className="task-input-card" role={variant === "dock" ? "dialog" : undefined} aria-modal={variant === "dock" ? false : undefined} aria-label={variant === "dock" ? "Quick capture" : undefined}>
+        {variant === "dock" && (
+          <header className="quick-capture-header">
+            <div>
+              <strong>Quick capture</strong>
+              <span>Stays open after you add an item</span>
+            </div>
+            <button type="button" onClick={onClose} aria-label="Close quick capture"><X size={14} /></button>
+          </header>
+        )}
+        <div className="task-mode-switcher" role="tablist" aria-label="Capture type">
+          {[
+            { id: "task", label: "Task" },
+            { id: "note", label: "Note" },
+          ].map((mode) => (
+            <button
+              type="button"
+              key={mode.id}
+              role="tab"
+              aria-selected={inputMode === mode.id}
+              tabIndex={inputMode === mode.id ? 0 : -1}
+              className={inputMode === mode.id ? "is-active" : ""}
+              onClick={() => setInputMode(mode.id)}
+              onKeyDown={(event) => {
+                if (!["ArrowLeft", "ArrowRight"].includes(event.key)) return;
+                event.preventDefault();
+                setInputMode(inputMode === "task" ? "note" : "task");
+                requestAnimationFrame(() => event.currentTarget.parentElement?.querySelector("[aria-selected='true']")?.focus());
+              }}
+            >{mode.label}</button>
+          ))}
+        </div>
+        {context && (
+          <div className="quick-capture-context">
+            <span><BookOpen size={12} />From {context.label || context.title || "Canvas"}</span>
+            <button type="button" onClick={clearContext} aria-label="Remove capture context"><X size={12} /></button>
+          </div>
+        )}
         {error && <div className="task-input-error">{error}</div>}
         <div className="task-input-main">
-          <span className={`task-mode-badge is-${inputMode}`}>{inputMode === "command" ? "CMD" : inputMode.toUpperCase()}</span>
-          <textarea ref={textareaRef} value={inputValue} rows={1} onChange={(event) => setInputValue(event.target.value)} onKeyDown={handleInputKeyDown} placeholder={inputMode === "task" ? "Describe your task... (Tab to switch modes)" : inputMode === "note" ? "Note title... (Tab to switch modes)" : "Enter task or command... (Tab to switch modes)"} />
+          <span className={`task-mode-badge is-${inputMode}`}>{inputMode.toUpperCase()}</span>
+          <textarea ref={textareaRef} value={inputValue} rows={1} onChange={(event) => setInputValue(event.target.value)} onKeyDown={handleInputKeyDown} placeholder={inputMode === "task" ? "What needs to be done?" : "Capture a note title..."} />
         </div>
         {inputMode === "task" && (
           <div className="task-properties">
@@ -311,6 +432,11 @@ export default function TaskInputBar({ token, onTaskCreated, onNoteCreated, auto
               else if (event.key === "Enter") submit();
               else handleArrowNav(event, 4);
             }}><Plus size={14} />{isSubmitting ? "Adding..." : "Add"}</button>
+          </div>
+        )}
+        {inputMode === "note" && (
+          <div className="task-properties is-note-mode">
+            <button type="button" className="task-add-button property-pill" disabled={!inputValue.trim() || isSubmitting} onClick={submit}><Plus size={14} />{isSubmitting ? "Adding..." : "Add note"}</button>
           </div>
         )}
       </div>

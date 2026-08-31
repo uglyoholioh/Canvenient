@@ -1,7 +1,8 @@
 // React is required by the test JSX transform.
 // eslint-disable-next-line no-unused-vars
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import TaskView from "./TaskView";
+import TaskInputBar from "./TaskInputBar";
 import Omnibar from "./Omnibar";
 import SettingsView from "./SettingsView";
 import CanvasView from "./CanvasView";
@@ -10,8 +11,10 @@ import NotesView from "./NotesView";
 import Schedule from "./Schedule";
 import MarkdownEditor from "./MarkdownEditor";
 import { WorkspaceToolbarContext } from "./WorkspaceToolbarContext";
+import { QuickCaptureContext } from "./QuickCaptureContext";
 import { Folder, Search, Settings, CheckSquare, PanelLeft, PanelLeftClose, PanelLeftOpen, BookOpen, Plus, LogOut, LayoutDashboard, FileText, CalendarDays } from "lucide-react";
 import { createNote } from "../api";
+import { formatShortcut, matchesShortcut, readKeyboardShortcuts } from "../keyboardShortcuts";
 
 const getSidebarBehavior = () => {
   const stored = localStorage.getItem('canvenient-sidebar-mode');
@@ -55,11 +58,44 @@ export default function WorkspaceLayout({ token, user, onLogout }) {
   const [isShortcutHelpOpen, setIsShortcutHelpOpen] = useState(false);
   const [toolbar, setToolbar] = useState(null);
   const [isSidebarHovered, setIsSidebarHovered] = useState(false);
+  const [shortcuts, setShortcuts] = useState(readKeyboardShortcuts);
+  const [captureContext, setCaptureContext] = useState(null);
+  const [quickCapture, setQuickCapture] = useState({ isOpen: false, mode: "task", context: null });
+  const quickCaptureReturnFocus = useRef(null);
   
   const [sidebarWidth, setSidebarWidth] = useState(() => parseInt(localStorage.getItem('canvenient-sidebar-width') || '250', 10));
   const [isDragging, setIsDragging] = useState(false);
   
   const [sidebarBehavior, setSidebarBehavior] = useState(getSidebarBehavior);
+
+  const openQuickCapture = useCallback((options = {}) => {
+    const mode = options.mode === "note" ? "note" : "task";
+    quickCaptureReturnFocus.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    setQuickCapture((current) => ({
+      isOpen: true,
+      mode,
+      context: options.context === undefined
+        ? (current.isOpen ? (captureContext || current.context) : captureContext)
+        : options.context,
+    }));
+  }, [captureContext]);
+
+  const closeQuickCapture = useCallback(() => {
+    setQuickCapture((current) => ({ ...current, isOpen: false }));
+    requestAnimationFrame(() => quickCaptureReturnFocus.current?.focus?.());
+  }, []);
+
+  const clearQuickCaptureContext = useCallback(() => {
+    setCaptureContext(null);
+    setQuickCapture((current) => ({ ...current, context: null }));
+  }, []);
+
+  const quickCaptureValue = useMemo(() => ({
+    isOpen: quickCapture.isOpen,
+    openQuickCapture,
+    closeQuickCapture,
+    setCaptureContext,
+  }), [closeQuickCapture, openQuickCapture, quickCapture.isOpen]);
 
   useEffect(() => {
     localStorage.setItem("canvenient-active-view", activeTab);
@@ -74,18 +110,41 @@ export default function WorkspaceLayout({ token, user, onLogout }) {
     const handleStorage = () => {
       setSidebarBehavior(getSidebarBehavior());
       setSidebarWidth(parseInt(localStorage.getItem('canvenient-sidebar-width') || '250', 10));
+      setShortcuts(readKeyboardShortcuts());
     };
     window.addEventListener('storage', handleStorage);
     window.addEventListener('settings-updated', handleStorage);
+    window.addEventListener('keyboard-shortcuts-updated', handleStorage);
     return () => {
       window.removeEventListener('storage', handleStorage);
       window.removeEventListener('settings-updated', handleStorage);
+      window.removeEventListener('keyboard-shortcuts-updated', handleStorage);
     };
   }, []);
 
   useEffect(() => {
     const handleGlobalKey = (e) => {
       if (e.key === "Escape") setIsShortcutHelpOpen(false);
+      if (e.target.closest?.("[data-quick-capture-browse='true']") && matchesShortcut(e, shortcuts.browseCapture)) {
+        e.preventDefault();
+        openQuickCapture({ mode: "task" });
+        return;
+      }
+      if (matchesShortcut(e, shortcuts.quickNote)) {
+        e.preventDefault();
+        openQuickCapture({ mode: "note" });
+        return;
+      }
+      if (matchesShortcut(e, shortcuts.quickTask)) {
+        e.preventDefault();
+        openQuickCapture({ mode: "task" });
+        return;
+      }
+      if (matchesShortcut(e, shortcuts.search)) {
+        e.preventDefault();
+        setIsOmnibarOpen(true);
+        return;
+      }
       if (!(e.metaKey || e.ctrlKey)) return;
       const key = e.key.toLowerCase();
       if (e.key === '\\') {
@@ -97,17 +156,8 @@ export default function WorkspaceLayout({ token, user, onLogout }) {
         });
       }
       if (window.__TAURI_IPC__) return;
-      if (key === 'k') {
-        e.preventDefault();
-        setIsOmnibarOpen(true);
-      }
       const viewShortcuts = { "1": "dashboard", "2": "tasks", "3": "schedule", "4": "canvas", "5": "notes" };
       if (viewShortcuts[e.key]) { e.preventDefault(); setActiveTab(viewShortcuts[e.key]); }
-      if (key === "n" && e.shiftKey) { e.preventDefault(); createAndOpenNote(); }
-      else if (key === "n") {
-        e.preventDefault(); setActiveTab("tasks");
-        window.setTimeout(() => window.dispatchEvent(new CustomEvent("canvenient-focus-task-input")), 0);
-      }
       if (key === "o") {
         e.preventDefault(); setActiveTab("schedule");
         window.setTimeout(() => window.dispatchEvent(new CustomEvent("canvenient-open-schedule-import")), 0);
@@ -116,7 +166,7 @@ export default function WorkspaceLayout({ token, user, onLogout }) {
     };
     window.addEventListener('keydown', handleGlobalKey);
     return () => window.removeEventListener('keydown', handleGlobalKey);
-  }, [createAndOpenNote]);
+  }, [openQuickCapture, shortcuts]);
 
   useEffect(() => {
     let disposed = false;
@@ -140,11 +190,8 @@ export default function WorkspaceLayout({ token, user, onLogout }) {
           return next;
         });
       }
-      if (action === "new-note") await createAndOpenNote();
-      if (action === "new-task") {
-        setActiveTab("tasks");
-        window.setTimeout(() => window.dispatchEvent(new CustomEvent("canvenient-focus-task-input")), 0);
-      }
+      if (action === "new-note") openQuickCapture({ mode: "note" });
+      if (action === "new-task") openQuickCapture({ mode: "task" });
       if (action === "import-timetable") {
         setActiveTab("schedule");
         window.setTimeout(() => window.dispatchEvent(new CustomEvent("canvenient-open-schedule-import")), 0);
@@ -175,7 +222,7 @@ export default function WorkspaceLayout({ token, user, onLogout }) {
       disposed = true;
       cleanups.forEach((cleanup) => cleanup());
     };
-  }, [createAndOpenNote]);
+  }, [openQuickCapture]);
 
   const handleMouseDown = useCallback((e) => {
     e.preventDefault();
@@ -230,7 +277,16 @@ export default function WorkspaceLayout({ token, user, onLogout }) {
 
   const toolbarTitle = toolbar?.title || viewTitle(activeTab);
 
+  const handleTaskCreated = useCallback((task) => {
+    window.dispatchEvent(new CustomEvent("canvenient-task-created", { detail: task }));
+  }, []);
+
+  const handleNoteCreated = useCallback((note) => {
+    window.dispatchEvent(new CustomEvent("canvenient-note-created", { detail: note }));
+  }, []);
+
   return (
+    <QuickCaptureContext.Provider value={quickCaptureValue}>
     <WorkspaceToolbarContext.Provider value={setToolbar}>
     <div className="mac-workspace-shell">
       <div className="mac-sidebar-rail" style={{ width: layoutSidebarWidth }}>
@@ -269,7 +325,7 @@ export default function WorkspaceLayout({ token, user, onLogout }) {
               <NavItem isSlim={isSlim} icon={CalendarDays} label="Schedule" active={activeTab === 'schedule'} onClick={() => setActiveTab("schedule")} />
               <NavItem isSlim={isSlim} icon={BookOpen} label="Canvas" active={activeTab === 'canvas'} onClick={() => setActiveTab("canvas")} />
               <NavItem isSlim={isSlim} icon={FileText} label="Notes" active={activeTab === 'notes' || activeTab.startsWith('note-')} onClick={() => setActiveTab("notes")} />
-              <NavItem isSlim={isSlim} icon={Search} label="Search" active={false} onClick={() => setIsOmnibarOpen(true)} shortcut="⌘K" />
+              <NavItem isSlim={isSlim} icon={Search} label="Search" active={false} onClick={() => setIsOmnibarOpen(true)} shortcut={formatShortcut(shortcuts.search)} />
             </nav>
 
             {!isSlim && (
@@ -324,7 +380,7 @@ export default function WorkspaceLayout({ token, user, onLogout }) {
               <button type="button" className="mac-toolbar-search" onClick={() => setIsOmnibarOpen(true)}>
                 <Search size={14} />
                 <span>Search</span>
-                <kbd>⌘K</kbd>
+                <kbd>{formatShortcut(shortcuts.search)}</kbd>
               </button>
             )}
           </div>
@@ -339,6 +395,17 @@ export default function WorkspaceLayout({ token, user, onLogout }) {
           {activeTab === 'notes' && <NotesView token={token} />}
           {activeTab.startsWith('note-') && <MarkdownEditor key={activeTab} noteId={activeTab.split('-')[1]} token={token} />}
         </div>
+        <TaskInputBar
+          token={token}
+          variant="dock"
+          isOpen={quickCapture.isOpen}
+          initialMode={quickCapture.mode}
+          context={quickCapture.context}
+          onContextClear={clearQuickCaptureContext}
+          onClose={closeQuickCapture}
+          onTaskCreated={handleTaskCreated}
+          onNoteCreated={handleNoteCreated}
+        />
       </main>
 
       {isOmnibarOpen && <Omnibar onClose={() => setIsOmnibarOpen(false)} token={token} onNavigate={(type, item) => {
@@ -352,9 +419,10 @@ export default function WorkspaceLayout({ token, user, onLogout }) {
           <section className="mac-shortcut-sheet" role="dialog" aria-modal="true" aria-labelledby="shortcut-help-title">
             <header><h2 id="shortcut-help-title">Keyboard shortcuts</h2><button type="button" onClick={() => setIsShortcutHelpOpen(false)} aria-label="Close keyboard shortcuts">×</button></header>
             <dl>
-              <div><dt>Search</dt><dd>⌘K</dd></div>
-              <div><dt>New task</dt><dd>⌘N</dd></div>
-              <div><dt>New note</dt><dd>⇧⌘N</dd></div>
+              <div><dt>Search</dt><dd>{formatShortcut(shortcuts.search)}</dd></div>
+              <div><dt>Quick task</dt><dd>{formatShortcut(shortcuts.quickTask)}</dd></div>
+              <div><dt>Quick note</dt><dd>{formatShortcut(shortcuts.quickNote)}</dd></div>
+              <div><dt>Quick capture from browse mode</dt><dd>{formatShortcut(shortcuts.browseCapture)}</dd></div>
               <div><dt>Import timetable</dt><dd>⌘O</dd></div>
               <div><dt>Switch views</dt><dd>⌘1–5</dd></div>
               <div><dt>Toggle sidebar</dt><dd>⌘\\</dd></div>
@@ -364,5 +432,6 @@ export default function WorkspaceLayout({ token, user, onLogout }) {
       )}
     </div>
     </WorkspaceToolbarContext.Provider>
+    </QuickCaptureContext.Provider>
   );
 }
