@@ -24,12 +24,15 @@ export default function GlobalTasksPanel({
       className={`global-tasks-layer ${isOpen ? "is-open" : "is-closed"}`}
       aria-hidden={!isOpen}
       inert={isOpen ? undefined : true}
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) onClose();
+      }}
     >
       <aside
         ref={panelRef}
         className="global-tasks-panel"
         role="dialog"
-        aria-modal="false"
+        aria-modal="true"
         aria-labelledby="global-tasks-title"
         tabIndex={-1}
         onKeyDown={(event) => {

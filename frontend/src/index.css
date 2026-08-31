@@ -2825,38 +2825,49 @@ textarea {
   }
 }
 
-/* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V4
- * designed-as-app · global Tasks panel
+/* Hallmark · component: modal workspace · genre: modern-minimal · theme: Cobalt
+ * states: default · hover · focus · active · disabled · loading · error · success
+ * contrast: pass (46–50) · pre-emit critique: P5 H5 E5 S5 R5 V4
  */
 .global-tasks-layer {
   position: fixed;
   inset: 0;
   z-index: 680;
-  pointer-events: none;
+  padding: clamp(16px, 5vh, 52px) clamp(16px, 6vw, 84px);
+  background: color-mix(in srgb, var(--color-mac-window, var(--bg)) 38%, transparent);
+  backdrop-filter: blur(5px);
+  display: grid;
+  place-items: center;
+  pointer-events: auto;
   visibility: visible;
+  opacity: 1;
+  transition: opacity 150ms ease, visibility 150ms;
 }
 
 .global-tasks-panel {
-  position: absolute;
-  inset: 0 0 0 auto;
-  width: min(480px, calc(100vw - 58px));
-  min-width: 360px;
-  border-inline-start: 1px solid var(--color-mac-divider, var(--border));
+  width: min(960px, 100%);
+  height: min(760px, 100%);
+  min-width: 0;
+  min-height: 0;
+  border: 1px solid var(--color-mac-divider, var(--border));
+  border-radius: 10px;
   background: var(--color-mac-window, var(--bg));
-  box-shadow: -18px 0 42px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 24px 72px rgba(0, 0, 0, 0.34);
   display: flex;
   flex-direction: column;
-  pointer-events: auto;
-  transform: translateX(0);
-  transition: transform 180ms ease, visibility 180ms;
+  overflow: hidden;
+  transform: translateY(0) scale(1);
+  transition: transform 150ms ease;
 }
 
 .global-tasks-layer.is-closed {
   visibility: hidden;
-  transition-delay: 180ms;
+  opacity: 0;
+  pointer-events: none;
+  transition-delay: 150ms;
 }
 
-.global-tasks-layer.is-closed .global-tasks-panel { transform: translateX(100%); }
+.global-tasks-layer.is-closed .global-tasks-panel { transform: translateY(12px) scale(0.985); }
 
 .global-tasks-header {
   min-height: var(--height-mac-toolbar, 48px);
@@ -2894,7 +2905,8 @@ textarea {
 .global-tasks-panel .task-properties { padding-inline-start: 0; }
 
 @media (max-width: 620px) {
-  .global-tasks-panel { width: 100%; min-width: 0; }
+  .global-tasks-layer { padding: 10px; }
+  .global-tasks-panel { width: 100%; height: 100%; border-radius: 7px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
