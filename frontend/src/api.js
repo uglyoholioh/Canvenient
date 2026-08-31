@@ -55,6 +55,23 @@ function getErrorMessage(payload, fallbackMessage) {
     return payload.detail;
   }
 
+  // FastAPI returns request-validation failures as an array. Turn that into a
+  // compact, useful message instead of hiding the field that needs attention
+  // behind a bare "Request failed (422)".
+  if (Array.isArray(payload.detail)) {
+    const details = payload.detail
+      .map((issue) => {
+        if (!issue || typeof issue !== "object" || typeof issue.msg !== "string") return "";
+        const location = Array.isArray(issue.loc)
+          ? issue.loc.filter((part) => part !== "body").join(".")
+          : "";
+        return location ? `${location}: ${issue.msg}` : issue.msg;
+      })
+      .filter(Boolean);
+
+    if (details.length > 0) return details.join(" ");
+  }
+
   if (typeof payload.message === "string") {
     return payload.message;
   }

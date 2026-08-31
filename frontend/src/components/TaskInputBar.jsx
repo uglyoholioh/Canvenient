@@ -348,7 +348,7 @@ export default function TaskInputBar({
         {error && <div className="task-input-error">{error}</div>}
         <div className="task-input-main">
           <span className={`task-mode-badge is-${inputMode}`}>{inputMode.toUpperCase()}</span>
-          <textarea ref={textareaRef} value={inputValue} rows={1} onChange={(event) => setInputValue(event.target.value)} onKeyDown={handleInputKeyDown} placeholder={inputMode === "task" ? "What needs to be done?" : "Capture a note title..."} />
+          <textarea ref={textareaRef} value={inputValue} rows={1} maxLength={160} onChange={(event) => setInputValue(event.target.value)} onKeyDown={handleInputKeyDown} placeholder={inputMode === "task" ? "What needs to be done?" : "Capture a note title..."} />
         </div>
         {inputMode === "task" && (
           <div className="task-properties">

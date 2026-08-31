@@ -354,7 +354,7 @@ export default function TaskView({ token, embedded = false, active = true, compo
                 <form className="task-inline-editor" onSubmit={(event) => { event.preventDefault(); saveEdit(task); }} onKeyDown={(event) => {
                   if (event.key === "Escape") { event.preventDefault(); cancelEdit(task.id); }
                 }}>
-                  <input ref={editRef} aria-label="Edit task title" value={editDraft?.title || ""} onChange={(event) => setEditDraft((draft) => ({ ...draft, title: event.target.value }))} />
+                  <input ref={editRef} aria-label="Edit task title" value={editDraft?.title || ""} maxLength={160} onChange={(event) => setEditDraft((draft) => ({ ...draft, title: event.target.value }))} />
                   <div className="task-inline-properties">
                     <label>Due <DueDateEditor value={editDraft?.dueAt || duePartsValue(null)} onChange={(dueAt) => setEditDraft((draft) => ({ ...draft, dueAt }))} /></label>
                     <label>Priority <select aria-label="Edit task priority" value={editDraft?.priority || "medium"} onChange={(event) => setEditDraft((draft) => ({ ...draft, priority: event.target.value }))}>

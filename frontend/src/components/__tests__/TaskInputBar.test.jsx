@@ -41,4 +41,12 @@ describe("TaskInputBar quick capture", () => {
     expect(screen.getByRole("dialog", { name: "Quick capture" })).toBeInTheDocument();
     await waitFor(() => expect(screen.getByPlaceholderText("What needs to be done?")).toHaveValue(""));
   });
+
+  it("keeps task titles within the server-supported length", async () => {
+    render(
+      <TaskInputBar token="token" variant="dock" isOpen initialMode="task" allowedModes={["task"]} />,
+    );
+
+    await waitFor(() => expect(screen.getByPlaceholderText("What needs to be done?")).toHaveAttribute("maxLength", "160"));
+  });
 });

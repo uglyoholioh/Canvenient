@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from 'vitest'
-import { login, register, importIcs } from '../api'
+import { createTask, login, register, importIcs } from '../api'
 
 describe('api.js error handling', () => {
   const originalFetch = globalThis.fetch
@@ -52,6 +52,21 @@ describe('api.js error handling', () => {
 
     await expect(login({ email: 'test@nus.edu', password: 'password' })).rejects.toThrow(
       'Could not connect to server'
+    )
+  })
+
+  it('explains FastAPI field validation errors', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 422,
+      headers: new Map([['content-type', 'application/json']]),
+      json: () => Promise.resolve({
+        detail: [{ loc: ['body', 'title'], msg: 'String should have at most 160 characters' }],
+      }),
+    })
+
+    await expect(createTask('test-token', { title: 'A task' })).rejects.toThrow(
+      'title: String should have at most 160 characters'
     )
   })
 
