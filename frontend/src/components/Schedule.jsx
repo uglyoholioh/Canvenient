@@ -1,447 +1,310 @@
-import { useCallback, useEffect, useState } from "react"
-import { getSchedule, importIcs, createEvent, updateEvent, deleteEvent, updateEventAttendance } from "../api"
-import { Upload, RefreshCw, Calendar as CalendarIcon, Grid, List, X, Edit, Trash2, Clock, MapPin } from "lucide-react"
-import { ThemeProvider, createTheme } from "@mui/material/styles"
-
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { CalendarDays, ChevronLeft, ChevronRight, FileUp, Link2, Loader2, MapPin, Upload, X } from "lucide-react";
+import { getSchedule, importIcs, importNusmods } from "../api";
+import { useWorkspaceToolbar } from "./WorkspaceToolbarContext";
 import {
-  EventCalendarProvider,
-  EventDialogProvider,
-  useEventDialogContext
-} from "@mui/x-scheduler/internals"
-import { MonthView } from "@mui/x-scheduler/month-view"
-import { WeekView } from "@mui/x-scheduler/week-view"
-import { AgendaView } from "@mui/x-scheduler/agenda-view"
+  formatScheduleTime,
+  localDateKey,
+  minutesSinceMidnight,
+  scheduleItemsForDate,
+  startOfLocalDay,
+  timelineBlockGeometry,
+  weekDates,
+} from "./scheduleUtils";
 
-// MUI Scheduler supports these event colours
-const SCHEDULER_COLORS = ['red', 'pink', 'purple', 'indigo', 'blue', 'teal', 'green', 'lime', 'amber', 'orange', 'grey']
+const EMPTY_SCHEDULE = { classes: [], exams: [], events: [] };
+const HOUR_HEIGHT = 48;
 
-// Map SchedulerEventColor to CSS {bg, color} for badge styling
-const COLOR_CSS_MAP = {
-  red: { bg: 'rgba(211,47,47,0.1)', color: '#D32F2F' },
-  pink: { bg: 'rgba(194,24,91,0.1)', color: '#C2185B' },
-  purple: { bg: 'rgba(123,31,162,0.1)', color: '#7B1FA2' },
-  indigo: { bg: 'rgba(57,73,171,0.1)', color: '#3949AB' },
-  blue: { bg: 'rgba(21,101,192,0.1)', color: '#1565C0' },
-  teal: { bg: 'rgba(0,121,107,0.1)', color: '#007975' },
-  green: { bg: 'rgba(46,125,50,0.1)', color: '#2E7D32' },
-  lime: { bg: 'rgba(85,139,47,0.1)', color: '#558B2F' },
-  amber: { bg: 'rgba(255,143,0,0.1)', color: '#FF8F00' },
-  orange: { bg: 'rgba(230,81,0,0.1)', color: '#E65100' },
-  grey: { bg: 'rgba(117,117,117,0.1)', color: '#757575' },
-}
-
-// Deterministically assign a scheduler colour to each module code
-function getModuleColor(moduleCode) {
-  if (!moduleCode) return null
-  let hash = 0
-  for (let i = 0; i < moduleCode.length; i++) {
-    hash = ((hash << 5) - hash) + moduleCode.charCodeAt(i)
-    hash |= 0
-  }
-  return SCHEDULER_COLORS[Math.abs(hash) % SCHEDULER_COLORS.length]
-}
-
-const scheduleTheme = createTheme({
-  components: {
-    MuiEventDialog: {
-      defaultProps: {
-        disableScrollLock: true,
-        disableEnforceFocus: true,
-        disablePortal: true,
-        hideBackdrop: true,
-      },
-      styleOverrides: {
-        root: {
-          display: "none !important",
-        },
-      },
-    },
-  },
-})
-
-function EventClickWatcher({ onEventClick }) {
-  const { isOpen, data: occurrence, onClose } = useEventDialogContext()
-
-  useEffect(() => {
-    if (isOpen && occurrence) {
-      const timer = setTimeout(() => {
-        onClose()
-        onEventClick(occurrence)
-      }, 0)
-      return () => clearTimeout(timer)
-    }
-  }, [isOpen, occurrence, onClose, onEventClick])
-
-  return null
-}
-
-function Schedule({ token }) {
-  const [schedule, setSchedule] = useState({ classes: [], exams: [], events: [] })
-  const [loadingSchedule, setLoadingSchedule] = useState(false)
-  const [uploadingSchedule, setUploadingSchedule] = useState(false)
-  const [error, setError] = useState("")
-  const [viewMode, setViewMode] = useState("month")
-
-  const [activeModal, setActiveModal] = useState(null)
-
-  const loadSchedule = useCallback(async () => {
-    if (!token) return
-    setLoadingSchedule(true)
-    setError("")
-    try {
-      const data = await getSchedule(token)
-      setSchedule(data || { classes: [], exams: [], events: [] })
-    } catch (err) {
-      setError(err.message || "Could not load schedule.")
-    } finally {
-      setLoadingSchedule(false)
-    }
-  }, [token])
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      loadSchedule()
-    }, 0)
-    return () => clearTimeout(timer)
-  }, [loadSchedule])
-
-  const handleIcsUpload = async (e) => {
-    const file = e.target.files[0]
-    if (!file) return
-    setUploadingSchedule(true)
-    try {
-      await importIcs(token, file)
-      await loadSchedule()
-    } catch (err) {
-      setError(err.message || "Failed to import calendar.")
-    } finally {
-      setUploadingSchedule(false)
-    }
-  }
-
-  const getMuiEvents = () => {
-    const list = []
-    if (schedule.classes) {
-      schedule.classes.forEach(c => list.push({
-        id: `class-${c.id}`, eventId: c.id, type: "class",
-        title: `${c.module_code} ${c.lesson_type}`, description: c.module_name, venue: c.venue || "No Venue",
-        start: new Date(`${c.class_date}T${c.start_time}`).toISOString(),
-        end: new Date(`${c.class_date}T${c.end_time}`).toISOString(),
-        color: getModuleColor(c.module_code),
-        moduleCode: c.module_code,
-      }))
-    }
-    if (schedule.exams) {
-      schedule.exams.forEach(e => list.push({
-        id: `exam-${e.id}`, eventId: e.id, type: "exam",
-        title: `${e.module_code} Exam`, description: e.module_name, venue: "See Exam Venue",
-        start: new Date(e.start_at).toISOString(), end: new Date(e.end_at).toISOString(),
-        color: getModuleColor(e.module_code),
-        moduleCode: e.module_code,
-      }))
-    }
-    if (schedule.events) {
-      schedule.events.forEach(ev => {
-        const isGroupOrComm = ev.c_id != null || ev.g_id != null
-        const isAttending = ev.is_attending
-
-        let className = ""
-        if (isGroupOrComm && !isAttending) {
-          className = "event-pending-rsvp"
-        }
-
-        list.push({
-          id: `event-${ev.id}`, eventId: ev.id, type: "event",
-          title: ev.title, description: ev.description || "", venue: ev.venue || "No Venue",
-          start: new Date(ev.start_at).toISOString(),
-          end: ev.end_at ? new Date(ev.end_at).toISOString() : new Date(ev.start_at).toISOString(),
-          c_id: ev.c_id,
-          g_id: ev.g_id,
-          is_attending: ev.is_attending,
-          className
-        })
-      })
-    }
-    return list
-  }
-
-  const handleCreatePersonalEvent = async (e) => {
-    e.preventDefault()
-    const { event } = activeModal
-    if (!event.title.trim() || !event.start) return
-    try {
-      await createEvent(token, {
-        title: event.title,
-        description: event.description || "",
-        venue: event.venue || "",
-        start_at: new Date(event.start).toISOString(),
-        end_at: event.end ? new Date(event.end).toISOString() : null,
-        is_all_day: false,
-        c_id: null,
-        g_id: null,
-        module_code: null,
-        event_type: null
-      })
-      setActiveModal(null)
-      loadSchedule()
-    } catch (err) {
-      alert(err.message || "Failed to create personal event.")
-    }
-  }
-
-  const handleSaveEdit = async (e) => {
-    e.preventDefault()
-    const { event } = activeModal
-    try {
-      await updateEvent(token, event.eventId, {
-        title: event.title,
-        description: event.description,
-        venue: event.venue,
-        start_at: event.start,
-        end_at: event.end,
-        is_all_day: false,
-        module_code: null, c_id: null, g_id: null
-      })
-      setActiveModal(null)
-      loadSchedule()
-    } catch (err) {
-      alert(err.message || "Failed to update.")
-    }
-  }
-
-  const handleDelete = async () => {
-    if (!window.confirm("Delete this event?")) return
-    try {
-      await deleteEvent(token, activeModal.event.eventId)
-      setActiveModal(null)
-      loadSchedule()
-    } catch (err) {
-      alert(err.message || "Failed to delete.")
-    }
-  }
-
-  const handleUpdateAttendance = async (eventId, isAttending) => {
-    try {
-      await updateEventAttendance(token, eventId, isAttending)
-      setActiveModal(prev => ({
-        ...prev,
-        event: {
-          ...prev.event,
-          is_attending: isAttending,
-          className: (prev.event.c_id || prev.event.g_id) && !isAttending ? "event-pending-rsvp" : ""
-        }
-      }))
-      loadSchedule()
-    } catch (err) {
-      alert(err.message || "Failed to update attendance.")
-    }
-  }
-
+function TimelineItem({ item, startHour, now, isToday }) {
+  const { top, height } = timelineBlockGeometry(item, startHour, HOUR_HEIGHT);
+  const isPast = isToday && item.end <= now;
+  const isCurrent = isToday && item.start <= now && item.end > now;
 
   return (
-    <div className="app-shell" style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
-      <div className="card flex justify-between items-center mb-md">
-        <div className="flex-col gap-xs">
-          <h2 style={{ fontSize: "28px" }}>Academic Schedule</h2>
-          <p className="text-muted text-sm">Interactive calendar with monthly, weekly, and agenda views.</p>
-        </div>
-        <div className="flex items-center gap-md">
-          <div className="view-switcher-group flex" style={{ marginRight: "12px" }}>
-            <button className={`btn btn--sm ${viewMode === "month" ? "btn--primary" : "btn--outline"}`} onClick={() => setViewMode("month")}><CalendarIcon size={14} style={{ marginRight: "4px" }} />Month</button>
-            <button className={`btn btn--sm ${viewMode === "week" ? "btn--primary" : "btn--outline"}`} onClick={() => setViewMode("week")}><Grid size={14} style={{ marginRight: "4px" }} />Week</button>
-            <button className={`btn btn--sm ${viewMode === "agenda" ? "btn--primary" : "btn--outline"}`} onClick={() => setViewMode("agenda")}><List size={14} style={{ marginRight: "4px" }} />Agenda</button>
-          </div>
-          <button className="btn btn--primary" onClick={() => setActiveModal({ mode: "create", event: { title: "", start: "", end: "", venue: "", description: "" } })} style={{ display: "inline-flex", alignItems: "center" }}>
-            + New Event
-          </button>
-          <label className="btn btn--secondary cursor-pointer">
-            <Upload size={14} style={{ marginRight: "6px" }} />Import .ics
-            <input type="file" accept=".ics" onChange={handleIcsUpload} style={{ display: "none" }} disabled={uploadingSchedule} />
-          </label>
-        </div>
+    <article
+      className={`schedule-timeline-item is-${item.kind} ${isPast ? "is-past" : ""} ${isCurrent ? "is-current" : ""}`}
+      style={{
+        top: `${top}px`,
+        height: `${height}px`,
+        "--module-color": item.color,
+        "--module-ink": item.ink,
+      }}
+      aria-label={`${item.title}, ${formatScheduleTime(item.start)} to ${formatScheduleTime(item.end)}, ${item.subtitle}${item.classNo ? ` ${item.classNo}` : ""}, ${item.venue}`}
+    >
+      <div className="schedule-item-time">
+        <strong>{formatScheduleTime(item.start)}</strong>
+        <span>to {formatScheduleTime(item.end)}</span>
       </div>
-
-      {error && <div className="card text-error mb-md" style={{ borderColor: "var(--error)", padding: "12px 16px" }}>{error}</div>}
-
-      {loadingSchedule ? (
-        <div className="state-box"><RefreshCw size={24} className="spin" /><span>Loading schedule...</span></div>
-      ) : (
-        <div className="card" style={{ padding: "20px" }}>
-          <div style={{ height: "650px", width: "100%", overflow: "hidden" }}>
-            <ThemeProvider theme={scheduleTheme}>
-              <EventCalendarProvider events={getMuiEvents()} defaultVisibleDate={new Date()} readOnly>
-                <EventDialogProvider>
-                  <EventClickWatcher onEventClick={(occurrence) => {
-                    const matchedEvent = getMuiEvents().find(ev => ev.id === occurrence.id)
-                    if (matchedEvent) {
-                      setActiveModal({ mode: "view", event: matchedEvent })
-                    }
-                  }} />
-                  {viewMode === "month" && <MonthView />}
-                  {viewMode === "week" && <WeekView />}
-                  {viewMode === "agenda" && <AgendaView />}
-                </EventDialogProvider>
-              </EventCalendarProvider>
-            </ThemeProvider>
-          </div>
-        </div>
+      <div className="schedule-item-copy">
+        <div><strong>{item.title}</strong><span>{item.subtitle}{item.classNo ? ` · ${item.classNo}` : ""}</span></div>
+        <small><MapPin size={11} />{item.venue}</small>
+      </div>
+      {(isCurrent || isPast || item.kind === "exam") && (
+        <span className="schedule-item-state">{isCurrent ? "Now" : isPast ? "Past" : "Exam"}</span>
       )}
+    </article>
+  );
+}
 
-      {activeModal && (
-        <div className="modal-overlay" onClick={() => setActiveModal(null)}>
-          <div className="modal-card" onClick={(e) => e.stopPropagation()} style={{ maxWidth: "450px" }}>
-            <div className="modal-header">
-              <h3>
-                {activeModal.mode === "create"
-                  ? "New Personal Event"
-                  : activeModal.mode === "edit"
-                  ? "Edit Event"
-                  : "Event Details"}
-              </h3>
-              <button className="close-modal" onClick={() => setActiveModal(null)}><X size={18} /></button>
+export default function Schedule({ token }) {
+  const [schedule, setSchedule] = useState(EMPTY_SCHEDULE);
+  const [selectedDate, setSelectedDate] = useState(() => startOfLocalDay(new Date()));
+  const [now, setNow] = useState(new Date());
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
+  const [isImportOpen, setIsImportOpen] = useState(false);
+  const [nusmodsUrl, setNusmodsUrl] = useState("");
+  const [importing, setImporting] = useState(false);
+  const timelineScrollRef = useRef(null);
+
+  const loadSchedule = useCallback(async () => {
+    if (!token) return;
+    setLoading(true);
+    try {
+      setSchedule((await getSchedule(token)) || EMPTY_SCHEDULE);
+      setError("");
+    } catch (loadError) {
+      setError(loadError.message || "Could not load your schedule.");
+    } finally {
+      setLoading(false);
+    }
+  }, [token]);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      loadSchedule();
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [loadSchedule]);
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(new Date()), 30000);
+    return () => window.clearInterval(timer);
+  }, []);
+
+  const days = useMemo(() => weekDates(selectedDate), [selectedDate]);
+  const items = useMemo(() => scheduleItemsForDate(schedule, selectedDate), [schedule, selectedDate]);
+  const isToday = localDateKey(selectedDate) === localDateKey(now);
+  const selectedDateMinutes = isToday ? minutesSinceMidnight(now) : 12 * 60;
+  const earliestMinutes = items.length ? Math.min(...items.map((item) => minutesSinceMidnight(item.start)), selectedDateMinutes) : Math.min(8 * 60, selectedDateMinutes);
+  const latestMinutes = items.length ? Math.max(...items.map((item) => minutesSinceMidnight(item.end)), selectedDateMinutes + 60) : Math.max(18 * 60, selectedDateMinutes + 60);
+  const startHour = Math.max(0, Math.min(8, Math.floor(earliestMinutes / 60)));
+  const endHour = Math.min(24, Math.max(18, Math.ceil(latestMinutes / 60)));
+  const timelineHeight = (endHour - startHour) * HOUR_HEIGHT;
+  const hours = Array.from({ length: endHour - startHour + 1 }, (_, index) => startHour + index);
+  const classCount = items.filter((item) => item.kind === "class").length;
+  const otherCount = items.length - classCount;
+
+  useEffect(() => {
+    if (loading || !timelineScrollRef.current) return;
+    if (!isToday) {
+      timelineScrollRef.current.scrollTop = 0;
+      return;
+    }
+    const currentTop = ((minutesSinceMidnight(now) - startHour * 60) / 60) * HOUR_HEIGHT;
+    timelineScrollRef.current.scrollTop = Math.max(currentTop - 170, 0);
+  }, [isToday, loading, now, startHour, timelineHeight]);
+
+  const moveWeek = (direction) => {
+    const next = new Date(selectedDate);
+    next.setDate(next.getDate() + direction * 7);
+    setSelectedDate(startOfLocalDay(next));
+  };
+
+  const goToday = () => setSelectedDate(startOfLocalDay(new Date()));
+
+  const finishImport = useCallback(async (result) => {
+    await loadSchedule();
+    setNotice(`Imported ${result.classes || 0} classes${result.exams ? ` and ${result.exams} exams` : ""}.`);
+    setError("");
+    setIsImportOpen(false);
+  }, [loadSchedule]);
+
+  const importCalendarData = useCallback(async (data, fileName = "timetable.ics") => {
+    setImporting(true);
+    try {
+      await finishImport(await importIcs(token, data, fileName));
+    } catch (importError) {
+      setError(importError.message || "Could not import that calendar file.");
+    } finally {
+      setImporting(false);
+    }
+  }, [finishImport, token]);
+
+  const importCalendarPath = useCallback(async (path) => {
+    if (!window.__TAURI_IPC__) return;
+    const { invoke } = await import("@tauri-apps/api/tauri");
+    const bytes = await invoke("read_calendar_file", { path });
+    await importCalendarData(new Uint8Array(bytes), path.split(/[\\/]/).pop() || "timetable.ics");
+  }, [importCalendarData]);
+
+  const chooseCalendarFile = async () => {
+    if (!window.__TAURI_IPC__) {
+      document.getElementById("schedule-ics-fallback")?.click();
+      return;
+    }
+    try {
+      const { open } = await import("@tauri-apps/api/dialog");
+      const path = await open({ multiple: false, filters: [{ name: "iCalendar", extensions: ["ics"] }] });
+      if (typeof path === "string") await importCalendarPath(path);
+    } catch (importError) {
+      setError(importError.message || "Could not open that calendar file.");
+    }
+  };
+
+  useEffect(() => {
+    const openImport = () => { setError(""); setIsImportOpen(true); };
+    const importPaths = (event) => {
+      const paths = Array.isArray(event.detail) ? event.detail : [];
+      if (paths[0]) importCalendarPath(paths[0]).catch((importError) => setError(importError.message || "Could not import that calendar file."));
+    };
+    const closeImport = (event) => { if (event.key === "Escape") setIsImportOpen(false); };
+    window.addEventListener("canvenient-open-schedule-import", openImport);
+    window.addEventListener("canvenient-import-ics-paths", importPaths);
+    window.addEventListener("keydown", closeImport);
+    return () => {
+      window.removeEventListener("canvenient-open-schedule-import", openImport);
+      window.removeEventListener("canvenient-import-ics-paths", importPaths);
+      window.removeEventListener("keydown", closeImport);
+    };
+  }, [importCalendarPath]);
+
+  const toolbarConfig = useMemo(() => ({
+    title: selectedDate.toLocaleDateString([], { weekday: "long", month: "long", day: "numeric" }),
+    subtitle: items.length ? `${items.length} scheduled ${items.length === 1 ? "item" : "items"}` : "Nothing scheduled",
+    actions: (
+      <>
+        {!isToday && <button type="button" className="mac-toolbar-action" onClick={goToday}>Today</button>}
+        <button type="button" className="mac-toolbar-action is-primary" onClick={() => { setError(""); setIsImportOpen(true); }}><Upload size={14} />Import</button>
+      </>
+    ),
+  }), [isToday, items.length, selectedDate]);
+  useWorkspaceToolbar(toolbarConfig);
+
+  const handleNusmodsImport = async (event) => {
+    event.preventDefault();
+    if (!nusmodsUrl.trim()) return;
+    setImporting(true);
+    try {
+      const result = await importNusmods(token, nusmodsUrl.trim());
+      setNusmodsUrl("");
+      await finishImport(result);
+    } catch (importError) {
+      setError(importError.message || "Could not import that NUSMods timetable.");
+    } finally {
+      setImporting(false);
+    }
+  };
+
+  const handleIcsImport = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    await importCalendarData(file, file.name);
+    event.target.value = "";
+  };
+
+  return (
+    <div className="schedule-page">
+      <nav className="schedule-week-strip" aria-label="Select schedule date">
+        <button type="button" className="schedule-week-arrow" onClick={() => moveWeek(-1)} aria-label="Previous week"><ChevronLeft size={16} /></button>
+        <div className="schedule-week-days">
+          {days.map((day) => {
+            const active = localDateKey(day) === localDateKey(selectedDate);
+            const today = localDateKey(day) === localDateKey(now);
+            const count = scheduleItemsForDate(schedule, day).length;
+            return (
+              <button
+                type="button"
+                key={localDateKey(day)}
+                className={`${active ? "is-active" : ""} ${today ? "is-today" : ""}`}
+                onClick={() => setSelectedDate(startOfLocalDay(day))}
+                aria-pressed={active}
+                aria-label={`${day.toLocaleDateString([], { weekday: "long", month: "long", day: "numeric" })}${count ? `, ${count} scheduled` : ""}`}
+              >
+                <span>{day.toLocaleDateString([], { weekday: "short" })}</span>
+                <strong>{day.getDate()}</strong>
+                <i className={count ? "has-items" : ""}>{count || ""}</i>
+              </button>
+            );
+          })}
+        </div>
+        <button type="button" className="schedule-week-arrow" onClick={() => moveWeek(1)} aria-label="Next week"><ChevronRight size={16} /></button>
+      </nav>
+
+      {notice && <div className="schedule-notice">{notice}<button type="button" onClick={() => setNotice("")} aria-label="Dismiss import message"><X size={13} /></button></div>}
+      {error && !isImportOpen && <div className="schedule-error">{error}</div>}
+
+      <section className="schedule-workbench">
+        <header className="schedule-day-bar">
+          <div className="schedule-day-summary">
+            <span className="schedule-date-chip">{selectedDate.toLocaleDateString([], { weekday: "short", day: "numeric" })}</span>
+            <div>
+              <strong>{items.length ? `${items.length} scheduled` : "Clear day"}</strong>
+              <span>{classCount} classes · {otherCount} other</span>
             </div>
-
-            {activeModal.mode === "create" ? (
-              <form onSubmit={handleCreatePersonalEvent} className="form modal-body">
-                <div className="form-group">
-                  <label>Title</label>
-                  <input
-                    type="text"
-                    className="form-input"
-                    value={activeModal.event.title}
-                    onChange={(e) => setActiveModal({ ...activeModal, event: { ...activeModal.event, title: e.target.value } })}
-                    required
-                  />
-                </div>
-                <div className="form-group">
-                  <label>Venue (optional)</label>
-                  <input
-                    type="text"
-                    className="form-input"
-                    value={activeModal.event.venue}
-                    onChange={(e) => setActiveModal({ ...activeModal, event: { ...activeModal.event, venue: e.target.value } })}
-                  />
-                </div>
-                <div className="form-grid form-grid--2col" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
-                  <div className="form-group">
-                    <label>Start Date & Time</label>
-                    <input
-                      type="datetime-local"
-                      className="form-input"
-                      value={activeModal.event.start}
-                      onChange={(e) => setActiveModal({ ...activeModal, event: { ...activeModal.event, start: e.target.value } })}
-                      required
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>End (optional)</label>
-                    <input
-                      type="datetime-local"
-                      className="form-input"
-                      value={activeModal.event.end}
-                      onChange={(e) => setActiveModal({ ...activeModal, event: { ...activeModal.event, end: e.target.value } })}
-                    />
-                  </div>
-                </div>
-                <div className="form-group">
-                  <label>Description (optional)</label>
-                  <textarea
-                    className="form-input"
-                    value={activeModal.event.description}
-                    onChange={(e) => setActiveModal({ ...activeModal, event: { ...activeModal.event, description: e.target.value } })}
-                    rows={2}
-                  />
-                </div>
-                <div className="modal-footer flex justify-end gap-sm" style={{ padding: "16px 0 0" }}>
-                  <button type="button" className="btn btn--secondary" onClick={() => setActiveModal(null)}>Cancel</button>
-                  <button type="submit" className="btn btn--primary">Create</button>
-                </div>
-              </form>
-            ) : activeModal.mode === "edit" ? (
-              <form onSubmit={handleSaveEdit} className="form modal-body">
-                <div className="form-group">
-                  <label>Title</label>
-                  <input type="text" className="form-input" value={activeModal.event.title} onChange={(e) => setActiveModal({ ...activeModal, event: { ...activeModal.event, title: e.target.value } })} required />
-                </div>
-                <div className="form-group">
-                  <label>Venue</label>
-                  <input type="text" className="form-input" value={activeModal.event.venue} onChange={(e) => setActiveModal({ ...activeModal, event: { ...activeModal.event, venue: e.target.value } })} />
-                </div>
-                <div className="form-group">
-                  <label>Description</label>
-                  <textarea className="form-input" value={activeModal.event.description} onChange={(e) => setActiveModal({ ...activeModal, event: { ...activeModal.event, description: e.target.value } })} rows={2} />
-                </div>
-                <div className="modal-footer flex justify-between w-full" style={{ padding: "16px 0 0" }}>
-                  <button type="button" className="btn btn--danger" onClick={handleDelete}><Trash2 size={14} /></button>
-                  <div className="flex gap-sm">
-                    <button type="button" className="btn btn--secondary" onClick={() => setActiveModal({ ...activeModal, mode: "view" })}>Cancel</button>
-                    <button type="submit" className="btn btn--primary">Save</button>
-                  </div>
-                </div>
-              </form>
+          </div>
+          <div className="schedule-day-meta">
+            {isToday && <span className="schedule-current-clock"><i />{now.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}</span>}
+          </div>
+        </header>
+        <div className="schedule-timeline-panel">
+          <div className="schedule-timeline-scroll" ref={timelineScrollRef}>
+            {loading ? (
+              <div className="schedule-loading"><Loader2 size={18} className="spin" />Loading timetable</div>
             ) : (
-              <div className="modal-body flex-col gap-md">
-                {activeModal.event.type === "event" ? (
-                  <span className="badge badge--square badge--warning" style={{ alignSelf: "flex-start" }}>
-                    {activeModal.event.type}
-                  </span>
-                ) : (
-                  <span className="badge badge--square" style={{
-                    alignSelf: "flex-start",
-                    backgroundColor: (COLOR_CSS_MAP[getModuleColor(activeModal.event.moduleCode)] || COLOR_CSS_MAP.grey).bg,
-                    color: (COLOR_CSS_MAP[getModuleColor(activeModal.event.moduleCode)] || COLOR_CSS_MAP.grey).color,
-                  }}>
-                    {activeModal.event.moduleCode || activeModal.event.type}
-                  </span>
+              <div className="schedule-timeline" style={{ height: `${timelineHeight}px` }}>
+                {hours.map((hour) => {
+                  const top = (hour - startHour) * HOUR_HEIGHT;
+                  const labelDate = new Date(); labelDate.setHours(hour, 0, 0, 0);
+                  return <div className="schedule-hour-line" key={hour} style={{ top: `${top}px` }}><span>{labelDate.toLocaleTimeString([], { hour: "numeric" })}</span><i /></div>;
+                })}
+                {isToday && minutesSinceMidnight(now) >= startHour * 60 && minutesSinceMidnight(now) <= endHour * 60 && (
+                  <div className="schedule-now-line" style={{ top: `${((minutesSinceMidnight(now) - startHour * 60) / 60) * HOUR_HEIGHT}px` }}><span>Now</span><i /></div>
                 )}
-                <h4 style={{ fontSize: "20px", fontWeight: "600" }}>{activeModal.event.title}</h4>
-                {activeModal.event.description && <p className="text-sm">{activeModal.event.description}</p>}
-
-                <hr style={{ border: 0, height: "1px", background: "var(--border)", margin: "4px 0" }} />
-
-                <div className="flex-col gap-xs text-sm text-muted">
-                  <span className="flex items-center gap-xs"><Clock size={14} />{new Date(activeModal.event.start).toLocaleString("en-SG")}</span>
-                  <span className="flex items-center gap-xs"><MapPin size={14} />{activeModal.event.venue}</span>
-                  {(activeModal.event.c_id || activeModal.event.g_id) && (
-                    <div style={{ marginTop: "12px" }}>
-                      <span className="eyebrow" style={{ display: "block", marginBottom: "6px" }}>RSVP STATUS</span>
-                      <div className="flex items-center gap-md">
-                        <span className={`badge badge--${activeModal.event.is_attending ? "success" : "muted"}`}>
-                          {activeModal.event.is_attending ? "Attending" : "Not Attending"}
-                        </span>
-                        <div className="flex gap-xs">
-                          <button 
-                            type="button"
-                            className={`btn btn--sm ${activeModal.event.is_attending ? "btn--primary" : "btn--outline"}`}
-                            style={{ padding: "4px 8px", fontSize: "11px" }}
-                            onClick={() => handleUpdateAttendance(activeModal.event.eventId, true)}
-                          >
-                            Going
-                          </button>
-                          <button 
-                            type="button"
-                            className={`btn btn--sm ${!activeModal.event.is_attending ? "btn--danger" : "btn--outline"}`}
-                            style={{ padding: "4px 8px", fontSize: "11px" }}
-                            onClick={() => handleUpdateAttendance(activeModal.event.eventId, false)}
-                          >
-                            Not Going
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  )}
+                <div className="schedule-items-layer">
+                  {items.map((item) => <TimelineItem key={item.id} item={item} startHour={startHour} now={now} isToday={isToday} />)}
                 </div>
-                <div className="modal-footer flex justify-end w-full" style={{ padding: "16px 0 0" }}>
-                  {activeModal.event.type === "event" && !activeModal.event.c_id && !activeModal.event.g_id ?
-                    <button className="btn btn--primary btn--sm" onClick={() => setActiveModal({ ...activeModal, mode: "edit" })}>Edit</button> : null}
-                </div>
+                {!items.length && <div className="schedule-timeline-empty"><CalendarDays size={22} /><strong>Your day is open</strong><span>Import a timetable or choose another date.</span></div>}
               </div>
             )}
           </div>
         </div>
+      </section>
+
+      {isImportOpen && (
+        <div className="schedule-import-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) setIsImportOpen(false); }}>
+          <div className="schedule-import-dialog" role="dialog" aria-modal="true" aria-labelledby="schedule-import-title">
+            <header><div><h2 id="schedule-import-title">Import timetable</h2><p>Add classes from NUSMods or an iCalendar file.</p></div><button type="button" onClick={() => setIsImportOpen(false)} aria-label="Close timetable import"><X size={16} /></button></header>
+            <form onSubmit={handleNusmodsImport} className="schedule-link-import">
+              <label htmlFor="nusmods-url">NUSMods share link</label>
+              <span>Paste the URL from “Share timetable” in NUSMods.</span>
+              <div>
+                <Link2 size={16} aria-hidden="true" />
+                <input
+                  id="nusmods-url"
+                  type="url"
+                  value={nusmodsUrl}
+                  onChange={(event) => setNusmodsUrl(event.target.value)}
+                  placeholder="https://nusmods.com/timetable/sem-1/share?…"
+                  aria-invalid={Boolean(error)}
+                  aria-describedby={error ? "nusmods-url-error" : "nusmods-url-help"}
+                />
+                <button type="submit" disabled={importing || !nusmodsUrl.trim()}>{importing ? <Loader2 size={14} className="spin" /> : "Import link"}</button>
+              </div>
+              <small id="nusmods-url-help">Your imported classes and exams will be replaced.</small>
+            </form>
+            <div className="schedule-import-divider"><span>or</span></div>
+            <button type="button" className="schedule-file-import" onClick={chooseCalendarFile} disabled={importing}>
+              <input id="schedule-ics-fallback" type="file" accept=".ics,text/calendar" onChange={handleIcsImport} disabled={importing} tabIndex="-1" />
+              <FileUp size={18} aria-hidden="true" />
+              <strong>{importing ? "Importing calendar…" : "Choose an .ics file"}</strong>
+            </button>
+            <small className="schedule-file-help">Choose a file, drop it anywhere on the app, or use Open With in Finder.</small>
+            {error && <div id="nusmods-url-error" className="schedule-import-error">{error}</div>}
+            <footer>Personal events are always kept.</footer>
+          </div>
+        </div>
       )}
     </div>
-  )
+  );
 }
-
-export default Schedule

@@ -13,7 +13,11 @@ class ClassOut(BaseModel):
     start_time: time
     end_time: time
     venue: str | None = None
-    class_date: date
+    # Timetables imported before exact occurrence dates were introduced only
+    # stored day_of_week. Keep those rows readable while the frontend uses the
+    # weekday as a compatibility fallback.
+    class_date: date | None = None
+    module_color: str | None = None
 
 
 class ExamOut(BaseModel):
@@ -22,6 +26,7 @@ class ExamOut(BaseModel):
     module_name: str
     start_at: datetime
     end_at: datetime
+    module_color: str | None = None
 
 
 class ScheduleOut(BaseModel):

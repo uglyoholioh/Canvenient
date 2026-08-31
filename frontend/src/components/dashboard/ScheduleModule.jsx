@@ -1,41 +1,124 @@
-import { useEffect, useMemo, useState } from "react";
-import { CalendarDays, List } from "lucide-react";
-import { getSchedule } from "../../api";
+// React is required by the test JSX transform.
+// eslint-disable-next-line no-unused-vars
+import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { CalendarDays, CheckSquare, MapPin, RotateCw } from "lucide-react";
+import { getSchedule, getTasks } from "../../api";
+import { dashboardAgendaItems, dashboardAgendaView, formatScheduleTime, startOfLocalDay } from "../scheduleUtils";
 
-function dayIndex(value) {
-  const numeric = Number(value);
-  return numeric >= 0 && numeric <= 6 ? numeric : numeric >= 1 && numeric <= 7 ? numeric % 7 : null;
+const VIEWS = [
+  { id: "now", label: "Now" },
+  { id: "today", label: "Today" },
+  { id: "upcoming", label: "Next" },
+];
+
+function dayLabel(date, now) {
+  const day = startOfLocalDay(date);
+  const today = startOfLocalDay(now);
+  const difference = Math.round((day - today) / 86400000);
+  if (difference === 0) return "Today";
+  if (difference === 1) return "Tomorrow";
+  return date.toLocaleDateString([], { weekday: "short", month: "short", day: "numeric" });
 }
 
-export default function ScheduleModule({ token }) {
+function agendaTime(item) {
+  if (item.kind === "task") return formatScheduleTime(item.start);
+  return `${formatScheduleTime(item.start)}–${formatScheduleTime(item.end)}`;
+}
+
+export default function ScheduleModule({ token, onNavigate }) {
   const [schedule, setSchedule] = useState({ classes: [], exams: [], events: [] });
-  const [mode, setMode] = useState("list");
-  useEffect(() => { getSchedule(token).then((data) => setSchedule(data || { classes: [], exams: [], events: [] })).catch(() => {}); }, [token]);
+  const [tasks, setTasks] = useState([]);
+  const [now, setNow] = useState(new Date());
+  const [view, setView] = useState("now");
+  const [status, setStatus] = useState("loading");
 
-  const upcoming = useMemo(() => {
-    const today = new Date();
-    const rows = [];
-    schedule.classes?.filter((item) => dayIndex(item.day_of_week) === today.getDay()).forEach((item) => rows.push({ id: `class-${item.id}`, title: `${item.module_code} ${item.lesson_type}`, time: String(item.start_time).slice(0, 5), venue: item.venue }));
-    schedule.events?.filter((item) => new Date(item.end_at || item.start_at) >= today).forEach((item) => rows.push({ id: `event-${item.id}`, title: item.title, date: new Date(item.start_at), venue: item.venue }));
-    schedule.exams?.filter((item) => new Date(item.end_at || item.start_at) >= today).forEach((item) => rows.push({ id: `exam-${item.id}`, title: `${item.module_code} Exam`, date: new Date(item.start_at), venue: "Exam" }));
-    return rows.sort((a, b) => (a.date?.getTime() || 0) - (b.date?.getTime() || 0)).slice(0, 7);
-  }, [schedule]);
+  const loadAgenda = useCallback(() => {
+    Promise.allSettled([getSchedule(token), getTasks(token)])
+      .then(([scheduleResult, taskResult]) => {
+        if (scheduleResult.status === "rejected" && taskResult.status === "rejected") {
+          setStatus("error");
+          return;
+        }
+        setSchedule(scheduleResult.status === "fulfilled" && scheduleResult.value
+          ? scheduleResult.value
+          : { classes: [], exams: [], events: [] });
+        setTasks(taskResult.status === "fulfilled" ? taskResult.value || [] : []);
+        setStatus("success");
+      });
+  }, [token]);
 
-  const today = new Date();
-  const week = Array.from({ length: 7 }, (_, offset) => { const date = new Date(today); date.setDate(today.getDate() + offset); return date; });
-  const hasOnDate = (date) => schedule.events?.some((item) => new Date(item.start_at).toDateString() === date.toDateString()) || schedule.exams?.some((item) => new Date(item.start_at).toDateString() === date.toDateString()) || schedule.classes?.some((item) => dayIndex(item.day_of_week) === date.getDay());
+  const retryAgenda = () => {
+    setStatus("loading");
+    loadAgenda();
+  };
+
+  useEffect(() => { loadAgenda(); }, [loadAgenda]);
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(new Date()), 30000);
+    return () => window.clearInterval(timer);
+  }, []);
+
+  const agenda = useMemo(() => dashboardAgendaItems(schedule, tasks, now), [schedule, tasks, now]);
+  const visible = useMemo(() => dashboardAgendaView(agenda, now, view), [agenda, now, view]);
+  const current = visible.items.find((item) => item.kind !== "task" && item.start <= now && item.end > now);
+  const summary = view === "today"
+    ? `${visible.total} item${visible.total === 1 ? "" : "s"} today`
+    : view === "upcoming"
+      ? `${visible.total} upcoming`
+      : current
+        ? "In class now"
+        : visible.fallback
+          ? "Nothing left today · showing what’s next"
+          : `${visible.total} item${visible.total === 1 ? "" : "s"} left today`;
 
   return (
-    <div className="schedule-module">
-      <div className="module-view-toggle">
-        <button type="button" className={mode === "list" ? "is-active" : ""} onClick={() => setMode("list")}><List size={12} />Today</button>
-        <button type="button" className={mode === "week" ? "is-active" : ""} onClick={() => setMode("week")}><CalendarDays size={12} />Week</button>
+    <div className="schedule-module schedule-module-agenda" data-state={status}>
+      <div className="schedule-module-controls">
+        <div className="schedule-module-view-tabs" role="group" aria-label="Schedule card view">
+          {VIEWS.map((option) => (
+            <button
+              type="button"
+              aria-pressed={view === option.id}
+              className={view === option.id ? "is-active" : ""}
+              disabled={status === "loading"}
+              key={option.id}
+              onClick={() => setView(option.id)}
+            >{option.label}</button>
+          ))}
+        </div>
+        <time dateTime={now.toISOString()}>{now.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}</time>
       </div>
-      {mode === "week" ? (
-        <div className="mini-week">{week.map((date) => <div key={date.toISOString()} className={date.toDateString() === today.toDateString() ? "is-today" : ""}><span>{date.toLocaleDateString([], { weekday: "short" }).slice(0, 2)}</span><strong>{date.getDate()}</strong>{hasOnDate(date) && <i />}</div>)}</div>
-      ) : upcoming.length === 0 ? <div className="module-empty">No classes or events coming up.</div> : (
-        <div className="module-list">{upcoming.map((item) => <div className="module-list-item module-item-main" key={item.id}><span className="schedule-time">{item.time || item.date?.toLocaleDateString([], { month: "short", day: "numeric" })}</span><span className="module-item-copy"><strong>{item.title}</strong><small>{item.venue || "No venue"}</small></span></div>)}</div>
-      )}
+      {status === "loading" ? <div className="schedule-module-message is-loading" aria-live="polite">Loading your day…</div>
+        : status === "error" ? <div className="schedule-module-message is-error" role="alert"><span>Couldn’t load your agenda.</span><button type="button" onClick={retryAgenda}><RotateCw size={12} />Retry</button></div>
+          : <>
+            <div className="schedule-module-summary"><span className={current ? "is-live" : ""} />{summary}</div>
+            {visible.items.length ? (
+              <div className="schedule-module-list">
+                {visible.items.map((item) => {
+                  const happening = item.kind !== "task" && item.start <= now && item.end > now;
+                  const past = item.end < now;
+                  return (
+                    <button
+                      type="button"
+                      className={`schedule-module-row ${happening ? "is-current" : ""} ${past ? "is-past" : ""}`}
+                      style={{ "--module-color": item.color }}
+                      key={`${item.id}-${item.start.toISOString()}`}
+                      onClick={() => onNavigate?.(item.destination)}
+                      aria-label={`Open ${item.kind === "task" ? "task" : "schedule"}: ${item.title}`}
+                    >
+                      <span className="schedule-module-row-color" aria-hidden="true" />
+                      <span className="schedule-module-row-time"><small>{dayLabel(item.start, now)}</small><strong>{agendaTime(item)}</strong></span>
+                      <span className="schedule-module-row-copy">
+                        <strong>{item.title}</strong>
+                        <small>{item.kind === "task" ? <><CheckSquare size={11} />{item.subtitle}</> : <><CalendarDays size={11} />{item.subtitle}{item.classNo ? ` · ${item.classNo}` : ""}{item.venue ? <><span>·</span><MapPin size={11} />{item.venue}</> : null}</>}</small>
+                      </span>
+                      {happening && <em>Now</em>}
+                    </button>
+                  );
+                })}
+              </div>
+            ) : <div className="schedule-module-message">No scheduled classes or dated tasks in the next two weeks.</div>}
+          </>}
     </div>
   );
 }

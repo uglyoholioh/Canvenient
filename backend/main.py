@@ -4,6 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from database import db
 from routes.academic_modules import router as academic_modules_router
+from routes.module_colors import router as module_colors_router
 from routes.auth import router as auth_router
 from routes.categories import router as categories_router
 from routes.tasks import router as tasks_router
@@ -45,6 +46,7 @@ app.add_middleware(
 app.include_router(auth_router)
 app.include_router(categories_router)
 app.include_router(academic_modules_router)
+app.include_router(module_colors_router)
 app.include_router(tasks_router)
 app.include_router(canvas_router)
 app.include_router(schedule_router)

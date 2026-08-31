@@ -1,18 +1,35 @@
 import { useState, useEffect } from "react";
-import { Moon, Sun, Monitor, Database, Keyboard, PanelLeft, MoveHorizontal } from "lucide-react";
+import { Moon, Sun, Monitor, Database, Keyboard, PanelLeft, MoveHorizontal, Palette, Loader2 } from "lucide-react";
+import DashboardCustomizer from "./dashboard/DashboardCustomizer";
+import { readDashboardConfig, readDashboardLayout, saveDashboardConfig, saveDashboardLayout } from "./dashboard/dashboardConfig";
+import { applyModulePalette, getModuleColors, updateModuleColor } from "../api";
 
 const getSidebarBehavior = () => {
   const stored = localStorage.getItem('canvenient-sidebar-mode');
   return ['hover', 'pinned', 'hidden'].includes(stored) ? stored : 'hover';
 };
 
-export default function SettingsView() {
+export default function SettingsView({ token }) {
   const [theme, setTheme] = useState(localStorage.getItem('canvenient-theme') || 'system');
   const [sidebarBehavior, setSidebarBehavior] = useState(getSidebarBehavior);
   const [sidebarWidth, setSidebarWidth] = useState(() => parseInt(localStorage.getItem('canvenient-sidebar-width') || '250', 10));
   const [checkboxStyle, setCheckboxStyle] = useState(localStorage.getItem('canvenient-checkbox-style') || 'brackets');
   const [defaultMode, setDefaultMode] = useState(localStorage.getItem('canvenient-default-mode') || 'task');
   const [canvasToken, setCanvasToken] = useState("");
+  const [dashboardLayout, setDashboardLayout] = useState(readDashboardLayout);
+  const [dashboardConfig, setDashboardConfig] = useState(readDashboardConfig);
+  const [moduleColors, setModuleColors] = useState({ active_palette: "balanced", palettes: [], modules: [] });
+  const [moduleColorsLoading, setModuleColorsLoading] = useState(true);
+  const [moduleColorsSaving, setModuleColorsSaving] = useState("");
+  const [moduleColorsError, setModuleColorsError] = useState("");
+
+  useEffect(() => {
+    if (!token) return;
+    getModuleColors(token)
+      .then(setModuleColors)
+      .catch((error) => setModuleColorsError(error.message || "Could not load course colours."))
+      .finally(() => setModuleColorsLoading(false));
+  }, [token]);
 
   useEffect(() => {
     if (theme === 'system') {
@@ -50,6 +67,42 @@ export default function SettingsView() {
     setDefaultMode(val);
     localStorage.setItem('canvenient-default-mode', val);
     window.dispatchEvent(new Event('settings-updated'));
+  };
+
+  const handleDashboardLayoutChange = (layout) => {
+    setDashboardLayout(layout);
+    saveDashboardLayout(layout);
+  };
+
+  const handleDashboardConfigChange = (config) => {
+    setDashboardConfig(config);
+    saveDashboardConfig(config);
+  };
+
+  const handlePaletteChange = async (palette) => {
+    setModuleColorsSaving(`palette:${palette}`);
+    setModuleColorsError("");
+    try {
+      setModuleColors(await applyModulePalette(token, palette));
+      window.dispatchEvent(new Event("module-colors-updated"));
+    } catch (error) {
+      setModuleColorsError(error.message || "Could not apply that palette.");
+    } finally {
+      setModuleColorsSaving("");
+    }
+  };
+
+  const handleModuleColorChange = async (moduleCode, color) => {
+    setModuleColorsSaving(`module:${moduleCode}`);
+    setModuleColorsError("");
+    try {
+      setModuleColors(await updateModuleColor(token, moduleCode, color));
+      window.dispatchEvent(new Event("module-colors-updated"));
+    } catch (error) {
+      setModuleColorsError(error.message || "Could not update that course colour.");
+    } finally {
+      setModuleColorsSaving("");
+    }
   };
 
   const handleChangeHotkey = () => {
@@ -90,6 +143,67 @@ export default function SettingsView() {
             <Monitor size={24} color={theme === 'system' ? 'var(--accent)' : 'var(--text-muted)'} />
             <span style={{ color: theme === 'system' ? 'var(--text-h)' : 'var(--text)' }}>System</span>
           </button>
+        </div>
+      </section>
+
+      <section className="settings-course-colors">
+        <div className="settings-section-heading">
+          <div><Palette size={15} /><h2>Course colours</h2></div>
+          <p>One colour per module, shared by Schedule and Canvas.</p>
+        </div>
+
+        {moduleColorsLoading ? (
+          <div className="settings-colors-state"><Loader2 size={15} className="retro-icon-spin" />Loading courses</div>
+        ) : (
+          <div className="settings-colors-panel">
+            <div className="settings-palette-list" role="radiogroup" aria-label="Course colour palette">
+              {moduleColors.palettes.map((palette) => {
+                const active = moduleColors.active_palette === palette.id;
+                const saving = moduleColorsSaving === `palette:${palette.id}`;
+                return (
+                  <button
+                    type="button"
+                    role="radio"
+                    aria-checked={active}
+                    className={active ? "is-active" : ""}
+                    key={palette.id}
+                    disabled={Boolean(moduleColorsSaving)}
+                    onClick={() => handlePaletteChange(palette.id)}
+                  >
+                    <span className="settings-palette-swatches" aria-hidden="true">
+                      {palette.colors.slice(0, 5).map((color) => <i key={color} style={{ backgroundColor: color }} />)}
+                    </span>
+                    <strong>{palette.name}</strong>
+                    {saving && <Loader2 size={12} className="retro-icon-spin" />}
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="settings-module-colors">
+              {moduleColors.modules.length ? moduleColors.modules.map((module) => (
+                <label key={module.module_code}>
+                  <span className="settings-module-swatch" style={{ backgroundColor: module.color }} />
+                  <span><strong>{module.module_code}</strong><small>{module.module_name}</small></span>
+                  <input
+                    type="color"
+                    value={module.color}
+                    disabled={Boolean(moduleColorsSaving)}
+                    onChange={(event) => handleModuleColorChange(module.module_code, event.target.value)}
+                    aria-label={`Change ${module.module_code} colour`}
+                  />
+                </label>
+              )) : <div className="settings-colors-empty">Import a timetable or connect Canvas to add courses.</div>}
+            </div>
+          </div>
+        )}
+        {moduleColorsError && <div className="settings-colors-error">{moduleColorsError}</div>}
+      </section>
+
+      <section style={{ marginBottom: '40px' }}>
+        <h2 style={{ fontSize: '14px', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '16px', letterSpacing: '1px' }}>Dashboard</h2>
+        <div style={{ padding: '16px', backgroundColor: 'var(--surface)', border: '1px solid var(--border-strong)', borderRadius: '8px' }}>
+          <DashboardCustomizer layout={dashboardLayout} config={dashboardConfig} onLayoutChange={handleDashboardLayoutChange} onConfigChange={handleDashboardConfigChange} />
         </div>
       </section>
 

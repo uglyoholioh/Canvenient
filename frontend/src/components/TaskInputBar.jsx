@@ -216,6 +216,11 @@ export default function TaskInputBar({ token, onTaskCreated, onNoteCreated, auto
   useEffect(() => { getAcademicModules(token).then(setModules).catch(() => setModules([])); }, [token]);
   useEffect(() => { if (autoFocus) textareaRef.current?.focus(); }, [autoFocus]);
   useEffect(() => {
+    const focusInput = () => textareaRef.current?.focus();
+    window.addEventListener("canvenient-focus-task-input", focusInput);
+    return () => window.removeEventListener("canvenient-focus-task-input", focusInput);
+  }, []);
+  useEffect(() => {
     const updateSettings = () => { if (!inputValue) setInputMode(localStorage.getItem("canvenient-default-mode") || "task"); };
     window.addEventListener("settings-updated", updateSettings);
     return () => window.removeEventListener("settings-updated", updateSettings);

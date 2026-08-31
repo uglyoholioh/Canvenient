@@ -54,6 +54,7 @@ class EventOut(BaseModel):
     c_id: int | None = None
     g_id: int | None = None
     module_code: str | None = None
+    module_color: str | None = None
     event_type: str | None = None
     is_attending: bool = False
     rsvp_count: int = 0

@@ -10,3 +10,4 @@ class AcademicModuleOut(BaseModel):
     source_type: Literal["canvas"]
     source_course_id: str | None = None
     external_url: str | None = None
+    color: str | None = None

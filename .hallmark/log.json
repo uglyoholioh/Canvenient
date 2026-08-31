@@ -1,0 +1,23 @@
+[
+  {
+    "date": "2026-08-30",
+    "macrostructure": "Dense academic timeline",
+    "theme": "Cobalt with module surfaces",
+    "enrichment": "none",
+    "brief": "Compact full-colour class cards with immediately readable module, time, type, and venue"
+  },
+  {
+    "date": "2026-08-30",
+    "macrostructure": "Workbench",
+    "theme": "Cobalt",
+    "enrichment": "none",
+    "brief": "Minimal flat Schedule page with a week selector and vertical class timeline"
+  },
+  {
+    "date": "2026-08-30",
+    "macrostructure": "Settings control panel",
+    "theme": "Shared course palette",
+    "enrichment": "flat swatches",
+    "brief": "Persistent unique module colours shared across Schedule, dashboard, and Canvas"
+  }
+]

@@ -1,7 +1,10 @@
-import { useCallback, useEffect, useRef, useState } from "react";
-import { BookOpen, Calendar, CheckCircle, Flag } from "lucide-react";
+// React is required by the test JSX transform.
+// eslint-disable-next-line no-unused-vars
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { BookOpen, Calendar, CheckCircle, Flag, Plus } from "lucide-react";
 import { getTasks, updateTask } from "../api";
 import TaskInputBar from "./TaskInputBar";
+import { useWorkspaceToolbar } from "./WorkspaceToolbarContext";
 
 function normalizeDate(value) {
   if (!value) return null;
@@ -23,6 +26,35 @@ function formatDueDate(value) {
   }).format(date);
 }
 
+function taskDueDate(task) {
+  return normalizeDate(task?.effective_due_at || task?.due_at_override || task?.source_due_at);
+}
+
+function taskCreatedTime(task) {
+  return normalizeDate(task?.created_at)?.getTime() || 0;
+}
+
+function sortPendingTasks(data) {
+  if (!Array.isArray(data)) return [];
+
+  return data
+    .filter((task) => task && task.status !== "done")
+    .sort((a, b) => {
+      const aDue = taskDueDate(a)?.getTime() ?? Infinity;
+      const bDue = taskDueDate(b)?.getTime() ?? Infinity;
+      if (aDue !== bDue) return aDue - bDue;
+      return taskCreatedTime(b) - taskCreatedTime(a);
+    });
+}
+
+function visiblePriority(task) {
+  const manualPriority = task?.priority_manual || "medium";
+  if (manualPriority !== "medium") return manualPriority;
+  return ["urgent", "high"].includes(task?.recommended_priority)
+    ? task.recommended_priority
+    : null;
+}
+
 function priorityColor(priority) {
   if (priority === "urgent") return "var(--danger)";
   if (priority === "high") return "var(--warning)";
@@ -33,6 +65,7 @@ function priorityColor(priority) {
 export default function TaskView({ token }) {
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
   const [selectedIndex, setSelectedIndex] = useState(null);
   const [editingId, setEditingId] = useState(null);
   const [editValue, setEditValue] = useState("");
@@ -41,15 +74,21 @@ export default function TaskView({ token }) {
   const editRef = useRef(null);
 
   const loadTasks = useCallback(async () => {
+    setLoading(true);
+    setLoadError("");
     try {
       const data = await getTasks(token);
-      setTasks((data || []).filter((task) => task?.status !== "done").sort((a, b) => new Date(a.created_at || 0) - new Date(b.created_at || 0)));
+      setTasks(sortPendingTasks(data));
+    } catch (error) {
+      setLoadError(error.message || "Could not load tasks.");
     } finally {
       setLoading(false);
     }
   }, [token]);
 
-  useEffect(() => { loadTasks(); }, [loadTasks]);
+  useEffect(() => {
+    void Promise.resolve().then(loadTasks);
+  }, [loadTasks]);
   useEffect(() => {
     const updateSettings = () => setCheckboxStyle(localStorage.getItem("canvenient-checkbox-style") || "brackets");
     window.addEventListener("settings-updated", updateSettings);
@@ -71,19 +110,39 @@ export default function TaskView({ token }) {
     setEditingId(null);
   };
 
+  const toolbarConfig = useMemo(() => ({
+    title: "Tasks",
+    subtitle: loading ? "Loading" : `${tasks.length} pending`,
+    actions: <button type="button" className="mac-toolbar-action" onClick={() => window.dispatchEvent(new CustomEvent("canvenient-focus-task-input"))}><Plus size={14} />New Task</button>,
+  }), [loading, tasks.length]);
+  useWorkspaceToolbar(toolbarConfig);
+
   useEffect(() => {
     const handleKeyDown = (event) => {
-      if (editingId !== null || selectedIndex === null) return;
+      if (editingId !== null || event.target.closest?.("input, textarea, select, [contenteditable='true']")) return;
       if (event.key === "ArrowUp") {
         event.preventDefault();
-        setSelectedIndex((index) => Math.max(0, index - 1));
+        setSelectedIndex((index) => index === null ? tasks.length - 1 : Math.max(0, index - 1));
       } else if (event.key === "ArrowDown") {
         event.preventDefault();
-        setSelectedIndex((index) => index < tasks.length - 1 ? index + 1 : null);
-      } else if (event.key === "Enter") {
+        setSelectedIndex((index) => index === null ? 0 : Math.min(tasks.length - 1, index + 1));
+      } else if (event.key === "Home") {
+        event.preventDefault();
+        setSelectedIndex(tasks.length ? 0 : null);
+      } else if (event.key === "End") {
+        event.preventDefault();
+        setSelectedIndex(tasks.length ? tasks.length - 1 : null);
+      } else if (event.key === "Escape") {
+        event.preventDefault();
+        setSelectedIndex(null);
+      } else if (selectedIndex !== null && event.key === " ") {
         event.preventDefault();
         completeTask(tasks[selectedIndex]);
-      } else if (event.key.length === 1 && !event.metaKey && !event.ctrlKey && !event.altKey) {
+      } else if (selectedIndex !== null && event.key === "Enter") {
+        event.preventDefault();
+        setEditingId(tasks[selectedIndex].id);
+        setEditValue(tasks[selectedIndex].title);
+      } else if (selectedIndex !== null && event.key.length === 1 && !event.metaKey && !event.ctrlKey && !event.altKey) {
         event.preventDefault();
         setEditingId(tasks[selectedIndex].id);
         setEditValue(`${tasks[selectedIndex].title}${event.key}`);
@@ -95,15 +154,23 @@ export default function TaskView({ token }) {
 
   return (
     <div className="task-view">
-      <div className="task-feed">
-        {loading ? <div className="empty-state">Loading tasks...</div> : tasks.length === 0 ? (
+      <div className="task-feed" role="list" aria-label="Pending tasks">
+        {loading ? <div className="empty-state">Loading tasks...</div> : loadError ? (
+          <div className="empty-state task-load-error">
+            <strong>Could not load tasks</strong>
+            <span>{loadError}</span>
+            <button type="button" onClick={loadTasks}>Retry</button>
+          </div>
+        ) : tasks.length === 0 ? (
           <div className="empty-state"><strong>No tasks pending</strong><span>Type below to add a task, note, or command.</span></div>
         ) : tasks.map((task, index) => {
           const selected = selectedIndex === index;
           const editing = editingId === task.id;
+          const dueDate = taskDueDate(task);
+          const priority = visiblePriority(task);
           return (
-            <div key={task.id} ref={(element) => { itemRefs.current[index] = element; }} tabIndex="-1" className={`task-row ${selected ? "is-selected" : ""}`} onClick={() => setSelectedIndex(index)}>
-              <button type="button" tabIndex="-1" className="task-check" onClick={(event) => { event.stopPropagation(); completeTask(task); }}>
+            <div role="listitem" key={task.id} ref={(element) => { itemRefs.current[index] = element; }} tabIndex={selected || (selectedIndex === null && index === 0) ? 0 : -1} className={`task-row ${selected ? "is-selected" : ""}`} onFocus={() => setSelectedIndex(index)} onClick={() => setSelectedIndex(index)}>
+              <button type="button" tabIndex="-1" className="task-check" aria-label={`Complete ${task.title}`} onClick={(event) => { event.stopPropagation(); completeTask(task); }}>
                 {checkboxStyle === "icon" ? <CheckCircle size={16} /> : checkboxStyle === "circle" ? "( )" : "[ ]"}
               </button>
               {editing ? (
@@ -114,21 +181,21 @@ export default function TaskView({ token }) {
               ) : (
                 <div className="task-row-content">
                   <span>{task.title}</span>
-                  {(task.priority_manual !== "medium" || task.due_at_override || task.module_code) && (
+                  {(priority || dueDate || task.module_code) && (
                     <div className="task-meta">
-                      {task.priority_manual !== "medium" && <span style={{ color: priorityColor(task.priority_manual) }}><Flag size={10} />{task.priority_manual.toUpperCase()}</span>}
-                      {task.due_at_override && <span><Calendar size={10} />{formatDueDate(task.due_at_override)}</span>}
+                      {priority && <span style={{ color: priorityColor(priority) }}><Flag size={10} />{priority.toUpperCase()}</span>}
+                      {dueDate && <span><Calendar size={10} />{formatDueDate(dueDate)}</span>}
                       {task.module_code && <span><BookOpen size={10} />{task.module_code}</span>}
                     </div>
                   )}
                 </div>
               )}
-              {selected && !editing && <small>Enter to complete · Type to edit</small>}
+              {selected && !editing && <small>Space to complete · Enter to edit</small>}
             </div>
           );
         })}
       </div>
-      <TaskInputBar token={token} onTaskCreated={(task) => setTasks((current) => [...current, task])} />
+      <TaskInputBar token={token} onTaskCreated={(task) => setTasks((current) => sortPendingTasks([...current, task]))} />
     </div>
   );
 }

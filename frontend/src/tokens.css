@@ -1,0 +1,121 @@
+/* Hallmark · macrostructure: Workbench · genre: modern-minimal · theme: Cobalt
+ * pre-emit critique: P5 H5 E4 S5 R5 V4 · contrast: pass (40–41)
+ * nav: inherited app shell · footer: none · slop: pass (42–45)
+ * honest: pass (46) · chrome: pass (47) · tokens: pass (48) · icons: pass (30)
+ * responsive: pass (34, 49–57)
+ * audience: NUS students · use: scan the day and import a timetable · tone: dense academic
+ */
+:root {
+  --font-native: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif;
+  --font-native-mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, monospace;
+
+  --color-mac-window: oklch(16% 0.008 255);
+  --color-mac-sidebar: oklch(20% 0.01 255);
+  --color-mac-toolbar: oklch(19% 0.009 255);
+  --color-mac-panel: oklch(21% 0.01 255);
+  --color-mac-control: oklch(26% 0.012 255);
+  --color-mac-control-hover: oklch(31% 0.014 255);
+  --color-mac-selection: oklch(55% 0.14 245 / 0.32);
+  --color-mac-selection-ink: oklch(96% 0.008 245);
+  --color-mac-muted: oklch(72% 0.025 250);
+  --color-mac-divider: oklch(36% 0.012 255 / 0.52);
+  --color-mac-shadow: oklch(5% 0.005 255 / 0.38);
+  --color-mac-backdrop: oklch(7% 0.006 255 / 0.62);
+
+  --space-mac-2xs: 4px;
+  --space-mac-xs: 8px;
+  --space-mac-sm: 12px;
+  --space-mac-md: 16px;
+  --height-mac-toolbar: 44px;
+  --width-mac-sidebar-compact: 58px;
+  --radius-mac-control: 6px;
+  --radius-mac-panel: 10px;
+  --shadow-mac-overlay: 10px 0 28px var(--color-mac-shadow);
+  --shadow-mac-sheet: 0 18px 48px var(--color-mac-shadow);
+
+  --color-schedule-paper: var(--bg);
+  --color-schedule-surface: var(--surface);
+  --color-schedule-item: var(--surface-muted);
+  --color-schedule-past: var(--surface);
+  --color-schedule-current: var(--surface-warm);
+  --color-schedule-selected: var(--surface-muted);
+  --color-schedule-hover: var(--surface-muted);
+  --color-schedule-pressed: var(--surface-hover);
+  --color-schedule-disabled: var(--surface-muted);
+  --color-schedule-count: var(--surface-muted);
+  --color-schedule-active-count: var(--surface-warm);
+  --color-schedule-rule: var(--border);
+  --color-schedule-rule-strong: var(--border-strong);
+  --color-schedule-ink: var(--text);
+  --color-schedule-ink-strong: var(--text-h);
+  --color-schedule-muted: oklch(64% 0.025 250);
+  --color-schedule-accent: var(--accent);
+  --color-schedule-accent-hover: var(--info);
+  --color-schedule-accent-ink: var(--text-inverse);
+  --color-schedule-focus: var(--border-focus);
+  --color-schedule-live: var(--error);
+  --color-schedule-event: var(--text-muted);
+  --color-schedule-card-ink-light: oklch(98% 0.005 250);
+  --color-schedule-card-ink-dark: oklch(16% 0.018 250);
+  --color-schedule-warning: var(--warning);
+  --color-schedule-warning-rule: var(--warning);
+  --color-schedule-success: var(--success);
+  --color-schedule-success-rule: var(--success);
+  --color-schedule-success-surface: var(--success-bg);
+  --color-schedule-error: var(--error);
+  --color-schedule-error-rule: var(--error);
+  --color-schedule-error-surface: var(--error-bg);
+  --color-schedule-backdrop: oklch(8% 0.01 250 / 0.72);
+
+  --font-schedule-display: "Space Grotesk", var(--font-sans);
+  --font-schedule-body: var(--font-sans);
+  --font-schedule-mono: var(--font-mono);
+
+  --space-schedule-3xs: 0.125rem;
+  --space-schedule-2xs: 0.25rem;
+  --space-schedule-xs: 0.5rem;
+  --space-schedule-sm: 0.75rem;
+  --space-schedule-md: 1rem;
+  --space-schedule-lg: 1.5rem;
+  --space-schedule-xl: 2rem;
+  --space-schedule-2xl: 2.5rem;
+
+  --text-schedule-2xs: 0.625rem;
+  --text-schedule-xs: 0.75rem;
+  --text-schedule-sm: 0.875rem;
+  --text-schedule-lg: 1.125rem;
+  --text-schedule-card-module: 0.9375rem;
+  --text-schedule-card-time: 0.8125rem;
+  --text-schedule-card-meta: 0.75rem;
+
+  --tracking-schedule-tight: -0.02em;
+  --tracking-schedule-wide: 0.08em;
+  --rule-schedule: 1px;
+  --rule-schedule-block: 3px;
+  --rule-schedule-focus: 2px;
+  --radius-schedule-block: 3px;
+  --radius-schedule-control: 5px;
+  --radius-schedule-panel: 7px;
+  --schedule-content-max: 1120px;
+  --z-schedule-raised: 10;
+  --z-schedule-line: 20;
+  --z-schedule-modal: 400;
+
+  --ease-schedule-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --dur-schedule-micro: 100ms;
+}
+
+:root[data-theme="light"] {
+  --color-mac-window: oklch(96% 0.006 245);
+  --color-mac-sidebar: oklch(92% 0.01 245);
+  --color-mac-toolbar: oklch(95% 0.007 245);
+  --color-mac-panel: oklch(99% 0.004 245);
+  --color-mac-control: oklch(89% 0.01 245);
+  --color-mac-control-hover: oklch(85% 0.012 245);
+  --color-mac-selection: oklch(58% 0.15 245 / 0.22);
+  --color-mac-selection-ink: oklch(20% 0.018 245);
+  --color-mac-muted: oklch(42% 0.025 250);
+  --color-mac-divider: oklch(69% 0.012 245 / 0.55);
+  --color-mac-shadow: oklch(22% 0.01 245 / 0.18);
+  --color-mac-backdrop: oklch(20% 0.006 245 / 0.32);
+}

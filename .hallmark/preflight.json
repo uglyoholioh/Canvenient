@@ -1,0 +1,15 @@
+{
+  "date": "2026-08-30",
+  "scope": "single-page",
+  "target": "frontend/src/components/Schedule.jsx",
+  "framework": "React 19 + Vite + Tauri",
+  "fonts": ["Inter", "Instrument Serif", "JetBrains Mono"],
+  "palette": "Existing dark and light CSS custom properties in frontend/src/index.css",
+  "motion": "motion-cut; no animation library",
+  "spacing": "compact 4px and 8px rhythm",
+  "preserve": ["app palette", "font stack", "schedule data behavior", "sidebar shell"],
+  "source_mtimes": {
+    "frontend/package.json": 1788014730,
+    "frontend/src/index.css": 1788071410
+  }
+}

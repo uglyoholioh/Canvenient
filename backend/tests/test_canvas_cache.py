@@ -48,7 +48,7 @@ async def test_canvas_courses_cache_hit(client: AsyncClient, auth):
     # Without force_refresh, it should return cached courses without attempting HTTP call
     resp = await client.get("/canvas/courses", headers=auth_headers(token))
     assert resp.status_code == 200
-    assert resp.json() == cached_courses
+    assert resp.json()[0] == {**cached_courses[0], "color": "#F0757C"}
 
 
 async def test_canvas_announcements_cache_hit(client: AsyncClient, auth):

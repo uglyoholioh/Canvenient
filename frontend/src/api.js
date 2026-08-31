@@ -1,6 +1,38 @@
 const AUTH_TOKEN_KEY = "canvenient.auth.token";
 
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/+$/, "");
+const configuredApiBaseUrl = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/+$/, "");
+const isPackagedDesktopApp = window.location.protocol === "tauri:";
+
+// Vite's development server proxies relative API calls to FastAPI. A packaged
+// Tauri app has no Vite proxy, so it must contact its bundled sidecar directly.
+const API_BASE_URL = configuredApiBaseUrl
+  || (isPackagedDesktopApp ? "http://127.0.0.1:8000" : "");
+
+const DESKTOP_STARTUP_RETRIES = 20;
+const DESKTOP_RETRY_DELAY_MS = 150;
+
+function wait(ms) {
+  return new Promise((resolve) => window.setTimeout(resolve, ms));
+}
+
+async function fetchWithDesktopStartupRetry(url, options) {
+  const attempts = isPackagedDesktopApp ? DESKTOP_STARTUP_RETRIES + 1 : 1;
+  let lastError;
+
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
+    try {
+      return await fetch(url, options);
+    } catch (error) {
+      lastError = error;
+      if (attempt === attempts - 1) {
+        break;
+      }
+      await wait(DESKTOP_RETRY_DELAY_MS);
+    }
+  }
+
+  throw lastError;
+}
 
 function buildUrl(path) {
   if (path.startsWith("http://") || path.startsWith("https://")) {
@@ -41,7 +73,7 @@ async function apiRequest(path, { method = "GET", body, token } = {}) {
   const url = buildUrl(path);
   let response;
   try {
-    response = await fetch(url, {
+    response = await fetchWithDesktopStartupRetry(url, {
       method,
       headers,
       body: body !== undefined ? JSON.stringify(body) : undefined,
@@ -178,6 +210,26 @@ export function getAcademicModules(token) {
   return apiRequest("/academic-modules", { token });
 }
 
+export function getModuleColors(token) {
+  return apiRequest("/module-colors", { token });
+}
+
+export function applyModulePalette(token, palette) {
+  return apiRequest("/module-colors/palette", {
+    method: "PUT",
+    body: { palette },
+    token,
+  });
+}
+
+export function updateModuleColor(token, moduleCode, color) {
+  return apiRequest(`/module-colors/${encodeURIComponent(moduleCode)}`, {
+    method: "PATCH",
+    body: { color },
+    token,
+  });
+}
+
 export function getTasks(token) {
   return apiRequest("/tasks", { token });
 }
@@ -277,9 +329,10 @@ export async function loadCachedCanvasFiles(token, { onSyncRequired } = {}) {
 
 // Schedule
 
-export async function importIcs(token, file) {
+export async function importIcs(token, file, fileName = "timetable.ics") {
   const formData = new FormData();
-  formData.append("file", file);
+  const upload = file instanceof Blob ? file : new Blob([file], { type: "text/calendar" });
+  formData.append("file", upload, file.name || fileName);
   const url = buildUrl("/schedule/import/ics");
   let response;
   try {
@@ -316,6 +369,14 @@ export async function importIcs(token, file) {
   }
 
   return payload;
+}
+
+export function importNusmods(token, url) {
+  return apiRequest("/schedule/import/nusmods", {
+    method: "POST",
+    body: { url },
+    token,
+  });
 }
 
 export function getSchedule(token) {

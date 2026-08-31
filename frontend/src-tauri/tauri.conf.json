@@ -38,7 +38,7 @@
         "icons/icon.icns",
         "icons/icon.ico"
       ],
-      "identifier": "com.tauri.dev",
+      "identifier": "com.oli.canvenient",
       "longDescription": "",
       "macOS": {
         "entitlements": null,
@@ -64,13 +64,18 @@
     },
     "windows": [
       {
+        "acceptFirstMouse": true,
+        "decorations": true,
         "fullscreen": false,
         "height": 600,
+        "hiddenTitle": true,
+        "minHeight": 520,
+        "minWidth": 720,
         "resizable": true,
         "title": "Canvenient",
+        "titleBarStyle": "Transparent",
         "width": 800,
-        "decorations": false,
-        "transparent": true
+        "transparent": false
       }
     ]
   }

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { CalendarClock, Check, Pencil, RotateCcw, Trash2 } from "lucide-react";
+import { CalendarClock, Check, Pencil, Trash2 } from "lucide-react";
 import { deleteTask, getTasks, updateTask } from "../../api";
 
 function taskDueDate(task) {
@@ -14,6 +14,11 @@ function localInputValue(value) {
   const date = value ? new Date(value) : new Date();
   const adjusted = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
   return adjusted.toISOString().slice(0, 16);
+}
+
+function taskCreatedTime(task) {
+  const date = new Date(task.created_at || 0);
+  return Number.isNaN(date.getTime()) ? 0 : date.getTime();
 }
 
 export default function TasksModule({ token, refreshKey = 0 }) {
@@ -33,13 +38,16 @@ export default function TasksModule({ token, refreshKey = 0 }) {
   const visibleTasks = useMemo(() => {
     const now = new Date();
     const todayEnd = new Date(now); todayEnd.setHours(23, 59, 59, 999);
-    return tasks.filter((task) => {
+    const filtered = tasks.filter((task) => {
       const due = taskDueDate(task);
       if (filter === "today") return due && due >= now && due <= todayEnd;
       if (filter === "overdue") return due && due < now;
       if (filter === "priority") return ["urgent", "high"].includes(task.priority_manual);
       return true;
-    }).sort((a, b) => (taskDueDate(a)?.getTime() || Infinity) - (taskDueDate(b)?.getTime() || Infinity));
+    });
+
+    if (filter === "all") return filtered.sort((a, b) => taskCreatedTime(b) - taskCreatedTime(a));
+    return filtered.sort((a, b) => (taskDueDate(a)?.getTime() || Infinity) - (taskDueDate(b)?.getTime() || Infinity));
   }, [filter, tasks]);
 
   const openTask = (task) => {
@@ -71,12 +79,12 @@ export default function TasksModule({ token, refreshKey = 0 }) {
       </div>
       {error ? <div className="module-error">{error}</div> : visibleTasks.length === 0 ? <div className="module-empty">Nothing in this view.</div> : (
         <div className="module-list">
-          {visibleTasks.slice(0, 10).map((task) => {
+          {visibleTasks.map((task) => {
             const due = taskDueDate(task);
             return (
               <div className={`module-list-item task-module-item ${expandedId === task.id ? "is-expanded" : ""}`} key={task.id}>
+                <button type="button" className="module-task-check" onClick={() => complete(task)} aria-label={`Complete ${task.title}`}>[ ]</button>
                 <button type="button" className="module-item-main" onClick={() => openTask(task)}>
-                  <span className={`priority-dot is-${task.priority_manual}`} />
                   <span className="module-item-copy"><strong>{task.title}</strong><small>{task.module_code || "Personal"}{due ? ` · ${due.toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}` : ""}</small></span>
                 </button>
                 {expandedId === task.id && (
@@ -96,7 +104,6 @@ export default function TasksModule({ token, refreshKey = 0 }) {
           })}
         </div>
       )}
-      {tasks.length > 10 && <div className="module-footnote"><RotateCcw size={11} />Showing the next 10 tasks</div>}
     </div>
   );
 }

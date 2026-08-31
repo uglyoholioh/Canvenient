@@ -109,6 +109,28 @@ SCHEMA_STATEMENTS = [
     ON academic_modules (user_id)
     """,
     """
+    CREATE TABLE IF NOT EXISTS module_colors (
+        user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        module_code TEXT NOT NULL,
+        module_name TEXT NOT NULL,
+        color TEXT NOT NULL,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        PRIMARY KEY (user_id, module_code),
+        UNIQUE (user_id, color)
+    )
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS module_color_settings (
+        user_id BIGINT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+        palette_name TEXT NOT NULL DEFAULT 'balanced'
+    )
+    """,
+    """
+    CREATE INDEX IF NOT EXISTS module_colors_user_id_idx
+    ON module_colors (user_id)
+    """,
+    """
     DELETE FROM academic_modules
     WHERE source_type <> 'canvas'
     """,
@@ -576,5 +598,4 @@ async def initialize_schema() -> None:
                 pass
         else:
             await db.execute(query=statement)
-
 

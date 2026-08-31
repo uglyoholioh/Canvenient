@@ -9,10 +9,25 @@ from database import db
 from dependencies import CurrentUser
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
+from module_colors import ensure_module_colors, normalize_module_code
 
 router = APIRouter(prefix="/canvas", tags=["canvas"])
 
 CANVAS_CACHE_TTL_MINUTES = 15
+
+
+async def attach_course_colors(user_id: int, courses: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    colors = await ensure_module_colors(
+        user_id,
+        ((course.get("course_code", ""), course.get("name")) for course in courses),
+    )
+    return [
+        {
+            **course,
+            "color": colors.get(normalize_module_code(course.get("course_code", ""))),
+        }
+        for course in courses
+    ]
 
 
 class CanvasSubmissionRequest(BaseModel):
@@ -148,7 +163,7 @@ async def list_canvas_courses(
     if not force_refresh:
         cached_data, synced_at = await get_canvas_cache(current_user.id, "courses")
         if cached_data is not None and is_cache_fresh(synced_at):
-            return cached_data
+            return await attach_course_colors(current_user.id, cached_data)
 
     headers = {"Authorization": f"Bearer {token}"}
     try:
@@ -165,12 +180,12 @@ async def list_canvas_courses(
     except Exception:
         stale_data, _ = await get_canvas_cache(current_user.id, "courses")
         if stale_data is not None:
-            return stale_data
+            return await attach_course_colors(current_user.id, stale_data)
         return []
 
     if not isinstance(courses, list):
         stale_data, _ = await get_canvas_cache(current_user.id, "courses")
-        return stale_data if stale_data is not None else []
+        return await attach_course_colors(current_user.id, stale_data) if stale_data is not None else []
 
     result = []
     for c in courses:
@@ -185,7 +200,7 @@ async def list_canvas_courses(
             )
 
     await save_canvas_cache(current_user.id, "courses", result)
-    return result
+    return await attach_course_colors(current_user.id, result)
 
 
 @router.get("/announcements", response_model=list[dict[str, Any]])
@@ -734,15 +749,19 @@ async def list_cached_canvas_files(current_user: CurrentUser):
     course_rows = await db.fetch_all(
         query="""
             SELECT
-                source_course_id AS canvas_course_id,
-                module_code AS course_code,
-                name,
-                external_url
-            FROM academic_modules
-            WHERE user_id = :user_id
-                AND source_type = 'canvas'
-                AND source_course_id IS NOT NULL
-            ORDER BY module_code ASC
+                am.source_course_id AS canvas_course_id,
+                am.module_code AS course_code,
+                am.name,
+                am.external_url,
+                mc.color
+            FROM academic_modules am
+            LEFT JOIN module_colors mc
+              ON mc.user_id = am.user_id
+             AND mc.module_code = UPPER(TRIM(am.module_code))
+            WHERE am.user_id = :user_id
+                AND am.source_type = 'canvas'
+                AND am.source_course_id IS NOT NULL
+            ORDER BY am.module_code ASC
         """,
         values={"user_id": current_user.id},
     )
@@ -772,6 +791,7 @@ async def list_cached_canvas_files(current_user: CurrentUser):
             "course_code": row["course_code"],
             "name": row["name"],
             "external_url": row["external_url"],
+            "color": row["color"],
         }
         for row in course_rows
     ]
