@@ -139,7 +139,6 @@ export default function WorkspaceLayout({ token, user, onLogout }) {
     const handleGlobalKey = (e) => {
       if (e.key === "Escape") {
         setIsShortcutHelpOpen(false);
-        if (tasksPanel.isOpen) closeTasksPanel();
       }
       if (matchesShortcut(e, shortcuts.tasksPanel)) {
         e.preventDefault();

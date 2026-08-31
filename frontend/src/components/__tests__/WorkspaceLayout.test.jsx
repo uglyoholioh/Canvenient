@@ -82,4 +82,15 @@ describe("WorkspaceLayout", () => {
     expect(screen.queryByRole("dialog", { name: "Tasks" })).not.toBeInTheDocument();
     await waitFor(() => expect(dashboardCard).toHaveFocus());
   });
+
+  it("keeps the Tasks panel open when Escape leaves a current control", () => {
+    render(<WorkspaceLayout token="token" user={{ id: 1 }} onLogout={() => {}} />);
+    const dashboardCard = screen.getByRole("button", { name: "Dashboard content" });
+    dashboardCard.focus();
+    fireEvent.keyDown(dashboardCard, { key: "Tab", shiftKey: true });
+
+    fireEvent.keyDown(screen.getByRole("textbox", { name: "Panel task composer" }), { key: "Escape" });
+
+    expect(screen.getByRole("dialog", { name: "Tasks" })).toBeInTheDocument();
+  });
 });

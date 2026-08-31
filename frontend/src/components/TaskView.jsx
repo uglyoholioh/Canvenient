@@ -118,6 +118,7 @@ function DueDateEditor({ value, onChange }) {
         else if (/^\d$/.test(event.key)) { event.preventDefault(); typeDigit(event.key); }
         else if (event.key === "Backspace" || event.key === "Delete") { event.preventDefault(); onChange({ ...value, [segment]: "" }); setIsTyping(true); }
         else if (event.key === "Enter") event.preventDefault();
+        else if (event.key === "Escape") { event.preventDefault(); event.currentTarget.blur(); }
       }}
     >
       <span className={selectedSegment === 0 ? "is-active" : ""}> {displaySegment("day")} </span><i>/</i>

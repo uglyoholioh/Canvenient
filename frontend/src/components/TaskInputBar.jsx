@@ -301,6 +301,9 @@ export default function TaskInputBar({
     if (event.key === "Escape" && onClose) {
       event.preventDefault();
       onClose();
+    } else if (event.key === "Escape") {
+      event.preventDefault();
+      event.currentTarget.blur();
     } else if (event.key === "Enter" && !event.shiftKey) {
       event.preventDefault();
       submit();

@@ -42,11 +42,6 @@ export default function GlobalTasksPanel({
             onClose();
             return;
           }
-          if (event.key === "Escape") {
-            event.preventDefault();
-            event.stopPropagation();
-            onClose();
-          }
         }}
       >
         <header className="global-tasks-header">
