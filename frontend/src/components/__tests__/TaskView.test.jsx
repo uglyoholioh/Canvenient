@@ -79,10 +79,12 @@ describe("TaskView keyboard navigation", () => {
     fireEvent.click(firstTask);
     fireEvent.keyDown(window, { key: "Enter" });
     fireEvent.change(screen.getByLabelText("Edit task title"), { target: { value: "Revised task" } });
+    fireEvent.keyDown(screen.getByLabelText("Edit task title"), { key: "c", code: "KeyC", altKey: true });
+    expect(screen.getByLabelText("Edit task course")).toHaveFocus();
     fireEvent.change(screen.getByLabelText("Edit task due date"), { target: { value: "2026-09-15T14:30" } });
     fireEvent.change(screen.getByLabelText("Edit task priority"), { target: { value: "high" } });
     fireEvent.change(screen.getByLabelText("Edit task course"), { target: { value: "42" } });
-    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+    fireEvent.keyDown(screen.getByLabelText("Edit task course"), { key: "Enter", metaKey: true });
 
     await waitFor(() => expect(updateTask).toHaveBeenCalledWith("token", 1, {
       title: "Revised task",

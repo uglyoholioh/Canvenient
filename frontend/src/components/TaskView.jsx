@@ -83,6 +83,9 @@ export default function TaskView({ token, embedded = false, active = true, compo
   const [checkboxStyle, setCheckboxStyle] = useState(() => localStorage.getItem("canvenient-checkbox-style") || "brackets");
   const itemRefs = useRef({});
   const editRef = useRef(null);
+  const editDueRef = useRef(null);
+  const editPriorityRef = useRef(null);
+  const editCourseRef = useRef(null);
   const taskViewRef = useRef(null);
 
   const loadTasks = useCallback(async () => {
@@ -242,24 +245,34 @@ export default function TaskView({ token, embedded = false, active = true, compo
               </button>
               {editing ? (
                 <form className="task-inline-editor" onSubmit={(event) => { event.preventDefault(); saveEdit(task); }} onKeyDown={(event) => {
-                  if (event.key === "Escape") { event.preventDefault(); cancelEdit(); }
-                  if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) { event.preventDefault(); saveEdit(task); }
+                  if (event.key === "Escape") { event.preventDefault(); cancelEdit(); return; }
+                  if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) { event.preventDefault(); saveEdit(task); return; }
+                  if (!event.altKey || event.metaKey || event.ctrlKey) return;
+                  const shortcutTargets = {
+                    KeyT: editRef,
+                    KeyD: editDueRef,
+                    KeyP: editPriorityRef,
+                    KeyC: editCourseRef,
+                  };
+                  const targetRef = shortcutTargets[event.code];
+                  if (targetRef) { event.preventDefault(); targetRef.current?.focus(); }
                 }}>
-                  <textarea ref={editRef} aria-label="Edit task title" value={editDraft?.title || ""} onChange={(event) => setEditDraft((draft) => ({ ...draft, title: event.target.value }))} />
+                  <input ref={editRef} aria-label="Edit task title" aria-keyshortcuts="Alt+T" value={editDraft?.title || ""} onChange={(event) => setEditDraft((draft) => ({ ...draft, title: event.target.value }))} />
                   <div className="task-inline-properties">
-                    <label>Due <input aria-label="Edit task due date" type="datetime-local" value={editDraft?.dueAt || ""} onChange={(event) => setEditDraft((draft) => ({ ...draft, dueAt: event.target.value }))} /></label>
-                    <label>Priority <select aria-label="Edit task priority" value={editDraft?.priority || "medium"} onChange={(event) => setEditDraft((draft) => ({ ...draft, priority: event.target.value }))}>
+                    <label>Due <input ref={editDueRef} aria-label="Edit task due date" aria-keyshortcuts="Alt+D" type="datetime-local" value={editDraft?.dueAt || ""} onChange={(event) => setEditDraft((draft) => ({ ...draft, dueAt: event.target.value }))} /></label>
+                    <label>Priority <select ref={editPriorityRef} aria-label="Edit task priority" aria-keyshortcuts="Alt+P" value={editDraft?.priority || "medium"} onChange={(event) => setEditDraft((draft) => ({ ...draft, priority: event.target.value }))}>
                       <option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option><option value="urgent">Urgent</option>
                     </select></label>
-                    <label>Course <select aria-label="Edit task course" value={editDraft?.moduleId || ""} onChange={(event) => setEditDraft((draft) => ({ ...draft, moduleId: event.target.value }))}>
+                    <label>Course <select ref={editCourseRef} aria-label="Edit task course" aria-keyshortcuts="Alt+C" value={editDraft?.moduleId || ""} onChange={(event) => setEditDraft((draft) => ({ ...draft, moduleId: event.target.value }))}>
                       <option value="">No course</option>
                       {modules.map((module) => <option key={module.id} value={module.id}>{module.module_code}</option>)}
                     </select></label>
                   </div>
                   {editError && <div className="task-inline-error" role="alert">{editError}</div>}
+                  <div className="task-inline-shortcuts" aria-label="Editing shortcuts">⌥T title · ⌥D due · ⌥P priority · ⌥C course · ⌘↵ save · Esc cancel</div>
                   <div className="task-inline-actions">
                     <button type="button" onClick={cancelEdit}>Cancel</button>
-                    <button type="submit" className="is-primary" disabled={!editDraft?.title.trim() || isSavingEdit}>{isSavingEdit ? "Saving…" : "Save"}</button>
+                    <button type="submit" className="is-primary" aria-keyshortcuts="Meta+Enter Control+Enter" disabled={!editDraft?.title.trim() || isSavingEdit}>{isSavingEdit ? "Saving…" : "Save"}</button>
                   </div>
                 </form>
               ) : (

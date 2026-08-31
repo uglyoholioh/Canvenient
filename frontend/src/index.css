@@ -2913,15 +2913,15 @@ textarea {
   grid-template-columns: minmax(0, 1fr);
   gap: 8px;
 }
-.task-view .task-inline-editor > textarea {
+.task-view .task-inline-editor > input {
   width: 100%;
-  min-height: 58px;
+  height: 34px;
   padding: 8px 9px;
   border: 1px solid var(--border-strong);
   border-radius: 5px;
   background: var(--bg);
 }
-.task-view .task-inline-editor > textarea:focus { border-color: var(--accent); }
+.task-view .task-inline-editor > input:focus { border-color: var(--accent); }
 .task-inline-properties { display: grid; grid-template-columns: minmax(170px, 1.4fr) minmax(105px, .7fr) minmax(120px, 1fr); gap: 7px; }
 .task-inline-properties label { min-width: 0; color: var(--text-muted); display: flex; flex-direction: column; gap: 4px; font-size: 9px; }
 .task-inline-properties input, .task-inline-properties select { width: 100%; height: 31px; padding: 0 7px; border: 1px solid var(--border-strong); border-radius: 4px; outline: 0; background: var(--surface-muted); color: var(--text-h); font-size: 10px; }
@@ -2930,6 +2930,7 @@ textarea {
 .task-view .task-inline-actions button.is-primary { background: var(--accent); color: var(--text-inverse); }
 .task-view .task-inline-actions button:disabled { cursor: not-allowed; opacity: .5; }
 .task-inline-error { color: var(--danger); font-size: 10px; }
+.task-inline-shortcuts { color: var(--text-muted); font: 9px var(--font-mono); }
 
 @media (max-width: 620px) {
   .global-tasks-layer { padding: 10px; }
