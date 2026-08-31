@@ -58,12 +58,12 @@ function parseDueParts(parts) {
 }
 
 function DueDateEditor({ value, onChange }) {
-  const [selectedSegment, setSelectedSegment] = useState(0);
+  const [selectedSegment, setSelectedSegment] = useState(null);
   const [isTyping, setIsTyping] = useState(false);
-  const segment = DUE_SEGMENTS[selectedSegment];
+  const segment = DUE_SEGMENTS[selectedSegment] || "day";
 
   const moveSegment = (direction) => {
-    setSelectedSegment((current) => Math.max(0, Math.min(DUE_SEGMENTS.length - 1, current + direction)));
+    setSelectedSegment((current) => Math.max(0, Math.min(DUE_SEGMENTS.length - 1, (current ?? 0) + direction)));
     setIsTyping(false);
   };
 
@@ -108,7 +108,8 @@ function DueDateEditor({ value, onChange }) {
       role="group"
       tabIndex={0}
       aria-label="Edit task due date and time. Use left and right arrows to choose a part, up and down arrows to adjust it, or type digits to replace it."
-      onFocus={() => setIsTyping(false)}
+      onFocus={() => { setSelectedSegment(0); setIsTyping(false); }}
+      onBlur={() => { setSelectedSegment(null); setIsTyping(false); }}
       onKeyDown={(event) => {
         if (event.key === "ArrowLeft") { event.preventDefault(); moveSegment(-1); }
         else if (event.key === "ArrowRight") { event.preventDefault(); moveSegment(1); }

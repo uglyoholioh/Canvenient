@@ -82,10 +82,12 @@ describe("TaskView keyboard navigation", () => {
     fireEvent.keyDown(window, { key: "Enter" });
     const title = screen.getByLabelText("Edit task title");
     await waitFor(() => expect(title).toHaveFocus());
+    expect(document.querySelector(".task-due-editor .is-active")).not.toBeInTheDocument();
     fireEvent.change(title, { target: { value: "Revised task" } });
 
     await user.tab();
     expect(screen.getByRole("group", { name: /edit task due date/i })).toHaveFocus();
+    expect(document.querySelector(".task-due-editor .is-active")).toHaveTextContent("DD");
     await user.keyboard("150920261430");
     await user.tab();
     expect(screen.getByLabelText("Edit task priority")).toHaveFocus();
