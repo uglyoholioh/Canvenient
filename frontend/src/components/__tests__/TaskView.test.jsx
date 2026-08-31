@@ -2,6 +2,7 @@
 // eslint-disable-next-line no-unused-vars
 import React from "react";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import TaskView from "../TaskView";
 import { getAcademicModules, getTasks, updateTask } from "../../api";
@@ -62,6 +63,7 @@ describe("TaskView keyboard navigation", () => {
   });
 
   it("edits title, due date, priority, and course in one save", async () => {
+    const user = userEvent.setup();
     updateTask.mockResolvedValue({
       id: 1,
       title: "Revised task",
@@ -78,22 +80,32 @@ describe("TaskView keyboard navigation", () => {
 
     fireEvent.click(firstTask);
     fireEvent.keyDown(window, { key: "Enter" });
-    fireEvent.change(screen.getByLabelText("Edit task title"), { target: { value: "Revised task" } });
-    fireEvent.keyDown(screen.getByLabelText("Edit task title"), { key: "c", code: "KeyC", altKey: true });
+    const title = screen.getByLabelText("Edit task title");
+    await waitFor(() => expect(title).toHaveFocus());
+    fireEvent.change(title, { target: { value: "Revised task" } });
+
+    await user.tab();
+    expect(screen.getByLabelText("Edit task due date")).toHaveFocus();
+    fireEvent.change(screen.getByLabelText("Edit task due date"), { target: { value: "15/09/2026 14:30" } });
+    await user.tab();
+    expect(screen.getByLabelText("Edit task priority")).toHaveFocus();
+    await user.selectOptions(screen.getByLabelText("Edit task priority"), "high");
+    await user.tab();
     expect(screen.getByLabelText("Edit task course")).toHaveFocus();
-    fireEvent.change(screen.getByLabelText("Edit task due date"), { target: { value: "2026-09-15T14:30" } });
-    fireEvent.change(screen.getByLabelText("Edit task priority"), { target: { value: "high" } });
-    fireEvent.change(screen.getByLabelText("Edit task course"), { target: { value: "42" } });
-    fireEvent.keyDown(screen.getByLabelText("Edit task course"), { key: "Enter", metaKey: true });
+    await user.selectOptions(screen.getByLabelText("Edit task course"), "42");
+    await user.tab();
+    expect(screen.getByRole("button", { name: "Save" })).toHaveFocus();
+    await user.keyboard("{Enter}");
 
     await waitFor(() => expect(updateTask).toHaveBeenCalledWith("token", 1, {
       title: "Revised task",
-      due_at_override: new Date("2026-09-15T14:30").toISOString(),
+      due_at_override: new Date(2026, 8, 15, 14, 30).toISOString(),
       priority_manual: "high",
       module_id: 42,
     }));
     expect(await screen.findByText("Revised task")).toBeInTheDocument();
     expect(screen.getByText("CS2040")).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByText("Revised task").closest(".task-row")).toHaveFocus());
   });
 
   it("orders pending tasks by effective deadline and shows Canvas source deadlines", async () => {

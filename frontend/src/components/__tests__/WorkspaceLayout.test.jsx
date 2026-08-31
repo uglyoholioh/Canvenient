@@ -75,8 +75,13 @@ describe("WorkspaceLayout", () => {
 
     expect(screen.getByRole("dialog", { name: "Tasks" })).toBeInTheDocument();
 
-    fireEvent.keyDown(window, { key: "Tab", shiftKey: true });
+    const composer = screen.getByRole("textbox", { name: "Panel task composer" });
+    composer.focus();
+    fireEvent.keyDown(composer, { key: "Tab", shiftKey: true });
 
+    expect(screen.getByRole("dialog", { name: "Tasks" })).toBeInTheDocument();
+
+    fireEvent.keyDown(composer, { key: "Escape" });
     expect(screen.queryByRole("dialog", { name: "Tasks" })).not.toBeInTheDocument();
   });
 });

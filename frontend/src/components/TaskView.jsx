@@ -26,11 +26,33 @@ function formatDueDate(value) {
   }).format(date);
 }
 
-function dateTimeInputValue(value) {
+function dueTextValue(value) {
   const date = normalizeDate(value);
   if (!date) return "";
   const part = (number) => String(number).padStart(2, "0");
-  return `${date.getFullYear()}-${part(date.getMonth() + 1)}-${part(date.getDate())}T${part(date.getHours())}:${part(date.getMinutes())}`;
+  return `${part(date.getDate())}/${part(date.getMonth() + 1)}/${date.getFullYear()} ${part(date.getHours())}:${part(date.getMinutes())}`;
+}
+
+function parseDueText(value) {
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  const match = trimmed.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})(?:,?\s+)(\d{1,2}):(\d{2})(?:\s*(am|pm))?$/i);
+  if (!match) throw new Error("Use DD/MM/YYYY HH:MM, for example 21/10/2026 23:59.");
+  const [, dayText, monthText, yearText, hourText, minuteText, meridiem] = match;
+  const day = Number(dayText);
+  const month = Number(monthText);
+  const year = Number(yearText);
+  let hour = Number(hourText);
+  const minute = Number(minuteText);
+  if (meridiem) {
+    if (hour < 1 || hour > 12) throw new Error("Enter an hour from 1 to 12 when using AM or PM.");
+    hour = (hour % 12) + (meridiem.toLowerCase() === "pm" ? 12 : 0);
+  }
+  const date = new Date(year, month - 1, day, hour, minute, 0, 0);
+  if (month < 1 || month > 12 || minute > 59 || hour > 23 || date.getFullYear() !== year || date.getMonth() !== month - 1 || date.getDate() !== day) {
+    throw new Error("Enter a valid due date and time.");
+  }
+  return date.toISOString();
 }
 
 function taskDueDate(task) {
@@ -83,9 +105,6 @@ export default function TaskView({ token, embedded = false, active = true, compo
   const [checkboxStyle, setCheckboxStyle] = useState(() => localStorage.getItem("canvenient-checkbox-style") || "brackets");
   const itemRefs = useRef({});
   const editRef = useRef(null);
-  const editDueRef = useRef(null);
-  const editPriorityRef = useRef(null);
-  const editCourseRef = useRef(null);
   const taskViewRef = useRef(null);
 
   const loadTasks = useCallback(async () => {
@@ -137,32 +156,45 @@ export default function TaskView({ token, embedded = false, active = true, compo
     setEditError("");
     setEditDraft({
       title,
-      dueAt: dateTimeInputValue(taskDueDate(task)),
+      dueAt: dueTextValue(taskDueDate(task)),
       priority: task.priority_manual || "medium",
       moduleId: task.module_id == null ? "" : String(task.module_id),
     });
   };
 
-  const cancelEdit = () => {
+  const restoreTaskFocus = (taskId) => {
+    requestAnimationFrame(() => taskViewRef.current?.querySelector(`[data-task-id="${taskId}"]`)?.focus());
+  };
+
+  const cancelEdit = (taskId) => {
     setEditingId(null);
     setEditDraft(null);
     setEditError("");
+    restoreTaskFocus(taskId);
   };
 
   const saveEdit = async (task) => {
     if (!editDraft?.title.trim() || isSavingEdit) return;
+    let dueAtOverride;
+    try {
+      dueAtOverride = parseDueText(editDraft.dueAt);
+    } catch (error) {
+      setEditError(error.message);
+      return;
+    }
     setIsSavingEdit(true);
     setEditError("");
     try {
       const updated = await updateTask(token, task.id, {
         title: editDraft.title.trim(),
-        due_at_override: editDraft.dueAt ? new Date(editDraft.dueAt).toISOString() : null,
+        due_at_override: dueAtOverride,
         priority_manual: editDraft.priority,
         module_id: editDraft.moduleId ? Number(editDraft.moduleId) : null,
       });
       setTasks((current) => sortPendingTasks(current.map((item) => item.id === task.id ? updated : item)));
       setEditingId(null);
       setEditDraft(null);
+      restoreTaskFocus(task.id);
     } catch (error) {
       setEditError(error.message || "Could not save task changes.");
     } finally {
@@ -233,8 +265,9 @@ export default function TaskView({ token, embedded = false, active = true, compo
               role="listitem"
               key={task.id}
               ref={(element) => { itemRefs.current[index] = element; }}
+              data-task-id={task.id}
               tabIndex={selected || (selectedIndex === null && index === 0) ? 0 : -1}
-              className={`task-row ${selected ? "is-selected" : ""}`}
+              className={`task-row ${selected ? "is-selected" : ""} ${editing ? "is-editing" : ""}`}
               onPointerEnter={(event) => { if (event.pointerType !== "touch") setInteractionMode("pointer"); }}
               onPointerDown={(event) => { if (event.pointerType !== "touch") setInteractionMode("pointer"); }}
               onFocus={() => setSelectedIndex(index)}
@@ -245,34 +278,23 @@ export default function TaskView({ token, embedded = false, active = true, compo
               </button>
               {editing ? (
                 <form className="task-inline-editor" onSubmit={(event) => { event.preventDefault(); saveEdit(task); }} onKeyDown={(event) => {
-                  if (event.key === "Escape") { event.preventDefault(); cancelEdit(); return; }
-                  if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) { event.preventDefault(); saveEdit(task); return; }
-                  if (!event.altKey || event.metaKey || event.ctrlKey) return;
-                  const shortcutTargets = {
-                    KeyT: editRef,
-                    KeyD: editDueRef,
-                    KeyP: editPriorityRef,
-                    KeyC: editCourseRef,
-                  };
-                  const targetRef = shortcutTargets[event.code];
-                  if (targetRef) { event.preventDefault(); targetRef.current?.focus(); }
+                  if (event.key === "Escape") { event.preventDefault(); cancelEdit(task.id); }
                 }}>
-                  <input ref={editRef} aria-label="Edit task title" aria-keyshortcuts="Alt+T" value={editDraft?.title || ""} onChange={(event) => setEditDraft((draft) => ({ ...draft, title: event.target.value }))} />
+                  <input ref={editRef} aria-label="Edit task title" value={editDraft?.title || ""} onChange={(event) => setEditDraft((draft) => ({ ...draft, title: event.target.value }))} />
                   <div className="task-inline-properties">
-                    <label>Due <input ref={editDueRef} aria-label="Edit task due date" aria-keyshortcuts="Alt+D" type="datetime-local" value={editDraft?.dueAt || ""} onChange={(event) => setEditDraft((draft) => ({ ...draft, dueAt: event.target.value }))} /></label>
-                    <label>Priority <select ref={editPriorityRef} aria-label="Edit task priority" aria-keyshortcuts="Alt+P" value={editDraft?.priority || "medium"} onChange={(event) => setEditDraft((draft) => ({ ...draft, priority: event.target.value }))}>
+                    <label>Due <input aria-label="Edit task due date" type="text" inputMode="numeric" placeholder="DD/MM/YYYY HH:MM" value={editDraft?.dueAt || ""} onChange={(event) => setEditDraft((draft) => ({ ...draft, dueAt: event.target.value }))} /></label>
+                    <label>Priority <select aria-label="Edit task priority" value={editDraft?.priority || "medium"} onChange={(event) => setEditDraft((draft) => ({ ...draft, priority: event.target.value }))}>
                       <option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option><option value="urgent">Urgent</option>
                     </select></label>
-                    <label>Course <select ref={editCourseRef} aria-label="Edit task course" aria-keyshortcuts="Alt+C" value={editDraft?.moduleId || ""} onChange={(event) => setEditDraft((draft) => ({ ...draft, moduleId: event.target.value }))}>
+                    <label>Course <select aria-label="Edit task course" value={editDraft?.moduleId || ""} onChange={(event) => setEditDraft((draft) => ({ ...draft, moduleId: event.target.value }))}>
                       <option value="">No course</option>
                       {modules.map((module) => <option key={module.id} value={module.id}>{module.module_code}</option>)}
                     </select></label>
                   </div>
                   {editError && <div className="task-inline-error" role="alert">{editError}</div>}
-                  <div className="task-inline-shortcuts" aria-label="Editing shortcuts">⌥T title · ⌥D due · ⌥P priority · ⌥C course · ⌘↵ save · Esc cancel</div>
                   <div className="task-inline-actions">
-                    <button type="button" onClick={cancelEdit}>Cancel</button>
-                    <button type="submit" className="is-primary" aria-keyshortcuts="Meta+Enter Control+Enter" disabled={!editDraft?.title.trim() || isSavingEdit}>{isSavingEdit ? "Saving…" : "Save"}</button>
+                    <button type="submit" className="is-primary" disabled={!editDraft?.title.trim() || isSavingEdit}>{isSavingEdit ? "Saving…" : "Save"}</button>
+                    <button type="button" onClick={() => cancelEdit(task.id)}>Cancel</button>
                   </div>
                 </form>
               ) : (

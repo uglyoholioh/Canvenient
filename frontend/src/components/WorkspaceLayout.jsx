@@ -142,6 +142,7 @@ export default function WorkspaceLayout({ token, user, onLogout }) {
         if (tasksPanel.isOpen) closeTasksPanel();
       }
       if (matchesShortcut(e, shortcuts.tasksPanel)) {
+        if (tasksPanel.isOpen && e.target.closest?.(".global-tasks-panel")) return;
         e.preventDefault();
         toggleTasksPanel();
         return;
