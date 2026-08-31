@@ -225,6 +225,7 @@ export default function TaskInputBar({
   const [modules, setModules] = useState([]);
   const [inputValue, setInputValue] = useState("");
   const [description, setDescription] = useState("");
+  const [showTaskNote, setShowTaskNote] = useState(false);
   const [inputMode, setInputMode] = useState(requestedMode);
   const [dateType, setDateType] = useState("");
   const [customDate, setCustomDate] = useState("");
@@ -234,6 +235,7 @@ export default function TaskInputBar({
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const textareaRef = useRef(null);
+  const noteRef = useRef(null);
 
   useEffect(() => { getAcademicModules(token).then(setModules).catch(() => setModules([])); }, [token]);
   useEffect(() => {
@@ -263,6 +265,7 @@ export default function TaskInputBar({
   const reset = () => {
     setInputValue("");
     setDescription("");
+    setShowTaskNote(false);
     setDateType("");
     setCustomDate("");
     setTime("");
@@ -362,7 +365,7 @@ export default function TaskInputBar({
         </div>
         {inputMode === "task" && (
           <>
-            <textarea className="task-input-note" aria-label="Task note" value={description} maxLength={4000} rows={2} onChange={(event) => setDescription(event.target.value)} placeholder="Add details or a note (optional)" />
+            {showTaskNote && <textarea ref={noteRef} className="task-input-note" aria-label="Task note" value={description} maxLength={4000} rows={2} onChange={(event) => setDescription(event.target.value)} placeholder="Add details or a note (optional)" />}
             <div className="task-properties">
             <DateSelect dateType={dateType} setDateType={setDateType} customDate={customDate} setCustomDate={setCustomDate} onEscape={() => textareaRef.current?.focus()} />
             <div className="task-time-pill property-pill">
@@ -380,10 +383,14 @@ export default function TaskInputBar({
             <CustomSelect icon={BookOpen} value={moduleId} onChange={setModuleId} onEscape={() => textareaRef.current?.focus()} propIndex={3} placeholder="Course" options={[
               { value: "", label: "No Course" }, ...modules.map((module) => ({ value: String(module.id), label: module.module_code })),
             ]} />
-            <button type="button" data-property-index="4" className="task-add-button property-pill" disabled={!inputValue.trim() || isSubmitting} onClick={submit} onKeyDown={(event) => {
+            {!showTaskNote && <button type="button" data-property-index="4" className="task-note-toggle" onClick={() => {
+              setShowTaskNote(true);
+              requestAnimationFrame(() => noteRef.current?.focus());
+            }} onKeyDown={(event) => handleArrowNav(event, 4)}>Add note</button>}
+            <button type="button" data-property-index={showTaskNote ? "4" : "5"} className="task-add-button property-pill" disabled={!inputValue.trim() || isSubmitting} onClick={submit} onKeyDown={(event) => {
               if (event.key === "Escape") textareaRef.current?.focus();
               else if (event.key === "Enter") submit();
-              else handleArrowNav(event, 4);
+              else handleArrowNav(event, showTaskNote ? 4 : 5);
             }}><Plus size={14} />{isSubmitting ? "Adding..." : "Add"}</button>
             </div>
           </>
