@@ -8,8 +8,11 @@ const isPackagedDesktopApp = window.location.protocol === "tauri:";
 const API_BASE_URL = configuredApiBaseUrl
   || (isPackagedDesktopApp ? "http://127.0.0.1:8000" : "");
 
-const DESKTOP_STARTUP_RETRIES = 20;
-const DESKTOP_RETRY_DELAY_MS = 150;
+// The packaged Python sidecar can need several seconds on first launch to
+// initialize its data directory and database. Keep retries bounded, but long
+// enough that the first login request does not surface a false connection error.
+const DESKTOP_STARTUP_RETRIES = 48;
+const DESKTOP_RETRY_DELAY_MS = 250;
 
 function wait(ms) {
   return new Promise((resolve) => window.setTimeout(resolve, ms));
