@@ -2905,9 +2905,36 @@ textarea {
 .global-tasks-panel .task-input-card { padding: 9px; }
 .global-tasks-panel .task-properties { padding-inline-start: 0; }
 
+.task-view .task-inline-editor {
+  min-width: 0;
+  flex: 1;
+  padding: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 8px;
+}
+.task-view .task-inline-editor > textarea {
+  width: 100%;
+  min-height: 58px;
+  padding: 8px 9px;
+  border: 1px solid var(--border-strong);
+  border-radius: 5px;
+  background: var(--bg);
+}
+.task-view .task-inline-editor > textarea:focus { border-color: var(--accent); }
+.task-inline-properties { display: grid; grid-template-columns: minmax(170px, 1.4fr) minmax(105px, .7fr) minmax(120px, 1fr); gap: 7px; }
+.task-inline-properties label { min-width: 0; color: var(--text-muted); display: flex; flex-direction: column; gap: 4px; font-size: 9px; }
+.task-inline-properties input, .task-inline-properties select { width: 100%; height: 31px; padding: 0 7px; border: 1px solid var(--border-strong); border-radius: 4px; outline: 0; background: var(--surface-muted); color: var(--text-h); font-size: 10px; }
+.task-inline-properties input:focus, .task-inline-properties select:focus { border-color: var(--accent); }
+.task-view .task-inline-actions { justify-content: flex-end; }
+.task-view .task-inline-actions button.is-primary { background: var(--accent); color: var(--text-inverse); }
+.task-view .task-inline-actions button:disabled { cursor: not-allowed; opacity: .5; }
+.task-inline-error { color: var(--danger); font-size: 10px; }
+
 @media (max-width: 620px) {
   .global-tasks-layer { padding: 10px; }
   .global-tasks-panel { width: 100%; height: 100%; border-radius: 7px; }
+  .task-inline-properties { grid-template-columns: 1fr; }
 }
 
 @media (prefers-reduced-motion: reduce) {

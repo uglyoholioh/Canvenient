@@ -4,9 +4,10 @@ import React from "react";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import TaskView from "../TaskView";
-import { getTasks, updateTask } from "../../api";
+import { getAcademicModules, getTasks, updateTask } from "../../api";
 
 vi.mock("../../api", () => ({
+  getAcademicModules: vi.fn(),
   getTasks: vi.fn(),
   updateTask: vi.fn(),
 }));
@@ -27,6 +28,7 @@ describe("TaskView keyboard navigation", () => {
       { id: 1, title: "First task", status: "todo", created_at: "2026-08-29T10:00:00Z", priority_manual: "medium" },
       { id: 2, title: "Second task", status: "todo", created_at: "2026-08-29T11:00:00Z", priority_manual: "medium" },
     ]);
+    getAcademicModules.mockResolvedValue([{ id: 42, module_code: "CS2040" }]);
     updateTask.mockResolvedValue({ id: 1, status: "done" });
   });
 
@@ -57,6 +59,39 @@ describe("TaskView keyboard navigation", () => {
     fireEvent.keyDown(window, { key: "ArrowUp" });
     expect(taskView).toHaveAttribute("data-interaction-mode", "keyboard");
     expect(screen.getByText("Space to complete · Enter to edit")).toBeInTheDocument();
+  });
+
+  it("edits title, due date, priority, and course in one save", async () => {
+    updateTask.mockResolvedValue({
+      id: 1,
+      title: "Revised task",
+      status: "todo",
+      created_at: "2026-08-29T10:00:00Z",
+      priority_manual: "high",
+      due_at_override: "2026-09-15T06:30:00.000Z",
+      effective_due_at: "2026-09-15T06:30:00.000Z",
+      module_id: 42,
+      module_code: "CS2040",
+    });
+    render(<TaskView token="token" />);
+    const firstTask = await screen.findByText("First task");
+
+    fireEvent.click(firstTask);
+    fireEvent.keyDown(window, { key: "Enter" });
+    fireEvent.change(screen.getByLabelText("Edit task title"), { target: { value: "Revised task" } });
+    fireEvent.change(screen.getByLabelText("Edit task due date"), { target: { value: "2026-09-15T14:30" } });
+    fireEvent.change(screen.getByLabelText("Edit task priority"), { target: { value: "high" } });
+    fireEvent.change(screen.getByLabelText("Edit task course"), { target: { value: "42" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+
+    await waitFor(() => expect(updateTask).toHaveBeenCalledWith("token", 1, {
+      title: "Revised task",
+      due_at_override: new Date("2026-09-15T14:30").toISOString(),
+      priority_manual: "high",
+      module_id: 42,
+    }));
+    expect(await screen.findByText("Revised task")).toBeInTheDocument();
+    expect(screen.getByText("CS2040")).toBeInTheDocument();
   });
 
   it("orders pending tasks by effective deadline and shows Canvas source deadlines", async () => {

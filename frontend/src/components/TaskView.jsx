@@ -2,7 +2,7 @@
 // eslint-disable-next-line no-unused-vars
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { BookOpen, Calendar, CheckCircle, Flag, Plus } from "lucide-react";
-import { getTasks, updateTask } from "../api";
+import { getAcademicModules, getTasks, updateTask } from "../api";
 import { useWorkspaceToolbar } from "./WorkspaceToolbarContext";
 import TaskInputBar from "./TaskInputBar";
 
@@ -24,6 +24,13 @@ function formatDueDate(value) {
     day: "numeric",
     ...(hasTime ? { hour: "numeric", minute: "2-digit" } : {}),
   }).format(date);
+}
+
+function dateTimeInputValue(value) {
+  const date = normalizeDate(value);
+  if (!date) return "";
+  const part = (number) => String(number).padStart(2, "0");
+  return `${date.getFullYear()}-${part(date.getMonth() + 1)}-${part(date.getDate())}T${part(date.getHours())}:${part(date.getMinutes())}`;
 }
 
 function taskDueDate(task) {
@@ -66,10 +73,13 @@ export default function TaskView({ token, embedded = false, active = true, compo
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
+  const [modules, setModules] = useState([]);
   const [selectedIndex, setSelectedIndex] = useState(null);
   const [interactionMode, setInteractionMode] = useState("keyboard");
   const [editingId, setEditingId] = useState(null);
-  const [editValue, setEditValue] = useState("");
+  const [editDraft, setEditDraft] = useState(null);
+  const [editError, setEditError] = useState("");
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
   const [checkboxStyle, setCheckboxStyle] = useState(() => localStorage.getItem("canvenient-checkbox-style") || "brackets");
   const itemRefs = useRef({});
   const editRef = useRef(null);
@@ -91,6 +101,9 @@ export default function TaskView({ token, embedded = false, active = true, compo
   useEffect(() => {
     void Promise.resolve().then(loadTasks);
   }, [loadTasks]);
+  useEffect(() => {
+    getAcademicModules(token).then(setModules).catch(() => setModules([]));
+  }, [token]);
   useEffect(() => {
     const updateSettings = () => setCheckboxStyle(localStorage.getItem("canvenient-checkbox-style") || "brackets");
     window.addEventListener("settings-updated", updateSettings);
@@ -116,11 +129,42 @@ export default function TaskView({ token, embedded = false, active = true, compo
     setSelectedIndex(null);
   }, [token]);
 
-  const saveEdit = async (task) => {
-    if (!editValue.trim()) return;
-    const updated = await updateTask(token, task.id, { title: editValue.trim() });
-    setTasks((current) => current.map((item) => item.id === task.id ? { ...item, title: updated.title } : item));
+  const startEditing = (task, title = task.title) => {
+    setEditingId(task.id);
+    setEditError("");
+    setEditDraft({
+      title,
+      dueAt: dateTimeInputValue(taskDueDate(task)),
+      priority: task.priority_manual || "medium",
+      moduleId: task.module_id == null ? "" : String(task.module_id),
+    });
+  };
+
+  const cancelEdit = () => {
     setEditingId(null);
+    setEditDraft(null);
+    setEditError("");
+  };
+
+  const saveEdit = async (task) => {
+    if (!editDraft?.title.trim() || isSavingEdit) return;
+    setIsSavingEdit(true);
+    setEditError("");
+    try {
+      const updated = await updateTask(token, task.id, {
+        title: editDraft.title.trim(),
+        due_at_override: editDraft.dueAt ? new Date(editDraft.dueAt).toISOString() : null,
+        priority_manual: editDraft.priority,
+        module_id: editDraft.moduleId ? Number(editDraft.moduleId) : null,
+      });
+      setTasks((current) => sortPendingTasks(current.map((item) => item.id === task.id ? updated : item)));
+      setEditingId(null);
+      setEditDraft(null);
+    } catch (error) {
+      setEditError(error.message || "Could not save task changes.");
+    } finally {
+      setIsSavingEdit(false);
+    }
   };
 
   const toolbarConfig = useMemo(() => ({
@@ -155,12 +199,10 @@ export default function TaskView({ token, embedded = false, active = true, compo
         completeTask(tasks[selectedIndex]);
       } else if (selectedIndex !== null && event.key === "Enter") {
         event.preventDefault();
-        setEditingId(tasks[selectedIndex].id);
-        setEditValue(tasks[selectedIndex].title);
+        startEditing(tasks[selectedIndex]);
       } else if (selectedIndex !== null && event.key.length === 1 && !event.metaKey && !event.ctrlKey && !event.altKey) {
         event.preventDefault();
-        setEditingId(tasks[selectedIndex].id);
-        setEditValue(`${tasks[selectedIndex].title}${event.key}`);
+        startEditing(tasks[selectedIndex], `${tasks[selectedIndex].title}${event.key}`);
       }
     };
     window.addEventListener("keydown", handleKeyDown);
@@ -199,10 +241,27 @@ export default function TaskView({ token, embedded = false, active = true, compo
                 {checkboxStyle === "icon" ? <CheckCircle size={16} /> : checkboxStyle === "circle" ? "( )" : "[ ]"}
               </button>
               {editing ? (
-                <textarea ref={editRef} value={editValue} onChange={(event) => setEditValue(event.target.value)} onBlur={() => saveEdit(task)} onKeyDown={(event) => {
-                  if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); saveEdit(task); }
-                  if (event.key === "Escape") { event.preventDefault(); setEditingId(null); }
-                }} />
+                <form className="task-inline-editor" onSubmit={(event) => { event.preventDefault(); saveEdit(task); }} onKeyDown={(event) => {
+                  if (event.key === "Escape") { event.preventDefault(); cancelEdit(); }
+                  if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) { event.preventDefault(); saveEdit(task); }
+                }}>
+                  <textarea ref={editRef} aria-label="Edit task title" value={editDraft?.title || ""} onChange={(event) => setEditDraft((draft) => ({ ...draft, title: event.target.value }))} />
+                  <div className="task-inline-properties">
+                    <label>Due <input aria-label="Edit task due date" type="datetime-local" value={editDraft?.dueAt || ""} onChange={(event) => setEditDraft((draft) => ({ ...draft, dueAt: event.target.value }))} /></label>
+                    <label>Priority <select aria-label="Edit task priority" value={editDraft?.priority || "medium"} onChange={(event) => setEditDraft((draft) => ({ ...draft, priority: event.target.value }))}>
+                      <option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option><option value="urgent">Urgent</option>
+                    </select></label>
+                    <label>Course <select aria-label="Edit task course" value={editDraft?.moduleId || ""} onChange={(event) => setEditDraft((draft) => ({ ...draft, moduleId: event.target.value }))}>
+                      <option value="">No course</option>
+                      {modules.map((module) => <option key={module.id} value={module.id}>{module.module_code}</option>)}
+                    </select></label>
+                  </div>
+                  {editError && <div className="task-inline-error" role="alert">{editError}</div>}
+                  <div className="task-inline-actions">
+                    <button type="button" onClick={cancelEdit}>Cancel</button>
+                    <button type="submit" className="is-primary" disabled={!editDraft?.title.trim() || isSavingEdit}>{isSavingEdit ? "Saving…" : "Save"}</button>
+                  </div>
+                </form>
               ) : (
                 <div className="task-row-content">
                   <span>{task.title}</span>
