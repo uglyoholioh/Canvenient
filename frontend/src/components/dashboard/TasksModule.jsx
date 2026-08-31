@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
-import { CalendarClock, Check, Pencil, Plus, Trash2 } from "lucide-react";
+import { CalendarClock, Check, Pencil, Trash2 } from "lucide-react";
 import { deleteTask, getTasks, updateTask } from "../../api";
+import TaskInputBar from "../TaskInputBar";
 
 function taskDueDate(task) {
   const raw = task.effective_due_at || task.due_at_override || task.source_due_at;
@@ -21,7 +22,7 @@ function taskCreatedTime(task) {
   return Number.isNaN(date.getTime()) ? 0 : date.getTime();
 }
 
-export default function TasksModule({ token, refreshKey = 0, onAddTask }) {
+export default function TasksModule({ token, refreshKey = 0 }) {
   const [tasks, setTasks] = useState([]);
   const [filter, setFilter] = useState("all");
   const [expandedId, setExpandedId] = useState(null);
@@ -78,7 +79,6 @@ export default function TasksModule({ token, refreshKey = 0, onAddTask }) {
         <div className="module-filter-tabs" role="tablist" aria-label="Task filters">
           {["all", "today", "overdue", "priority"].map((value) => <button type="button" role="tab" aria-selected={filter === value} key={value} className={filter === value ? "is-active" : ""} onClick={() => setFilter(value)}>{value}</button>)}
         </div>
-        <button type="button" className="module-quick-add" onClick={onAddTask}><Plus size={12} />Add</button>
       </div>
       {error ? <div className="module-error">{error}</div> : visibleTasks.length === 0 ? <div className="module-empty">Nothing in this view.</div> : (
         <div className="module-list">
@@ -107,6 +107,17 @@ export default function TasksModule({ token, refreshKey = 0, onAddTask }) {
           })}
         </div>
       )}
+      <TaskInputBar
+        token={token}
+        variant="dashboard"
+        initialMode="task"
+        allowedModes={["task"]}
+        autoFocus={false}
+        onTaskCreated={(task) => {
+          setTasks((current) => [task, ...current]);
+          window.dispatchEvent(new CustomEvent("canvenient-task-created", { detail: task }));
+        }}
+      />
     </div>
   );
 }

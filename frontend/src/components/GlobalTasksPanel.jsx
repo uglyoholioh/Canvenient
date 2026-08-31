@@ -35,11 +35,18 @@ export default function GlobalTasksPanel({
         aria-modal="true"
         aria-labelledby="global-tasks-title"
         tabIndex={-1}
-        onKeyDown={(event) => {
-          if (event.key !== "Escape") return;
-          event.preventDefault();
-          event.stopPropagation();
-          onClose();
+        onKeyDownCapture={(event) => {
+          if (event.key === "Tab" && event.shiftKey) {
+            event.preventDefault();
+            event.stopPropagation();
+            onClose();
+            return;
+          }
+          if (event.key === "Escape") {
+            event.preventDefault();
+            event.stopPropagation();
+            onClose();
+          }
         }}
       >
         <header className="global-tasks-header">
@@ -52,7 +59,7 @@ export default function GlobalTasksPanel({
             <button type="button" onClick={onClose} aria-label="Close Tasks panel"><X size={15} /></button>
           </div>
         </header>
-        {isOpen && <TaskView token={token} embedded active composerAutoFocus={focusComposer} />}
+        {isOpen && <TaskView token={token} embedded active composerAutoFocus={focusComposer} composerFocusRequestScope="global-tasks" />}
       </aside>
     </div>
   );

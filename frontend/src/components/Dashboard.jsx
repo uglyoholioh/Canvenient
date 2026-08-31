@@ -89,7 +89,7 @@ export default function Dashboard({ token, user, onNavigate }) {
       icon: CheckSquare,
       title: "Tasks",
       onViewFull: () => onNavigate("tasks"),
-      body: <TasksModule token={token} refreshKey={taskRefreshKey} onAddTask={() => openQuickCapture({ mode: "task" })} />,
+      body: <TasksModule token={token} refreshKey={taskRefreshKey} />,
     },
     schedule: {
       icon: CalendarDays,

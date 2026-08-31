@@ -1850,6 +1850,10 @@ button.module-item-main:hover, .module-list-item.task-module-item:hover { backgr
 .tasks-module { height: 100%; min-height: 0; display: flex; flex-direction: column; }
 .tasks-module .module-filter-tabs { flex: none; }
 .tasks-module-controls { flex: none; display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+.tasks-module .module-list, .tasks-module .module-empty, .tasks-module .module-error { min-height: 0; flex: 1 1 0; }
+.tasks-module .task-input-shell.is-dashboard { flex: none; padding: 8px 0 0; border-top: 1px solid var(--border); background: transparent; }
+.tasks-module .task-input-shell.is-dashboard .task-input-card { padding: 7px; border-color: var(--border); box-shadow: none; }
+.tasks-module .task-input-shell.is-dashboard .task-input-note { min-height: 36px; }
 .module-quick-add { flex: none; min-height: 25px; padding: 4px 7px; border: 1px solid var(--border); border-radius: 5px; background: transparent; color: var(--text-muted); cursor: pointer; display: flex; align-items: center; gap: 4px; font-size: 10px; }
 .module-quick-add:hover { border-color: var(--border-strong); background: var(--surface-hover); color: var(--text-h); }
 .tasks-module .module-list { min-height: 0; flex: 1 1 0; overflow-y: auto; }

@@ -81,7 +81,7 @@ export default function WorkspaceLayout({ token, user, onLogout }) {
     }
     setTasksPanel({ isOpen: true, focusComposer: Boolean(options.focusComposer) });
     if (options.focusComposer) {
-      requestAnimationFrame(() => window.dispatchEvent(new CustomEvent("canvenient-focus-task-input")));
+      requestAnimationFrame(() => window.dispatchEvent(new CustomEvent("canvenient-focus-task-input", { detail: { scope: "global-tasks" } })));
     }
   }, [tasksPanel.isOpen]);
 
@@ -142,7 +142,6 @@ export default function WorkspaceLayout({ token, user, onLogout }) {
         if (tasksPanel.isOpen) closeTasksPanel();
       }
       if (matchesShortcut(e, shortcuts.tasksPanel)) {
-        if (tasksPanel.isOpen && e.target.closest?.(".global-tasks-panel")) return;
         e.preventDefault();
         toggleTasksPanel();
         return;

@@ -1,7 +1,7 @@
 // React is required by the test JSX transform.
 // eslint-disable-next-line no-unused-vars
 import React from "react";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import WorkspaceLayout from "../WorkspaceLayout";
 
@@ -66,7 +66,7 @@ describe("WorkspaceLayout", () => {
     expect(screen.getByRole("heading", { name: "Dashboard" })).toBeInTheDocument();
   });
 
-  it("toggles the Tasks panel from any active control with Shift+Tab", () => {
+  it("opens and closes the Tasks panel with Shift+Tab without leaking focus to the dashboard", async () => {
     render(<WorkspaceLayout token="token" user={{ id: 1 }} onLogout={() => {}} />);
     const dashboardCard = screen.getByRole("button", { name: "Dashboard content" });
     dashboardCard.focus();
@@ -79,9 +79,7 @@ describe("WorkspaceLayout", () => {
     composer.focus();
     fireEvent.keyDown(composer, { key: "Tab", shiftKey: true });
 
-    expect(screen.getByRole("dialog", { name: "Tasks" })).toBeInTheDocument();
-
-    fireEvent.keyDown(composer, { key: "Escape" });
     expect(screen.queryByRole("dialog", { name: "Tasks" })).not.toBeInTheDocument();
+    await waitFor(() => expect(dashboardCard).toHaveFocus());
   });
 });

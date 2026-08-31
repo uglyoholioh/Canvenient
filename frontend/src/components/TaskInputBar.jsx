@@ -216,6 +216,7 @@ export default function TaskInputBar({
   onClose,
   variant = "inline",
   allowedModes = ["task", "note"],
+  focusRequestScope,
 }) {
   const availableModes = allowedModes.filter((mode) => ["task", "note"].includes(mode));
   const requestedMode = availableModes.includes(normalizedMode(initialMode))
@@ -245,10 +246,14 @@ export default function TaskInputBar({
     if (isOpen) setInputMode(requestedMode);
   }, [isOpen, requestedMode]);
   useEffect(() => {
+    if (!focusRequestScope) return undefined;
     const focusInput = () => textareaRef.current?.focus();
-    window.addEventListener("canvenient-focus-task-input", focusInput);
-    return () => window.removeEventListener("canvenient-focus-task-input", focusInput);
-  }, []);
+    const handleFocusRequest = (event) => {
+      if (event.detail?.scope === focusRequestScope) focusInput();
+    };
+    window.addEventListener("canvenient-focus-task-input", handleFocusRequest);
+    return () => window.removeEventListener("canvenient-focus-task-input", handleFocusRequest);
+  }, [focusRequestScope]);
   useEffect(() => {
     if (!textareaRef.current) return;
     textareaRef.current.style.height = "auto";

@@ -165,7 +165,7 @@ function priorityColor(priority) {
   return "var(--text-muted)";
 }
 
-export default function TaskView({ token, embedded = false, active = true, composerAutoFocus = false }) {
+export default function TaskView({ token, embedded = false, active = true, composerAutoFocus = false, composerFocusRequestScope }) {
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
@@ -399,6 +399,7 @@ export default function TaskView({ token, embedded = false, active = true, compo
         initialMode="task"
         allowedModes={["task"]}
         autoFocus={composerAutoFocus}
+        focusRequestScope={composerFocusRequestScope}
         onTaskCreated={(task) => window.dispatchEvent(new CustomEvent("canvenient-task-created", { detail: task }))}
       />
     </div>
