@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import TaskView from "./TaskView";
 import TaskInputBar from "./TaskInputBar";
+import GlobalTasksPanel from "./GlobalTasksPanel";
 import Omnibar from "./Omnibar";
 import SettingsView from "./SettingsView";
 import CanvasView from "./CanvasView";
@@ -59,8 +60,9 @@ export default function WorkspaceLayout({ token, user, onLogout }) {
   const [toolbar, setToolbar] = useState(null);
   const [isSidebarHovered, setIsSidebarHovered] = useState(false);
   const [shortcuts, setShortcuts] = useState(readKeyboardShortcuts);
-  const [captureContext, setCaptureContext] = useState(null);
-  const [quickCapture, setQuickCapture] = useState({ isOpen: false, mode: "task", context: null });
+  const [tasksPanel, setTasksPanel] = useState({ isOpen: false, focusComposer: false });
+  const [quickCapture, setQuickCapture] = useState({ isOpen: false });
+  const tasksPanelReturnFocus = useRef(null);
   const quickCaptureReturnFocus = useRef(null);
   
   const [sidebarWidth, setSidebarWidth] = useState(() => parseInt(localStorage.getItem('canvenient-sidebar-width') || '250', 10));
@@ -68,33 +70,44 @@ export default function WorkspaceLayout({ token, user, onLogout }) {
   
   const [sidebarBehavior, setSidebarBehavior] = useState(getSidebarBehavior);
 
-  const openQuickCapture = useCallback((options = {}) => {
-    const mode = options.mode === "note" ? "note" : "task";
-    quickCaptureReturnFocus.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    setQuickCapture((current) => ({
-      isOpen: true,
-      mode,
-      context: options.context === undefined
-        ? (current.isOpen ? (captureContext || current.context) : captureContext)
-        : options.context,
-    }));
-  }, [captureContext]);
-
-  const closeQuickCapture = useCallback(() => {
-    setQuickCapture((current) => ({ ...current, isOpen: false }));
-    requestAnimationFrame(() => quickCaptureReturnFocus.current?.focus?.());
+  const closeTasksPanel = useCallback((restoreFocus = true) => {
+    setTasksPanel({ isOpen: false, focusComposer: false });
+    if (restoreFocus) requestAnimationFrame(() => tasksPanelReturnFocus.current?.focus?.());
   }, []);
 
-  const clearQuickCaptureContext = useCallback(() => {
-    setCaptureContext(null);
-    setQuickCapture((current) => ({ ...current, context: null }));
+  const openTasksPanel = useCallback((options = {}) => {
+    if (!tasksPanel.isOpen) {
+      tasksPanelReturnFocus.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    }
+    setTasksPanel({ isOpen: true, focusComposer: Boolean(options.focusComposer) });
+    if (options.focusComposer) {
+      requestAnimationFrame(() => window.dispatchEvent(new CustomEvent("canvenient-focus-task-input")));
+    }
+  }, [tasksPanel.isOpen]);
+
+  const toggleTasksPanel = useCallback(() => {
+    if (tasksPanel.isOpen) closeTasksPanel();
+    else openTasksPanel();
+  }, [closeTasksPanel, openTasksPanel, tasksPanel.isOpen]);
+
+  const openQuickCapture = useCallback((options = {}) => {
+    if (options.mode !== "note") {
+      openTasksPanel({ focusComposer: true });
+      return;
+    }
+    quickCaptureReturnFocus.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    setQuickCapture({ isOpen: true });
+  }, [openTasksPanel]);
+
+  const closeQuickCapture = useCallback(() => {
+    setQuickCapture({ isOpen: false });
+    requestAnimationFrame(() => quickCaptureReturnFocus.current?.focus?.());
   }, []);
 
   const quickCaptureValue = useMemo(() => ({
     isOpen: quickCapture.isOpen,
     openQuickCapture,
     closeQuickCapture,
-    setCaptureContext,
   }), [closeQuickCapture, openQuickCapture, quickCapture.isOpen]);
 
   useEffect(() => {
@@ -124,10 +137,13 @@ export default function WorkspaceLayout({ token, user, onLogout }) {
 
   useEffect(() => {
     const handleGlobalKey = (e) => {
-      if (e.key === "Escape") setIsShortcutHelpOpen(false);
-      if (e.target.closest?.("[data-quick-capture-browse='true']") && matchesShortcut(e, shortcuts.browseCapture)) {
+      if (e.key === "Escape") {
+        setIsShortcutHelpOpen(false);
+        if (tasksPanel.isOpen) closeTasksPanel();
+      }
+      if (matchesShortcut(e, shortcuts.tasksPanel)) {
         e.preventDefault();
-        openQuickCapture({ mode: "task" });
+        toggleTasksPanel();
         return;
       }
       if (matchesShortcut(e, shortcuts.quickNote)) {
@@ -166,7 +182,7 @@ export default function WorkspaceLayout({ token, user, onLogout }) {
     };
     window.addEventListener('keydown', handleGlobalKey);
     return () => window.removeEventListener('keydown', handleGlobalKey);
-  }, [openQuickCapture, shortcuts]);
+  }, [closeTasksPanel, openQuickCapture, shortcuts, tasksPanel.isOpen, toggleTasksPanel]);
 
   useEffect(() => {
     let disposed = false;
@@ -276,10 +292,6 @@ export default function WorkspaceLayout({ token, user, onLogout }) {
   };
 
   const toolbarTitle = toolbar?.title || viewTitle(activeTab);
-
-  const handleTaskCreated = useCallback((task) => {
-    window.dispatchEvent(new CustomEvent("canvenient-task-created", { detail: task }));
-  }, []);
 
   const handleNoteCreated = useCallback((note) => {
     window.dispatchEvent(new CustomEvent("canvenient-note-created", { detail: note }));
@@ -399,14 +411,24 @@ export default function WorkspaceLayout({ token, user, onLogout }) {
           token={token}
           variant="dock"
           isOpen={quickCapture.isOpen}
-          initialMode={quickCapture.mode}
-          context={quickCapture.context}
-          onContextClear={clearQuickCaptureContext}
+          initialMode="note"
+          allowedModes={["note"]}
           onClose={closeQuickCapture}
-          onTaskCreated={handleTaskCreated}
           onNoteCreated={handleNoteCreated}
         />
       </main>
+
+      <GlobalTasksPanel
+        token={token}
+        isOpen={tasksPanel.isOpen}
+        focusComposer={tasksPanel.focusComposer}
+        shortcutLabel={formatShortcut(shortcuts.tasksPanel)}
+        onClose={closeTasksPanel}
+        onOpenFull={() => {
+          closeTasksPanel(false);
+          setActiveTab("tasks");
+        }}
+      />
 
       {isOmnibarOpen && <Omnibar onClose={() => setIsOmnibarOpen(false)} token={token} onNavigate={(type, item) => {
         if (type === 'note') {
@@ -420,9 +442,9 @@ export default function WorkspaceLayout({ token, user, onLogout }) {
             <header><h2 id="shortcut-help-title">Keyboard shortcuts</h2><button type="button" onClick={() => setIsShortcutHelpOpen(false)} aria-label="Close keyboard shortcuts">×</button></header>
             <dl>
               <div><dt>Search</dt><dd>{formatShortcut(shortcuts.search)}</dd></div>
-              <div><dt>Quick task</dt><dd>{formatShortcut(shortcuts.quickTask)}</dd></div>
+              <div><dt>Tasks panel</dt><dd>{formatShortcut(shortcuts.tasksPanel)}</dd></div>
+              <div><dt>New task</dt><dd>{formatShortcut(shortcuts.quickTask)}</dd></div>
               <div><dt>Quick note</dt><dd>{formatShortcut(shortcuts.quickNote)}</dd></div>
-              <div><dt>Quick capture from browse mode</dt><dd>{formatShortcut(shortcuts.browseCapture)}</dd></div>
               <div><dt>Import timetable</dt><dd>⌘O</dd></div>
               <div><dt>Switch views</dt><dd>⌘1–5</dd></div>
               <div><dt>Toggle sidebar</dt><dd>⌘\\</dd></div>

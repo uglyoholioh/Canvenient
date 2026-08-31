@@ -396,7 +396,6 @@ export default function ModuleCard({
       ref={setCardRef}
       className={`dashboard-module ${collapsed ? "is-collapsed" : ""} ${editing ? "is-editing" : ""} ${dragging ? "is-dragging" : ""} ${resizing ? "is-resizing" : ""} ${className}`}
       data-module={moduleId}
-      data-quick-capture-browse="true"
       data-columns={size.columns}
       data-rows={size.rows}
       tabIndex={browseActive ? 0 : -1}

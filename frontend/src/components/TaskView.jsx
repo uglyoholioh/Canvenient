@@ -4,7 +4,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { BookOpen, Calendar, CheckCircle, Flag, Plus } from "lucide-react";
 import { getTasks, updateTask } from "../api";
 import { useWorkspaceToolbar } from "./WorkspaceToolbarContext";
-import { useQuickCapture } from "./QuickCaptureContext";
+import TaskInputBar from "./TaskInputBar";
 
 function normalizeDate(value) {
   if (!value) return null;
@@ -62,8 +62,7 @@ function priorityColor(priority) {
   return "var(--text-muted)";
 }
 
-export default function TaskView({ token }) {
-  const { openQuickCapture } = useQuickCapture();
+export default function TaskView({ token, embedded = false, active = true, composerAutoFocus = false }) {
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
@@ -73,6 +72,7 @@ export default function TaskView({ token }) {
   const [checkboxStyle, setCheckboxStyle] = useState(() => localStorage.getItem("canvenient-checkbox-style") || "brackets");
   const itemRefs = useRef({});
   const editRef = useRef(null);
+  const taskViewRef = useRef(null);
 
   const loadTasks = useCallback(async () => {
     setLoading(true);
@@ -125,11 +125,12 @@ export default function TaskView({ token }) {
   const toolbarConfig = useMemo(() => ({
     title: "Tasks",
     subtitle: loading ? "Loading" : `${tasks.length} pending`,
-    actions: <button type="button" className="mac-toolbar-action" onClick={() => openQuickCapture({ mode: "task" })}><Plus size={14} />New Task</button>,
-  }), [loading, openQuickCapture, tasks.length]);
-  useWorkspaceToolbar(toolbarConfig);
+    actions: <button type="button" className="mac-toolbar-action" onClick={() => taskViewRef.current?.querySelector("textarea")?.focus()}><Plus size={14} />New Task</button>,
+  }), [loading, tasks.length]);
+  useWorkspaceToolbar(toolbarConfig, !embedded);
 
   useEffect(() => {
+    if (!active) return undefined;
     const handleKeyDown = (event) => {
       if (editingId !== null || event.target.closest?.("input, textarea, select, [contenteditable='true']")) return;
       if (event.key === "ArrowUp") {
@@ -162,10 +163,10 @@ export default function TaskView({ token }) {
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [completeTask, editingId, selectedIndex, tasks]);
+  }, [active, completeTask, editingId, selectedIndex, tasks]);
 
   return (
-    <div className="task-view">
+    <div ref={taskViewRef} className={`task-view ${embedded ? "is-embedded" : ""}`}>
       <div className="task-feed" role="list" aria-label="Pending tasks">
         {loading ? <div className="empty-state">Loading tasks...</div> : loadError ? (
           <div className="empty-state task-load-error">
@@ -174,7 +175,7 @@ export default function TaskView({ token }) {
             <button type="button" onClick={loadTasks}>Retry</button>
           </div>
         ) : tasks.length === 0 ? (
-          <div className="empty-state"><strong>No tasks pending</strong><span>Use Quick Capture to add one without leaving this view.</span></div>
+          <div className="empty-state"><strong>No tasks pending</strong><span>Add one below without leaving this view.</span></div>
         ) : tasks.map((task, index) => {
           const selected = selectedIndex === index;
           const editing = editingId === task.id;
@@ -207,6 +208,15 @@ export default function TaskView({ token }) {
           );
         })}
       </div>
+      <TaskInputBar
+        token={token}
+        variant={embedded ? "panel" : "inline"}
+        isOpen={active}
+        initialMode="task"
+        allowedModes={["task"]}
+        autoFocus={composerAutoFocus}
+        onTaskCreated={(task) => window.dispatchEvent(new CustomEvent("canvenient-task-created", { detail: task }))}
+      />
     </div>
   );
 }

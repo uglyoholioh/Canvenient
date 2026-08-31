@@ -23,6 +23,7 @@ describe("keyboard shortcuts", () => {
   it("uses stable defaults and macOS-style labels", () => {
     expect(readKeyboardShortcuts()).toEqual(DEFAULT_KEYBOARD_SHORTCUTS);
     expect(formatShortcut(DEFAULT_KEYBOARD_SHORTCUTS.quickNote)).toBe("⌘⇧N");
+    expect(formatShortcut(DEFAULT_KEYBOARD_SHORTCUTS.tasksPanel)).toBe("⇧Tab");
   });
 
   it("records and matches a configurable shortcut", () => {

@@ -149,7 +149,7 @@ export default function SettingsView({ token }) {
   const updateShortcut = (name, value) => {
     const duplicate = Object.entries(shortcutConfig).find(([key, shortcut]) => key !== name && typeof shortcut === "string" && shortcut === value);
     if (duplicate) {
-      const labels = { quickTask: "Quick task", quickNote: "Quick note", search: "Search", browseCapture: "Browse capture" };
+      const labels = { tasksPanel: "Tasks panel", quickTask: "New task", quickNote: "Quick note", search: "Search" };
       setShortcutError(`${formatShortcut(value)} is already assigned to ${labels[duplicate[0]]}.`);
       return;
     }
@@ -320,10 +320,10 @@ export default function SettingsView({ token }) {
           <p>Click a shortcut, then press the replacement. Changes apply immediately.</p>
         </div>
         <div className="settings-shortcuts-panel">
-          <ShortcutRecorder label="Quick task" description="Open the capture dock in task mode" value={shortcutConfig.quickTask} onChange={(value) => updateShortcut("quickTask", value)} onReset={() => updateShortcut("quickTask", DEFAULT_KEYBOARD_SHORTCUTS.quickTask)} />
-          <ShortcutRecorder label="Quick note" description="Open the same dock in note mode" value={shortcutConfig.quickNote} onChange={(value) => updateShortcut("quickNote", value)} onReset={() => updateShortcut("quickNote", DEFAULT_KEYBOARD_SHORTCUTS.quickNote)} />
+          <ShortcutRecorder allowShiftOnly label="Tasks panel" description="Toggle the full Tasks panel from anywhere" value={shortcutConfig.tasksPanel} onChange={(value) => updateShortcut("tasksPanel", value)} onReset={() => updateShortcut("tasksPanel", DEFAULT_KEYBOARD_SHORTCUTS.tasksPanel)} />
+          <ShortcutRecorder label="New task" description="Open the Tasks panel and focus its composer" value={shortcutConfig.quickTask} onChange={(value) => updateShortcut("quickTask", value)} onReset={() => updateShortcut("quickTask", DEFAULT_KEYBOARD_SHORTCUTS.quickTask)} />
+          <ShortcutRecorder label="Quick note" description="Open the note capture dock" value={shortcutConfig.quickNote} onChange={(value) => updateShortcut("quickNote", value)} onReset={() => updateShortcut("quickNote", DEFAULT_KEYBOARD_SHORTCUTS.quickNote)} />
           <ShortcutRecorder label="Search" description="Open workspace search" value={shortcutConfig.search} onChange={(value) => updateShortcut("search", value)} onReset={() => updateShortcut("search", DEFAULT_KEYBOARD_SHORTCUTS.search)} />
-          <ShortcutRecorder allowShiftOnly label="Browse capture" description="Open a task from a dashboard card or Canvas detail" value={shortcutConfig.browseCapture} onChange={(value) => updateShortcut("browseCapture", value)} onReset={() => updateShortcut("browseCapture", DEFAULT_KEYBOARD_SHORTCUTS.browseCapture)} />
         </div>
         {shortcutError && <div className="settings-shortcut-error" role="alert">{shortcutError}</div>}
         <p className="settings-shortcut-footnote">The system-wide show/hide shortcut remains ⌘J.</p>

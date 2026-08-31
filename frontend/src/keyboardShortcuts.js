@@ -4,7 +4,7 @@ export const DEFAULT_KEYBOARD_SHORTCUTS = {
   quickTask: "Meta+N",
   quickNote: "Meta+Shift+N",
   search: "Meta+K",
-  browseCapture: "Shift+Tab",
+  tasksPanel: "Shift+Tab",
 };
 
 const MODIFIER_ORDER = ["Meta", "Control", "Alt", "Shift"];
@@ -43,7 +43,7 @@ export function readKeyboardShortcuts() {
       quickTask: normalizeShortcut(stored.quickTask, DEFAULT_KEYBOARD_SHORTCUTS.quickTask),
       quickNote: normalizeShortcut(stored.quickNote, DEFAULT_KEYBOARD_SHORTCUTS.quickNote),
       search: normalizeShortcut(stored.search, DEFAULT_KEYBOARD_SHORTCUTS.search),
-      browseCapture: normalizeShortcut(stored.browseCapture, DEFAULT_KEYBOARD_SHORTCUTS.browseCapture),
+      tasksPanel: normalizeShortcut(stored.tasksPanel || stored.browseCapture, DEFAULT_KEYBOARD_SHORTCUTS.tasksPanel),
     };
   } catch {
     return { ...DEFAULT_KEYBOARD_SHORTCUTS };

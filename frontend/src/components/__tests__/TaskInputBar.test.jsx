@@ -19,39 +19,25 @@ describe("TaskInputBar quick capture", () => {
     createTask.mockResolvedValue({ id: 9, title: "Review assignment", status: "todo" });
   });
 
-  it("keeps the dock open and carries Canvas context into the created task", async () => {
+  it("keeps a task-only composer open after creating a task", async () => {
     render(
       <TaskInputBar
         token="token"
         variant="dock"
         isOpen
         initialMode="task"
-        context={{
-          type: "assignment",
-          id: 77,
-          title: "Problem Set 2",
-          label: "Problem Set 2",
-          courseId: 501,
-          courseCode: "CS2040",
-          dueAt: "2026-09-01T10:30:00+08:00",
-          externalUrl: "https://canvas.example/assignments/77",
-        }}
+        allowedModes={["task"]}
       />,
     );
 
-    expect(screen.getByText("From Problem Set 2")).toBeInTheDocument();
-    await waitFor(() => expect(screen.getByRole("button", { name: "CS2040" })).toBeInTheDocument());
     fireEvent.change(screen.getByPlaceholderText("What needs to be done?"), { target: { value: "Review assignment" } });
     fireEvent.click(screen.getByRole("button", { name: "Add" }));
 
     await waitFor(() => expect(createTask).toHaveBeenCalledWith("token", expect.objectContaining({
       title: "Review assignment",
-      module_id: 42,
-      source_type: "canvas",
-      source_id: "77",
-      source_due_at: "2026-09-01T10:30:00+08:00",
-      external_url: "https://canvas.example/assignments/77",
+      priority_manual: "medium",
     })));
+    expect(createTask.mock.calls[0][1]).not.toHaveProperty("source_type");
     expect(screen.getByRole("dialog", { name: "Quick capture" })).toBeInTheDocument();
     await waitFor(() => expect(screen.getByPlaceholderText("What needs to be done?")).toHaveValue(""));
   });

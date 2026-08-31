@@ -1,12 +1,12 @@
 // React is required by the test JSX transform.
 // eslint-disable-next-line no-unused-vars
 import React from "react";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import WorkspaceLayout from "../WorkspaceLayout";
 
-vi.mock("../Dashboard", () => ({ default: () => <button type="button" data-quick-capture-browse="true">Dashboard content</button> }));
-vi.mock("../TaskView", () => ({ default: () => <div>Tasks content</div> }));
+vi.mock("../Dashboard", () => ({ default: () => <button type="button">Dashboard content</button> }));
+vi.mock("../TaskView", () => ({ default: ({ embedded, composerAutoFocus }) => <div>Tasks content{embedded && <textarea autoFocus={composerAutoFocus} aria-label="Panel task composer" />}</div> }));
 vi.mock("../Schedule", () => ({ default: () => <div>Schedule content</div> }));
 vi.mock("../SettingsView", () => ({ default: () => <div>Settings content</div> }));
 vi.mock("../CanvasView", () => ({ default: () => <div>Canvas content</div> }));
@@ -56,23 +56,27 @@ describe("WorkspaceLayout", () => {
     expect(tasks).toHaveFocus();
   });
 
-  it("opens the persistent quick-capture dock without changing views", async () => {
+  it("opens the Tasks panel at its composer without changing views", async () => {
     render(<WorkspaceLayout token="token" user={{ id: 1 }} onLogout={() => {}} />);
 
     fireEvent.keyDown(window, { key: "n", metaKey: true });
 
-    expect(screen.getByRole("dialog", { name: "Quick capture" })).toBeInTheDocument();
-    await waitFor(() => expect(screen.getByPlaceholderText("What needs to be done?")).toHaveFocus());
+    expect(screen.getByRole("dialog", { name: "Tasks" })).toBeInTheDocument();
+    expect(screen.getByRole("textbox", { name: "Panel task composer" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Dashboard" })).toBeInTheDocument();
   });
 
-  it("uses the contextual browse shortcut from an active dashboard control", async () => {
+  it("toggles the Tasks panel from any active control with Shift+Tab", () => {
     render(<WorkspaceLayout token="token" user={{ id: 1 }} onLogout={() => {}} />);
     const dashboardCard = screen.getByRole("button", { name: "Dashboard content" });
     dashboardCard.focus();
 
     fireEvent.keyDown(dashboardCard, { key: "Tab", shiftKey: true });
 
-    await waitFor(() => expect(screen.getByPlaceholderText("What needs to be done?")).toHaveFocus());
+    expect(screen.getByRole("dialog", { name: "Tasks" })).toBeInTheDocument();
+
+    fireEvent.keyDown(window, { key: "Tab", shiftKey: true });
+
+    expect(screen.queryByRole("dialog", { name: "Tasks" })).not.toBeInTheDocument();
   });
 });
