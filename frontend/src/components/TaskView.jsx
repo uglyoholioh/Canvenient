@@ -67,6 +67,7 @@ export default function TaskView({ token, embedded = false, active = true, compo
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
   const [selectedIndex, setSelectedIndex] = useState(null);
+  const [interactionMode, setInteractionMode] = useState("keyboard");
   const [editingId, setEditingId] = useState(null);
   const [editValue, setEditValue] = useState("");
   const [checkboxStyle, setCheckboxStyle] = useState(() => localStorage.getItem("canvenient-checkbox-style") || "brackets");
@@ -133,6 +134,7 @@ export default function TaskView({ token, embedded = false, active = true, compo
     if (!active) return undefined;
     const handleKeyDown = (event) => {
       if (editingId !== null || event.target.closest?.("input, textarea, select, [contenteditable='true']")) return;
+      setInteractionMode("keyboard");
       if (event.key === "ArrowUp") {
         event.preventDefault();
         setSelectedIndex((index) => index === null ? tasks.length - 1 : Math.max(0, index - 1));
@@ -166,7 +168,7 @@ export default function TaskView({ token, embedded = false, active = true, compo
   }, [active, completeTask, editingId, selectedIndex, tasks]);
 
   return (
-    <div ref={taskViewRef} className={`task-view ${embedded ? "is-embedded" : ""}`}>
+    <div ref={taskViewRef} className={`task-view is-${interactionMode}-mode ${embedded ? "is-embedded" : ""}`} data-interaction-mode={interactionMode}>
       <div className="task-feed" role="list" aria-label="Pending tasks">
         {loading ? <div className="empty-state">Loading tasks...</div> : loadError ? (
           <div className="empty-state task-load-error">
@@ -182,7 +184,17 @@ export default function TaskView({ token, embedded = false, active = true, compo
           const dueDate = taskDueDate(task);
           const priority = visiblePriority(task);
           return (
-            <div role="listitem" key={task.id} ref={(element) => { itemRefs.current[index] = element; }} tabIndex={selected || (selectedIndex === null && index === 0) ? 0 : -1} className={`task-row ${selected ? "is-selected" : ""}`} onFocus={() => setSelectedIndex(index)} onClick={() => setSelectedIndex(index)}>
+            <div
+              role="listitem"
+              key={task.id}
+              ref={(element) => { itemRefs.current[index] = element; }}
+              tabIndex={selected || (selectedIndex === null && index === 0) ? 0 : -1}
+              className={`task-row ${selected ? "is-selected" : ""}`}
+              onPointerEnter={(event) => { if (event.pointerType !== "touch") setInteractionMode("pointer"); }}
+              onPointerDown={(event) => { if (event.pointerType !== "touch") setInteractionMode("pointer"); }}
+              onFocus={() => setSelectedIndex(index)}
+              onClick={() => setSelectedIndex(index)}
+            >
               <button type="button" tabIndex="-1" className="task-check" aria-label={`Complete ${task.title}`} onClick={(event) => { event.stopPropagation(); completeTask(task); }}>
                 {checkboxStyle === "icon" ? <CheckCircle size={16} /> : checkboxStyle === "circle" ? "( )" : "[ ]"}
               </button>
@@ -203,7 +215,7 @@ export default function TaskView({ token, embedded = false, active = true, compo
                   )}
                 </div>
               )}
-              {selected && !editing && <small>Space to complete · Enter to edit</small>}
+              {selected && interactionMode === "keyboard" && !editing && <small>Space to complete · Enter to edit</small>}
             </div>
           );
         })}

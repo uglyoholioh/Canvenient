@@ -41,6 +41,24 @@ describe("TaskView keyboard navigation", () => {
     await waitFor(() => expect(updateTask).toHaveBeenCalledWith("token", 2, { status: "done" }));
   });
 
+  it("lets only the most recent input modality own the visible selection", async () => {
+    const { container } = render(<TaskView token="token" />);
+    const rows = await screen.findAllByRole("listitem");
+    const taskView = container.querySelector(".task-view");
+
+    fireEvent.keyDown(window, { key: "ArrowDown" });
+    expect(taskView).toHaveAttribute("data-interaction-mode", "keyboard");
+    expect(screen.getByText("Space to complete · Enter to edit")).toBeInTheDocument();
+
+    fireEvent.pointerEnter(rows[0], { pointerType: "mouse" });
+    expect(taskView).toHaveAttribute("data-interaction-mode", "pointer");
+    expect(screen.queryByText("Space to complete · Enter to edit")).not.toBeInTheDocument();
+
+    fireEvent.keyDown(window, { key: "ArrowUp" });
+    expect(taskView).toHaveAttribute("data-interaction-mode", "keyboard");
+    expect(screen.getByText("Space to complete · Enter to edit")).toBeInTheDocument();
+  });
+
   it("orders pending tasks by effective deadline and shows Canvas source deadlines", async () => {
     getTasks.mockResolvedValue([
       { id: 1, title: "No deadline", status: "todo", created_at: "2026-08-30T10:00:00Z", priority_manual: "medium" },
