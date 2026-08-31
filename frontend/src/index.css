@@ -2928,6 +2928,11 @@ textarea {
 .task-inline-properties input, .task-inline-properties select { width: 100%; height: 31px; padding: 0 7px; border: 1px solid var(--border-strong); border-radius: 4px; outline: 0; background: var(--surface-muted); color: var(--text-h); font-size: 10px; }
 .task-inline-properties input:focus, .task-inline-properties select:focus { border-color: var(--accent); }
 .task-inline-properties label:focus-within { color: var(--text-h); }
+.task-due-editor { width: 100%; height: 31px; padding: 0 7px; border: 1px solid var(--border-strong); border-radius: 4px; outline: 0; background: var(--surface-muted); color: var(--text-h); display: flex; align-items: center; gap: 1px; cursor: text; font: 10px var(--font-mono); }
+.task-due-editor:focus-visible { border-color: var(--accent); outline: 2px solid var(--border-focus); outline-offset: 1px; }
+.task-due-editor span { min-width: 18px; padding: 2px 1px; border-radius: 2px; text-align: center; }.task-due-editor span:nth-of-type(3) { min-width: 34px; }
+.task-due-editor span.is-active { background: var(--accent); color: var(--text-inverse); }
+.task-due-editor i { color: var(--text-muted); font-style: normal; }
 .task-view .task-inline-actions { justify-content: flex-end; }
 .task-view .task-inline-actions button.is-primary { background: var(--accent); color: var(--text-inverse); }
 .task-view .task-inline-actions button:disabled { cursor: not-allowed; opacity: .5; }

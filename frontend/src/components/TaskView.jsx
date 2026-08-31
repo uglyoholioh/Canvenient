@@ -26,33 +26,106 @@ function formatDueDate(value) {
   }).format(date);
 }
 
-function dueTextValue(value) {
+const DUE_SEGMENTS = ["day", "month", "year", "hour", "minute"];
+const DUE_SEGMENT_LENGTHS = { day: 2, month: 2, year: 4, hour: 2, minute: 2 };
+
+function duePartsValue(value) {
   const date = normalizeDate(value);
-  if (!date) return "";
+  if (!date) return { day: "", month: "", year: "", hour: "", minute: "" };
   const part = (number) => String(number).padStart(2, "0");
-  return `${part(date.getDate())}/${part(date.getMonth() + 1)}/${date.getFullYear()} ${part(date.getHours())}:${part(date.getMinutes())}`;
+  return {
+    day: part(date.getDate()),
+    month: part(date.getMonth() + 1),
+    year: String(date.getFullYear()),
+    hour: part(date.getHours()),
+    minute: part(date.getMinutes()),
+  };
 }
 
-function parseDueText(value) {
-  const trimmed = value.trim();
-  if (!trimmed) return null;
-  const match = trimmed.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})(?:,?\s+)(\d{1,2}):(\d{2})(?:\s*(am|pm))?$/i);
-  if (!match) throw new Error("Use DD/MM/YYYY HH:MM, for example 21/10/2026 23:59.");
-  const [, dayText, monthText, yearText, hourText, minuteText, meridiem] = match;
-  const day = Number(dayText);
-  const month = Number(monthText);
-  const year = Number(yearText);
-  let hour = Number(hourText);
-  const minute = Number(minuteText);
-  if (meridiem) {
-    if (hour < 1 || hour > 12) throw new Error("Enter an hour from 1 to 12 when using AM or PM.");
-    hour = (hour % 12) + (meridiem.toLowerCase() === "pm" ? 12 : 0);
-  }
+function parseDueParts(parts) {
+  if (DUE_SEGMENTS.every((segment) => !parts[segment])) return null;
+  if (DUE_SEGMENTS.some((segment) => !parts[segment])) throw new Error("Complete each part of the due date and time.");
+  const day = Number(parts.day);
+  const month = Number(parts.month);
+  const year = Number(parts.year);
+  const hour = Number(parts.hour);
+  const minute = Number(parts.minute);
   const date = new Date(year, month - 1, day, hour, minute, 0, 0);
   if (month < 1 || month > 12 || minute > 59 || hour > 23 || date.getFullYear() !== year || date.getMonth() !== month - 1 || date.getDate() !== day) {
     throw new Error("Enter a valid due date and time.");
   }
   return date.toISOString();
+}
+
+function DueDateEditor({ value, onChange }) {
+  const [selectedSegment, setSelectedSegment] = useState(0);
+  const [isTyping, setIsTyping] = useState(false);
+  const segment = DUE_SEGMENTS[selectedSegment];
+
+  const moveSegment = (direction) => {
+    setSelectedSegment((current) => Math.max(0, Math.min(DUE_SEGMENTS.length - 1, current + direction)));
+    setIsTyping(false);
+  };
+
+  const adjustSegment = (direction) => {
+    const currentDate = new Date();
+    const defaults = { day: 1, month: currentDate.getMonth() + 1, year: currentDate.getFullYear(), hour: 0, minute: 0 };
+    const bounds = {
+      day: [1, new Date(Number(value.year || defaults.year), Number(value.month || defaults.month), 0).getDate()],
+      month: [1, 12],
+      year: [2000, 2099],
+      hour: [0, 23],
+      minute: [0, 59],
+    };
+    const [minimum, maximum] = bounds[segment];
+    const current = Number(value[segment] || defaults[segment]);
+    const next = current + direction > maximum ? minimum : current + direction < minimum ? maximum : current + direction;
+    onChange({ ...value, [segment]: String(next).padStart(DUE_SEGMENT_LENGTHS[segment], "0") });
+    setIsTyping(false);
+  };
+
+  const typeDigit = (digit) => {
+    const length = DUE_SEGMENT_LENGTHS[segment];
+    const next = isTyping ? `${value[segment] || ""}${digit}`.slice(-length) : digit;
+    onChange({ ...value, [segment]: next });
+    if (next.length === length && selectedSegment < DUE_SEGMENTS.length - 1) {
+      setSelectedSegment((current) => current + 1);
+      setIsTyping(false);
+    } else {
+      setIsTyping(true);
+    }
+  };
+
+  const displaySegment = (segmentName) => {
+    const segmentValue = value[segmentName];
+    if (!segmentValue) return ({ day: "DD", month: "MM", year: "YYYY", hour: "HH", minute: "MM" })[segmentName];
+    return segmentName === "year" ? segmentValue : segmentValue.padStart(2, "0");
+  };
+
+  return (
+    <div
+      className="task-due-editor"
+      role="group"
+      tabIndex={0}
+      aria-label="Edit task due date and time. Use left and right arrows to choose a part, up and down arrows to adjust it, or type digits to replace it."
+      onFocus={() => setIsTyping(false)}
+      onKeyDown={(event) => {
+        if (event.key === "ArrowLeft") { event.preventDefault(); moveSegment(-1); }
+        else if (event.key === "ArrowRight") { event.preventDefault(); moveSegment(1); }
+        else if (event.key === "ArrowUp") { event.preventDefault(); adjustSegment(1); }
+        else if (event.key === "ArrowDown") { event.preventDefault(); adjustSegment(-1); }
+        else if (/^\d$/.test(event.key)) { event.preventDefault(); typeDigit(event.key); }
+        else if (event.key === "Backspace" || event.key === "Delete") { event.preventDefault(); onChange({ ...value, [segment]: "" }); setIsTyping(true); }
+        else if (event.key === "Enter") event.preventDefault();
+      }}
+    >
+      <span className={selectedSegment === 0 ? "is-active" : ""}> {displaySegment("day")} </span><i>/</i>
+      <span className={selectedSegment === 1 ? "is-active" : ""}> {displaySegment("month")} </span><i>/</i>
+      <span className={selectedSegment === 2 ? "is-active" : ""}> {displaySegment("year")} </span><i> · </i>
+      <span className={selectedSegment === 3 ? "is-active" : ""}> {displaySegment("hour")} </span><i>:</i>
+      <span className={selectedSegment === 4 ? "is-active" : ""}> {displaySegment("minute")} </span>
+    </div>
+  );
 }
 
 function taskDueDate(task) {
@@ -156,7 +229,7 @@ export default function TaskView({ token, embedded = false, active = true, compo
     setEditError("");
     setEditDraft({
       title,
-      dueAt: dueTextValue(taskDueDate(task)),
+      dueAt: duePartsValue(taskDueDate(task)),
       priority: task.priority_manual || "medium",
       moduleId: task.module_id == null ? "" : String(task.module_id),
     });
@@ -177,7 +250,7 @@ export default function TaskView({ token, embedded = false, active = true, compo
     if (!editDraft?.title.trim() || isSavingEdit) return;
     let dueAtOverride;
     try {
-      dueAtOverride = parseDueText(editDraft.dueAt);
+      dueAtOverride = parseDueParts(editDraft.dueAt);
     } catch (error) {
       setEditError(error.message);
       return;
@@ -282,7 +355,7 @@ export default function TaskView({ token, embedded = false, active = true, compo
                 }}>
                   <input ref={editRef} aria-label="Edit task title" value={editDraft?.title || ""} onChange={(event) => setEditDraft((draft) => ({ ...draft, title: event.target.value }))} />
                   <div className="task-inline-properties">
-                    <label>Due <input aria-label="Edit task due date" type="text" inputMode="numeric" placeholder="DD/MM/YYYY HH:MM" value={editDraft?.dueAt || ""} onChange={(event) => setEditDraft((draft) => ({ ...draft, dueAt: event.target.value }))} /></label>
+                    <label>Due <DueDateEditor value={editDraft?.dueAt || duePartsValue(null)} onChange={(dueAt) => setEditDraft((draft) => ({ ...draft, dueAt }))} /></label>
                     <label>Priority <select aria-label="Edit task priority" value={editDraft?.priority || "medium"} onChange={(event) => setEditDraft((draft) => ({ ...draft, priority: event.target.value }))}>
                       <option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option><option value="urgent">Urgent</option>
                     </select></label>

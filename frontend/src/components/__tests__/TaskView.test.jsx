@@ -85,8 +85,8 @@ describe("TaskView keyboard navigation", () => {
     fireEvent.change(title, { target: { value: "Revised task" } });
 
     await user.tab();
-    expect(screen.getByLabelText("Edit task due date")).toHaveFocus();
-    fireEvent.change(screen.getByLabelText("Edit task due date"), { target: { value: "15/09/2026 14:30" } });
+    expect(screen.getByRole("group", { name: /edit task due date/i })).toHaveFocus();
+    await user.keyboard("150920261430");
     await user.tab();
     expect(screen.getByLabelText("Edit task priority")).toHaveFocus();
     await user.selectOptions(screen.getByLabelText("Edit task priority"), "high");
