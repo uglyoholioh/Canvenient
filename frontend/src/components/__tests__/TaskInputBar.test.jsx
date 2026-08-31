@@ -30,16 +30,18 @@ describe("TaskInputBar quick capture", () => {
       />,
     );
 
-    fireEvent.change(screen.getByPlaceholderText("What needs to be done?"), { target: { value: "Review assignment" } });
+    fireEvent.change(screen.getByPlaceholderText("Short task title..."), { target: { value: "Review assignment" } });
+    fireEvent.change(screen.getByLabelText("Task note"), { target: { value: "Read the marking rubric first." } });
     fireEvent.click(screen.getByRole("button", { name: "Add" }));
 
     await waitFor(() => expect(createTask).toHaveBeenCalledWith("token", expect.objectContaining({
       title: "Review assignment",
+      description: "Read the marking rubric first.",
       priority_manual: "medium",
     })));
     expect(createTask.mock.calls[0][1]).not.toHaveProperty("source_type");
     expect(screen.getByRole("dialog", { name: "Quick capture" })).toBeInTheDocument();
-    await waitFor(() => expect(screen.getByPlaceholderText("What needs to be done?")).toHaveValue(""));
+    await waitFor(() => expect(screen.getByPlaceholderText("Short task title...")).toHaveValue(""));
   });
 
   it("keeps task titles within the server-supported length", async () => {
@@ -47,6 +49,7 @@ describe("TaskInputBar quick capture", () => {
       <TaskInputBar token="token" variant="dock" isOpen initialMode="task" allowedModes={["task"]} />,
     );
 
-    await waitFor(() => expect(screen.getByPlaceholderText("What needs to be done?")).toHaveAttribute("maxLength", "160"));
+    await waitFor(() => expect(screen.getByPlaceholderText("Short task title...")).toHaveAttribute("maxLength", "160"));
+    expect(screen.getByLabelText("Task note")).toHaveAttribute("maxLength", "4000");
   });
 });

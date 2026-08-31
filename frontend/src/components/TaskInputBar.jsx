@@ -223,6 +223,7 @@ export default function TaskInputBar({
     : availableModes[0] || "task";
   const [modules, setModules] = useState([]);
   const [inputValue, setInputValue] = useState("");
+  const [description, setDescription] = useState("");
   const [inputMode, setInputMode] = useState(requestedMode);
   const [dateType, setDateType] = useState("");
   const [customDate, setCustomDate] = useState("");
@@ -256,6 +257,7 @@ export default function TaskInputBar({
 
   const reset = () => {
     setInputValue("");
+    setDescription("");
     setDateType("");
     setCustomDate("");
     setTime("");
@@ -275,7 +277,7 @@ export default function TaskInputBar({
         const note = await createNote({ title, content: "" }, token);
         onNoteCreated?.(note);
       } else {
-        const payload = { title, priority_manual: priority };
+        const payload = { title, description: description.trim(), priority_manual: priority };
         const dueAt = parseDueDate(dateType, customDate, time);
         if (dueAt) payload.due_at_override = dueAt;
         if (moduleId) payload.module_id = Number(moduleId);
@@ -348,10 +350,12 @@ export default function TaskInputBar({
         {error && <div className="task-input-error">{error}</div>}
         <div className="task-input-main">
           <span className={`task-mode-badge is-${inputMode}`}>{inputMode.toUpperCase()}</span>
-          <textarea ref={textareaRef} value={inputValue} rows={1} maxLength={160} onChange={(event) => setInputValue(event.target.value)} onKeyDown={handleInputKeyDown} placeholder={inputMode === "task" ? "What needs to be done?" : "Capture a note title..."} />
+          <textarea ref={textareaRef} value={inputValue} rows={1} maxLength={160} onChange={(event) => setInputValue(event.target.value)} onKeyDown={handleInputKeyDown} placeholder={inputMode === "task" ? "Short task title..." : "Capture a note title..."} />
         </div>
         {inputMode === "task" && (
-          <div className="task-properties">
+          <>
+            <textarea className="task-input-note" aria-label="Task note" value={description} maxLength={4000} rows={2} onChange={(event) => setDescription(event.target.value)} placeholder="Add details or a note (optional)" />
+            <div className="task-properties">
             <DateSelect dateType={dateType} setDateType={setDateType} customDate={customDate} setCustomDate={setCustomDate} onEscape={() => textareaRef.current?.focus()} />
             <div className="task-time-pill property-pill">
               <Clock size={12} />
@@ -373,7 +377,8 @@ export default function TaskInputBar({
               else if (event.key === "Enter") submit();
               else handleArrowNav(event, 4);
             }}><Plus size={14} />{isSubmitting ? "Adding..." : "Add"}</button>
-          </div>
+            </div>
+          </>
         )}
         {inputMode === "note" && (
           <div className="task-properties is-note-mode">

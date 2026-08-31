@@ -230,6 +230,7 @@ export default function TaskView({ token, embedded = false, active = true, compo
     setEditError("");
     setEditDraft({
       title,
+      description: task.description || "",
       dueAt: duePartsValue(taskDueDate(task)),
       priority: task.priority_manual || "medium",
       moduleId: task.module_id == null ? "" : String(task.module_id),
@@ -261,6 +262,7 @@ export default function TaskView({ token, embedded = false, active = true, compo
     try {
       const updated = await updateTask(token, task.id, {
         title: editDraft.title.trim(),
+        description: editDraft.description.trim(),
         due_at_override: dueAtOverride,
         priority_manual: editDraft.priority,
         module_id: editDraft.moduleId ? Number(editDraft.moduleId) : null,
@@ -355,6 +357,7 @@ export default function TaskView({ token, embedded = false, active = true, compo
                   if (event.key === "Escape") { event.preventDefault(); cancelEdit(task.id); }
                 }}>
                   <input ref={editRef} aria-label="Edit task title" value={editDraft?.title || ""} maxLength={160} onChange={(event) => setEditDraft((draft) => ({ ...draft, title: event.target.value }))} />
+                  <textarea aria-label="Edit task note" value={editDraft?.description || ""} maxLength={4000} rows={3} onChange={(event) => setEditDraft((draft) => ({ ...draft, description: event.target.value }))} placeholder="Add details or a note (optional)" />
                   <div className="task-inline-properties">
                     <label>Due <DueDateEditor value={editDraft?.dueAt || duePartsValue(null)} onChange={(dueAt) => setEditDraft((draft) => ({ ...draft, dueAt }))} /></label>
                     <label>Priority <select aria-label="Edit task priority" value={editDraft?.priority || "medium"} onChange={(event) => setEditDraft((draft) => ({ ...draft, priority: event.target.value }))}>
@@ -374,6 +377,7 @@ export default function TaskView({ token, embedded = false, active = true, compo
               ) : (
                 <div className="task-row-content">
                   <span>{task.title}</span>
+                  {task.description && <small className="task-row-note">{task.description}</small>}
                   {(priority || dueDate || task.module_code) && (
                     <div className="task-meta">
                       {priority && <span style={{ color: priorityColor(priority) }}><Flag size={10} />{priority.toUpperCase()}</span>}

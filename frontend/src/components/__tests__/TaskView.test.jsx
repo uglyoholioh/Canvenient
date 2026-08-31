@@ -62,7 +62,7 @@ describe("TaskView keyboard navigation", () => {
     expect(screen.getByText("Space to complete · Enter to edit")).toBeInTheDocument();
   });
 
-  it("edits title, due date, priority, and course in one save", async () => {
+  it("edits title, note, due date, priority, and course in one save", async () => {
     const user = userEvent.setup();
     updateTask.mockResolvedValue({
       id: 1,
@@ -86,6 +86,9 @@ describe("TaskView keyboard navigation", () => {
     fireEvent.change(title, { target: { value: "Revised task" } });
 
     await user.tab();
+    expect(screen.getByLabelText("Edit task note")).toHaveFocus();
+    fireEvent.change(screen.getByLabelText("Edit task note"), { target: { value: "Bring the tutorial worksheet." } });
+    await user.tab();
     expect(screen.getByRole("group", { name: /edit task due date/i })).toHaveFocus();
     expect(document.querySelector(".task-due-editor .is-active")).toHaveTextContent("DD");
     await user.keyboard("150920261430");
@@ -101,6 +104,7 @@ describe("TaskView keyboard navigation", () => {
 
     await waitFor(() => expect(updateTask).toHaveBeenCalledWith("token", 1, {
       title: "Revised task",
+      description: "Bring the tutorial worksheet.",
       due_at_override: new Date(2026, 8, 15, 14, 30).toISOString(),
       priority_manual: "high",
       module_id: 42,
