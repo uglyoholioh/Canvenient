@@ -77,9 +77,75 @@ export default function ModuleCard({
   onQuickCapture,
 }) {
   const [resizing, setResizing] = React.useState(false);
+  const [loweredTop, setLoweredTop] = React.useState(null);
   const localCardRef = React.useRef(null);
   const resizeSession = React.useRef(null);
   const moveSession = React.useRef(null);
+
+  const updateButtonPosition = React.useCallback(() => {
+    if (!onViewFull || !localCardRef.current) return;
+    const card = localCardRef.current;
+    const body = card.querySelector(".dashboard-module-body");
+    if (!body) return;
+
+    const cardRect = card.getBoundingClientRect();
+    const buttonHeight = 32;
+    const buttonMargin = 8;
+    const defaultButtonTop = cardRect.bottom - buttonHeight - buttonMargin;
+
+    const items = body.querySelectorAll(
+      ".task-module-item, .task-module-next-line, .task-module-new-entry, .schedule-timeline-item, .schedule-module-message, .canvas-compact-row, .canvas-module-section, .module-list-item, button:not(.module-view-full), a, input, textarea"
+    );
+
+    let maxBottom = 0;
+    items.forEach((item) => {
+      const rect = item.getBoundingClientRect();
+      if (rect.height > 0 && rect.width > 0 && rect.bottom > maxBottom) {
+        maxBottom = rect.bottom;
+      }
+    });
+
+    if (maxBottom === 0) {
+      const bodyRect = body.getBoundingClientRect();
+      maxBottom = bodyRect.bottom;
+    }
+
+    if (maxBottom > defaultButtonTop - 6) {
+      const targetTop = Math.round(maxBottom - cardRect.top + buttonMargin);
+      setLoweredTop((prev) => (prev === targetTop ? prev : targetTop));
+    } else {
+      setLoweredTop((prev) => (prev === null ? null : null));
+    }
+  }, [onViewFull]);
+
+  React.useEffect(() => {
+    if (!onViewFull) return;
+    const card = localCardRef.current;
+    if (!card) return;
+
+    updateButtonPosition();
+
+    const handleUpdate = () => {
+      updateButtonPosition();
+    };
+
+    card.addEventListener("scroll", handleUpdate, { capture: true, passive: true });
+    window.addEventListener("resize", handleUpdate);
+
+    let resizeObserver = null;
+    if (typeof ResizeObserver !== "undefined") {
+      resizeObserver = new ResizeObserver(handleUpdate);
+      resizeObserver.observe(card);
+      const body = card.querySelector(".dashboard-module-body");
+      if (body) resizeObserver.observe(body);
+    }
+
+    return () => {
+      card.removeEventListener("scroll", handleUpdate, { capture: true });
+      window.removeEventListener("resize", handleUpdate);
+      resizeObserver?.disconnect();
+    };
+  }, [onViewFull, updateButtonPosition, children]);
 
   const setCardRef = React.useCallback((element) => {
     localCardRef.current = element;
@@ -392,7 +458,9 @@ export default function ModuleCard({
       data-rows={size.rows}
       tabIndex={browseActive ? 0 : -1}
       aria-label={`${title} dashboard card. Use arrow keys to move, Enter to interact, or N for a new task.${onViewFull ? " Press O to open the full view." : ""}`}
+      onMouseEnter={updateButtonPosition}
       onFocus={(event) => {
+        updateButtonPosition();
         if (event.target === event.currentTarget) onBrowseFocus?.();
       }}
       onKeyDown={handleBrowseKeyDown}
@@ -432,10 +500,11 @@ export default function ModuleCard({
       {onViewFull && (
         <button
           type="button"
-          className="module-view-full"
+          className={`module-view-full ${loweredTop !== null ? "is-lowered" : ""}`}
           onClick={onViewFull}
           aria-label={`Open ${title.toLowerCase()}`}
           title={`Open ${title.toLowerCase()}`}
+          style={loweredTop !== null ? { top: `${loweredTop}px`, bottom: "auto" } : undefined}
         >
           <span>Open {title.toLowerCase()}</span>
           <ArrowUpRight size={11} className="module-view-full-icon" aria-hidden="true" />

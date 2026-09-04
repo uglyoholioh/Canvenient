@@ -9,6 +9,8 @@ import TasksModule from "./dashboard/TasksModule";
 import DashboardCustomizer from "./dashboard/DashboardCustomizer";
 import { readDashboardConfig, readDashboardLayout, saveDashboardConfig, saveDashboardLayout, threeColumnDashboardConfig } from "./dashboard/dashboardConfig";
 import { useQuickCapture } from "./QuickCaptureContext";
+import { WorkspaceToolbarContext } from "./WorkspaceToolbarContext";
+import { useContext } from "react";
 
 const DASHBOARD_FONT_VALUES = {
   sans: "-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', sans-serif",
@@ -18,6 +20,7 @@ const DASHBOARD_FONT_VALUES = {
 
 export default function Dashboard({ token, user, onNavigate, onOpenSearch, searchShortcutLabel }) {
   const { openQuickCapture } = useQuickCapture();
+  const setToolbar = useContext(WorkspaceToolbarContext);
   const [activeCanvasItem, setActiveCanvasItem] = useState(null);
   const [taskRefreshKey, setTaskRefreshKey] = useState(0);
   const [layout, setLayout] = useState(readDashboardLayout);
@@ -62,12 +65,13 @@ export default function Dashboard({ token, user, onNavigate, onOpenSearch, searc
   useEffect(() => {
     const refreshTasks = () => setTaskRefreshKey((key) => key + 1);
     window.addEventListener("canvenient-task-created", refreshTasks);
-    window.addEventListener("canvenient-tasks-changed", refreshTasks);
+    window.addEventListener("canvenient-task-restored", refreshTasks);
     return () => {
-      window.removeEventListener("canvenient-task-created", refreshTasks);
       window.removeEventListener("canvenient-tasks-changed", refreshTasks);
+      window.removeEventListener("canvenient-task-created", refreshTasks);
+      window.removeEventListener("canvenient-task-restored", refreshTasks);
     };
-  }, []);
+  }, [token]);
 
   const changeLayout = useCallback((nextLayout) => {
     setLayout(nextLayout);
@@ -221,22 +225,14 @@ export default function Dashboard({ token, user, onNavigate, onOpenSearch, searc
 
   const today = new Date();
   const dayLabel = today.toLocaleDateString([], { weekday: "long", month: "long", day: "numeric" });
-  const gridTracks = previewTracks || config.tracks;
-  const totalRequestedRowHeight = gridTracks.rows.reduce((sum, value) => sum + value, 0) || 1;
-  const availableGridHeight = Math.max(gridTracks.rows.length * 96, Math.min(gridTracks.rows.length * 400, viewportHeight - 120));
-  const rowScale = availableGridHeight / totalRequestedRowHeight;
-
-  return (
-    <div className="dashboard-page">
-      <div className="dashboard-scroll">
-        <header className="dashboard-command-header">
-          <h2>{dayLabel}</h2>
-          <div className="dashboard-command-actions">
-            <button type="button" className="mac-toolbar-search dashboard-search" onClick={onOpenSearch}>
-              <Search size={14} />
-              <span>Search for anything…</span>
-              {searchShortcutLabel && <kbd>{searchShortcutLabel}</kbd>}
-            </button>
+  
+  useEffect(() => {
+    if (!setToolbar) return;
+    setToolbar({
+      title: dayLabel,
+      hideSearch: false,
+      actions: (
+        <>
             <button
               type="button"
               className={`dashboard-edit-button ${isEditingLayout ? "is-active" : ""}`}
@@ -247,9 +243,21 @@ export default function Dashboard({ token, user, onNavigate, onOpenSearch, searc
               {isEditingLayout ? <Check size={15} /> : <Pencil size={15} />}
             </button>
             <button type="button" className={`dashboard-customize-button ${isCustomizing ? "is-active" : ""}`} onClick={() => setIsCustomizing((open) => !open)} aria-label="Customize dashboard" title="Customize dashboard"><SlidersHorizontal size={15} /></button>
-            {isCustomizing && <div className="dashboard-customizer-popover is-in-dashboard"><header><strong>Customize dashboard</strong><button type="button" onClick={() => setIsCustomizing(false)} aria-label="Close dashboard customizer"><X size={14} /></button></header><DashboardCustomizer compact layout={layout} config={config} onLayoutChange={selectLayout} onConfigChange={changeConfig} /></div>}
-          </div>
-        </header>
+            {isCustomizing && <div className="dashboard-customizer-popover is-in-toolbar"><header><strong>Customize dashboard</strong><button type="button" onClick={() => setIsCustomizing(false)} aria-label="Close dashboard customizer"><X size={14} /></button></header><DashboardCustomizer compact layout={layout} config={config} onLayoutChange={selectLayout} onConfigChange={changeConfig} /></div>}
+        </>
+      )
+    });
+    return () => setToolbar(null);
+  }, [setToolbar, dayLabel, isEditingLayout, beginLayoutEdit, isCustomizing, layout, config, selectLayout, changeConfig]);
+
+  const gridTracks = previewTracks || config.tracks;
+  const totalRequestedRowHeight = gridTracks.rows.reduce((sum, value) => sum + value, 0) || 1;
+  const availableGridHeight = Math.max(gridTracks.rows.length * 96, Math.min(gridTracks.rows.length * 400, viewportHeight - 120));
+  const rowScale = availableGridHeight / totalRequestedRowHeight;
+
+  return (
+    <div className="dashboard-page">
+      <div className="dashboard-scroll">
         <div
           className={`dashboard-grid is-${layout} ${isEditingLayout ? "is-layout-editing" : ""}`}
           style={{

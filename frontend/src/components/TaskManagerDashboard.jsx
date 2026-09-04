@@ -12,10 +12,10 @@ import {
   deleteTask,
   getAcademicModules,
   getCategories,
-  getTasks,
   syncCanvasTasks,
   updateTask,
 } from "../api";
+import { queueTaskDeletion } from "../taskDeleteBuffer";
 import { getTaskModuleColor } from "./scheduleUtils";
 
 const emptyTaskForm = {
@@ -345,8 +345,15 @@ function TaskManagerDashboard({ token, currentUser, onLogout }) {
     }
 
     if (token) loadInitialWorkspace();
+    
+    const handleRestored = (event) => {
+      if (event.detail) setTasks((current) => sortTasks([...current.filter(t => t.id !== event.detail.id), event.detail]));
+    };
+    window.addEventListener("canvenient-task-restored", handleRestored);
+    
     return () => {
       cancelled = true;
+      window.removeEventListener("canvenient-task-restored", handleRestored);
     };
   }, [token]);
 
@@ -487,17 +494,10 @@ function TaskManagerDashboard({ token, currentUser, onLogout }) {
   }
 
   async function handleDeleteTask(taskId) {
-    setBusyKey(`task-delete-${taskId}`);
-    setError("");
-
-    try {
-      await deleteTask(token, taskId);
-      setTasks((current) => current.filter((task) => task.id !== taskId));
-    } catch (deleteError) {
-      setError(deleteError.message || "Could not remove the task.");
-    } finally {
-      setBusyKey("");
-    }
+    const task = tasks.find((t) => t.id === taskId);
+    if (!task) return;
+    queueTaskDeletion(token, task);
+    setTasks((current) => current.filter((t) => t.id !== taskId));
   }
 
   async function handleDeleteCategory(categoryId) {

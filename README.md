@@ -159,6 +159,9 @@ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope Process
 ## Working with Git (Team Conventions)
 
 Before making changes, consult [coding-conventions.md](coding-conventions.md).
+AI-assisted changes must also follow [AGENTS.md](AGENTS.md) and the
+[AI Working Agreement](docs/AI_WORKING_AGREEMENT.md). The latest accepted
+application state is recorded in [Project State and Safepoints](docs/PROJECT_STATE.md).
 
 - Create a feature branch: `git checkout -b feature/your-feature-name`
 - Use prefix-based commit messages:

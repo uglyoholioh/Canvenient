@@ -15,7 +15,7 @@ import VenueFinder from "./VenueFinder";
 import CanvasDrawer from "./drawers/CanvasDrawer";
 import { WorkspaceToolbarContext } from "./WorkspaceToolbarContext";
 import { QuickCaptureContext } from "./QuickCaptureContext";
-import { Folder, Search, Settings, CheckSquare, PanelLeft, PanelLeftClose, PanelLeftOpen, BookOpen, Plus, LogOut, LayoutDashboard, FileText, CalendarDays, DoorOpen } from "lucide-react";
+import { Folder, Search, Settings, CheckSquare, PanelLeft, BookOpen, Plus, LogOut, LayoutDashboard, FileText, CalendarDays, DoorOpen, ChevronLeft, ChevronRight } from "lucide-react";
 import { createNote } from "../api";
 import { formatShortcut, matchesShortcut, readKeyboardShortcuts } from "../keyboardShortcuts";
 
@@ -51,13 +51,35 @@ const viewTitle = (activeTab) => {
   if (activeTab === "schedule") return "Schedule";
   if (activeTab === "venues") return "Venue Finder";
   if (activeTab === "settings") return "Settings";
-  if (activeTab === "canvas") return "Resources";
+  if (activeTab === "canvas") return "Modules";
   if (activeTab === "notes") return "Notes";
   return "Note";
 };
 
 export default function WorkspaceLayout({ token, user, onLogout, onUpdateUser }) {
-  const [activeTab, setActiveTab] = useState(getInitialView);
+  const [history, setHistory] = useState([getInitialView()]);
+  const [historyIndex, setHistoryIndex] = useState(0);
+  const activeTab = history[historyIndex];
+
+  const setActiveTab = useCallback((tab) => {
+    if (typeof tab === 'function') tab = tab(activeTab);
+    if (tab === activeTab) return;
+    setHistory(prev => {
+      const newHistory = prev.slice(0, historyIndex + 1);
+      newHistory.push(tab);
+      return newHistory;
+    });
+    setHistoryIndex(prev => prev + 1);
+  }, [activeTab, historyIndex]);
+
+  const goBack = useCallback(() => {
+    if (historyIndex > 0) setHistoryIndex(prev => prev - 1);
+  }, [historyIndex]);
+
+  const goForward = useCallback(() => {
+    if (historyIndex < history.length - 1) setHistoryIndex(prev => prev + 1);
+  }, [historyIndex, history.length]);
+
   const [isOmnibarOpen, setIsOmnibarOpen] = useState(false);
   const [isShortcutHelpOpen, setIsShortcutHelpOpen] = useState(false);
   const [toolbar, setToolbar] = useState(null);
@@ -305,123 +327,121 @@ export default function WorkspaceLayout({ token, user, onLogout, onUpdateUser })
     <QuickCaptureContext.Provider value={quickCaptureValue}>
     <WorkspaceToolbarContext.Provider value={setToolbar}>
     <div className="mac-workspace-shell">
-      <div className="mac-sidebar-rail" style={{ width: layoutSidebarWidth }}>
-        <aside
-          className={`mac-sidebar ${isSlim ? "is-slim" : "is-expanded"} ${sidebarBehavior === "hover" ? "is-hover-mode" : ""}`}
-          onMouseEnter={() => { if (sidebarBehavior === 'hover') setIsSidebarHovered(true); }}
-          onMouseLeave={() => { if (sidebarBehavior === 'hover' && !isDragging) setIsSidebarHovered(false); }}
-          onKeyDown={handleSidebarKeyDown}
-          style={{ width: currentSidebarWidth, borderInlineEnd: isSidebarVisible ? undefined : 0 }}
-        >
-          <header className="mac-sidebar-header" data-tauri-drag-region>
-            <div className="mac-sidebar-brand" aria-hidden={isSlim}>
-              <span className="mac-sidebar-brand-mark" aria-hidden="true">C</span>
-              <strong>Canvenient</strong>
-            </div>
-            {isSidebarVisible && (
-              <button
-                type="button"
-                className="mac-toolbar-button"
-                onClick={() => setAndPersistSidebarBehavior(sidebarBehavior === 'pinned' ? 'hover' : 'pinned')}
-                title={sidebarBehavior === 'pinned' ? 'Use hover sidebar (Command+\\)' : 'Keep sidebar open (Command+\\)'}
-                aria-label={sidebarBehavior === 'pinned' ? 'Use hover sidebar' : 'Keep sidebar open'}
-              >
-                {sidebarBehavior === 'pinned' ? <PanelLeftClose size={16} /> : <PanelLeftOpen size={16} />}
-              </button>
-            )}
-          </header>
-
-          <div className={`mac-sidebar-scroll ${isSlim ? "is-slim" : ""}`}>
-            {!isSlim && <div className="mac-source-label">Library</div>}
-            <nav className="mac-source-list" aria-label="Workspace views">
-              <NavItem isSlim={isSlim} icon={LayoutDashboard} label="Dashboard" active={activeTab === 'dashboard'} onClick={() => setActiveTab("dashboard")} />
-              <NavItem isSlim={isSlim} icon={CheckSquare} label="Tasks" active={activeTab === 'tasks'} onClick={() => setActiveTab("tasks")} />
-              <NavItem isSlim={isSlim} icon={CalendarDays} label="Schedule" active={activeTab === 'schedule'} onClick={() => setActiveTab("schedule")} />
-              <NavItem isSlim={isSlim} icon={DoorOpen} label="Venue Finder" active={activeTab === 'venues'} onClick={() => setActiveTab("venues")} />
-              <NavItem isSlim={isSlim} icon={BookOpen} label="Resources" active={activeTab === 'canvas'} onClick={() => setActiveTab("canvas")} />
-              <NavItem isSlim={isSlim} icon={FileText} label="Notes" active={activeTab === 'notes' || activeTab.startsWith('note-')} onClick={() => setActiveTab("notes")} />
-              <NavItem isSlim={isSlim} icon={Search} label="Search" active={false} onClick={() => setIsOmnibarOpen(true)} />
-            </nav>
-
-            {!isSlim && (
-              <div className="mac-source-label mac-folder-label">
-                <span>Folders</span>
-                <button type="button" onClick={() => alert('Folder creation coming soon!')} aria-label="Create folder"><Plus size={13} /></button>
-              </div>
-            )}
-            <div className="mac-source-list">
-              <NavItem isSlim={isSlim} icon={Folder} label="Empty Workspace" active={false} onClick={() => alert('Click the + button to create a folder. Feature coming soon!')} />
-              <NavItem isSlim={isSlim} icon={Plus} label="New Note" active={false} onClick={createAndOpenNote} />
-            </div>
-          </div>
-
-          <footer className={`mac-sidebar-footer ${isSlim ? "is-slim" : ""}`}>
-            <NavItem isSlim={isSlim} icon={Settings} label="Settings" active={activeTab === 'settings'} onClick={() => setActiveTab("settings")} />
-            <NavItem isSlim={isSlim} icon={LogOut} label="Log Out" active={false} onClick={onLogout} />
-          </footer>
-
-          {sidebarBehavior === 'pinned' && (
-            <div
-              className={`mac-sidebar-resizer ${isDragging ? "is-dragging" : ""}`}
-              onMouseDown={handleMouseDown}
-              role="separator"
-              aria-orientation="vertical"
-              aria-label="Resize sidebar"
-            />
-          )}
-        </aside>
-      </div>
-
-      <main className="mac-workspace-main">
-        {activeTab !== "dashboard" && <header className="mac-workspace-toolbar" data-tauri-drag-region>
-          {sidebarBehavior === 'hidden' && (
-            <button
-              type="button"
-              className="mac-toolbar-button"
-              onClick={() => setAndPersistSidebarBehavior('hover')}
-              title="Show sidebar"
-              aria-label="Show sidebar"
-            >
-              <PanelLeft size={16} />
-            </button>
-          )}
+      <header className="mac-workspace-toolbar" data-tauri-drag-region>
+        <div className="mac-toolbar-leading" data-tauri-drag-region style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
+          <div data-tauri-drag-region style={{ width: 80, height: 10, flexShrink: 0 }} />
+          <button
+            type="button"
+            className="mac-toolbar-button"
+            onClick={() => setAndPersistSidebarBehavior(sidebarBehavior === 'hidden' ? 'hover' : 'hidden')}
+            title={sidebarBehavior === 'hidden' ? 'Show sidebar' : 'Hide sidebar'}
+            aria-label="Toggle sidebar"
+          >
+            <PanelLeft size={16} />
+          </button>
+          <button type="button" className="mac-toolbar-button" disabled={historyIndex === 0} onClick={goBack} title="Go back">
+            <ChevronLeft size={16} />
+          </button>
+          <button type="button" className="mac-toolbar-button" disabled={historyIndex === history.length - 1} onClick={goForward} title="Go forward">
+            <ChevronRight size={16} />
+          </button>
           <div className="mac-toolbar-heading" data-tauri-drag-region>
             {toolbarTitle && <h1>{toolbarTitle}</h1>}
             {toolbar?.subtitle && <span>{toolbar.subtitle}</span>}
           </div>
-          {!toolbar?.hideSearch && (
-            <button type="button" className="mac-toolbar-search mac-toolbar-search-primary" onClick={() => setIsOmnibarOpen(true)}>
-              <Search size={14} />
-              <span>Search for anything…</span>
-              <kbd>{formatShortcut(shortcuts.search)}</kbd>
-            </button>
-          )}
-          {toolbar?.hideSearch && <div aria-hidden="true" />}
-          <div className="mac-toolbar-actions">
-            {toolbar?.actions}
-          </div>
-        </header>}
-
-        <div className="mac-workspace-content">
-          {activeTab === 'dashboard' && <Dashboard token={token} user={user} onNavigate={setActiveTab} onOpenSearch={() => setIsOmnibarOpen(true)} searchShortcutLabel={formatShortcut(shortcuts.search)} />}
-          {activeTab === 'tasks' && <TaskView token={token} user={user} />}
-          {activeTab === 'schedule' && <Schedule token={token} />}
-          {activeTab === 'venues' && <VenueFinder token={token} />}
-          {activeTab === 'settings' && <SettingsView token={token} user={user} onUpdateUser={onUpdateUser} />}
-          {activeTab === 'canvas' && <CanvasView token={token} />}
-          {activeTab === 'notes' && <NotesView token={token} />}
-          {activeTab.startsWith('note-') && <MarkdownEditor key={activeTab} noteId={activeTab.split('-')[1]} token={token} />}
         </div>
-        <TaskInputBar
-          token={token}
-          variant="dock"
-          isOpen={quickCapture.isOpen}
-          initialMode="note"
-          allowedModes={["note"]}
-          onClose={closeQuickCapture}
-          onNoteCreated={handleNoteCreated}
-        />
-      </main>
+        {!toolbar?.hideSearch && (
+          <button type="button" className="mac-toolbar-search mac-toolbar-search-primary" onClick={() => setIsOmnibarOpen(true)}>
+            <Search size={14} />
+            <span>Search for anything…</span>
+            <kbd>{formatShortcut(shortcuts.search)}</kbd>
+          </button>
+        )}
+        {toolbar?.hideSearch && <div aria-hidden="true" />}
+        <div className="mac-toolbar-actions">
+          {toolbar?.actions}
+        </div>
+      </header>
+
+      <div className="mac-workspace-body">
+        <div className="mac-sidebar-rail" style={{ width: layoutSidebarWidth }}>
+          <aside
+            className={`mac-sidebar ${isSlim ? "is-slim" : "is-expanded"} ${sidebarBehavior === "hover" ? "is-hover-mode" : ""}`}
+            onMouseEnter={() => { if (sidebarBehavior === 'hover') setIsSidebarHovered(true); }}
+            onMouseLeave={() => { if (sidebarBehavior === 'hover' && !isDragging) setIsSidebarHovered(false); }}
+            onKeyDown={handleSidebarKeyDown}
+            style={{ width: currentSidebarWidth, borderInlineEnd: isSidebarVisible ? undefined : 0 }}
+          >
+            <header className="mac-sidebar-header" style={{ paddingInline: isSlim ? 0 : '12px', justifyContent: isSlim ? 'center' : 'flex-start' }}>
+              <div className="mac-sidebar-brand" aria-hidden={isSlim}>
+                <span className="mac-sidebar-brand-mark" aria-hidden="true">C</span>
+                <strong>Canvenient</strong>
+              </div>
+            </header>
+
+            <div className={`mac-sidebar-scroll ${isSlim ? "is-slim" : ""}`}>
+              {!isSlim && <div className="mac-source-label">Library</div>}
+              <nav className="mac-source-list" aria-label="Workspace views">
+                <NavItem isSlim={isSlim} icon={LayoutDashboard} label="Dashboard" active={activeTab === 'dashboard'} onClick={() => setActiveTab("dashboard")} />
+                <NavItem isSlim={isSlim} icon={CheckSquare} label="Tasks" active={activeTab === 'tasks'} onClick={() => setActiveTab("tasks")} />
+                <NavItem isSlim={isSlim} icon={CalendarDays} label="Schedule" active={activeTab === 'schedule'} onClick={() => setActiveTab("schedule")} />
+                <NavItem isSlim={isSlim} icon={DoorOpen} label="Venue Finder" active={activeTab === 'venues'} onClick={() => setActiveTab("venues")} />
+                <NavItem isSlim={isSlim} icon={BookOpen} label="Modules" active={activeTab === 'canvas'} onClick={() => setActiveTab("canvas")} />
+                <NavItem isSlim={isSlim} icon={FileText} label="Notes" active={activeTab === 'notes' || activeTab.startsWith('note-')} onClick={() => setActiveTab("notes")} />
+                <NavItem isSlim={isSlim} icon={Search} label="Search" active={false} onClick={() => setIsOmnibarOpen(true)} />
+              </nav>
+
+              {!isSlim && (
+                <div className="mac-source-label mac-folder-label">
+                  <span>Folders</span>
+                  <button type="button" onClick={() => alert('Folder creation coming soon!')} aria-label="Create folder"><Plus size={13} /></button>
+                </div>
+              )}
+              <div className="mac-source-list">
+                <NavItem isSlim={isSlim} icon={Folder} label="Empty Workspace" active={false} onClick={() => alert('Click the + button to create a folder. Feature coming soon!')} />
+                <NavItem isSlim={isSlim} icon={Plus} label="New Note" active={false} onClick={createAndOpenNote} />
+              </div>
+            </div>
+
+            <footer className={`mac-sidebar-footer ${isSlim ? "is-slim" : ""}`}>
+              <NavItem isSlim={isSlim} icon={Settings} label="Settings" active={activeTab === 'settings'} onClick={() => setActiveTab("settings")} />
+              <NavItem isSlim={isSlim} icon={LogOut} label="Log Out" active={false} onClick={onLogout} />
+            </footer>
+
+            {sidebarBehavior === 'pinned' && (
+              <div
+                className={`mac-sidebar-resizer ${isDragging ? "is-dragging" : ""}`}
+                onMouseDown={handleMouseDown}
+                role="separator"
+                aria-orientation="vertical"
+                aria-label="Resize sidebar"
+              />
+            )}
+          </aside>
+        </div>
+
+        <main className="mac-workspace-main">
+          <div className="mac-workspace-content">
+            {activeTab === 'dashboard' && <Dashboard token={token} user={user} onNavigate={setActiveTab} onOpenSearch={() => setIsOmnibarOpen(true)} searchShortcutLabel={formatShortcut(shortcuts.search)} />}
+            {activeTab === 'tasks' && <TaskView token={token} user={user} />}
+            {activeTab === 'schedule' && <Schedule token={token} />}
+            {activeTab === 'venues' && <VenueFinder token={token} />}
+            {activeTab === 'settings' && <SettingsView token={token} user={user} onUpdateUser={onUpdateUser} />}
+            {activeTab === 'canvas' && <CanvasView token={token} />}
+            {activeTab === 'notes' && <NotesView token={token} />}
+            {activeTab.startsWith('note-') && <MarkdownEditor key={activeTab} noteId={activeTab.split('-')[1]} token={token} />}
+          </div>
+          <TaskInputBar
+            token={token}
+            variant="dock"
+            isOpen={quickCapture.isOpen}
+            initialMode="note"
+            allowedModes={["note"]}
+            onClose={closeQuickCapture}
+            onNoteCreated={handleNoteCreated}
+          />
+        </main>
+      </div>
 
       <GlobalTasksPanel
         token={token}

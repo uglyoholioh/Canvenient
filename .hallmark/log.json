@@ -1,5 +1,50 @@
 [
   {
+    "date": "2026-09-01",
+    "macrostructure": "Viewport-filling Workbench",
+    "theme": "Graphite native workbench",
+    "enrichment": "none",
+    "brief": "Dashboard expands to the available window with wider transit support and proportional full-height panes",
+    "scope": "app"
+  },
+  {
+    "date": "2026-09-01",
+    "macrostructure": "Workbench split-column",
+    "theme": "Graphite native workbench",
+    "enrichment": "none",
+    "brief": "Dashboard middle column pairs a compact schedule above a rectangular NUS ISB module",
+    "scope": "app"
+  },
+  {
+    "date": "2026-09-01",
+    "macrostructure": "Workbench split-row",
+    "theme": "Graphite native workbench",
+    "enrichment": "none",
+    "brief": "Dashboard primary modules compacted above a full-width NUS ISB transit row",
+    "scope": "app"
+  },
+  {
+    "date": "2026-09-01",
+    "macrostructure": "Transit route",
+    "theme": "Graphite native workbench",
+    "enrichment": "none",
+    "brief": "Dashboard schedule restructured as a slim transport-map timeline with stations and truthful duration segments"
+  },
+  {
+    "date": "2026-09-01",
+    "macrostructure": "Workbench",
+    "theme": "Graphite native workbench",
+    "enrichment": "none",
+    "brief": "Dashboard schedule timeline redesigned as a compact time rail with truthful duration lanes"
+  },
+  {
+    "date": "2026-08-31",
+    "macrostructure": "Map / Diagram",
+    "theme": "Cobalt",
+    "enrichment": "none",
+    "brief": "Class identity cards with a horizontal left-to-right daily schedule ruler"
+  },
+  {
     "date": "2026-08-30",
     "macrostructure": "Dense academic timeline",
     "theme": "Cobalt with module surfaces",

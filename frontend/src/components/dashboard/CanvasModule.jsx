@@ -104,11 +104,13 @@ export default function CanvasModule({ token, enabled, onOpenItem }) {
   }, [enabled, token]);
 
   useEffect(() => {
-    window.addEventListener("canvenient-tasks-changed", loadTasks);
     window.addEventListener("canvenient-task-created", loadTasks);
+    window.addEventListener("canvenient-task-restored", loadTasks);
+    window.addEventListener("canvenient-tasks-changed", loadTasks);
     return () => {
-      window.removeEventListener("canvenient-tasks-changed", loadTasks);
       window.removeEventListener("canvenient-task-created", loadTasks);
+      window.removeEventListener("canvenient-task-restored", loadTasks);
+      window.removeEventListener("canvenient-tasks-changed", loadTasks);
     };
   }, [token]);
 

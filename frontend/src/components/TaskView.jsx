@@ -1,9 +1,10 @@
 // React is required by the test JSX transform.
 // eslint-disable-next-line no-unused-vars
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { BookOpen, Calendar, CheckCircle, Flag, Pencil, Plus } from "lucide-react";
+import { BookOpen, Calendar, CheckCircle, Flag, Pencil, Plus, Trash2 } from "lucide-react";
 import { getAcademicModules, getTasks, updateTask } from "../api";
 import { notifyTasksChanged } from "../taskEvents";
+import { queueTaskDeletion } from "../taskDeleteBuffer";
 import { getTaskModuleColor } from "./scheduleUtils";
 import { useWorkspaceToolbar } from "./WorkspaceToolbarContext";
 import TaskInputBar from "./TaskInputBar";
@@ -249,8 +250,19 @@ export default function TaskView({ token, embedded = false, active = true, compo
         event.detail,
       ]));
     };
+    const handleRestored = (event) => {
+      if (!event.detail) return;
+      setTasks((current) => sortPendingTasks([
+        ...current.filter((task) => task.id !== event.detail.id),
+        event.detail,
+      ]));
+    };
     window.addEventListener("canvenient-task-created", handleCreated);
-    return () => window.removeEventListener("canvenient-task-created", handleCreated);
+    window.addEventListener("canvenient-task-restored", handleRestored);
+    return () => {
+      window.removeEventListener("canvenient-task-created", handleCreated);
+      window.removeEventListener("canvenient-task-restored", handleRestored);
+    };
   }, []);
 
   const openTask = useCallback((task) => {
@@ -265,6 +277,21 @@ export default function TaskView({ token, embedded = false, active = true, compo
     setTasks((current) => current.filter((item) => item.id !== task.id));
     setSelectedIndex(null);
     notifyTasksChanged();
+  }, [token]);
+
+  const deletingRefs = useRef(new Set());
+
+  const removeTask = useCallback((task) => {
+    if (deletingRefs.current.has(task.id)) return;
+    deletingRefs.current.add(task.id);
+
+    // Optimistic UI update
+    setTasks((current) => current.filter((item) => item.id !== task.id));
+    setSelectedIndex(null);
+    notifyTasksChanged();
+
+    queueTaskDeletion(token, task);
+    deletingRefs.current.delete(task.id);
   }, [token]);
 
   const startEditing = (task, title = task.title) => {
@@ -362,6 +389,9 @@ export default function TaskView({ token, embedded = false, active = true, compo
       } else if (selectedIndex !== null && event.key === " ") {
         event.preventDefault();
         completeTask(tasks[selectedIndex]);
+      } else if (selectedIndex !== null && (event.key === "Backspace" || event.key === "Delete")) {
+        event.preventDefault();
+        removeTask(tasks[selectedIndex]);
       } else if (selectedIndex !== null && (event.key === "e" || event.key === "E") && !event.metaKey && !event.ctrlKey && !event.altKey) {
         event.preventDefault();
         startEditing(tasks[selectedIndex]);
@@ -410,6 +440,10 @@ export default function TaskView({ token, embedded = false, active = true, compo
                 setSelectedIndex(index);
                 if (!editing) openTask(task);
               }}
+              onDoubleClick={(event) => {
+                event.stopPropagation();
+                if (!editing) startEditing(task);
+              }}
             >
               {taskModuleColor && (
                 <span
@@ -422,30 +456,31 @@ export default function TaskView({ token, embedded = false, active = true, compo
                 {checkboxStyle === "icon" ? <CheckCircle size={16} /> : checkboxStyle === "circle" ? "( )" : "[ ]"}
               </button>
               {editing ? (
-                <form className="task-inline-editor" onSubmit={(event) => { event.preventDefault(); saveEdit(task); }} onKeyDown={(event) => {
-                  if (event.key === "Escape") { event.preventDefault(); cancelEdit(task.id); }
-                }}>
-                  <input ref={editRef} aria-label="Edit task title" value={editDraft?.title || ""} maxLength={160} onChange={(event) => setEditDraft((draft) => ({ ...draft, title: event.target.value }))} />
-                  <textarea aria-label="Edit task note" value={editDraft?.description || ""} maxLength={4000} rows={3} onChange={(event) => setEditDraft((draft) => ({ ...draft, description: event.target.value }))} placeholder="Add details or a note (optional)" />
-                  <div className="task-inline-properties">
-                    <label>Due
-                      <DueDateEditor value={editDraft?.dueAt || duePartsValue(null)} onChange={(dueAt) => setEditDraft((draft) => ({ ...draft, dueAt }))} />
-                      <button type="button" aria-label="Clear due date and time" className="task-clear-due" onClick={() => setEditDraft((draft) => ({ ...draft, dueAt: duePartsValue(null) }))}>Clear due date and time</button>
-                    </label>
-                    <label>Priority <select aria-label="Edit task priority" value={editDraft?.priority || "medium"} onChange={(event) => setEditDraft((draft) => ({ ...draft, priority: event.target.value }))}>
-                      <option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option><option value="urgent">Urgent</option>
-                    </select></label>
-                    <label>Module <select aria-label="Edit task module" value={editDraft?.moduleId || ""} onChange={(event) => setEditDraft((draft) => ({ ...draft, moduleId: event.target.value }))}>
-                      <option value="">No module</option>
-                      {modules.map((module) => <option key={module.id} value={module.id}>{module.module_code}</option>)}
-                    </select></label>
-                  </div>
-                  {editError && <div className="task-inline-error" role="alert">{editError}</div>}
-                  <div className="task-inline-actions">
-                    <button type="submit" className="is-primary" disabled={!editDraft?.title.trim() || isSavingEdit}>{isSavingEdit ? "Saving…" : "Save"}</button>
-                    <button type="button" onClick={() => cancelEdit(task.id)}>Cancel</button>
-                  </div>
-                </form>
+                <TaskInputBar
+                  token={token}
+                  variant="inline"
+                  initialTask={task}
+                  allowedModes={["task"]}
+                  autoFocus={true}
+                  showCancel={true}
+                  onClose={() => cancelEdit(task.id)}
+                  onSubmitTaskEdit={async (taskId, payload) => {
+                    setIsSavingEdit(true);
+                    setEditError("");
+                    try {
+                      const updated = await updateTask(token, taskId, payload);
+                      setTasks((current) => sortPendingTasks(current.map((item) => item.id === taskId ? updated : item)));
+                      setEditingId(null);
+                      restoreTaskFocus(taskId);
+                      notifyTasksChanged();
+                    } catch (error) {
+                      setEditError(error.message || "Could not save task changes.");
+                      throw error;
+                    } finally {
+                      setIsSavingEdit(false);
+                    }
+                  }}
+                />
               ) : (
                 <>
                   <div className="task-row-content">
@@ -474,6 +509,19 @@ export default function TaskView({ token, embedded = false, active = true, compo
                     >
                       <Pencil size={12} />
                       <span>Edit</span>
+                    </button>
+                    <button
+                      type="button"
+                      className="task-row-delete-button"
+                      aria-label={`Delete ${task.title}`}
+                      title="Delete task"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        removeTask(task);
+                      }}
+                    >
+                      <Trash2 size={12} />
+                      <span>Delete</span>
                     </button>
                   </div>
                 </>

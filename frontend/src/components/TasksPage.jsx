@@ -23,6 +23,7 @@ import {
   createCategory,
   getAcademicModules
 } from "../api"
+import { queueTaskDeletion } from "../taskDeleteBuffer"
 import { getTaskModuleColor } from "./scheduleUtils"
 
 export default function TasksPage({ token, currentUser }) {
@@ -78,6 +79,14 @@ export default function TasksPage({ token, currentUser }) {
       if (cached) setTasks(JSON.parse(cached))
     } catch {}
     loadData()
+    
+    const handleRestored = (event) => {
+      if (event.detail) {
+        setTasks((prev) => [event.detail, ...prev.filter(t => t.id !== event.detail.id)])
+      }
+    };
+    window.addEventListener("canvenient-task-restored", handleRestored);
+    return () => window.removeEventListener("canvenient-task-restored", handleRestored);
   }, [loadData])
 
   // Quick Add handler
@@ -124,17 +133,20 @@ export default function TasksPage({ token, currentUser }) {
     }
   }
 
+  const deletingRefs = useRef(new Set());
+
   // Delete task
-  const handleDeleteTask = async (taskId, e) => {
+  const handleDeleteTask = (taskId, e) => {
     e.stopPropagation()
-    if (!window.confirm("Delete this task?")) return
+    if (deletingRefs.current.has(taskId)) return;
+    deletingRefs.current.add(taskId);
+    
+    const task = tasks.find(t => t.id === taskId);
+    if (!task) return;
+    
     setTasks((prev) => prev.filter((t) => t.id !== taskId))
-    try {
-      await deleteTask(token, taskId)
-    } catch (err) {
-      alert(err.message || "Failed to delete task")
-      loadData()
-    }
+    queueTaskDeletion(token, task);
+    deletingRefs.current.delete(taskId);
   }
 
   // Start inline editing
@@ -370,6 +382,10 @@ export default function TasksPage({ token, currentUser }) {
                     if (!isEditing && task.external_url) {
                       window.open(task.external_url, "_blank", "noopener,noreferrer");
                     }
+                  }}
+                  onDoubleClick={(e) => {
+                    e.stopPropagation();
+                    if (!isEditing) startEditing(task);
                   }}
                 >
                   {isEditing ? (

@@ -210,6 +210,8 @@ export default function TaskInputBar({
   token,
   onTaskCreated,
   onNoteCreated,
+  onSubmitTaskEdit,
+  initialTask,
   autoFocus = true,
   isOpen = true,
   initialMode,
@@ -224,16 +226,21 @@ export default function TaskInputBar({
   const requestedMode = availableModes.includes(normalizedMode(initialMode))
     ? normalizedMode(initialMode)
     : availableModes[0] || "task";
+  
+  const initialDueDate = initialTask ? new Date(initialTask.effective_due_at || initialTask.due_at_override || initialTask.source_due_at) : null;
+  const initialDateStr = initialDueDate && !isNaN(initialDueDate.getTime()) ? `${String(initialDueDate.getDate()).padStart(2, "0")}/${String(initialDueDate.getMonth() + 1).padStart(2, "0")}` : "";
+  const initialTimeStr = initialDueDate && !isNaN(initialDueDate.getTime()) && (initialDueDate.getHours() > 0 || initialDueDate.getMinutes() > 0) ? `${String(initialDueDate.getHours()).padStart(2, "0")}:${String(initialDueDate.getMinutes()).padStart(2, "0")}` : "";
+
   const [modules, setModules] = useState([]);
-  const [inputValue, setInputValue] = useState("");
-  const [description, setDescription] = useState("");
-  const [showTaskNote, setShowTaskNote] = useState(false);
-  const [inputMode, setInputMode] = useState(requestedMode);
-  const [dateType, setDateType] = useState("");
-  const [customDate, setCustomDate] = useState("");
-  const [time, setTime] = useState("");
-  const [priority, setPriority] = useState("medium");
-  const [moduleId, setModuleId] = useState("");
+  const [inputValue, setInputValue] = useState(initialTask?.title || "");
+  const [description, setDescription] = useState(initialTask?.description || "");
+  const [showTaskNote, setShowTaskNote] = useState(Boolean(initialTask?.description));
+  const [inputMode, setInputMode] = useState(initialTask ? "task" : requestedMode);
+  const [dateType, setDateType] = useState(initialDateStr ? "custom" : "");
+  const [customDate, setCustomDate] = useState(initialDateStr);
+  const [time, setTime] = useState(initialTimeStr);
+  const [priority, setPriority] = useState(initialTask?.priority_manual || "medium");
+  const [moduleId, setModuleId] = useState(initialTask?.module_id ? String(initialTask.module_id) : "");
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const textareaRef = useRef(null);
@@ -297,10 +304,15 @@ export default function TaskInputBar({
       } else {
         const payload = { title, description: description.trim(), priority_manual: priority };
         const dueAt = parseDueDate(dateType, customDate, time);
-        if (dueAt) payload.due_at_override = dueAt;
-        if (moduleId) payload.module_id = Number(moduleId);
-        const task = await createTask(token, payload);
-        onTaskCreated?.(task);
+        if (dueAt !== undefined) payload.due_at_override = dueAt;
+        if (moduleId !== undefined) payload.module_id = moduleId ? Number(moduleId) : null;
+        
+        if (initialTask && onSubmitTaskEdit) {
+          await onSubmitTaskEdit(initialTask.id, payload);
+        } else {
+          const task = await createTask(token, payload);
+          onTaskCreated?.(task);
+        }
       }
       reset();
     } catch (submitError) {
@@ -455,7 +467,7 @@ export default function TaskInputBar({
               if (event.key === "Escape") { if (onClose) onClose(); else textareaRef.current?.focus(); }
               else if (event.key === "Enter") submit();
               else handleArrowNav(event, showTaskNote ? 4 : 5, cardRef);
-            }}><Plus size={14} />{isSubmitting ? "Adding..." : "Add"}</button>
+            }}><Plus size={14} />{isSubmitting ? (initialTask ? "Saving..." : "Adding...") : (initialTask ? "Save" : "Add")}</button>
             </div>
           </>
         )}

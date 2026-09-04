@@ -36,7 +36,7 @@ describe("WorkspaceLayout", () => {
     render(<WorkspaceLayout token="token" user={{ id: 1 }} onLogout={() => {}} />);
 
     expect(screen.getByRole("navigation", { name: "Workspace views" })).toBeInTheDocument();
-    expect(screen.queryByRole("heading", { name: "Dashboard" })).not.toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Dashboard" })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Schedule" }));
 
@@ -63,7 +63,7 @@ describe("WorkspaceLayout", () => {
 
     expect(screen.getByRole("dialog", { name: "Tasks" })).toBeInTheDocument();
     expect(screen.getByRole("textbox", { name: "Panel task composer" })).toBeInTheDocument();
-    expect(screen.queryByRole("heading", { name: "Dashboard" })).not.toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Dashboard" })).toBeInTheDocument();
   });
 
   it("opens and closes the Tasks panel with Shift+Tab without leaking focus to the dashboard", async () => {

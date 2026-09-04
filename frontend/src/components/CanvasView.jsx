@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { Bell, BookOpen, CheckCircle2, Download, File, Loader2, RefreshCw, LayoutDashboard, ArrowLeft } from "lucide-react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { Bell, BookOpen, CheckCircle2, Download, File, Loader2, RefreshCw, ArrowLeft } from "lucide-react";
 import { getCanvasAnnouncements, getCanvasAssignments, getCanvasCourses, getCanvasFiles, getCanvasGrades, syncCanvasAssignments } from "../api";
 import CanvasDrawer from "./drawers/CanvasDrawer";
 import { useWorkspaceToolbar } from "./WorkspaceToolbarContext";
@@ -100,14 +100,14 @@ export default function CanvasView({ token }) {
     subtitle: selectedCourse ? selectedCourse.course_code : "Overview",
     actions: (
       <>
-        <div className="canvas-tabs">
-          <button type="button" className={tab === "assignments" ? "is-active" : ""} onClick={() => setTab("assignments")}>Assignments</button>
-          <button type="button" className={tab === "announcements" ? "is-active" : ""} onClick={() => setTab("announcements")}>Announcements</button>
-          <button type="button" className={tab === "grades" ? "is-active" : ""} onClick={() => setTab("grades")}>Grades</button>
-          {selectedCourseId !== "all" && (
+        {selectedCourseId !== "all" && (
+          <div className="canvas-tabs">
+            <button type="button" className={tab === "assignments" ? "is-active" : ""} onClick={() => setTab("assignments")}>Assignments</button>
+            <button type="button" className={tab === "announcements" ? "is-active" : ""} onClick={() => setTab("announcements")}>Announcements</button>
+            <button type="button" className={tab === "grades" ? "is-active" : ""} onClick={() => setTab("grades")}>Grades</button>
             <button type="button" className={tab === "files" ? "is-active" : ""} onClick={() => setTab("files")}>Files</button>
-          )}
-        </div>
+          </div>
+        )}
         <button type="button" className="canvas-sync" onClick={sync} disabled={syncing}><RefreshCw size={14} className={syncing ? "retro-icon-spin" : ""} />{syncing ? "Syncing" : "Sync"}</button>
       </>
     ),
@@ -132,22 +132,31 @@ export default function CanvasView({ token }) {
 
           {loading ? <div className="canvas-loading"><Loader2 className="retro-icon-spin" />Loading Modules...</div> : <>
             {selectedCourseId === "all" ? (
-              <div className="module-grid">
-                {courses.map(course => (
-                  <button
-                    key={course.id}
-                    className="module-card"
-                    style={{ "--module-color": course.color }}
-                    onClick={() => { setSelectedCourseId(course.id); setSelectedFile(null); }}
-                  >
-                    <div className="module-card-color-bar" />
-                    <div className="module-card-content">
-                      <strong>{course.course_code}</strong>
-                      <small>{course.name}</small>
-                    </div>
-                  </button>
-                ))}
-              </div>
+              courses.length === 0 ? (
+                <div className="module-empty">No courses available. Sync to fetch modules.</div>
+              ) : (
+                <div className="module-grid">
+                  {courses.map(course => (
+                    <button
+                      key={course.id}
+                      className="module-card"
+                      style={{ "--module-color": course.color }}
+                      onClick={() => { setSelectedCourseId(course.id); setSelectedFile(null); }}
+                    >
+                      <div className="module-card-color-bar" />
+                      <div className="module-card-content">
+                        <strong>{course.course_code}</strong>
+                        <small>{course.name}</small>
+                      </div>
+                      <div className="module-card-stats" style={{ display: 'flex', gap: '16px', marginTop: 'auto', paddingTop: '12px', borderTop: '1px solid var(--border)' }}>
+                        <span className="module-card-stat" style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: 'var(--text-muted)' }}>
+                          <BookOpen size={12} /> {assignments.filter(a => String(a.course_id) === String(course.id) && a.due_at && new Date(a.due_at) >= new Date() && !a.has_submitted).length} upcoming assignment{assignments.filter(a => String(a.course_id) === String(course.id) && a.due_at && new Date(a.due_at) >= new Date() && !a.has_submitted).length !== 1 ? 's' : ''}
+                        </span>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )
             ) : (
               <>
                 {tab === "assignments" && <section>

@@ -2,8 +2,9 @@
 // eslint-disable-next-line no-unused-vars
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CalendarClock, Check, Pencil, Trash2 } from "lucide-react";
-import { createTask, deleteTask, getAcademicModules, getTasks, updateTask } from "../../api";
+import { createTask, getAcademicModules, getTasks, updateTask } from "../../api";
 import { notifyTasksChanged } from "../../taskEvents";
+import { queueTaskDeletion } from "../../taskDeleteBuffer";
 import { getTaskModuleColor } from "../scheduleUtils";
 
 function taskDueDate(task) {
@@ -57,6 +58,14 @@ export default function TasksModule({ token, refreshKey = 0 }) {
     getAcademicModules(token)
       .then((data) => setModules(data || []))
       .catch(() => {});
+
+    const handleRestored = (event) => {
+      if (event.detail) {
+        setTasks((current) => [...current.filter(t => t.id !== event.detail.id), event.detail]);
+      }
+    };
+    window.addEventListener("canvenient-task-restored", handleRestored);
+    return () => window.removeEventListener("canvenient-task-restored", handleRestored);
   }, [token, refreshKey]);
 
   const visibleTasks = useMemo(() => {
@@ -171,15 +180,11 @@ export default function TasksModule({ token, refreshKey = 0 }) {
     }
   };
 
-  const remove = async (task) => {
-    try {
-      setActionError("");
-      await deleteTask(token, task.id);
-      setTasks((current) => current.filter((item) => item.id !== task.id));
-      notifyTasksChanged();
-    } catch (actionError) {
-      setActionError(actionError.message || "Could not delete task.");
-    }
+  const remove = (task) => {
+    setActionError("");
+    queueTaskDeletion(token, task);
+    setTasks((current) => current.filter((item) => item.id !== task.id));
+    notifyTasksChanged();
   };
 
   useEffect(() => {

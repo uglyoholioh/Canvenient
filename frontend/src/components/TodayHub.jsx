@@ -20,7 +20,6 @@ import {
   getTasks,
   createTask,
   updateTask,
-  deleteTask,
   getSchedule,
   getCanvasAnnouncements,
   getCanvasAssignments,
@@ -105,7 +104,15 @@ export default function TodayHub({ token, currentUser }) {
       loadAllData(true)
     }, 5 * 60 * 1000)
 
-    return () => clearInterval(interval)
+    const handleRestored = (event) => {
+      if (event.detail) setTasks((prev) => [event.detail, ...prev.filter(t => t.id !== event.detail.id)])
+    };
+    window.addEventListener("canvenient-task-restored", handleRestored);
+
+    return () => {
+      clearInterval(interval)
+      window.removeEventListener("canvenient-task-restored", handleRestored);
+    };
   }, [loadAllData])
 
   // Handle Quick Add Task

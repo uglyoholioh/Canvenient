@@ -313,4 +313,93 @@ describe("ModuleCard resizing", () => {
     fireEvent.keyDown(control, { key: "Escape" });
     expect(card).toHaveFocus();
   });
+
+  it("lowers the hover button when content would be blocked", () => {
+    const onViewFull = vi.fn();
+    const { container } = render(
+      <ModuleCard moduleId="tasks" title="Tasks" onViewFull={onViewFull}>
+        <div className="task-module-item">
+          <button type="button">Task 1</button>
+        </div>
+        <div className="task-module-item">
+          <button type="button">Task 2</button>
+        </div>
+      </ModuleCard>,
+    );
+
+    const card = container.querySelector(".dashboard-module");
+    const body = container.querySelector(".dashboard-module-body");
+    const openButton = screen.getByRole("button", { name: "Open tasks" });
+
+    // Mock bounding rects such that card bottom is 200, and last item bottom is 220
+    // (meaning last item extends beyond card bottom and would be blocked by button at default top 160)
+    card.getBoundingClientRect = () => ({
+      top: 0,
+      bottom: 200,
+      height: 200,
+      left: 0,
+      right: 300,
+      width: 300,
+    });
+    body.getBoundingClientRect = () => ({
+      top: 0,
+      bottom: 220,
+      height: 220,
+      left: 0,
+      right: 300,
+      width: 300,
+    });
+
+    const items = container.querySelectorAll(".task-module-item button");
+    items[0].getBoundingClientRect = () => ({ top: 10, bottom: 60, height: 50, width: 280, left: 10, right: 290 });
+    items[1].getBoundingClientRect = () => ({ top: 70, bottom: 220, height: 150, width: 280, left: 10, right: 290 });
+
+    fireEvent.mouseEnter(card);
+
+    expect(openButton).toHaveClass("is-lowered");
+    // maxBottom (220) - cardRect.top (0) + 8 = 228
+    expect(openButton.style.top).toBe("228px");
+    expect(openButton.style.bottom).toBe("auto");
+  });
+
+  it("keeps default position when content does not block the hover button", () => {
+    const onViewFull = vi.fn();
+    const { container } = render(
+      <ModuleCard moduleId="tasks" title="Tasks" onViewFull={onViewFull}>
+        <div className="task-module-item">
+          <button type="button">Task 1</button>
+        </div>
+      </ModuleCard>,
+    );
+
+    const card = container.querySelector(".dashboard-module");
+    const body = container.querySelector(".dashboard-module-body");
+    const openButton = screen.getByRole("button", { name: "Open tasks" });
+
+    // Card height 500, content only reaches y = 100
+    card.getBoundingClientRect = () => ({
+      top: 0,
+      bottom: 500,
+      height: 500,
+      left: 0,
+      right: 300,
+      width: 300,
+    });
+    body.getBoundingClientRect = () => ({
+      top: 0,
+      bottom: 100,
+      height: 100,
+      left: 0,
+      right: 300,
+      width: 300,
+    });
+
+    const item = container.querySelector(".task-module-item button");
+    item.getBoundingClientRect = () => ({ top: 10, bottom: 60, height: 50, width: 280, left: 10, right: 290 });
+
+    fireEvent.mouseEnter(card);
+
+    expect(openButton).not.toHaveClass("is-lowered");
+    expect(openButton.style.top).toBe("");
+  });
 });

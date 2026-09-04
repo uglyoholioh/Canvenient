@@ -1,8 +1,10 @@
+import React from "react";
 import { useEffect, useState } from "react"
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom"
 import RegisterForm from "./components/RegisterForm"
 import LoginForm from "./components/LoginForm"
 import WorkspaceLayout from "./components/WorkspaceLayout"
+import GlobalToast from "./components/GlobalToast"
 import "./components/auth.css"
 
 import {
@@ -119,6 +121,7 @@ function App() {
         />
         <Route path="*" element={<Navigate to="/workspace" replace />} />
       </Routes>
+      <GlobalToast />
     </Router>
   )
 }

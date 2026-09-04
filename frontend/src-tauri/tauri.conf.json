@@ -73,9 +73,9 @@
         "minWidth": 720,
         "resizable": true,
         "title": "Canvenient",
-        "titleBarStyle": "Transparent",
+        "titleBarStyle": "Overlay",
         "width": 800,
-        "transparent": false
+        "transparent": true
       }
     ]
   }
