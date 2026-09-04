@@ -60,7 +60,7 @@ async def test_canvas_announcements_cache_hit(client: AsyncClient, auth):
 
     resp = await client.get("/canvas/announcements", headers=auth_headers(token))
     assert resp.status_code == 200
-    assert resp.json() == cached_ann
+    assert resp.json() == [{**cached_ann[0], "is_dismissed": False}]
 
 
 async def test_canvas_assignments_cache_hit(client: AsyncClient, auth):

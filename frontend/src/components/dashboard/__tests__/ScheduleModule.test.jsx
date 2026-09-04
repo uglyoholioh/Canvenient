@@ -34,27 +34,44 @@ describe("ScheduleModule", () => {
     getTasks.mockResolvedValue([{ id: 3, title: "Tomorrow task", module_code: "CS2040S", status: "open", effective_due_at: tomorrow.toISOString() }]);
   });
 
-  it("falls forward from Now and swaps between Today and Next", async () => {
+  it("shows today's time-scaled schedule by default", async () => {
     const onNavigate = vi.fn();
-    render(<ScheduleModule token="token" onNavigate={onNavigate} />);
+    const { container } = render(<ScheduleModule token="token" onNavigate={onNavigate} />);
 
-    expect(await screen.findByText("Tomorrow task")).toBeInTheDocument();
-    expect(screen.getByText("Nothing left today · showing what’s next")).toBeInTheDocument();
-
-    fireEvent.click(screen.getByRole("button", { name: "Today" }));
-    expect(screen.getByText("Past class")).toBeInTheDocument();
+    expect(await screen.findByText("Past class")).toBeInTheDocument();
     expect(screen.queryByText("Tomorrow task")).not.toBeInTheDocument();
+    expect(container.querySelector(".schedule-timeline")).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: "Next" }));
-    fireEvent.click(screen.getByText("Tomorrow task"));
-    expect(onNavigate).toHaveBeenCalledWith("tasks");
+    fireEvent.click(screen.getByText("Past class"));
+    expect(onNavigate).toHaveBeenCalledWith("schedule");
   });
 
   it("keeps schedule data visible when tasks cannot be loaded", async () => {
     getTasks.mockRejectedValue(new Error("offline"));
     render(<ScheduleModule token="token" onNavigate={() => {}} />);
 
-    expect(await screen.findByText("ST2334")).toBeInTheDocument();
+    expect(await screen.findByText("Past class")).toBeInTheDocument();
     expect(screen.queryByText("Couldn’t load your agenda.")).not.toBeInTheDocument();
+  });
+
+  it("starts the timeline at the first class rather than an earlier task", async () => {
+    const today = new Date();
+    const firstClass = new Date(today);
+    firstClass.setHours(9, 30, 0, 0);
+    const earlierTask = new Date(today);
+    earlierTask.setHours(7, 0, 0, 0);
+    getSchedule.mockResolvedValue({
+      classes: [{ id: 4, module_code: "CS2040S", lesson_type: "Lecture", class_no: "1", class_date: dateKey(today), start_time: "09:30", end_time: "11:30", venue: "LT19", module_color: "#246BFD" }],
+      exams: [],
+      events: [],
+    });
+    getTasks.mockResolvedValue([{ id: 5, title: "Early task", status: "open", effective_due_at: earlierTask.toISOString() }]);
+
+    const { container } = render(<ScheduleModule token="token" onNavigate={() => {}} />);
+
+    await screen.findByText("CS2040S");
+    expect(container.querySelector(".schedule-timeline-hour time")).toHaveTextContent(
+      firstClass.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }),
+    );
   });
 });

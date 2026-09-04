@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react"
-import { BrowserRouter as Router, Routes, Route, Navigate, Outlet } from "react-router-dom"
+import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom"
 import RegisterForm from "./components/RegisterForm"
 import LoginForm from "./components/LoginForm"
 import WorkspaceLayout from "./components/WorkspaceLayout"
@@ -50,7 +50,12 @@ function App() {
   }, [token])
 
   useEffect(() => {
-    document.documentElement.setAttribute("data-theme", "dark")
+    const storedPreference = localStorage.getItem("canvenient-theme") || "graphite"
+    const preference = storedPreference === "dark" ? "graphite" : storedPreference
+    const resolvedTheme = preference === "system"
+      ? (window.matchMedia("(prefers-color-scheme: dark)").matches ? "graphite" : "light")
+      : preference
+    document.documentElement.setAttribute("data-theme", resolvedTheme)
   }, [])
 
   const handleLoginSuccess = (session) => {
@@ -64,6 +69,11 @@ function App() {
     clearStoredToken()
     setToken("")
     setCurrentUser(null)
+  }
+
+  const handleUserProfileUpdate = (user) => {
+    persistUser(user)
+    setCurrentUser(user)
   }
 
   if (isCheckingSession) {
@@ -98,7 +108,12 @@ function App() {
             !currentUser ? (
               <Navigate to="/login" replace />
             ) : (
-              <WorkspaceLayout token={token} user={currentUser} onLogout={handleLogout} />
+              <WorkspaceLayout
+                token={token}
+                user={currentUser}
+                onLogout={handleLogout}
+                onUpdateUser={handleUserProfileUpdate}
+              />
             )
           }
         />

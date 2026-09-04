@@ -1,8 +1,8 @@
 export const DASHBOARD_MODULES = [
   { id: "tasks", label: "Tasks" },
   { id: "schedule", label: "Schedule" },
+  { id: "isb", label: "NUS ISB" },
   { id: "canvas", label: "Canvas" },
-  { id: "notes", label: "Notes" },
 ];
 
 const LEGACY_DASHBOARD_SIZES = {
@@ -16,15 +16,15 @@ const LEGACY_DASHBOARD_SIZES = {
 };
 
 export const DEFAULT_DASHBOARD_SIZES = {
-  tasks: { columns: 3, rows: 3 },
+  tasks: { columns: 2, rows: 2 },
   schedule: { columns: 1, rows: 1 },
-  canvas: { columns: 1, rows: 1 },
-  notes: { columns: 1, rows: 1 },
+  isb: { columns: 1, rows: 1 },
+  canvas: { columns: 1, rows: 2 },
 };
 
 export const DEFAULT_DASHBOARD_TRACKS = {
-  columns: [1, 1, 1, 1],
-  rows: [150, 150, 150],
+  columns: [1.35, 1.35, 1, 1],
+  rows: [220, 520],
 };
 
 export const DASHBOARD_FONT_FAMILIES = [
@@ -45,6 +45,15 @@ export const DEFAULT_DASHBOARD_CONFIG = {
   tracks: DEFAULT_DASHBOARD_TRACKS,
   typography: DEFAULT_DASHBOARD_TYPOGRAPHY,
 };
+
+export function threeColumnDashboardConfig(config = DEFAULT_DASHBOARD_CONFIG) {
+  return {
+    ...config,
+    order: ["tasks", "schedule", "canvas", "isb"],
+    sizes: { ...config.sizes, ...DEFAULT_DASHBOARD_SIZES },
+    tracks: { ...DEFAULT_DASHBOARD_TRACKS },
+  };
+}
 
 export function readDashboardLayout() {
   const stored = localStorage.getItem("canvenient-dashboard-layout");

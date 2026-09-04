@@ -7,6 +7,7 @@
     "dev": "./start.sh",
     "start": "./start.sh",
     "desktop": "./desktop.sh",
+    "desktop:rebuild": "./scripts/rebuild-install-macos.sh",
     "dev:backend": "cd backend && source venv/bin/activate && uvicorn main:app --reload",
     "dev:frontend": "cd frontend && npm run dev",
     "build:frontend": "cd frontend && npm run build",

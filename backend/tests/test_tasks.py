@@ -70,6 +70,31 @@ async def test_delete_task_success(client: AsyncClient, auth):
     assert task_id not in task_ids
 
 
+async def test_create_task_with_long_description(client: AsyncClient, auth):
+    """Test creating a task with a long description (> 4000 chars) succeeds and truncates gracefully if oversized."""
+    token, _, _ = auth
+    long_desc = "A" * 5000
+    resp = await client.post(
+        "/tasks",
+        json={"title": "Assignment with long prompt", "description": long_desc},
+        headers=auth_headers(token),
+    )
+    assert resp.status_code == 201
+    data = resp.json()
+    assert data["description"] == long_desc
+
+    oversized_desc = "B" * 25000
+    resp_over = await client.post(
+        "/tasks",
+        json={"title": "Assignment with oversized prompt", "description": oversized_desc},
+        headers=auth_headers(token),
+    )
+    assert resp_over.status_code == 201
+    data_over = resp_over.json()
+    assert len(data_over["description"]) == 20000
+    assert data_over["description"] == "B" * 20000
+
+
 async def test_unauthenticated_tasks_access(client: AsyncClient):
     """Test unauthenticated access to /tasks returns 401."""
     resp = await client.get("/tasks")
@@ -77,3 +102,25 @@ async def test_unauthenticated_tasks_access(client: AsyncClient):
 
     post_resp = await client.post("/tasks", json={"title": "Unauthorized Task"})
     assert post_resp.status_code == 401
+
+
+async def test_create_canvas_task_strips_html_description(client: AsyncClient, auth):
+    """Test creating a task with source_type='canvas' cleans HTML tags from description."""
+    token, _, _ = auth
+    html_desc = "<p><span>Attached here are the Assignment 1 files.</span></p><p><a href='#'>BT2102-Assignment1.pdf</a></p>"
+    resp = await client.post(
+        "/tasks",
+        json={
+            "title": "Assignment 1",
+            "description": html_desc,
+            "source_type": "canvas",
+        },
+        headers=auth_headers(token),
+    )
+    assert resp.status_code == 201
+    data = resp.json()
+    assert "<p>" not in data["description"]
+    assert "<span>" not in data["description"]
+    assert "Attached here are the Assignment 1 files." in data["description"]
+    assert "BT2102-Assignment1.pdf" in data["description"]
+

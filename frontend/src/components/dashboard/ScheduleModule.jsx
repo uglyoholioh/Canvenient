@@ -1,36 +1,43 @@
 // React is required by the test JSX transform.
 // eslint-disable-next-line no-unused-vars
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { CalendarDays, CheckSquare, MapPin, RotateCw } from "lucide-react";
+import { RotateCw, ChevronLeft, ChevronRight } from "lucide-react";
 import { getSchedule, getTasks } from "../../api";
-import { dashboardAgendaItems, dashboardAgendaView, formatScheduleTime, startOfLocalDay } from "../scheduleUtils";
+import { dashboardAgendaItems, dashboardAgendaView, formatScheduleTime, getAcademicWeek } from "../scheduleUtils";
 
-const VIEWS = [
-  { id: "now", label: "Now" },
-  { id: "today", label: "Today" },
-  { id: "upcoming", label: "Next" },
-];
+const PIXELS_PER_HOUR = 52;
 
-function dayLabel(date, now) {
-  const day = startOfLocalDay(date);
-  const today = startOfLocalDay(now);
-  const difference = Math.round((day - today) / 86400000);
-  if (difference === 0) return "Today";
-  if (difference === 1) return "Tomorrow";
-  return date.toLocaleDateString([], { weekday: "short", month: "short", day: "numeric" });
+function minutesIntoDay(date) {
+  return (date.getHours() * 60) + date.getMinutes();
 }
 
-function agendaTime(item) {
-  if (item.kind === "task") return formatScheduleTime(item.start);
-  return `${formatScheduleTime(item.start)}–${formatScheduleTime(item.end)}`;
+function timelineGeometry(items, now, showNow = true) {
+  const nowMinutes = minutesIntoDay(now);
+  const itemEnds = items.map((item) => item.kind === "task" ? minutesIntoDay(item.start) + 20 : minutesIntoDay(item.end));
+  const firstClassStart = items.find((item) => item.kind === "class")?.start;
+  const rangeStart = minutesIntoDay(firstClassStart || items[0].start);
+  const rangeEnd = Math.min(24 * 60, Math.max(rangeStart + (3 * 60), Math.ceil(Math.max(...itemEnds) / 60) * 60));
+  const firstWholeHourAfterStart = Math.ceil(rangeStart / 60) * 60;
+  const markers = [rangeStart];
+  for (let minute = firstWholeHourAfterStart; minute < rangeEnd; minute += 60) {
+    if (minute > rangeStart) markers.push(minute);
+  }
+  return {
+    height: ((rangeEnd - rangeStart) / 60) * PIXELS_PER_HOUR,
+    markers,
+    rangeStart,
+    nowOffset: showNow && nowMinutes >= rangeStart && nowMinutes <= rangeEnd
+      ? ((nowMinutes - rangeStart) / 60) * PIXELS_PER_HOUR
+      : null,
+  };
 }
 
 export default function ScheduleModule({ token, onNavigate }) {
   const [schedule, setSchedule] = useState({ classes: [], exams: [], events: [] });
   const [tasks, setTasks] = useState([]);
   const [now, setNow] = useState(new Date());
-  const [view, setView] = useState("now");
   const [status, setStatus] = useState("loading");
+  const [dayOffset, setDayOffset] = useState(0);
 
   const loadAgenda = useCallback(() => {
     Promise.allSettled([getSchedule(token), getTasks(token)])
@@ -58,67 +65,107 @@ export default function ScheduleModule({ token, onNavigate }) {
     return () => window.clearInterval(timer);
   }, []);
 
-  const agenda = useMemo(() => dashboardAgendaItems(schedule, tasks, now), [schedule, tasks, now]);
-  const visible = useMemo(() => dashboardAgendaView(agenda, now, view), [agenda, now, view]);
-  const current = visible.items.find((item) => item.kind !== "task" && item.start <= now && item.end > now);
-  const summary = view === "today"
-    ? `${visible.total} item${visible.total === 1 ? "" : "s"} today`
-    : view === "upcoming"
-      ? `${visible.total} upcoming`
-      : current
-        ? "In class now"
-        : visible.fallback
-          ? "Nothing left today · showing what’s next"
-          : `${visible.total} item${visible.total === 1 ? "" : "s"} left today`;
+  const viewDate = useMemo(() => {
+    const d = new Date(now);
+    d.setDate(d.getDate() + dayOffset);
+    return d;
+  }, [now, dayOffset]);
+
+  const viewStartOfDay = useMemo(() => {
+    const d = new Date(viewDate);
+    d.setHours(0, 0, 0, 0);
+    return d;
+  }, [viewDate]);
+
+  const agenda = useMemo(() => dashboardAgendaItems(schedule, tasks, viewStartOfDay), [schedule, tasks, viewStartOfDay]);
+  const visible = useMemo(() => dashboardAgendaView(agenda, viewStartOfDay, "today", 50), [agenda, viewStartOfDay]);
+  const geometry = useMemo(() => visible.items.length ? timelineGeometry(visible.items, dayOffset === 0 ? now : viewStartOfDay, dayOffset === 0) : null, [dayOffset, now, viewStartOfDay, visible.items]);
+  const weekInfo = useMemo(() => getAcademicWeek(viewDate), [viewDate]);
+
+  const scrollRef = React.useRef(null);
+  const [lastScrolledDay, setLastScrolledDay] = useState(null);
+
+  useEffect(() => {
+    if (status === "success" && geometry) {
+      if (lastScrolledDay !== dayOffset) {
+        if (dayOffset === 0 && geometry.nowOffset !== null && scrollRef.current) {
+          scrollRef.current.scrollTop = Math.max(0, geometry.nowOffset - 40);
+        } else if (scrollRef.current) {
+          scrollRef.current.scrollTop = 0;
+        }
+        setLastScrolledDay(dayOffset);
+      }
+    }
+  }, [status, geometry, dayOffset, lastScrolledDay]);
 
   return (
     <div className="schedule-module schedule-module-agenda" data-state={status}>
       <div className="schedule-module-controls">
-        <div className="schedule-module-view-tabs" role="group" aria-label="Schedule card view">
-          {VIEWS.map((option) => (
-            <button
-              type="button"
-              aria-pressed={view === option.id}
-              className={view === option.id ? "is-active" : ""}
-              disabled={status === "loading"}
-              key={option.id}
-              onClick={() => setView(option.id)}
-            >{option.label}</button>
-          ))}
+        <span>{weekInfo.label}</span>
+        <div className="schedule-module-view-controls" style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+          <button type="button" onClick={() => setDayOffset(d => d - 1)} aria-label="Previous day" style={{ background: 'none', border: 'none', padding: '2px', cursor: 'pointer', display: 'flex', color: 'inherit' }}><ChevronLeft size={16} /></button>
+          <span style={{ fontSize: '0.9em', fontWeight: 500, minWidth: '4.5rem', textAlign: 'center' }}>
+            {dayOffset === 0 ? "Today" : dayOffset === 1 ? "Tomorrow" : dayOffset === -1 ? "Yesterday" : viewDate.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}
+          </span>
+          <button type="button" onClick={() => setDayOffset(d => d + 1)} aria-label="Next day" style={{ background: 'none', border: 'none', padding: '2px', cursor: 'pointer', display: 'flex', color: 'inherit' }}><ChevronRight size={16} /></button>
+          {dayOffset !== 0 && (
+            <button type="button" onClick={() => setDayOffset(0)} style={{ marginLeft: '4px', fontSize: '0.85em', opacity: 0.8, background: 'none', border: 'none', textDecoration: 'underline', cursor: 'pointer', color: 'inherit' }}>Today</button>
+          )}
         </div>
         <time dateTime={now.toISOString()}>{now.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}</time>
       </div>
-      {status === "loading" ? <div className="schedule-module-message is-loading" aria-live="polite">Loading your day…</div>
-        : status === "error" ? <div className="schedule-module-message is-error" role="alert"><span>Couldn’t load your agenda.</span><button type="button" onClick={retryAgenda}><RotateCw size={12} />Retry</button></div>
-          : <>
-            <div className="schedule-module-summary"><span className={current ? "is-live" : ""} />{summary}</div>
-            {visible.items.length ? (
-              <div className="schedule-module-list">
+      {status === "loading" ? (
+        <div className="schedule-module-message is-loading" aria-live="polite">Loading your day…</div>
+      ) : status === "error" ? (
+        <div className="schedule-module-message is-error" role="alert">
+          <span>Couldn’t load your agenda.</span>
+          <button type="button" onClick={retryAgenda}><RotateCw size={12} />Retry</button>
+        </div>
+      ) : (
+        <>
+          {visible.items.length && geometry ? (
+            <div className="schedule-timeline-scroll" ref={scrollRef}>
+              <div className="schedule-timeline" style={{ "--timeline-height": `${geometry.height}px` }}>
+                {geometry.markers.map((minute) => (
+                  <div className="schedule-timeline-hour" key={minute} style={{ top: `${((minute - geometry.rangeStart) / 60) * PIXELS_PER_HOUR}px` }}>
+                    <time>{new Date(2000, 0, 1, 0, minute).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}</time>
+                    <i />
+                  </div>
+                ))}
+                {geometry.nowOffset !== null && (
+                  <div className="schedule-timeline-now" style={{ top: `${geometry.nowOffset}px` }}>
+                    <i />
+                  </div>
+                )}
                 {visible.items.map((item) => {
                   const happening = item.kind !== "task" && item.start <= now && item.end > now;
                   const past = item.end < now;
+                  const top = ((minutesIntoDay(item.start) - geometry.rangeStart) / 60) * PIXELS_PER_HOUR;
+                  const durationMinutes = item.kind === "task" ? 20 : Math.max(20, (item.end - item.start) / 60000);
                   return (
                     <button
                       type="button"
-                      className={`schedule-module-row ${happening ? "is-current" : ""} ${past ? "is-past" : ""}`}
-                      style={{ "--module-color": item.color }}
+                      className={`schedule-timeline-item is-${item.kind} ${item.kind === "task" ? "is-task" : ""} ${happening ? "is-current" : ""} ${past ? "is-past" : ""}`}
+                      style={{ "--module-color": item.color, "--timeline-item-top": `${top}px`, "--timeline-duration": `${Math.max(18, (durationMinutes / 60) * PIXELS_PER_HOUR)}px`, opacity: item.attendInPerson === false ? 0.4 : 1 }}
                       key={`${item.id}-${item.start.toISOString()}`}
                       onClick={() => onNavigate?.(item.destination)}
                       aria-label={`Open ${item.kind === "task" ? "task" : "schedule"}: ${item.title}`}
                     >
-                      <span className="schedule-module-row-color" aria-hidden="true" />
-                      <span className="schedule-module-row-time"><small>{dayLabel(item.start, now)}</small><strong>{agendaTime(item)}</strong></span>
-                      <span className="schedule-module-row-copy">
+                      <span className="schedule-timeline-station" aria-hidden="true" />
+                      <span className="schedule-timeline-item-copy">
                         <strong>{item.title}</strong>
-                        <small>{item.kind === "task" ? <><CheckSquare size={11} />{item.subtitle}</> : <><CalendarDays size={11} />{item.subtitle}{item.classNo ? ` · ${item.classNo}` : ""}{item.venue ? <><span>·</span><MapPin size={11} />{item.venue}</> : null}</>}</small>
+                        <small>{formatScheduleTime(item.start)} · {item.subtitle}{item.classNo ? ` · ${item.classNo}` : ""}{item.venue ? ` · ${item.venue}` : ""}</small>
                       </span>
-                      {happening && <em>Now</em>}
                     </button>
                   );
                 })}
               </div>
-            ) : <div className="schedule-module-message">No scheduled classes or dated tasks in the next two weeks.</div>}
-          </>}
+            </div>
+          ) : (
+            <div className="schedule-module-message">No scheduled classes or dated tasks in the next two weeks.</div>
+          )}
+        </>
+      )}
     </div>
   );
 }

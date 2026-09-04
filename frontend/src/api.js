@@ -230,6 +230,14 @@ export function getAcademicModules(token) {
   return apiRequest("/academic-modules", { token });
 }
 
+export function updateAcademicModuleSelection(token, moduleIds) {
+  return apiRequest("/academic-modules/selection", {
+    method: "PUT",
+    body: { module_ids: moduleIds.map(Number) },
+    token,
+  });
+}
+
 export function getModuleColors(token) {
   return apiRequest("/module-colors", { token });
 }
@@ -296,6 +304,14 @@ export function getCanvasAnnouncements(token, forceRefresh = false) {
   return apiRequest(`/canvas/announcements${query}`, { token });
 }
 
+export function dismissCanvasAnnouncement(token, announcementId) {
+  return apiRequest("/canvas/announcements/dismiss", {
+    method: "POST",
+    body: { announcement_id: announcementId },
+    token,
+  });
+}
+
 export function getCanvasAssignments(token, forceRefresh = false) {
   const query = forceRefresh ? "?force_refresh=true" : "";
   return apiRequest(`/canvas/assignments${query}`, { token });
@@ -320,6 +336,42 @@ export function getCanvasGrades(token, courseId) {
 
 export function getCanvasFiles(token, courseId) {
   return apiRequest(`/canvas/files?course_id=` + courseId, { token });
+}
+
+export function getCanvasFolders(token, courseId) {
+  return apiRequest(`/canvas/folders?course_id=` + courseId, { token });
+}
+
+export function getCanvasCourseNavigation(token, courseId) {
+  return apiRequest(`/canvas/navigation?course_id=${encodeURIComponent(courseId)}`, { token });
+}
+
+export function getCanvasPages(token, courseId) {
+  return apiRequest(`/canvas/pages?course_id=${encodeURIComponent(courseId)}`, { token });
+}
+
+export function getCanvasPage(token, courseId, pageUrl) {
+  return apiRequest(`/canvas/pages/${encodeURIComponent(pageUrl)}?course_id=${encodeURIComponent(courseId)}`, { token });
+}
+
+export function getCanvasCourseModules(token, courseId) {
+  return apiRequest(`/canvas/modules?course_id=${encodeURIComponent(courseId)}`, { token });
+}
+
+export function getCanvasSyllabus(token, courseId) {
+  return apiRequest(`/canvas/syllabus?course_id=${encodeURIComponent(courseId)}`, { token });
+}
+
+export function searchCanvasResources(token, query, limit = 30) {
+  const params = new URLSearchParams({ q: query, limit: String(limit) });
+  return apiRequest(`/canvas/resource-search?${params.toString()}`, { token });
+}
+
+export function syncCanvasResourceIndex(token) {
+  return apiRequest("/canvas/resource-index", {
+    method: "POST",
+    token,
+  });
 }
 
 export function getCachedCanvasFiles(token) {
@@ -401,6 +453,75 @@ export function importNusmods(token, url) {
 
 export function getSchedule(token) {
   return apiRequest("/schedule", { token });
+}
+
+export function getClassContext(token, classId, occurrenceDate) {
+  return apiRequest(`/schedule/classes/${classId}/context?occurrence_date=${encodeURIComponent(occurrenceDate)}`, { token });
+}
+
+export function updateClass(token, classId, payload) {
+  return apiRequest(`/schedule/classes/${classId}`, {
+    method: "PATCH",
+    body: payload,
+    token,
+  });
+}
+
+export async function uploadClassFile(token, classId, occurrenceDate, file, isRecurring = false) {
+  const formData = new FormData();
+  formData.append("file", file, file.name || "attachment");
+  const path = `/schedule/classes/${classId}/files?occurrence_date=${encodeURIComponent(occurrenceDate)}${isRecurring ? "&is_recurring=true" : ""}`;
+  const url = buildUrl(path);
+  let response;
+  try {
+    response = await fetchWithDesktopStartupRetry(url, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+      body: formData,
+    });
+  } catch (error) {
+    throw new Error(`Could not connect to server at ${url}. Please check your backend connection.`, { cause: error });
+  }
+  const contentType = response.headers.get("content-type") || "";
+  const payload = contentType.includes("application/json") ? await response.json().catch(() => null) : null;
+  if (!response.ok) throw new Error(getErrorMessage(payload, `Could not attach the file (${response.status}).`));
+  if (!payload) throw new Error("Server returned an empty or invalid JSON response.");
+  return payload;
+}
+
+export async function downloadClassFile(token, fileId) {
+  const url = buildUrl(`/schedule/class-files/${fileId}`);
+  let response;
+  try {
+    response = await fetchWithDesktopStartupRetry(url, { headers: { Authorization: `Bearer ${token}` } });
+  } catch (error) {
+    throw new Error(`Could not connect to server at ${url}. Please check your backend connection.`, { cause: error });
+  }
+  if (!response.ok) {
+    const payload = (response.headers.get("content-type") || "").includes("application/json") ? await response.json().catch(() => null) : null;
+    throw new Error(getErrorMessage(payload, `Could not download the file (${response.status}).`));
+  }
+  return response.blob();
+}
+
+export function getCampusBusStops(token) {
+  return apiRequest("/campus-bus/stops", { token });
+}
+
+export function getCampusBusArrivals(token, stop) {
+  return apiRequest(`/campus-bus/arrivals?stop=${encodeURIComponent(stop)}`, { token });
+}
+
+export function searchCampusBusPlaces(token, query) {
+  return apiRequest(`/campus-bus/places?q=${encodeURIComponent(query)}`, { token });
+}
+
+export function planCampusBusTrip(token, trip) {
+  return apiRequest("/campus-bus/trips", {
+    method: "POST",
+    body: trip,
+    token,
+  });
 }
 
 export function getEvents(token) {
@@ -614,8 +735,61 @@ export function persistUser(user) {
 }
 
 export function syncCanvasAssignments(token) {
-  return apiRequest("/canvas/sync-assignments", {
+  return apiRequest("/tasks/sync-canvas", {
     method: "POST",
     token,
   });
+}
+
+// Venues & Free Room Finder
+export async function getVenueInformation(token, { academicYear, semester } = {}) {
+  const params = new URLSearchParams();
+  if (academicYear) params.set("academic_year", academicYear);
+  if (semester) params.set("semester", semester);
+  const q = params.toString() ? `?${params.toString()}` : "";
+  
+  const cacheKey = `canvenient.venues.info.${academicYear || 'current'}.${semester || 'current'}`;
+  try {
+    const cached = window.localStorage.getItem(cacheKey);
+    if (cached) {
+      const { timestamp, data } = JSON.parse(cached);
+      if (Date.now() - timestamp < 24 * 60 * 60 * 1000) return data;
+    }
+  } catch (e) {}
+
+  const data = await apiRequest(`/venues/info${q}`, { token });
+  try { window.localStorage.setItem(cacheKey, JSON.stringify({ timestamp: Date.now(), data })); } catch (e) {}
+  return data;
+}
+
+export async function getVenueLocations(token) {
+  const cacheKey = "canvenient.venues.locations";
+  try {
+    const cached = window.localStorage.getItem(cacheKey);
+    if (cached) {
+      const { timestamp, data } = JSON.parse(cached);
+      if (Date.now() - timestamp < 24 * 60 * 60 * 1000) return data;
+    }
+  } catch (e) {}
+
+  const data = await apiRequest("/venues/locations", { token });
+  try { window.localStorage.setItem(cacheKey, JSON.stringify({ timestamp: Date.now(), data })); } catch (e) {}
+  return data;
+}
+
+export function searchFreeVenues(token, options = {}) {
+  const params = new URLSearchParams();
+  if (options.day) params.set("day", options.day);
+  if (options.time) params.set("time", options.time);
+  if (options.lat !== undefined && options.lat !== null) params.set("lat", options.lat);
+  if (options.lon !== undefined && options.lon !== null) params.set("lon", options.lon);
+  if (options.faculty) params.set("faculty", options.faculty);
+  if (options.building) params.set("building", options.building);
+  if (options.query) params.set("query", options.query);
+  if (options.minFreeMinutes !== undefined && options.minFreeMinutes !== null) params.set("min_free_minutes", options.minFreeMinutes);
+  if (options.onlyFree !== undefined) params.set("only_free", options.onlyFree);
+  if (options.sort) params.set("sort", options.sort);
+  if (options.academicYear) params.set("academic_year", options.academicYear);
+  if (options.semester) params.set("semester", options.semester);
+  return apiRequest(`/venues/availability?${params.toString()}`, { token });
 }

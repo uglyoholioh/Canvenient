@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
-import { Moon, Sun, Monitor, Database, Keyboard, PanelLeft, MoveHorizontal, Palette, Loader2 } from "lucide-react";
+import { Moon, Sun, Monitor, Database, Keyboard, PanelLeft, MoveHorizontal, Palette, Loader2, Sparkles, Trees } from "lucide-react";
 import DashboardCustomizer from "./dashboard/DashboardCustomizer";
 import { readDashboardConfig, readDashboardLayout, saveDashboardConfig, saveDashboardLayout } from "./dashboard/dashboardConfig";
-import { applyModulePalette, getModuleColors, updateModuleColor } from "../api";
+import { applyModulePalette, getAcademicModules, getModuleColors, updateAcademicModuleSelection, updateModuleColor, updateProfile } from "../api";
 import {
   DEFAULT_KEYBOARD_SHORTCUTS,
   formatShortcut,
@@ -15,6 +15,15 @@ const getSidebarBehavior = () => {
   const stored = localStorage.getItem('canvenient-sidebar-mode');
   return ['hover', 'pinned', 'hidden'].includes(stored) ? stored : 'hover';
 };
+
+const APP_THEMES = [
+  { id: "graphite", label: "Graphite", description: "Soft monochrome", icon: Moon, swatches: ["#101113", "#1a1b1e", "#9c9da1"] },
+  { id: "dusk", label: "Dusk", description: "Smoky violet", icon: Sparkles, swatches: ["#14131a", "#211e2a", "#b7a6d8"] },
+  { id: "forest", label: "Moss", description: "Muted green", icon: Trees, swatches: ["#101512", "#1a211c", "#9fb49f"] },
+  { id: "ocean", label: "Tide", description: "Muted blue", icon: Palette, swatches: ["#0f1418", "#182126", "#9ab7c2"] },
+  { id: "light", label: "Paper", description: "Quiet light", icon: Sun, swatches: ["#f2f1ed", "#ffffff", "#66716f"] },
+  { id: "system", label: "System", description: "Follow device", icon: Monitor, swatches: ["#242528", "#e7e5df", "#8b8b8b"] },
+];
 
 function ShortcutRecorder({ allowShiftOnly = false, description, label, onChange, onReset, value }) {
   const [recording, setRecording] = useState(false);
@@ -56,33 +65,50 @@ function ShortcutRecorder({ allowShiftOnly = false, description, label, onChange
   );
 }
 
-export default function SettingsView({ token }) {
-  const [theme, setTheme] = useState(localStorage.getItem('canvenient-theme') || 'system');
+export default function SettingsView({ token, user, onUpdateUser }) {
+  const [theme, setTheme] = useState(() => {
+    const savedTheme = localStorage.getItem('canvenient-theme') || 'graphite';
+    return savedTheme === 'dark' ? 'graphite' : savedTheme;
+  });
   const [sidebarBehavior, setSidebarBehavior] = useState(getSidebarBehavior);
   const [sidebarWidth, setSidebarWidth] = useState(() => parseInt(localStorage.getItem('canvenient-sidebar-width') || '250', 10));
   const [checkboxStyle, setCheckboxStyle] = useState(localStorage.getItem('canvenient-checkbox-style') || 'brackets');
   const [shortcutConfig, setShortcutConfig] = useState(readKeyboardShortcuts);
   const [shortcutError, setShortcutError] = useState("");
-  const [canvasToken, setCanvasToken] = useState("");
+  const [canvasToken, setCanvasToken] = useState(() => user?.canvas_token || "");
+  const [canvasTokenSaving, setCanvasTokenSaving] = useState(false);
+  const [canvasTokenMessage, setCanvasTokenMessage] = useState("");
   const [dashboardLayout, setDashboardLayout] = useState(readDashboardLayout);
   const [dashboardConfig, setDashboardConfig] = useState(readDashboardConfig);
   const [moduleColors, setModuleColors] = useState({ active_palette: "balanced", palettes: [], modules: [] });
   const [moduleColorsLoading, setModuleColorsLoading] = useState(true);
   const [moduleColorsSaving, setModuleColorsSaving] = useState("");
   const [moduleColorsError, setModuleColorsError] = useState("");
+  const [academicModules, setAcademicModules] = useState([]);
+  const [academicModulesLoading, setAcademicModulesLoading] = useState(true);
+  const [academicModulesError, setAcademicModulesError] = useState("");
+  const [academicModulesSaving, setAcademicModulesSaving] = useState(false);
 
   useEffect(() => {
     if (!token) return;
     getModuleColors(token)
       .then(setModuleColors)
-      .catch((error) => setModuleColorsError(error.message || "Could not load course colours."))
+      .catch((error) => setModuleColorsError(error.message || "Could not load module colours."))
       .finally(() => setModuleColorsLoading(false));
+  }, [token]);
+
+  useEffect(() => {
+    if (!token) return;
+    getAcademicModules(token)
+      .then(setAcademicModules)
+      .catch((error) => setAcademicModulesError(error.message || "Could not load modules."))
+      .finally(() => setAcademicModulesLoading(false));
   }, [token]);
 
   useEffect(() => {
     if (theme === 'system') {
       const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-      document.documentElement.setAttribute('data-theme', prefersDark ? 'dark' : 'light');
+      document.documentElement.setAttribute('data-theme', prefersDark ? 'graphite' : 'light');
     } else {
       document.documentElement.setAttribute('data-theme', theme);
     }
@@ -140,9 +166,50 @@ export default function SettingsView({ token }) {
       setModuleColors(await updateModuleColor(token, moduleCode, color));
       window.dispatchEvent(new Event("module-colors-updated"));
     } catch (error) {
-      setModuleColorsError(error.message || "Could not update that course colour.");
+      setModuleColorsError(error.message || "Could not update that module colour.");
     } finally {
       setModuleColorsSaving("");
+    }
+  };
+
+  const handleModuleSelection = async (moduleId) => {
+    const previous = academicModules;
+    const next = previous.map((module) => module.id === moduleId ? { ...module, is_selected: !module.is_selected } : module);
+    setAcademicModules(next);
+    setAcademicModulesSaving(true);
+    setAcademicModulesError("");
+    try {
+      const updated = await updateAcademicModuleSelection(token, next.filter((module) => module.is_selected).map((module) => module.id));
+      setAcademicModules(updated);
+      window.dispatchEvent(new Event("academic-modules-updated"));
+    } catch (error) {
+      setAcademicModules(previous);
+      setAcademicModulesError(error.message || "Could not save module selection.");
+    } finally {
+      setAcademicModulesSaving(false);
+    }
+  };
+
+  const saveCanvasToken = async () => {
+    if (!user?.name?.trim()) {
+      setCanvasTokenMessage("Complete your profile name before saving a Canvas token.");
+      return;
+    }
+
+    setCanvasTokenSaving(true);
+    setCanvasTokenMessage("");
+    try {
+      const updatedUser = await updateProfile(token, {
+        name: user.name.trim(),
+        canvas_token: canvasToken.trim(),
+        theme: user.theme || "default",
+      });
+      onUpdateUser?.(updatedUser);
+      setCanvasTokenMessage("Canvas token saved.");
+    } catch (error) {
+      setCanvasTokenMessage(error.message || "Could not save the Canvas token.");
+    } finally {
+      setCanvasTokenSaving(false);
     }
   };
 
@@ -158,53 +225,47 @@ export default function SettingsView({ token }) {
   };
 
   return (
-    <div style={{ padding: '32px', maxWidth: '800px', margin: '0 auto', width: '100%', overflowY: 'auto', height: '100%' }} tabIndex={-1}>
+    <div style={{ padding: '32px', paddingBottom: '120px', maxWidth: '800px', margin: '0 auto', width: '100%', overflowY: 'auto', height: '100%' }} tabIndex={-1}>
       <h1 style={{ fontSize: '24px', fontWeight: '600', marginBottom: '24px', fontFamily: 'var(--font-mono)' }}>Settings</h1>
 
-      <section style={{ marginBottom: '40px' }}>
-        <h2 style={{ fontSize: '14px', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '16px', letterSpacing: '1px' }}>Appearance</h2>
-        
-        <div style={{ display: 'flex', gap: '16px', marginBottom: '16px' }}>
-          <button 
-            onClick={() => setTheme('light')}
-            tabIndex={0}
-            style={{ flex: 1, padding: '16px', borderRadius: '8px', border: `1px solid ${theme === 'light' ? 'var(--accent)' : 'var(--border-strong)'}`, backgroundColor: 'var(--surface)', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', outline: 'none', transition: 'all 0.2s ease' }}
-          >
-            <Sun size={24} color={theme === 'light' ? 'var(--accent)' : 'var(--text-muted)'} />
-            <span style={{ color: theme === 'light' ? 'var(--text-h)' : 'var(--text)' }}>Light</span>
-          </button>
-
-          <button 
-            onClick={() => setTheme('dark')}
-            tabIndex={0}
-            style={{ flex: 1, padding: '16px', borderRadius: '8px', border: `1px solid ${theme === 'dark' ? 'var(--accent)' : 'var(--border-strong)'}`, backgroundColor: 'var(--surface)', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', outline: 'none', transition: 'all 0.2s ease' }}
-          >
-            <Moon size={24} color={theme === 'dark' ? 'var(--accent)' : 'var(--text-muted)'} />
-            <span style={{ color: theme === 'dark' ? 'var(--text-h)' : 'var(--text)' }}>Dark</span>
-          </button>
-
-          <button 
-            onClick={() => setTheme('system')}
-            tabIndex={0}
-            style={{ flex: 1, padding: '16px', borderRadius: '8px', border: `1px solid ${theme === 'system' ? 'var(--accent)' : 'var(--border-strong)'}`, backgroundColor: 'var(--surface)', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', outline: 'none', transition: 'all 0.2s ease' }}
-          >
-            <Monitor size={24} color={theme === 'system' ? 'var(--accent)' : 'var(--text-muted)'} />
-            <span style={{ color: theme === 'system' ? 'var(--text-h)' : 'var(--text)' }}>System</span>
-          </button>
+      <section className="settings-appearance">
+        <div className="settings-section-heading">
+          <div><Palette size={15} /><h2>Appearance</h2></div>
+          <p>Choose a calm workspace palette.</p>
+        </div>
+        <div className="theme-picker" role="radiogroup" aria-label="Application theme">
+          {APP_THEMES.map(({ id, label, description, icon: Icon, swatches }) => {
+            const active = theme === id;
+            return (
+              <button
+                type="button"
+                role="radio"
+                aria-checked={active}
+                className={active ? "is-active" : ""}
+                key={id}
+                onClick={() => setTheme(id)}
+              >
+                <span className="theme-picker-preview" aria-hidden="true">
+                  {swatches.map((swatch) => <i key={swatch} style={{ background: swatch }} />)}
+                </span>
+                <span className="theme-picker-copy"><Icon size={15} /><strong>{label}</strong><small>{description}</small></span>
+              </button>
+            );
+          })}
         </div>
       </section>
 
       <section className="settings-course-colors">
         <div className="settings-section-heading">
-          <div><Palette size={15} /><h2>Course colours</h2></div>
+          <div><Palette size={15} /><h2>Module colours</h2></div>
           <p>One colour per module, shared by Schedule and Canvas.</p>
         </div>
 
         {moduleColorsLoading ? (
-          <div className="settings-colors-state"><Loader2 size={15} className="retro-icon-spin" />Loading courses</div>
+          <div className="settings-colors-state"><Loader2 size={15} className="retro-icon-spin" />Loading modules</div>
         ) : (
           <div className="settings-colors-panel">
-            <div className="settings-palette-list" role="radiogroup" aria-label="Course colour palette">
+            <div className="settings-palette-list" role="radiogroup" aria-label="Module colour palette">
               {moduleColors.palettes.map((palette) => {
                 const active = moduleColors.active_palette === palette.id;
                 const saving = moduleColorsSaving === `palette:${palette.id}`;
@@ -241,11 +302,29 @@ export default function SettingsView({ token }) {
                     aria-label={`Change ${module.module_code} colour`}
                   />
                 </label>
-              )) : <div className="settings-colors-empty">Import a timetable or connect Canvas to add courses.</div>}
+              )) : <div className="settings-colors-empty">Import a timetable or connect Canvas to add modules.</div>}
             </div>
           </div>
         )}
         {moduleColorsError && <div className="settings-colors-error">{moduleColorsError}</div>}
+      </section>
+
+      <section className="settings-course-colors">
+        <div className="settings-section-heading">
+          <div><Database size={15} /><h2>My modules</h2></div>
+          <p>Only selected modules appear when you assign a module to a task.</p>
+        </div>
+        {academicModulesLoading ? <div className="settings-colors-state"><Loader2 size={15} className="retro-icon-spin" />Loading modules</div> : academicModules.length ? (
+          <div className="settings-module-colors settings-module-selection" aria-label="Select modules you are taking">
+            {academicModules.map((module) => (
+              <label key={module.id}>
+                <input type="checkbox" checked={module.is_selected} disabled={academicModulesSaving} onChange={() => handleModuleSelection(module.id)} aria-label={`Taking ${module.module_code}`} />
+                <span><strong>{module.module_code}</strong><small>{module.name}</small></span>
+              </label>
+            ))}
+          </div>
+        ) : <div className="settings-colors-empty">Connect Canvas or import a timetable to choose your modules.</div>}
+        {academicModulesError && <div className="settings-colors-error" role="alert">{academicModulesError}</div>}
       </section>
 
       <section style={{ marginBottom: '40px' }}>
@@ -353,14 +432,18 @@ export default function SettingsView({ token }) {
               tabIndex={0}
             />
             <button 
+              type="button"
               tabIndex={0} 
+              disabled={canvasTokenSaving}
               style={{ padding: '0 20px', backgroundColor: 'var(--text-h)', color: 'var(--bg)', border: 'none', borderRadius: '4px', fontWeight: '600', cursor: 'pointer', outline: 'none' }}
+              onClick={saveCanvasToken}
               onMouseEnter={e => e.currentTarget.style.opacity = '0.9'}
               onMouseLeave={e => e.currentTarget.style.opacity = '1'}
             >
-              Save
+              {canvasTokenSaving ? 'Saving…' : 'Save'}
             </button>
           </div>
+          {canvasTokenMessage && <p className="settings-colors-error" role="status">{canvasTokenMessage}</p>}
         </div>
       </section>
 

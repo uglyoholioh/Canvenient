@@ -11,9 +11,11 @@ import Dashboard from "./Dashboard";
 import NotesView from "./NotesView";
 import Schedule from "./Schedule";
 import MarkdownEditor from "./MarkdownEditor";
+import VenueFinder from "./VenueFinder";
+import CanvasDrawer from "./drawers/CanvasDrawer";
 import { WorkspaceToolbarContext } from "./WorkspaceToolbarContext";
 import { QuickCaptureContext } from "./QuickCaptureContext";
-import { Folder, Search, Settings, CheckSquare, PanelLeft, PanelLeftClose, PanelLeftOpen, BookOpen, Plus, LogOut, LayoutDashboard, FileText, CalendarDays } from "lucide-react";
+import { Folder, Search, Settings, CheckSquare, PanelLeft, PanelLeftClose, PanelLeftOpen, BookOpen, Plus, LogOut, LayoutDashboard, FileText, CalendarDays, DoorOpen } from "lucide-react";
 import { createNote } from "../api";
 import { formatShortcut, matchesShortcut, readKeyboardShortcuts } from "../keyboardShortcuts";
 
@@ -24,7 +26,7 @@ const getSidebarBehavior = () => {
 
 const getInitialView = () => {
   const stored = localStorage.getItem("canvenient-active-view") || "dashboard";
-  return ["dashboard", "tasks", "schedule", "settings", "canvas", "notes"].includes(stored) || /^note-\d+$/.test(stored)
+  return ["dashboard", "tasks", "schedule", "venues", "settings", "canvas", "notes"].includes(stored) || /^note-\d+$/.test(stored)
     ? stored
     : "dashboard";
 };
@@ -38,8 +40,8 @@ const NavItem = ({ icon: Icon, label, active, onClick, shortcut, isSlim }) => (
     title={isSlim ? label : undefined}
   >
     <Icon size={16} style={{ flexShrink: 0 }} />
-    {!isSlim && <span>{label}</span>}
-    {!isSlim && shortcut && <kbd>{shortcut}</kbd>}
+    <span className="mac-source-row-label">{label}</span>
+    {!isSlim && shortcut && <kbd className="mac-source-row-shortcut">{shortcut}</kbd>}
   </button>
 );
 
@@ -47,19 +49,21 @@ const viewTitle = (activeTab) => {
   if (activeTab === "dashboard") return "Dashboard";
   if (activeTab === "tasks") return "Tasks";
   if (activeTab === "schedule") return "Schedule";
+  if (activeTab === "venues") return "Venue Finder";
   if (activeTab === "settings") return "Settings";
-  if (activeTab === "canvas") return "Canvas";
+  if (activeTab === "canvas") return "Resources";
   if (activeTab === "notes") return "Notes";
   return "Note";
 };
 
-export default function WorkspaceLayout({ token, user, onLogout }) {
+export default function WorkspaceLayout({ token, user, onLogout, onUpdateUser }) {
   const [activeTab, setActiveTab] = useState(getInitialView);
   const [isOmnibarOpen, setIsOmnibarOpen] = useState(false);
   const [isShortcutHelpOpen, setIsShortcutHelpOpen] = useState(false);
   const [toolbar, setToolbar] = useState(null);
   const [isSidebarHovered, setIsSidebarHovered] = useState(false);
   const [shortcuts, setShortcuts] = useState(readKeyboardShortcuts);
+  const [globalCanvasItem, setGlobalCanvasItem] = useState(null);
   const [tasksPanel, setTasksPanel] = useState({ isOpen: false, focusComposer: false });
   const [quickCapture, setQuickCapture] = useState({ isOpen: false });
   const tasksPanelReturnFocus = useRef(null);
@@ -87,7 +91,7 @@ export default function WorkspaceLayout({ token, user, onLogout }) {
 
   const toggleTasksPanel = useCallback(() => {
     if (tasksPanel.isOpen) closeTasksPanel();
-    else openTasksPanel();
+    else openTasksPanel({ focusComposer: true });
   }, [closeTasksPanel, openTasksPanel, tasksPanel.isOpen]);
 
   const openQuickCapture = useCallback((options = {}) => {
@@ -171,7 +175,7 @@ export default function WorkspaceLayout({ token, user, onLogout }) {
         });
       }
       if (window.__TAURI_IPC__) return;
-      const viewShortcuts = { "1": "dashboard", "2": "tasks", "3": "schedule", "4": "canvas", "5": "notes" };
+      const viewShortcuts = { "1": "dashboard", "2": "tasks", "3": "schedule", "4": "venues", "5": "canvas", "6": "notes" };
       if (viewShortcuts[e.key]) { e.preventDefault(); setActiveTab(viewShortcuts[e.key]); }
       if (key === "o") {
         e.preventDefault(); setActiveTab("schedule");
@@ -192,6 +196,7 @@ export default function WorkspaceLayout({ token, user, onLogout }) {
         "view-dashboard": "dashboard",
         "view-tasks": "tasks",
         "view-schedule": "schedule",
+        "view-venues": "venues",
         "view-canvas": "canvas",
         "view-notes": "notes",
         settings: "settings",
@@ -264,8 +269,8 @@ export default function WorkspaceLayout({ token, user, onLogout }) {
 
   const isSidebarVisible = sidebarBehavior !== 'hidden';
   const isSidebarExpanded = sidebarBehavior === 'pinned' || (sidebarBehavior === 'hover' && isSidebarHovered) || isDragging;
-  const currentSidebarWidth = !isSidebarVisible ? 0 : (isSidebarExpanded ? sidebarWidth : 58);
-  const layoutSidebarWidth = !isSidebarVisible ? 0 : (sidebarBehavior === 'pinned' ? sidebarWidth : 58);
+  const currentSidebarWidth = !isSidebarVisible ? 0 : (isSidebarExpanded ? sidebarWidth : 48);
+  const layoutSidebarWidth = !isSidebarVisible ? 0 : (sidebarBehavior === 'pinned' ? sidebarWidth : 48);
   const isSlim = isSidebarVisible && !isSidebarExpanded;
 
   const setAndPersistSidebarBehavior = (behavior) => {
@@ -309,12 +314,10 @@ export default function WorkspaceLayout({ token, user, onLogout }) {
           style={{ width: currentSidebarWidth, borderInlineEnd: isSidebarVisible ? undefined : 0 }}
         >
           <header className="mac-sidebar-header" data-tauri-drag-region>
-            {!isSlim && (
-              <div className="mac-sidebar-brand">
-                <span className="mac-sidebar-brand-mark" aria-hidden="true">C</span>
-                <strong>Canvenient</strong>
-              </div>
-            )}
+            <div className="mac-sidebar-brand" aria-hidden={isSlim}>
+              <span className="mac-sidebar-brand-mark" aria-hidden="true">C</span>
+              <strong>Canvenient</strong>
+            </div>
             {isSidebarVisible && (
               <button
                 type="button"
@@ -334,9 +337,10 @@ export default function WorkspaceLayout({ token, user, onLogout }) {
               <NavItem isSlim={isSlim} icon={LayoutDashboard} label="Dashboard" active={activeTab === 'dashboard'} onClick={() => setActiveTab("dashboard")} />
               <NavItem isSlim={isSlim} icon={CheckSquare} label="Tasks" active={activeTab === 'tasks'} onClick={() => setActiveTab("tasks")} />
               <NavItem isSlim={isSlim} icon={CalendarDays} label="Schedule" active={activeTab === 'schedule'} onClick={() => setActiveTab("schedule")} />
-              <NavItem isSlim={isSlim} icon={BookOpen} label="Canvas" active={activeTab === 'canvas'} onClick={() => setActiveTab("canvas")} />
+              <NavItem isSlim={isSlim} icon={DoorOpen} label="Venue Finder" active={activeTab === 'venues'} onClick={() => setActiveTab("venues")} />
+              <NavItem isSlim={isSlim} icon={BookOpen} label="Resources" active={activeTab === 'canvas'} onClick={() => setActiveTab("canvas")} />
               <NavItem isSlim={isSlim} icon={FileText} label="Notes" active={activeTab === 'notes' || activeTab.startsWith('note-')} onClick={() => setActiveTab("notes")} />
-              <NavItem isSlim={isSlim} icon={Search} label="Search" active={false} onClick={() => setIsOmnibarOpen(true)} shortcut={formatShortcut(shortcuts.search)} />
+              <NavItem isSlim={isSlim} icon={Search} label="Search" active={false} onClick={() => setIsOmnibarOpen(true)} />
             </nav>
 
             {!isSlim && (
@@ -369,7 +373,7 @@ export default function WorkspaceLayout({ token, user, onLogout }) {
       </div>
 
       <main className="mac-workspace-main">
-        <header className="mac-workspace-toolbar" data-tauri-drag-region>
+        {activeTab !== "dashboard" && <header className="mac-workspace-toolbar" data-tauri-drag-region>
           {sidebarBehavior === 'hidden' && (
             <button
               type="button"
@@ -382,26 +386,28 @@ export default function WorkspaceLayout({ token, user, onLogout }) {
             </button>
           )}
           <div className="mac-toolbar-heading" data-tauri-drag-region>
-            <h1>{toolbarTitle}</h1>
+            {toolbarTitle && <h1>{toolbarTitle}</h1>}
             {toolbar?.subtitle && <span>{toolbar.subtitle}</span>}
           </div>
+          {!toolbar?.hideSearch && (
+            <button type="button" className="mac-toolbar-search mac-toolbar-search-primary" onClick={() => setIsOmnibarOpen(true)}>
+              <Search size={14} />
+              <span>Search for anything…</span>
+              <kbd>{formatShortcut(shortcuts.search)}</kbd>
+            </button>
+          )}
+          {toolbar?.hideSearch && <div aria-hidden="true" />}
           <div className="mac-toolbar-actions">
             {toolbar?.actions}
-            {!toolbar?.hideSearch && (
-              <button type="button" className="mac-toolbar-search" onClick={() => setIsOmnibarOpen(true)}>
-                <Search size={14} />
-                <span>Search</span>
-                <kbd>{formatShortcut(shortcuts.search)}</kbd>
-              </button>
-            )}
           </div>
-        </header>
+        </header>}
 
         <div className="mac-workspace-content">
-          {activeTab === 'dashboard' && <Dashboard token={token} user={user} onNavigate={setActiveTab} />}
+          {activeTab === 'dashboard' && <Dashboard token={token} user={user} onNavigate={setActiveTab} onOpenSearch={() => setIsOmnibarOpen(true)} searchShortcutLabel={formatShortcut(shortcuts.search)} />}
           {activeTab === 'tasks' && <TaskView token={token} user={user} />}
           {activeTab === 'schedule' && <Schedule token={token} />}
-          {activeTab === 'settings' && <SettingsView token={token} user={user} />}
+          {activeTab === 'venues' && <VenueFinder token={token} />}
+          {activeTab === 'settings' && <SettingsView token={token} user={user} onUpdateUser={onUpdateUser} />}
           {activeTab === 'canvas' && <CanvasView token={token} />}
           {activeTab === 'notes' && <NotesView token={token} />}
           {activeTab.startsWith('note-') && <MarkdownEditor key={activeTab} noteId={activeTab.split('-')[1]} token={token} />}
@@ -432,9 +438,18 @@ export default function WorkspaceLayout({ token, user, onLogout }) {
       {isOmnibarOpen && <Omnibar onClose={() => setIsOmnibarOpen(false)} token={token} onNavigate={(type, item) => {
         if (type === 'note') {
           setActiveTab('note-' + item.id);
+        } else if (type === 'view') {
+          setActiveTab(item.view || item.id);
+        } else if (type === 'task') {
+          setActiveTab('tasks');
+        } else if (type === 'canvas_resource') {
+          setGlobalCanvasItem(item);
         }
         setIsOmnibarOpen(false);
       }} />}
+      
+      {globalCanvasItem && <CanvasDrawer item={globalCanvasItem} token={token} onClose={() => setGlobalCanvasItem(null)} />}
+      
       {isShortcutHelpOpen && (
         <div className="mac-shortcut-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) setIsShortcutHelpOpen(false); }}>
           <section className="mac-shortcut-sheet" role="dialog" aria-modal="true" aria-labelledby="shortcut-help-title">

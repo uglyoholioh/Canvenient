@@ -1,15 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { BookOpen, CalendarDays, Check, CheckSquare, Columns3, FileText, Grid3X3, LayoutGrid, Pencil, SlidersHorizontal, X } from "lucide-react";
+import { Check, Pencil, Search, SlidersHorizontal, X } from "lucide-react";
 import CanvasDrawer from "./drawers/CanvasDrawer";
-import NoteDrawer from "./drawers/NoteDrawer";
 import CanvasModule from "./dashboard/CanvasModule";
 import ModuleCard from "./dashboard/ModuleCard";
-import NotesModule from "./dashboard/NotesModule";
 import ScheduleModule from "./dashboard/ScheduleModule";
+import CampusBusModule from "./dashboard/CampusBusModule";
 import TasksModule from "./dashboard/TasksModule";
 import DashboardCustomizer from "./dashboard/DashboardCustomizer";
-import { readDashboardConfig, readDashboardLayout, saveDashboardConfig, saveDashboardLayout } from "./dashboard/dashboardConfig";
-import { useWorkspaceToolbar } from "./WorkspaceToolbarContext";
+import { readDashboardConfig, readDashboardLayout, saveDashboardConfig, saveDashboardLayout, threeColumnDashboardConfig } from "./dashboard/dashboardConfig";
 import { useQuickCapture } from "./QuickCaptureContext";
 
 const DASHBOARD_FONT_VALUES = {
@@ -18,18 +16,10 @@ const DASHBOARD_FONT_VALUES = {
   mono: "'SF Mono', SFMono-Regular, Menlo, Monaco, monospace",
 };
 
-function initialCollapsedState() {
-  try { return JSON.parse(localStorage.getItem("canvenient-dashboard-collapsed") || "{}"); }
-  catch { return {}; }
-}
-
-export default function Dashboard({ token, user, onNavigate }) {
+export default function Dashboard({ token, user, onNavigate, onOpenSearch, searchShortcutLabel }) {
   const { openQuickCapture } = useQuickCapture();
-  const [collapsed, setCollapsed] = useState(initialCollapsedState);
-  const [activeNote, setActiveNote] = useState(null);
   const [activeCanvasItem, setActiveCanvasItem] = useState(null);
   const [taskRefreshKey, setTaskRefreshKey] = useState(0);
-  const [noteRefreshKey, setNoteRefreshKey] = useState(0);
   const [layout, setLayout] = useState(readDashboardLayout);
   const [config, setConfig] = useState(readDashboardConfig);
   const [isCustomizing, setIsCustomizing] = useState(false);
@@ -37,7 +27,27 @@ export default function Dashboard({ token, user, onNavigate }) {
   const [draggedModule, setDraggedModule] = useState(null);
   const [previewTracks, setPreviewTracks] = useState(null);
   const [activeModuleId, setActiveModuleId] = useState("tasks");
+  const [viewportHeight, setViewportHeight] = useState(() => window.innerHeight);
   const moduleRefs = useRef(new Map());
+
+  useEffect(() => {
+    const updateViewportHeight = () => setViewportHeight(window.innerHeight);
+    window.addEventListener("resize", updateViewportHeight);
+    return () => window.removeEventListener("resize", updateViewportHeight);
+  }, []);
+
+  useEffect(() => {
+    const layoutKey = "canvenient-dashboard-three-column-layout";
+    if (localStorage.getItem(layoutKey) === "9") return;
+    Promise.resolve().then(() => {
+      const nextConfig = threeColumnDashboardConfig(readDashboardConfig());
+      saveDashboardConfig(nextConfig);
+      saveDashboardLayout("focus");
+      setConfig(nextConfig);
+      setLayout("focus");
+      localStorage.setItem(layoutKey, "9");
+    });
+  }, []);
 
   useEffect(() => {
     const syncSettings = () => { setLayout(readDashboardLayout()); setConfig(readDashboardConfig()); };
@@ -51,22 +61,13 @@ export default function Dashboard({ token, user, onNavigate }) {
 
   useEffect(() => {
     const refreshTasks = () => setTaskRefreshKey((key) => key + 1);
-    const refreshNotes = () => setNoteRefreshKey((key) => key + 1);
     window.addEventListener("canvenient-task-created", refreshTasks);
-    window.addEventListener("canvenient-note-created", refreshNotes);
+    window.addEventListener("canvenient-tasks-changed", refreshTasks);
     return () => {
       window.removeEventListener("canvenient-task-created", refreshTasks);
-      window.removeEventListener("canvenient-note-created", refreshNotes);
+      window.removeEventListener("canvenient-tasks-changed", refreshTasks);
     };
   }, []);
-
-  const toggle = (module) => {
-    setCollapsed((current) => {
-      const next = { ...current, [module]: !current[module] };
-      localStorage.setItem("canvenient-dashboard-collapsed", JSON.stringify(next));
-      return next;
-    });
-  };
 
   const changeLayout = useCallback((nextLayout) => {
     setLayout(nextLayout);
@@ -86,28 +87,23 @@ export default function Dashboard({ token, user, onNavigate }) {
 
   const modules = {
     tasks: {
-      icon: CheckSquare,
       title: "Tasks",
       onViewFull: () => onNavigate("tasks"),
       body: <TasksModule token={token} refreshKey={taskRefreshKey} />,
     },
     schedule: {
-      icon: CalendarDays,
       title: "Schedule",
       onViewFull: () => onNavigate("schedule"),
       body: <ScheduleModule token={token} onNavigate={onNavigate} />,
     },
+    isb: {
+      title: "NUS ISB",
+      body: <CampusBusModule token={token} />,
+    },
     canvas: {
-      icon: BookOpen,
       title: "Canvas",
       onViewFull: () => onNavigate("canvas"),
       body: <CanvasModule token={token} enabled={Boolean(user?.canvas_token)} onOpenItem={setActiveCanvasItem} />,
-    },
-    notes: {
-      icon: FileText,
-      title: "Notes",
-      onViewFull: () => onNavigate("notes"),
-      body: <NotesModule token={token} refreshKey={noteRefreshKey} onOpenNote={setActiveNote} />,
     },
   };
 
@@ -191,38 +187,12 @@ export default function Dashboard({ token, user, onNavigate }) {
     return () => window.removeEventListener("keydown", closeTransientUi);
   }, []);
 
-  const toolbarConfig = useMemo(() => ({
-    title: "Dashboard",
-    actions: (
-      <>
-        <div className="dashboard-layout-switcher" aria-label="Dashboard layout">
-          <button type="button" className={layout === "focus" ? "is-active" : ""} onClick={() => selectLayout("focus")} aria-label="Focus and sidebar layout" title="Focus + Sidebar"><Columns3 size={14} /></button>
-          <button type="button" className={layout === "bento" ? "is-active" : ""} onClick={() => selectLayout("bento")} aria-label="Bento grid layout" title="Bento Grid"><LayoutGrid size={14} /></button>
-          <button type="button" className={layout === "custom" ? "is-active" : ""} onClick={() => selectLayout("custom")} aria-label="Custom grid layout" title="Custom Grid"><Grid3X3 size={14} /></button>
-        </div>
-        <button
-          type="button"
-          className={`dashboard-edit-button ${isEditingLayout ? "is-active" : ""}`}
-          onClick={() => isEditingLayout ? setIsEditingLayout(false) : beginLayoutEdit()}
-          aria-label={isEditingLayout ? "Finish editing dashboard layout" : "Edit dashboard layout"}
-          title={isEditingLayout ? "Done" : "Edit layout"}
-        >
-          {isEditingLayout ? <Check size={14} /> : <Pencil size={14} />}
-        </button>
-        <button type="button" className={`dashboard-customize-button ${isCustomizing ? "is-active" : ""}`} onClick={() => setIsCustomizing((open) => !open)} aria-label="Customize dashboard" title="Customize dashboard"><SlidersHorizontal size={14} /></button>
-        {isCustomizing && <div className="dashboard-customizer-popover is-in-toolbar"><header><strong>Customize dashboard</strong><button type="button" onClick={() => setIsCustomizing(false)} aria-label="Close dashboard customizer"><X size={14} /></button></header><DashboardCustomizer compact layout={layout} config={config} onLayoutChange={selectLayout} onConfigChange={changeConfig} /></div>}
-      </>
-    ),
-  }), [changeConfig, config, isCustomizing, isEditingLayout, layout, selectLayout]);
-  useWorkspaceToolbar(toolbarConfig);
-
   const renderModule = (moduleId) => {
     const module = modules[moduleId];
     return (
       <ModuleCard
         key={moduleId}
         moduleId={moduleId}
-        icon={module.icon}
         title={module.title}
         cardRef={(element) => {
           if (element) moduleRefs.current.set(moduleId, element);
@@ -232,8 +202,6 @@ export default function Dashboard({ token, user, onNavigate }) {
         onBrowseFocus={() => setActiveModuleId(moduleId)}
         onBrowseMove={(key) => moveBrowseFocus(moduleId, key)}
         onQuickCapture={() => openQuickCapture({ mode: "task" })}
-        collapsed={collapsed[moduleId]}
-        onToggle={() => toggle(moduleId)}
         onViewFull={module.onViewFull}
         editing={isEditingLayout}
         dragging={draggedModule === moduleId}
@@ -251,14 +219,42 @@ export default function Dashboard({ token, user, onNavigate }) {
     );
   };
 
+  const today = new Date();
+  const dayLabel = today.toLocaleDateString([], { weekday: "long", month: "long", day: "numeric" });
+  const gridTracks = previewTracks || config.tracks;
+  const totalRequestedRowHeight = gridTracks.rows.reduce((sum, value) => sum + value, 0) || 1;
+  const availableGridHeight = Math.max(gridTracks.rows.length * 96, Math.min(gridTracks.rows.length * 400, viewportHeight - 120));
+  const rowScale = availableGridHeight / totalRequestedRowHeight;
+
   return (
     <div className="dashboard-page">
       <div className="dashboard-scroll">
+        <header className="dashboard-command-header">
+          <h2>{dayLabel}</h2>
+          <div className="dashboard-command-actions">
+            <button type="button" className="mac-toolbar-search dashboard-search" onClick={onOpenSearch}>
+              <Search size={14} />
+              <span>Search for anything…</span>
+              {searchShortcutLabel && <kbd>{searchShortcutLabel}</kbd>}
+            </button>
+            <button
+              type="button"
+              className={`dashboard-edit-button ${isEditingLayout ? "is-active" : ""}`}
+              onClick={() => isEditingLayout ? setIsEditingLayout(false) : beginLayoutEdit()}
+              aria-label={isEditingLayout ? "Finish editing dashboard layout" : "Edit dashboard layout"}
+              title={isEditingLayout ? "Done" : "Edit layout"}
+            >
+              {isEditingLayout ? <Check size={15} /> : <Pencil size={15} />}
+            </button>
+            <button type="button" className={`dashboard-customize-button ${isCustomizing ? "is-active" : ""}`} onClick={() => setIsCustomizing((open) => !open)} aria-label="Customize dashboard" title="Customize dashboard"><SlidersHorizontal size={15} /></button>
+            {isCustomizing && <div className="dashboard-customizer-popover is-in-dashboard"><header><strong>Customize dashboard</strong><button type="button" onClick={() => setIsCustomizing(false)} aria-label="Close dashboard customizer"><X size={14} /></button></header><DashboardCustomizer compact layout={layout} config={config} onLayoutChange={selectLayout} onConfigChange={changeConfig} /></div>}
+          </div>
+        </header>
         <div
           className={`dashboard-grid is-${layout} ${isEditingLayout ? "is-layout-editing" : ""}`}
           style={{
-            "--dashboard-column-tracks": (previewTracks || config.tracks).columns.map((value) => `${value}fr`).join(" "),
-            "--dashboard-row-tracks": (previewTracks || config.tracks).rows.map((value) => `${value}px`).join(" "),
+            "--dashboard-column-tracks": gridTracks.columns.map((value) => `${value}fr`).join(" "),
+            "--dashboard-row-tracks": gridTracks.rows.map((value) => `${Math.max(72, Math.round(value * rowScale))}px`).join(" "),
             "--dashboard-font-family": DASHBOARD_FONT_VALUES[config.typography?.family] || DASHBOARD_FONT_VALUES.sans,
             "--dashboard-font-size": `${config.typography?.size || 11}px`,
           }}
@@ -267,7 +263,6 @@ export default function Dashboard({ token, user, onNavigate }) {
           {visibleModules.length === 0 && <div className="dashboard-no-modules">No modules are visible. Use the customize button to add one.</div>}
         </div>
       </div>
-      <NoteDrawer note={activeNote} token={token} onClose={() => setActiveNote(null)} />
       <CanvasDrawer key={activeCanvasItem ? `${activeCanvasItem.itemType}-${activeCanvasItem.course_id}-${activeCanvasItem.id}` : "empty"} item={activeCanvasItem} token={token} onClose={() => setActiveCanvasItem(null)} />
     </div>
   );

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from 'vitest'
-import { createTask, login, register, importIcs } from '../api'
+import { createTask, login, register, importIcs, updateProfile } from '../api'
 
 describe('api.js error handling', () => {
   const originalFetch = globalThis.fetch
@@ -68,6 +68,26 @@ describe('api.js error handling', () => {
     await expect(createTask('test-token', { title: 'A task' })).rejects.toThrow(
       'title: String should have at most 160 characters'
     )
+  })
+
+  it('sends Canvas token saves to the authenticated profile endpoint', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      headers: new Map([['content-type', 'application/json']]),
+      json: () => Promise.resolve({ id: 1, email: 'test@nus.edu', name: 'Test', canvas_token: 'canvas-token', theme: 'graphite' }),
+    })
+
+    await updateProfile('session-token', { name: 'Test', canvas_token: 'canvas-token', theme: 'graphite' })
+
+    expect(globalThis.fetch).toHaveBeenCalledWith('/auth/profile', expect.objectContaining({
+      method: 'PATCH',
+      headers: expect.objectContaining({
+        Authorization: 'Bearer session-token',
+        'Content-Type': 'application/json',
+      }),
+      body: JSON.stringify({ name: 'Test', canvas_token: 'canvas-token', theme: 'graphite' }),
+    }))
   })
 
   it('handles registration network failure', async () => {

@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CalendarDays, ChevronLeft, ChevronRight, FileUp, Link2, Loader2, MapPin, Upload, X } from "lucide-react";
 import { getSchedule, importIcs, importNusmods } from "../api";
+import ClassContextDrawer from "./drawers/ClassContextDrawer";
 import { useWorkspaceToolbar } from "./WorkspaceToolbarContext";
 import {
   formatScheduleTime,
+  getAcademicWeek,
   localDateKey,
   minutesSinceMidnight,
   scheduleItemsForDate,
@@ -14,41 +16,116 @@ import {
 
 const EMPTY_SCHEDULE = { classes: [], exams: [], events: [] };
 const HOUR_HEIGHT = 48;
+const WEEK_HOUR_HEIGHT = 72;
+const HORIZONTAL_DAY_WIDTH = 64;
+const HORIZONTAL_HEADER_HEIGHT = 32;
+const WEEK_LAYOUT_STORAGE_KEY = "canvenient-schedule-week-layout";
 
-function TimelineItem({ item, startHour, now, isToday }) {
-  const { top, height } = timelineBlockGeometry(item, startHour, HOUR_HEIGHT);
+function classTypeBadge(item) {
+  if (item.kind !== "class") return item.subtitle;
+  const names = { lecture: "LEC", tutorial: "TUT", laboratory: "LAB", seminar: "SEM", recitation: "REC", sectional: "SEC" };
+  const code = names[String(item.subtitle || "").toLowerCase()] || String(item.subtitle || "Class").slice(0, 3).toUpperCase();
+  return item.classNo ? `${code} [${item.classNo}]` : code;
+}
+
+function TimelineItem({ item, startHour, hourHeight = HOUR_HEIGHT, now, isToday, compact = false, onOpenClass }) {
+  const { top, height } = timelineBlockGeometry(item, startHour, hourHeight);
   const isPast = isToday && item.end <= now;
-  const isCurrent = isToday && item.start <= now && item.end > now;
+  const linkCount = item.linkedTaskCount + item.linkedNoteCount + item.linkedFileCount;
+  const isLinkable = item.kind === "class";
+  const openClass = () => { if (isLinkable) onOpenClass?.(item); };
 
   return (
     <article
-      className={`schedule-timeline-item is-${item.kind} ${isPast ? "is-past" : ""} ${isCurrent ? "is-current" : ""}`}
+      className={`schedule-timeline-item is-${item.kind} ${isPast ? "is-past" : ""} ${isLinkable ? "is-linkable" : ""}`}
       style={{
         top: `${top}px`,
         height: `${height}px`,
         "--module-color": item.color,
         "--module-ink": item.ink,
+        opacity: item.attendInPerson === false ? 0.4 : 1
       }}
-      aria-label={`${item.title}, ${formatScheduleTime(item.start)} to ${formatScheduleTime(item.end)}, ${item.subtitle}${item.classNo ? ` ${item.classNo}` : ""}, ${item.venue}`}
+      role={isLinkable ? "button" : undefined}
+      tabIndex={isLinkable ? 0 : undefined}
+      onClick={openClass}
+      onKeyDown={(event) => { if (isLinkable && (event.key === "Enter" || event.key === " ")) { event.preventDefault(); openClass(); } }}
+      aria-label={`${item.title}, ${formatScheduleTime(item.start)} to ${formatScheduleTime(item.end)}, ${item.subtitle}${item.classNo ? ` ${item.classNo}` : ""}, ${item.venue}${linkCount ? `, ${linkCount} linked item${linkCount === 1 ? "" : "s"}` : ""}`}
     >
-      <div className="schedule-item-time">
-        <strong>{formatScheduleTime(item.start)}</strong>
-        <span>to {formatScheduleTime(item.end)}</span>
-      </div>
       <div className="schedule-item-copy">
-        <div><strong>{item.title}</strong><span>{item.subtitle}{item.classNo ? ` · ${item.classNo}` : ""}</span></div>
+        <div><strong>{item.title}</strong><span className="schedule-class-type">{classTypeBadge(item)}</span></div>
         <small><MapPin size={11} />{item.venue}</small>
+        {isLinkable && linkCount > 0 && <small className="schedule-linked-count">{linkCount} linked</small>}
       </div>
-      {(isCurrent || isPast || item.kind === "exam") && (
-        <span className="schedule-item-state">{isCurrent ? "Now" : isPast ? "Past" : "Exam"}</span>
+      {!compact && (isPast || item.kind === "exam") && (
+        <span className="schedule-item-state">{isPast ? "Past" : "Exam"}</span>
       )}
     </article>
   );
 }
 
+function HorizontalScheduleItem({ item, startHour, totalHours, now, isToday, row, dayWidth = HORIZONTAL_DAY_WIDTH, headerHeight = HORIZONTAL_HEADER_HEIGHT, onOpenClass }) {
+  const startMins = minutesSinceMidnight(item.start);
+  const endMins = minutesSinceMidnight(item.end);
+  const totalMins = totalHours * 60;
+  const leftPercent = Math.max(0, (startMins - startHour * 60) / totalMins);
+  const widthPercent = Math.max(0.01, (endMins - startMins) / totalMins);
+  const isPast = isToday && item.end <= now;
+  const linkCount = item.linkedTaskCount + item.linkedNoteCount + item.linkedFileCount;
+  const isLinkable = item.kind === "class";
+  const openClass = () => { if (isLinkable) onOpenClass?.(item); };
+
+  return (
+    <article
+      className={`schedule-horizontal-item is-${item.kind} ${isPast ? "is-past" : ""} ${isLinkable ? "is-linkable" : ""}`}
+      style={{
+        left: `calc(${dayWidth}px + ${leftPercent} * (100% - ${dayWidth}px) + 2px)`,
+        width: `calc(${widthPercent} * (100% - ${dayWidth}px) - 4px)`,
+        top: `calc(${headerHeight}px + ${row} * ((100% - ${headerHeight}px) / 7) + 2px)`,
+        height: `calc((100% - ${headerHeight}px) / 7 - 4px)`,
+        "--module-color": item.color,
+        "--module-ink": item.ink,
+        opacity: item.attendInPerson === false ? 0.4 : 1
+      }}
+      role={isLinkable ? "button" : undefined}
+      tabIndex={isLinkable ? 0 : undefined}
+      onClick={openClass}
+      onKeyDown={(event) => { if (isLinkable && (event.key === "Enter" || event.key === " ")) { event.preventDefault(); openClass(); } }}
+      aria-label={`${item.title}, ${formatScheduleTime(item.start)} to ${formatScheduleTime(item.end)}, ${item.subtitle}${item.classNo ? ` ${item.classNo}` : ""}, ${item.venue}${linkCount ? `, ${linkCount} linked item${linkCount === 1 ? "" : "s"}` : ""}`}
+    >
+      <div className="schedule-item-copy">
+        <div className="schedule-item-heading">
+          <strong>{item.title}</strong>
+          <span className="schedule-class-type">{classTypeBadge(item)}</span>
+        </div>
+        {item.venue && <small><MapPin size={10} />{item.venue}</small>}
+        {isLinkable && linkCount > 0 && <small className="schedule-linked-count">{linkCount} linked</small>}
+      </div>
+    </article>
+  );
+}
+
+function monthDates(anchor) {
+  const first = startOfLocalDay(new Date(anchor.getFullYear(), anchor.getMonth(), 1));
+  const offset = (first.getDay() + 6) % 7;
+  first.setDate(first.getDate() - offset);
+  return Array.from({ length: 42 }, (_, index) => {
+    const day = new Date(first);
+    day.setDate(first.getDate() + index);
+    return day;
+  });
+}
+
+const VIEWS = [
+  { id: "day", label: "Day" },
+  { id: "week", label: "Week" },
+  { id: "month", label: "Month" },
+];
+
 export default function Schedule({ token }) {
   const [schedule, setSchedule] = useState(EMPTY_SCHEDULE);
   const [selectedDate, setSelectedDate] = useState(() => startOfLocalDay(new Date()));
+  const [view, setView] = useState("week");
+  const [weekLayout, setWeekLayout] = useState(() => window.localStorage.getItem(WEEK_LAYOUT_STORAGE_KEY) === "vertical" ? "vertical" : "horizontal");
   const [now, setNow] = useState(new Date());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -56,6 +133,7 @@ export default function Schedule({ token }) {
   const [isImportOpen, setIsImportOpen] = useState(false);
   const [nusmodsUrl, setNusmodsUrl] = useState("");
   const [importing, setImporting] = useState(false);
+  const [selectedClass, setSelectedClass] = useState(null);
   const timelineScrollRef = useRef(null);
 
   const loadSchedule = useCallback(async () => {
@@ -81,33 +159,43 @@ export default function Schedule({ token }) {
     const timer = window.setInterval(() => setNow(new Date()), 30000);
     return () => window.clearInterval(timer);
   }, []);
+  useEffect(() => { window.localStorage.setItem(WEEK_LAYOUT_STORAGE_KEY, weekLayout); }, [weekLayout]);
 
   const days = useMemo(() => weekDates(selectedDate), [selectedDate]);
   const items = useMemo(() => scheduleItemsForDate(schedule, selectedDate), [schedule, selectedDate]);
+  const weekItems = useMemo(() => days.map((day) => ({ day, items: scheduleItemsForDate(schedule, day) })), [days, schedule]);
+  const weeklyTimelineItems = useMemo(() => weekItems.flatMap(({ items: dayItems }) => dayItems), [weekItems]);
+  const weekInfo = useMemo(() => getAcademicWeek(selectedDate), [selectedDate]);
+  const isHorizontalWeek = view === "week" && weekLayout === "horizontal";
+  const timelineItems = view === "week" ? weeklyTimelineItems : items;
+  const horizontalItems = useMemo(() => weekItems.flatMap(({ day, items: dayItems }, row) => dayItems.map((item) => ({ ...item, day, row }))), [weekItems]);
+  const monthDays = useMemo(() => monthDates(selectedDate), [selectedDate]);
   const isToday = localDateKey(selectedDate) === localDateKey(now);
-  const selectedDateMinutes = isToday ? minutesSinceMidnight(now) : 12 * 60;
-  const earliestMinutes = items.length ? Math.min(...items.map((item) => minutesSinceMidnight(item.start)), selectedDateMinutes) : Math.min(8 * 60, selectedDateMinutes);
-  const latestMinutes = items.length ? Math.max(...items.map((item) => minutesSinceMidnight(item.end)), selectedDateMinutes + 60) : Math.max(18 * 60, selectedDateMinutes + 60);
-  const startHour = Math.max(0, Math.min(8, Math.floor(earliestMinutes / 60)));
+  const earliestMinutes = timelineItems.length ? Math.min(...timelineItems.map((item) => minutesSinceMidnight(item.start))) : 8 * 60;
+  const latestMinutes = timelineItems.length ? Math.max(...timelineItems.map((item) => minutesSinceMidnight(item.end))) : 18 * 60;
+  const startHour = Math.max(0, Math.floor(earliestMinutes / 60));
   const endHour = Math.min(24, Math.max(18, Math.ceil(latestMinutes / 60)));
-  const timelineHeight = (endHour - startHour) * HOUR_HEIGHT;
+  const totalHours = Math.max(endHour - startHour, 1);
+  const hourHeight = view === "week" && weekLayout === "vertical" ? WEEK_HOUR_HEIGHT : HOUR_HEIGHT;
+  const timelineHeight = (endHour - startHour) * hourHeight;
   const hours = Array.from({ length: endHour - startHour + 1 }, (_, index) => startHour + index);
-  const classCount = items.filter((item) => item.kind === "class").length;
-  const otherCount = items.length - classCount;
 
   useEffect(() => {
     if (loading || !timelineScrollRef.current) return;
-    if (!isToday) {
+    const currentMinutes = minutesSinceMidnight(now);
+    if (!isToday || currentMinutes < startHour * 60 || currentMinutes > endHour * 60) {
       timelineScrollRef.current.scrollTop = 0;
       return;
     }
-    const currentTop = ((minutesSinceMidnight(now) - startHour * 60) / 60) * HOUR_HEIGHT;
+    const currentTop = ((currentMinutes - startHour * 60) / 60) * hourHeight;
     timelineScrollRef.current.scrollTop = Math.max(currentTop - 170, 0);
-  }, [isToday, loading, now, startHour, timelineHeight]);
+  }, [endHour, hourHeight, isToday, loading, now, startHour, timelineHeight]);
 
-  const moveWeek = (direction) => {
+  const movePeriod = (direction) => {
     const next = new Date(selectedDate);
-    next.setDate(next.getDate() + direction * 7);
+    if (view === "day") next.setDate(next.getDate() + direction);
+    else if (view === "month") next.setMonth(next.getMonth() + direction);
+    else next.setDate(next.getDate() + direction * 7);
     setSelectedDate(startOfLocalDay(next));
   };
 
@@ -170,15 +258,15 @@ export default function Schedule({ token }) {
   }, [importCalendarPath]);
 
   const toolbarConfig = useMemo(() => ({
-    title: selectedDate.toLocaleDateString([], { weekday: "long", month: "long", day: "numeric" }),
-    subtitle: items.length ? `${items.length} scheduled ${items.length === 1 ? "item" : "items"}` : "Nothing scheduled",
+    title: view === "month" ? selectedDate.toLocaleDateString([], { month: "long", year: "numeric" }) : view === "week" ? `${days[0].toLocaleDateString([], { month: "short", day: "numeric" })} – ${days[6].toLocaleDateString([], { month: "short", day: "numeric" })}` : selectedDate.toLocaleDateString([], { weekday: "long", month: "long", day: "numeric" }),
+    subtitle: view === "week" ? `${weekInfo.label} · ${timelineItems.length} scheduled this week` : items.length ? `${weekInfo.label} · ${items.length} scheduled ${items.length === 1 ? "item" : "items"}` : `${weekInfo.label} · Nothing scheduled`,
     actions: (
       <>
         {!isToday && <button type="button" className="mac-toolbar-action" onClick={goToday}>Today</button>}
         <button type="button" className="mac-toolbar-action is-primary" onClick={() => { setError(""); setIsImportOpen(true); }}><Upload size={14} />Import</button>
       </>
     ),
-  }), [isToday, items.length, selectedDate]);
+  }), [days, isToday, items.length, selectedDate, timelineItems.length, view, weekInfo]);
   useWorkspaceToolbar(toolbarConfig);
 
   const handleNusmodsImport = async (event) => {
@@ -205,8 +293,12 @@ export default function Schedule({ token }) {
 
   return (
     <div className="schedule-page">
-      <nav className="schedule-week-strip" aria-label="Select schedule date">
-        <button type="button" className="schedule-week-arrow" onClick={() => moveWeek(-1)} aria-label="Previous week"><ChevronLeft size={16} /></button>
+      <nav className="schedule-week-strip" aria-label="Schedule controls">
+        <button type="button" className="schedule-week-arrow" onClick={() => movePeriod(-1)} aria-label={`Previous ${view}`}><ChevronLeft size={16} /></button>
+        <div className="schedule-week-info" title={weekInfo.formatted}>
+          <span className="schedule-week-label">{weekInfo.label}</span>
+          <span className="schedule-week-ay">{weekInfo.shortAcademicYear} {weekInfo.shortSemester}</span>
+        </div>
         <div className="schedule-week-days">
           {days.map((day) => {
             const active = localDateKey(day) === localDateKey(selectedDate);
@@ -217,7 +309,10 @@ export default function Schedule({ token }) {
                 type="button"
                 key={localDateKey(day)}
                 className={`${active ? "is-active" : ""} ${today ? "is-today" : ""}`}
-                onClick={() => setSelectedDate(startOfLocalDay(day))}
+                onClick={() => {
+                  setSelectedDate(startOfLocalDay(day));
+                  if (view !== "day") setView("day");
+                }}
                 aria-pressed={active}
                 aria-label={`${day.toLocaleDateString([], { weekday: "long", month: "long", day: "numeric" })}${count ? `, ${count} scheduled` : ""}`}
               >
@@ -228,48 +323,120 @@ export default function Schedule({ token }) {
             );
           })}
         </div>
-        <button type="button" className="schedule-week-arrow" onClick={() => moveWeek(1)} aria-label="Next week"><ChevronRight size={16} /></button>
+        <div className="schedule-view-tabs" role="group" aria-label="Schedule view">
+          {VIEWS.map((option) => <button type="button" key={option.id} className={view === option.id ? "is-active" : ""} aria-pressed={view === option.id} onClick={() => setView(option.id)}>{option.label}</button>)}
+        </div>
+        {view === "week" && <div className="schedule-week-layout-toggle" role="group" aria-label="Week layout"><button type="button" className={weekLayout === "horizontal" ? "is-active" : ""} aria-pressed={weekLayout === "horizontal"} onClick={() => setWeekLayout("horizontal")}>Horizontal</button><button type="button" className={weekLayout === "vertical" ? "is-active" : ""} aria-pressed={weekLayout === "vertical"} onClick={() => setWeekLayout("vertical")}>Vertical</button></div>}
+        <button type="button" className="schedule-week-arrow" onClick={() => movePeriod(1)} aria-label={`Next ${view}`}><ChevronRight size={16} /></button>
       </nav>
 
       {notice && <div className="schedule-notice">{notice}<button type="button" onClick={() => setNotice("")} aria-label="Dismiss import message"><X size={13} /></button></div>}
       {error && !isImportOpen && <div className="schedule-error">{error}</div>}
 
-      <section className="schedule-workbench">
-        <header className="schedule-day-bar">
-          <div className="schedule-day-summary">
-            <span className="schedule-date-chip">{selectedDate.toLocaleDateString([], { weekday: "short", day: "numeric" })}</span>
-            <div>
-              <strong>{items.length ? `${items.length} scheduled` : "Clear day"}</strong>
-              <span>{classCount} classes · {otherCount} other</span>
-            </div>
-          </div>
-          <div className="schedule-day-meta">
-            {isToday && <span className="schedule-current-clock"><i />{now.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}</span>}
-          </div>
-        </header>
+      <section className={`schedule-workbench is-${view}-view ${isHorizontalWeek ? "is-horizontal-week" : ""}`}>
         <div className="schedule-timeline-panel">
-          <div className="schedule-timeline-scroll" ref={timelineScrollRef}>
+          <div className={`schedule-timeline-scroll ${isHorizontalWeek ? "is-horizontal" : ""}`} ref={timelineScrollRef}>
             {loading ? (
               <div className="schedule-loading"><Loader2 size={18} className="spin" />Loading timetable</div>
             ) : (
-              <div className="schedule-timeline" style={{ height: `${timelineHeight}px` }}>
+              view === "month" ? (
+                <div className="schedule-month-grid" role="grid" aria-label={selectedDate.toLocaleDateString([], { month: "long", year: "numeric" })}>
+                  {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((label) => <strong key={label}>{label}</strong>)}
+                  {monthDays.map((day) => {
+                    const dayItems = scheduleItemsForDate(schedule, day);
+                    const inMonth = day.getMonth() === selectedDate.getMonth();
+                    const today = localDateKey(day) === localDateKey(now);
+                    return <button type="button" key={localDateKey(day)} className={`${inMonth ? "" : "is-outside"} ${today ? "is-today" : ""}`} onClick={() => { setSelectedDate(startOfLocalDay(day)); setView("day"); }}>
+                      <span>{day.getDate()}</span>
+                      {dayItems.slice(0, 3).map((item) => <small key={item.id} style={{ "--module-color": item.color, opacity: item.attendInPerson === false ? 0.4 : 1 }}>{formatScheduleTime(item.start)} {item.title}</small>)}
+                      {dayItems.length > 3 && <em>+{dayItems.length - 3} more</em>}
+                    </button>;
+                  })}
+                </div>
+              ) : isHorizontalWeek ? (
+                <div className="schedule-horizontal-timeline">
+                  {hours.map((hour) => {
+                    const percent = (hour - startHour) / totalHours;
+                    const labelDate = new Date(); labelDate.setHours(hour, 0, 0, 0);
+                    const isLast = hour === endHour;
+                    return (
+                      <div
+                        className={`schedule-horizontal-hour ${isLast ? "is-last" : ""}`}
+                        key={hour}
+                        style={{ left: `calc(${HORIZONTAL_DAY_WIDTH}px + ${percent} * (100% - ${HORIZONTAL_DAY_WIDTH}px))` }}
+                      >
+                        <span style={isLast ? { right: "6px", left: "auto" } : { left: "6px" }}>
+                          {labelDate.toLocaleTimeString([], { hour: "numeric" })}
+                        </span>
+                        <i />
+                      </div>
+                    );
+                  })}
+                  {isToday && minutesSinceMidnight(now) >= startHour * 60 && minutesSinceMidnight(now) <= endHour * 60 && (
+                    <div
+                      className="schedule-horizontal-now"
+                      style={{ left: `calc(${HORIZONTAL_DAY_WIDTH}px + ${((minutesSinceMidnight(now) - startHour * 60) / (totalHours * 60))} * (100% - ${HORIZONTAL_DAY_WIDTH}px))` }}
+                    />
+                  )}
+                  {weekItems.map(({ day }, row) => (
+                    <div
+                      className={`schedule-horizontal-day ${localDateKey(day) === localDateKey(now) ? "is-today" : ""}`}
+                      key={localDateKey(day)}
+                      style={{
+                        top: `calc(${HORIZONTAL_HEADER_HEIGHT}px + ${row} * ((100% - ${HORIZONTAL_HEADER_HEIGHT}px) / 7))`,
+                        height: `calc((100% - ${HORIZONTAL_HEADER_HEIGHT}px) / 7)`,
+                      }}
+                    >
+                      <div className="schedule-horizontal-day-label">
+                        <span>{day.toLocaleDateString([], { weekday: "short" })}</span>
+                        <strong>{day.getDate()}</strong>
+                      </div>
+                    </div>
+                  ))}
+                  {horizontalItems.map((item) => (
+                    <HorizontalScheduleItem
+                      key={item.id}
+                      item={item}
+                      startHour={startHour}
+                      totalHours={totalHours}
+                      now={now}
+                      isToday={localDateKey(item.day) === localDateKey(now)}
+                      row={item.row}
+                      dayWidth={HORIZONTAL_DAY_WIDTH}
+                      headerHeight={HORIZONTAL_HEADER_HEIGHT}
+                      onOpenClass={setSelectedClass}
+                    />
+                  ))}
+                  {!horizontalItems.length && (
+                    <div className="schedule-horizontal-empty">
+                      <CalendarDays size={22} />
+                      <strong>Your week is open</strong>
+                      <span>Choose another week or import a timetable.</span>
+                    </div>
+                  )}
+                </div>
+              ) : (
+              <div className={`schedule-timeline ${view === "week" ? "schedule-week-timeline" : ""}`} style={{ height: `${timelineHeight}px` }}>
                 {hours.map((hour) => {
-                  const top = (hour - startHour) * HOUR_HEIGHT;
+                  const top = (hour - startHour) * hourHeight;
                   const labelDate = new Date(); labelDate.setHours(hour, 0, 0, 0);
                   return <div className="schedule-hour-line" key={hour} style={{ top: `${top}px` }}><span>{labelDate.toLocaleTimeString([], { hour: "numeric" })}</span><i /></div>;
                 })}
                 {isToday && minutesSinceMidnight(now) >= startHour * 60 && minutesSinceMidnight(now) <= endHour * 60 && (
-                  <div className="schedule-now-line" style={{ top: `${((minutesSinceMidnight(now) - startHour * 60) / 60) * HOUR_HEIGHT}px` }}><span>Now</span><i /></div>
+                  <div className="schedule-now-line" style={{ top: `${((minutesSinceMidnight(now) - startHour * 60) / 60) * hourHeight}px` }}><i /></div>
                 )}
-                <div className="schedule-items-layer">
-                  {items.map((item) => <TimelineItem key={item.id} item={item} startHour={startHour} now={now} isToday={isToday} />)}
-                </div>
-                {!items.length && <div className="schedule-timeline-empty"><CalendarDays size={22} /><strong>Your day is open</strong><span>Import a timetable or choose another date.</span></div>}
+                {view === "week" ? <div className="schedule-week-columns">{weekItems.map(({ day, items: dayItems }) => {
+                  const dayToday = localDateKey(day) === localDateKey(now);
+                  return <div className="schedule-week-column" key={localDateKey(day)}><header className={dayToday ? "is-today" : ""}><span>{day.toLocaleDateString([], { weekday: "short" })}</span><strong>{day.getDate()}</strong></header><div className="schedule-items-layer">{dayItems.map((item) => <TimelineItem key={item.id} item={item} startHour={startHour} hourHeight={hourHeight} now={now} isToday={dayToday} compact onOpenClass={setSelectedClass} />)}</div></div>;
+                })}</div> : <><div className="schedule-items-layer">{items.map((item) => <TimelineItem key={item.id} item={item} startHour={startHour} hourHeight={hourHeight} now={now} isToday={isToday} onOpenClass={setSelectedClass} />)}</div>{!items.length && <div className="schedule-timeline-empty"><CalendarDays size={22} /><strong>Your day is open</strong><span>Import a timetable or choose another date.</span></div>}</>}
               </div>
+              )
             )}
           </div>
         </div>
       </section>
+
+      {selectedClass && <ClassContextDrawer key={`${selectedClass.classId}-${selectedClass.occurrenceDate}`} item={selectedClass} token={token} onClose={() => setSelectedClass(null)} onContextChanged={loadSchedule} />}
 
       {isImportOpen && (
         <div className="schedule-import-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) setIsImportOpen(false); }}>

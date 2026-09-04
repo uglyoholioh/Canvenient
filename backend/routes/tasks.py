@@ -1,12 +1,57 @@
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 
 from database import db
 from dependencies import CurrentUser
 from fastapi import APIRouter, HTTPException, Response, status
 from models.task import TaskCreate, TaskOut, TaskPriority, TaskUpdate
-from routes.canvas import list_canvas_assignments, list_canvas_courses
+from routes.academic_modules import sync_canvas_courses_as_academic_modules
+from routes.canvas import list_canvas_assignments
+from text_utils import strip_html_tags
 
 router = APIRouter(prefix="/tasks", tags=["tasks"])
+
+
+def class_occurrence_key(record, occurrence_date: date) -> str:
+    return "|".join((
+        str(record["module_code"] or "").strip().upper(),
+        occurrence_date.isoformat() if hasattr(occurrence_date, "isoformat") else str(occurrence_date),
+        str(record["start_time"] or ""),
+        str(record["lesson_type"] or "").strip().lower(),
+        str(record["class_no"] or "").strip().upper(),
+    ))
+
+
+def class_series_key(record) -> str:
+    return "|".join((
+        str(record["module_code"] or "").strip().upper(),
+        "recurring",
+        str(record["start_time"] or ""),
+        str(record["lesson_type"] or "").strip().lower(),
+        str(record["class_no"] or "").strip().upper(),
+    ))
+
+
+def class_summary(record) -> str:
+    details = str(record["lesson_type"] or "Class").strip()
+    if record["class_no"]:
+        details = f"{details} [{record['class_no']}]"
+    return f"{record['module_code']} {details}"
+
+
+async def class_occurrence_for_user(class_id: int, occurrence_date: date, user_id: int):
+    record = await db.fetch_one(
+        query="""
+            SELECT id, module_code, lesson_type, class_no, start_time, class_date
+            FROM classes
+            WHERE id = :class_id AND user_id = :user_id
+        """,
+        values={"class_id": class_id, "user_id": user_id},
+    )
+    if not record:
+        raise HTTPException(status_code=404, detail="Class not found.")
+    if record["class_date"] is not None and str(record["class_date"]) != occurrence_date.isoformat():
+        raise HTTPException(status_code=400, detail="That class does not occur on the selected date.")
+    return record
 
 
 def get_recommended_priority(
@@ -91,10 +136,20 @@ def build_task(record) -> TaskOut:
     updated_at = ensure_utc(record["updated_at"]) or datetime.now(timezone.utc)
     completed_at = ensure_utc(record["completed_at"])
 
+    rec_dict = dict(record)
+    class_key = rec_dict.get("class_occurrence_key") or ""
+    is_rec = bool("|recurring|" in class_key)
+
+    raw_desc = record["description"] or ""
+    if record["source_type"] == "canvas" and ("<" in raw_desc and ">" in raw_desc):
+        cleaned_description = strip_html_tags(raw_desc)
+    else:
+        cleaned_description = raw_desc
+
     return TaskOut(
         id=record["id"],
         title=record["title"],
-        description=record["description"],
+        description=cleaned_description,
         status=record["status"],
         priority_manual=record["priority_manual"],
         recommended_priority=get_recommended_priority(
@@ -110,6 +165,12 @@ def build_task(record) -> TaskOut:
         module_id=record["module_id"],
         module_code=record["module_code"],
         module_name=record["module_name"],
+        module_color=rec_dict.get("module_color"),
+        class_occurrence_date=record["class_occurrence_date"],
+        class_summary=record["class_summary"],
+        class_relation=record["class_relation"],
+        is_recurring=is_rec,
+        class_recurring=is_rec,
         category_id=record["category_id"],
         category_name=record["category_name"],
         category_color=record["category_color"],
@@ -157,11 +218,20 @@ async def fetch_task_for_user(task_id: int, user_id: int):
                 t.updated_at,
                 m.module_code AS module_code,
                 m.name AS module_name,
+                mc.color AS module_color,
+                ctl.occurrence_date AS class_occurrence_date,
+                ctl.class_summary AS class_summary,
+                ctl.relation AS class_relation,
+                ctl.class_occurrence_key AS class_occurrence_key,
                 c.name AS category_name,
                 c.color AS category_color
             FROM tasks t
             LEFT JOIN academic_modules m
                 ON m.id = t.module_id
+            LEFT JOIN module_colors mc
+                ON mc.user_id = t.user_id AND mc.module_code = m.module_code
+            LEFT JOIN class_task_links ctl
+                ON ctl.task_id = t.id AND ctl.user_id = t.user_id
             LEFT JOIN categories c
                 ON c.id = t.category_id
             WHERE t.id = :task_id AND t.user_id = :user_id
@@ -198,11 +268,20 @@ async def list_tasks(current_user: CurrentUser):
                 t.updated_at,
                 m.module_code AS module_code,
                 m.name AS module_name,
+                mc.color AS module_color,
+                ctl.occurrence_date AS class_occurrence_date,
+                ctl.class_summary AS class_summary,
+                ctl.relation AS class_relation,
+                ctl.class_occurrence_key AS class_occurrence_key,
                 c.name AS category_name,
                 c.color AS category_color
             FROM tasks t
             LEFT JOIN academic_modules m
                 ON m.id = t.module_id
+            LEFT JOIN module_colors mc
+                ON mc.user_id = t.user_id AND mc.module_code = m.module_code
+            LEFT JOIN class_task_links ctl
+                ON ctl.task_id = t.id AND ctl.user_id = t.user_id
             LEFT JOIN categories c
                 ON c.id = t.category_id
             WHERE t.user_id = :user_id
@@ -228,41 +307,7 @@ async def sync_canvas_tasks(current_user: CurrentUser):
         values={"user_id": current_user.id},
     )
 
-    courses = await list_canvas_courses(current_user)
-    for course in courses:
-        await db.execute(
-            query="""
-                INSERT INTO academic_modules (
-                    user_id,
-                    module_code,
-                    name,
-                    source_type,
-                    source_course_id,
-                    external_url
-                )
-                VALUES (
-                    :user_id,
-                    :module_code,
-                    :name,
-                    'canvas',
-                    :source_course_id,
-                    :external_url
-                )
-                ON CONFLICT (user_id, module_code)
-                DO UPDATE SET
-                    name = EXCLUDED.name,
-                    source_type = 'canvas',
-                    source_course_id = EXCLUDED.source_course_id,
-                    external_url = EXCLUDED.external_url
-            """,
-            values={
-                "user_id": current_user.id,
-                "module_code": course["course_code"],
-                "name": course["name"],
-                "source_course_id": str(course["id"]),
-                "external_url": course["external_url"],
-            },
-        )
+    await sync_canvas_courses_as_academic_modules(current_user)
 
     try:
         assignments = await list_canvas_assignments(current_user)
@@ -358,7 +403,7 @@ async def sync_canvas_tasks(current_user: CurrentUser):
                 "user_id": current_user.id,
                 "module_id": module_row["id"],
                 "title": assignment.get("title") or "Untitled Canvas assignment",
-                "description": (assignment.get("description") or "")[:4000],
+                "description": strip_html_tags(assignment.get("description"))[:20000],
                 "priority_manual": get_recommended_priority("todo", due_at),
                 "source_id": source_id,
                 "source_due_at": due_at,
@@ -446,7 +491,19 @@ async def create_task(payload: TaskCreate, current_user: CurrentUser):
         "Category not found.",
     )
 
+    linked_class = None
+    if payload.class_id is not None or payload.class_occurrence_date is not None:
+        if payload.class_id is None or payload.class_occurrence_date is None:
+            raise HTTPException(status_code=422, detail="Choose both a class and its occurrence date.")
+        linked_class = await class_occurrence_for_user(
+            payload.class_id, payload.class_occurrence_date, current_user.id,
+        )
+
     completed_at = datetime.now(timezone.utc) if payload.status == "done" else None
+
+    task_description = payload.description
+    if payload.source_type == "canvas" and task_description:
+        task_description = strip_html_tags(task_description)[:20000]
 
     row = await db.fetch_one(
         query="""
@@ -489,7 +546,7 @@ async def create_task(payload: TaskCreate, current_user: CurrentUser):
             "module_id": payload.module_id,
             "category_id": payload.category_id,
             "title": payload.title,
-            "description": payload.description,
+            "description": task_description,
             "status": payload.status,
             "priority_manual": payload.priority_manual,
             "estimated_minutes": payload.estimated_minutes,
@@ -501,6 +558,25 @@ async def create_task(payload: TaskCreate, current_user: CurrentUser):
             "completed_at": completed_at,
         },
     )
+    if linked_class is not None:
+        is_rec = bool(payload.is_recurring or payload.class_recurring)
+        key = class_series_key(linked_class) if is_rec else class_occurrence_key(linked_class, payload.class_occurrence_date)
+        await db.execute(
+            query="""
+                INSERT INTO class_task_links (
+                    task_id, user_id, class_occurrence_key, occurrence_date, class_summary, relation
+                )
+                VALUES (:task_id, :user_id, :class_occurrence_key, :occurrence_date, :class_summary, :relation)
+            """,
+            values={
+                "task_id": row["id"],
+                "user_id": current_user.id,
+                "class_occurrence_key": key,
+                "occurrence_date": payload.class_occurrence_date,
+                "class_summary": class_summary(linked_class),
+                "relation": payload.class_relation,
+            },
+        )
     return build_task(await fetch_task_for_user(row["id"], current_user.id))
 
 
@@ -532,6 +608,11 @@ async def update_task(task_id: int, payload: TaskUpdate, current_user: CurrentUs
     if status_value != "done":
         completed_at = None
 
+    desc_val = updates.get("description", existing["description"])
+    source_type_val = updates.get("source_type", existing["source_type"])
+    if source_type_val == "canvas" and desc_val:
+        desc_val = strip_html_tags(desc_val)[:20000]
+
     await db.execute(
         query="""
             UPDATE tasks
@@ -558,7 +639,7 @@ async def update_task(task_id: int, payload: TaskUpdate, current_user: CurrentUs
             "module_id": module_id,
             "category_id": category_id,
             "title": updates.get("title", existing["title"]),
-            "description": updates.get("description", existing["description"]),
+            "description": desc_val,
             "status": status_value,
             "priority_manual": updates.get(
                 "priority_manual", existing["priority_manual"]

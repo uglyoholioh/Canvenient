@@ -23,6 +23,7 @@ import {
   createCategory,
   getAcademicModules
 } from "../api"
+import { getTaskModuleColor } from "./scheduleUtils"
 
 export default function TasksPage({ token, currentUser }) {
   const [tasks, setTasks] = useState([])
@@ -333,12 +334,23 @@ export default function TasksPage({ token, currentUser }) {
           filteredTasks.map((task) => {
             const category = categories.find((c) => c.id === task.category_id)
             const isEditing = editingTaskId === task.id
+            const taskModuleColor = getTaskModuleColor(task, modules)
+            const taskModule = modules.find((m) => m.id === task.module_id || m.module_code === task.module_code)
+            const moduleCode = task.module_code || taskModule?.module_code
 
             return (
               <div
                 key={task.id}
-                className={`task-row ${task.status === "done" ? "is-done" : ""}`}
+                className={`task-row ${task.status === "done" ? "is-done" : ""} ${taskModuleColor ? "has-module" : ""}`}
+                style={taskModuleColor ? { "--task-module-color": taskModuleColor } : undefined}
               >
+                {taskModuleColor && (
+                  <span
+                    className="task-module-strip"
+                    aria-hidden="true"
+                    style={{ backgroundColor: taskModuleColor }}
+                  />
+                )}
                 {/* Checkbox */}
                 <button
                   className="task-checkbox-btn"
@@ -352,7 +364,14 @@ export default function TasksPage({ token, currentUser }) {
                 </button>
 
                 {/* Title / Inline input */}
-                <div className="task-body" onClick={() => !isEditing && startEditing(task)}>
+                <div
+                  className="task-body"
+                  onClick={() => {
+                    if (!isEditing && task.external_url) {
+                      window.open(task.external_url, "_blank", "noopener,noreferrer");
+                    }
+                  }}
+                >
                   {isEditing ? (
                     <div className="task-inline-edit-wrap" onClick={(e) => e.stopPropagation()}>
                       <input
@@ -383,6 +402,15 @@ export default function TasksPage({ token, currentUser }) {
 
                   {/* Metadata Chips */}
                   <div className="task-meta-chips">
+                    {moduleCode && (
+                      <span
+                        className="task-chip-module font-mono"
+                        style={taskModuleColor ? { borderColor: taskModuleColor, color: taskModuleColor } : undefined}
+                      >
+                        {moduleCode}
+                      </span>
+                    )}
+
                     {category && (
                       <span
                         className="task-chip-category"
@@ -412,6 +440,17 @@ export default function TasksPage({ token, currentUser }) {
 
                 {/* Actions */}
                 <div className="task-actions-wrap">
+                  <button
+                    className="btn-icon-subtle opacity-hover"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      startEditing(task);
+                    }}
+                    title="Edit task"
+                    aria-label={`Edit ${task.title}`}
+                  >
+                    <Edit2 size={15} />
+                  </button>
                   <button
                     className="btn-icon-subtle opacity-hover"
                     onClick={(e) => handleDeleteTask(task.id, e)}

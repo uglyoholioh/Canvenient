@@ -27,6 +27,7 @@ import {
   getCategories,
   getAcademicModules
 } from "../api"
+import { getTaskModuleColor } from "./scheduleUtils"
 
 export default function TodayHub({ token, currentUser }) {
   const [tasks, setTasks] = useState([])
@@ -286,30 +287,45 @@ export default function TodayHub({ token, currentUser }) {
                   <p>All caught up! No pending tasks.</p>
                 </div>
               ) : (
-                activeTasks.slice(0, 8).map((task) => (
-                  <div key={task.id} className="hub-task-row" onClick={() => handleToggleTask(task)}>
-                    <button className="hub-task-checkbox">
-                      {task.status === "done" ? (
-                        <CheckCircle2 size={18} className="text-success" />
-                      ) : (
-                        <Circle size={18} className="text-muted" />
+                activeTasks.slice(0, 8).map((task) => {
+                  const taskModuleColor = getTaskModuleColor(task, modules)
+                  return (
+                    <div
+                      key={task.id}
+                      className={`hub-task-row ${taskModuleColor ? "has-module" : ""}`}
+                      style={taskModuleColor ? { "--task-module-color": taskModuleColor } : undefined}
+                      onClick={() => handleToggleTask(task)}
+                    >
+                      {taskModuleColor && (
+                        <span
+                          className="task-module-strip"
+                          aria-hidden="true"
+                          style={{ backgroundColor: taskModuleColor }}
+                        />
                       )}
-                    </button>
-                    <div className="hub-task-content">
-                      <span className={`hub-task-title ${task.status === "done" ? "done" : ""}`}>
-                        {task.title}
-                      </span>
-                      {task.due_at_override && (
-                        <span className="hub-task-due font-mono">
-                          Due {new Date(task.due_at_override).toLocaleDateString([], { month: "short", day: "numeric" })}
+                      <button className="hub-task-checkbox">
+                        {task.status === "done" ? (
+                          <CheckCircle2 size={18} className="text-success" />
+                        ) : (
+                          <Circle size={18} className="text-muted" />
+                        )}
+                      </button>
+                      <div className="hub-task-content">
+                        <span className={`hub-task-title ${task.status === "done" ? "done" : ""}`}>
+                          {task.title}
                         </span>
+                        {task.due_at_override && (
+                          <span className="hub-task-due font-mono">
+                            Due {new Date(task.due_at_override).toLocaleDateString([], { month: "short", day: "numeric" })}
+                          </span>
+                        )}
+                      </div>
+                      {task.priority_manual === "high" && (
+                        <span className="priority-dot high" title="High Priority" />
                       )}
                     </div>
-                    {task.priority_manual === "high" && (
-                      <span className="priority-dot high" title="High Priority" />
-                    )}
-                  </div>
-                ))
+                  )
+                })
               )}
             </div>
           </section>
@@ -385,7 +401,7 @@ export default function TodayHub({ token, currentUser }) {
                   <p className="text-xs text-muted">No recent announcements found.</p>
                 </div>
               ) : (
-                announcements.slice(0, 4).map((ann, idx) => (
+                announcements.filter(a => !a.is_dismissed).slice(0, 4).map((ann, idx) => (
                   <div key={ann.id || idx} className="hub-announcement-item">
                     <div className="flex justify-between items-center mb-xs">
                       <span className="badge-module text-xs">{ann.course_code || "Module"}</span>

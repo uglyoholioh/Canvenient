@@ -34,7 +34,7 @@ FRONTEND_PID=$!
 
 echo ""
 echo "✅ Both servers are running!"
-echo "   - Web App: http://localhost:5173"
+echo "   - Desktop App: http://localhost:5173"
 echo "   - API Docs: http://127.0.0.1:8000/docs"
 echo "   Press Ctrl+C to stop both servers."
 echo ""

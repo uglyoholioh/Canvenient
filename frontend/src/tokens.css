@@ -67,7 +67,7 @@
   --color-schedule-error-surface: var(--error-bg);
   --color-schedule-backdrop: oklch(8% 0.01 250 / 0.72);
 
-  --font-schedule-display: "Space Grotesk", var(--font-sans);
+  --font-schedule-display: var(--font-sans);
   --font-schedule-body: var(--font-sans);
   --font-schedule-mono: var(--font-mono);
 

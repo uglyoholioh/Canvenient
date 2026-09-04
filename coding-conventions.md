@@ -56,6 +56,19 @@ This project follows a small set of coding conventions to keep the codebase read
 - Record implementation notes, challenges, and design choices in the README.
 - Update documentation as the project changes, not only at the end.
 
+## State Management (Frontend)
+- Use `zustand` for managing global client state.
+- Avoid prop-drilling for state that is needed across disparate components.
+
+## Error Tracking
+- Use Sentry (`@sentry/react` for frontend, `sentry-sdk` for backend) for error logging and monitoring in production.
+- Ensure all critical exceptions that would otherwise fail silently are reported.
+
+## Accessibility (a11y)
+- Write semantic HTML for components.
+- Use proper ARIA labels and roles for interactive elements, especially custom ones.
+- Ensure all views are keyboard navigable (tab index, focus states).
+
 ## Version Control Rule
 - Nothing goes directly into `main`.
 - All changes should go through a branch and pull request.

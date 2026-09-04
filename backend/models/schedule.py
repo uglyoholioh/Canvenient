@@ -18,6 +18,10 @@ class ClassOut(BaseModel):
     # weekday as a compatibility fallback.
     class_date: date | None = None
     module_color: str | None = None
+    attend_in_person: bool = True
+    linked_task_count: int = 0
+    linked_note_count: int = 0
+    linked_file_count: int = 0
 
 
 class ExamOut(BaseModel):

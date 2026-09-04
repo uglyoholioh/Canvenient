@@ -36,7 +36,7 @@ describe("WorkspaceLayout", () => {
     render(<WorkspaceLayout token="token" user={{ id: 1 }} onLogout={() => {}} />);
 
     expect(screen.getByRole("navigation", { name: "Workspace views" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Dashboard" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Dashboard" })).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Schedule" }));
 
@@ -63,7 +63,7 @@ describe("WorkspaceLayout", () => {
 
     expect(screen.getByRole("dialog", { name: "Tasks" })).toBeInTheDocument();
     expect(screen.getByRole("textbox", { name: "Panel task composer" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Dashboard" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Dashboard" })).not.toBeInTheDocument();
   });
 
   it("opens and closes the Tasks panel with Shift+Tab without leaking focus to the dashboard", async () => {
@@ -76,14 +76,14 @@ describe("WorkspaceLayout", () => {
     expect(screen.getByRole("dialog", { name: "Tasks" })).toBeInTheDocument();
 
     const composer = screen.getByRole("textbox", { name: "Panel task composer" });
-    composer.focus();
+    await waitFor(() => expect(composer).toHaveFocus());
     fireEvent.keyDown(composer, { key: "Tab", shiftKey: true });
 
     expect(screen.queryByRole("dialog", { name: "Tasks" })).not.toBeInTheDocument();
     await waitFor(() => expect(dashboardCard).toHaveFocus());
   });
 
-  it("keeps the Tasks panel open when Escape leaves a current control", () => {
+  it("closes the Tasks panel when Escape leaves a current control", () => {
     render(<WorkspaceLayout token="token" user={{ id: 1 }} onLogout={() => {}} />);
     const dashboardCard = screen.getByRole("button", { name: "Dashboard content" });
     dashboardCard.focus();
@@ -91,6 +91,6 @@ describe("WorkspaceLayout", () => {
 
     fireEvent.keyDown(screen.getByRole("textbox", { name: "Panel task composer" }), { key: "Escape" });
 
-    expect(screen.getByRole("dialog", { name: "Tasks" })).toBeInTheDocument();
+    expect(screen.queryByRole("dialog", { name: "Tasks" })).not.toBeInTheDocument();
   });
 });

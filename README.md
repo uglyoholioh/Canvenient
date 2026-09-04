@@ -1,6 +1,6 @@
 # CanVenient
 
-CanVenient is a task manager and utility helper for NUS students, integrating Canvas, NUSMods, Telegram, and AI assistants.
+CanVenient is a native macOS task manager and utility helper for NUS students, built with Tauri, integrating Canvas, NUSMods, Telegram, and AI assistants.
 
 This guide will walk you through setting up and running the project locally on **Windows** and **macOS**.
 
@@ -123,6 +123,19 @@ The app will be available at `http://localhost:5173`.
 ---
 
 ## Troubleshooting
+
+### Rebuild and reinstall the macOS app
+
+From the project root, run:
+
+```bash
+npm run desktop:rebuild
+```
+
+This rebuilds the Python backend sidecar and Tauri app, closes the installed
+Canvenient app, replaces `/Applications/Canvenient.app`, relaunches it, and
+checks that its backend is healthy. Your app data in macOS Application Support
+is left untouched.
 
 ### Backend hangs and requests never complete
 This is usually caused by too many open database connections. Supabase's Session Mode pooler limits connections to 15. Stop all running Uvicorn processes and restart:

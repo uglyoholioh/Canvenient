@@ -48,6 +48,10 @@ SCHEMA_STATEMENTS = [
     ADD COLUMN IF NOT EXISTS class_date DATE
     """,
     """
+    ALTER TABLE classes
+    ADD COLUMN IF NOT EXISTS attend_in_person BOOLEAN NOT NULL DEFAULT TRUE
+    """,
+    """
     CREATE TABLE IF NOT EXISTS user_settings (
         user_id BIGINT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
         name TEXT NOT NULL DEFAULT '',
@@ -99,6 +103,10 @@ SCHEMA_STATEMENTS = [
         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
         UNIQUE (user_id, module_code)
     )
+    """,
+    """
+    ALTER TABLE academic_modules
+    ADD COLUMN is_selected BOOLEAN NOT NULL DEFAULT TRUE
     """,
     """
     CREATE UNIQUE INDEX IF NOT EXISTS academic_modules_user_module_code_unique
@@ -359,11 +367,58 @@ SCHEMA_STATEMENTS = [
     )
     """,
     """
+    CREATE TABLE IF NOT EXISTS canvas_resource_index (
+        user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        canvas_course_id TEXT NOT NULL,
+        course_code TEXT NOT NULL,
+        resource_type TEXT NOT NULL,
+        resource_id TEXT NOT NULL,
+        title TEXT NOT NULL,
+        body TEXT NOT NULL DEFAULT '',
+        external_url TEXT,
+        updated_at_canvas TIMESTAMPTZ,
+        indexed_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        PRIMARY KEY (
+            user_id,
+            canvas_course_id,
+            resource_type,
+            resource_id
+        )
+    )
+    """,
+    """
+    CREATE INDEX IF NOT EXISTS canvas_resource_index_user_idx
+    ON canvas_resource_index (user_id)
+    """,
+    """
+    CREATE INDEX IF NOT EXISTS canvas_resource_index_user_course_idx
+    ON canvas_resource_index (user_id, canvas_course_id)
+    """,
+    """
+    ALTER TABLE canvas_sync_state
+    ADD COLUMN IF NOT EXISTS resources_synced_at TIMESTAMPTZ
+    """,
+    """
     CREATE TABLE IF NOT EXISTS ai_brief_cache (
         user_id BIGINT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
         brief_data JSONB NOT NULL,
         context_snapshot JSONB NOT NULL,
         synced_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS dismissed_canvas_announcements (
+        user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        announcement_id BIGINT NOT NULL,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        PRIMARY KEY (user_id, announcement_id)
+    )
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS native_api_cache (
+        cache_key TEXT PRIMARY KEY,
+        data JSONB NOT NULL,
+        fetched_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
     """,
     """
@@ -552,6 +607,53 @@ SCHEMA_STATEMENTS = [
     )
     """,
     """
+    CREATE TABLE IF NOT EXISTS class_task_links (
+        task_id BIGINT PRIMARY KEY REFERENCES tasks(id) ON DELETE CASCADE,
+        user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        class_occurrence_key TEXT NOT NULL,
+        occurrence_date DATE NOT NULL,
+        class_summary TEXT NOT NULL,
+        relation TEXT NOT NULL DEFAULT 'due_before',
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+    """,
+    """
+    CREATE INDEX IF NOT EXISTS class_task_links_occurrence_idx
+    ON class_task_links (user_id, class_occurrence_key)
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS class_note_links (
+        note_id BIGINT PRIMARY KEY REFERENCES notes(id) ON DELETE CASCADE,
+        user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        class_occurrence_key TEXT NOT NULL,
+        occurrence_date DATE NOT NULL,
+        class_summary TEXT NOT NULL,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+    """,
+    """
+    CREATE INDEX IF NOT EXISTS class_note_links_occurrence_idx
+    ON class_note_links (user_id, class_occurrence_key)
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS class_files (
+        id BIGSERIAL PRIMARY KEY,
+        user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        class_occurrence_key TEXT NOT NULL,
+        occurrence_date DATE NOT NULL,
+        class_summary TEXT NOT NULL,
+        filename TEXT NOT NULL,
+        media_type TEXT NOT NULL DEFAULT 'application/octet-stream',
+        byte_size BIGINT NOT NULL,
+        content BYTEA NOT NULL,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+    """,
+    """
+    CREATE INDEX IF NOT EXISTS class_files_occurrence_idx
+    ON class_files (user_id, class_occurrence_key)
+    """,
+    """
     ALTER TABLE notes ADD COLUMN IF NOT EXISTS folder_id BIGINT REFERENCES folders(id) ON DELETE SET NULL
     """,
     """
@@ -598,4 +700,3 @@ async def initialize_schema() -> None:
                 pass
         else:
             await db.execute(query=statement)
-

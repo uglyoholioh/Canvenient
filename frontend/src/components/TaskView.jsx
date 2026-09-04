@@ -1,8 +1,10 @@
 // React is required by the test JSX transform.
 // eslint-disable-next-line no-unused-vars
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { BookOpen, Calendar, CheckCircle, Flag, Plus } from "lucide-react";
+import { BookOpen, Calendar, CheckCircle, Flag, Pencil, Plus } from "lucide-react";
 import { getAcademicModules, getTasks, updateTask } from "../api";
+import { notifyTasksChanged } from "../taskEvents";
+import { getTaskModuleColor } from "./scheduleUtils";
 import { useWorkspaceToolbar } from "./WorkspaceToolbarContext";
 import TaskInputBar from "./TaskInputBar";
 
@@ -22,7 +24,19 @@ function formatDueDate(value) {
   return new Intl.DateTimeFormat(undefined, {
     month: "short",
     day: "numeric",
-    ...(hasTime ? { hour: "numeric", minute: "2-digit" } : {}),
+    ...(hasTime ? { hour: "2-digit", minute: "2-digit", hourCycle: "h23" } : {}),
+  }).format(date);
+}
+
+function formatAddedAt(value) {
+  const date = normalizeDate(value);
+  if (!date) return "";
+  return new Intl.DateTimeFormat(undefined, {
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
   }).format(date);
 }
 
@@ -177,10 +191,26 @@ export default function TaskView({ token, embedded = false, active = true, compo
   const [editDraft, setEditDraft] = useState(null);
   const [editError, setEditError] = useState("");
   const [isSavingEdit, setIsSavingEdit] = useState(false);
+  const [isComposerOpen, setIsComposerOpen] = useState(Boolean(composerAutoFocus));
   const [checkboxStyle, setCheckboxStyle] = useState(() => localStorage.getItem("canvenient-checkbox-style") || "brackets");
   const itemRefs = useRef({});
   const editRef = useRef(null);
   const taskViewRef = useRef(null);
+
+  useEffect(() => {
+    if (composerAutoFocus) setIsComposerOpen(true);
+  }, [composerAutoFocus]);
+
+  useEffect(() => {
+    if (!composerFocusRequestScope) return undefined;
+    const handleFocusRequest = (event) => {
+      if (event.detail?.scope === composerFocusRequestScope) {
+        setIsComposerOpen(true);
+      }
+    };
+    window.addEventListener("canvenient-focus-task-input", handleFocusRequest);
+    return () => window.removeEventListener("canvenient-focus-task-input", handleFocusRequest);
+  }, [composerFocusRequestScope]);
 
   const loadTasks = useCallback(async () => {
     setLoading(true);
@@ -199,14 +229,17 @@ export default function TaskView({ token, embedded = false, active = true, compo
     void Promise.resolve().then(loadTasks);
   }, [loadTasks]);
   useEffect(() => {
-    getAcademicModules(token).then(setModules).catch(() => setModules([]));
+    const loadModules = () => getAcademicModules(token).then((data) => setModules((data || []).filter((module) => module.is_selected !== false))).catch(() => setModules([]));
+    loadModules();
+    window.addEventListener("academic-modules-updated", loadModules);
+    return () => window.removeEventListener("academic-modules-updated", loadModules);
   }, [token]);
   useEffect(() => {
     const updateSettings = () => setCheckboxStyle(localStorage.getItem("canvenient-checkbox-style") || "brackets");
     window.addEventListener("settings-updated", updateSettings);
     return () => window.removeEventListener("settings-updated", updateSettings);
   }, []);
-  useEffect(() => { itemRefs.current[selectedIndex]?.focus(); }, [selectedIndex]);
+  useEffect(() => { if (!editingId) itemRefs.current[selectedIndex]?.focus(); }, [selectedIndex, editingId]);
   useEffect(() => { if (editingId) editRef.current?.focus(); }, [editingId]);
   useEffect(() => {
     const handleCreated = (event) => {
@@ -220,13 +253,23 @@ export default function TaskView({ token, embedded = false, active = true, compo
     return () => window.removeEventListener("canvenient-task-created", handleCreated);
   }, []);
 
+  const openTask = useCallback((task) => {
+    if (!task) return;
+    if (task.external_url) {
+      window.open(task.external_url, "_blank", "noopener,noreferrer");
+    }
+  }, []);
+
   const completeTask = useCallback(async (task) => {
     await updateTask(token, task.id, { status: "done" });
     setTasks((current) => current.filter((item) => item.id !== task.id));
     setSelectedIndex(null);
+    notifyTasksChanged();
   }, [token]);
 
   const startEditing = (task, title = task.title) => {
+    const taskIndex = tasks.findIndex((t) => t.id === task.id);
+    if (taskIndex !== -1) setSelectedIndex(taskIndex);
     setEditingId(task.id);
     setEditError("");
     setEditDraft({
@@ -272,6 +315,7 @@ export default function TaskView({ token, embedded = false, active = true, compo
       setEditingId(null);
       setEditDraft(null);
       restoreTaskFocus(task.id);
+      notifyTasksChanged();
     } catch (error) {
       setEditError(error.message || "Could not save task changes.");
     } finally {
@@ -282,14 +326,23 @@ export default function TaskView({ token, embedded = false, active = true, compo
   const toolbarConfig = useMemo(() => ({
     title: "Tasks",
     subtitle: loading ? "Loading" : `${tasks.length} pending`,
-    actions: <button type="button" className="mac-toolbar-action" onClick={() => taskViewRef.current?.querySelector("textarea")?.focus()}><Plus size={14} />New Task</button>,
+    actions: <button type="button" className="mac-toolbar-action" onClick={() => setIsComposerOpen(true)}><Plus size={14} />New Task</button>,
   }), [loading, tasks.length]);
   useWorkspaceToolbar(toolbarConfig, !embedded);
+
+  const navigateFromComposer = useCallback((key) => {
+    setInteractionMode("keyboard");
+    setSelectedIndex((index) => {
+      if (!tasks.length) return null;
+      if (key === "ArrowUp") return index === null ? tasks.length - 1 : Math.max(0, index - 1);
+      return index === null ? 0 : Math.min(tasks.length - 1, index + 1);
+    });
+  }, [tasks.length]);
 
   useEffect(() => {
     if (!active) return undefined;
     const handleKeyDown = (event) => {
-      if (editingId !== null || event.target.closest?.("input, textarea, select, [contenteditable='true']")) return;
+      if (editingId !== null || event.target.closest?.("input, textarea, select, button, [contenteditable='true'], [role='listbox'], [role='option']")) return;
       setInteractionMode("keyboard");
       if (event.key === "ArrowUp") {
         event.preventDefault();
@@ -309,9 +362,12 @@ export default function TaskView({ token, embedded = false, active = true, compo
       } else if (selectedIndex !== null && event.key === " ") {
         event.preventDefault();
         completeTask(tasks[selectedIndex]);
-      } else if (selectedIndex !== null && event.key === "Enter") {
+      } else if (selectedIndex !== null && (event.key === "e" || event.key === "E") && !event.metaKey && !event.ctrlKey && !event.altKey) {
         event.preventDefault();
         startEditing(tasks[selectedIndex]);
+      } else if (selectedIndex !== null && event.key === "Enter") {
+        event.preventDefault();
+        openTask(tasks[selectedIndex]);
       } else if (selectedIndex !== null && event.key.length === 1 && !event.metaKey && !event.ctrlKey && !event.altKey) {
         event.preventDefault();
         startEditing(tasks[selectedIndex], `${tasks[selectedIndex].title}${event.key}`);
@@ -319,7 +375,7 @@ export default function TaskView({ token, embedded = false, active = true, compo
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [active, completeTask, editingId, selectedIndex, tasks]);
+  }, [active, completeTask, editingId, openTask, selectedIndex, tasks]);
 
   return (
     <div ref={taskViewRef} className={`task-view is-${interactionMode}-mode ${embedded ? "is-embedded" : ""}`} data-interaction-mode={interactionMode}>
@@ -337,6 +393,7 @@ export default function TaskView({ token, embedded = false, active = true, compo
           const editing = editingId === task.id;
           const dueDate = taskDueDate(task);
           const priority = visiblePriority(task);
+          const taskModuleColor = getTaskModuleColor(task, modules);
           return (
             <div
               role="listitem"
@@ -344,12 +401,23 @@ export default function TaskView({ token, embedded = false, active = true, compo
               ref={(element) => { itemRefs.current[index] = element; }}
               data-task-id={task.id}
               tabIndex={selected || (selectedIndex === null && index === 0) ? 0 : -1}
-              className={`task-row ${selected ? "is-selected" : ""} ${editing ? "is-editing" : ""}`}
+              className={`task-row ${selected ? "is-selected" : ""} ${editing ? "is-editing" : ""} ${taskModuleColor ? "has-module" : ""}`}
+              style={taskModuleColor ? { "--task-module-color": taskModuleColor } : undefined}
               onPointerEnter={(event) => { if (event.pointerType !== "touch") setInteractionMode("pointer"); }}
               onPointerDown={(event) => { if (event.pointerType !== "touch") setInteractionMode("pointer"); }}
               onFocus={() => setSelectedIndex(index)}
-              onClick={() => setSelectedIndex(index)}
+              onClick={() => {
+                setSelectedIndex(index);
+                if (!editing) openTask(task);
+              }}
             >
+              {taskModuleColor && (
+                <span
+                  className="task-module-strip"
+                  aria-hidden="true"
+                  style={{ backgroundColor: taskModuleColor }}
+                />
+              )}
               <button type="button" tabIndex="-1" className="task-check" aria-label={`Complete ${task.title}`} onClick={(event) => { event.stopPropagation(); completeTask(task); }}>
                 {checkboxStyle === "icon" ? <CheckCircle size={16} /> : checkboxStyle === "circle" ? "( )" : "[ ]"}
               </button>
@@ -360,12 +428,15 @@ export default function TaskView({ token, embedded = false, active = true, compo
                   <input ref={editRef} aria-label="Edit task title" value={editDraft?.title || ""} maxLength={160} onChange={(event) => setEditDraft((draft) => ({ ...draft, title: event.target.value }))} />
                   <textarea aria-label="Edit task note" value={editDraft?.description || ""} maxLength={4000} rows={3} onChange={(event) => setEditDraft((draft) => ({ ...draft, description: event.target.value }))} placeholder="Add details or a note (optional)" />
                   <div className="task-inline-properties">
-                    <label>Due <DueDateEditor value={editDraft?.dueAt || duePartsValue(null)} onChange={(dueAt) => setEditDraft((draft) => ({ ...draft, dueAt }))} /></label>
+                    <label>Due
+                      <DueDateEditor value={editDraft?.dueAt || duePartsValue(null)} onChange={(dueAt) => setEditDraft((draft) => ({ ...draft, dueAt }))} />
+                      <button type="button" aria-label="Clear due date and time" className="task-clear-due" onClick={() => setEditDraft((draft) => ({ ...draft, dueAt: duePartsValue(null) }))}>Clear due date and time</button>
+                    </label>
                     <label>Priority <select aria-label="Edit task priority" value={editDraft?.priority || "medium"} onChange={(event) => setEditDraft((draft) => ({ ...draft, priority: event.target.value }))}>
                       <option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option><option value="urgent">Urgent</option>
                     </select></label>
-                    <label>Course <select aria-label="Edit task course" value={editDraft?.moduleId || ""} onChange={(event) => setEditDraft((draft) => ({ ...draft, moduleId: event.target.value }))}>
-                      <option value="">No course</option>
+                    <label>Module <select aria-label="Edit task module" value={editDraft?.moduleId || ""} onChange={(event) => setEditDraft((draft) => ({ ...draft, moduleId: event.target.value }))}>
+                      <option value="">No module</option>
                       {modules.map((module) => <option key={module.id} value={module.id}>{module.module_code}</option>)}
                     </select></label>
                   </div>
@@ -376,33 +447,70 @@ export default function TaskView({ token, embedded = false, active = true, compo
                   </div>
                 </form>
               ) : (
-                <div className="task-row-content">
-                  <span>{task.title}</span>
-                  {task.description && <small className="task-row-note">{task.description}</small>}
-                  {(priority || dueDate || task.module_code) && (
-                    <div className="task-meta">
-                      {priority && <span style={{ color: priorityColor(priority) }}><Flag size={10} />{priority.toUpperCase()}</span>}
-                      {dueDate && <span><Calendar size={10} />{formatDueDate(dueDate)}</span>}
-                      {task.module_code && <span><BookOpen size={10} />{task.module_code}</span>}
-                    </div>
-                  )}
-                </div>
+                <>
+                  <div className="task-row-content">
+                    <span>{task.title}</span>
+                    {task.description && <small className="task-row-note">{task.description}</small>}
+                    {(priority || dueDate || task.module_code) && (
+                      <div className="task-meta">
+                        {priority && <span style={{ color: priorityColor(priority) }}><Flag size={10} />{priority.toUpperCase()}</span>}
+                        {dueDate && <span><Calendar size={10} />{formatDueDate(dueDate)}</span>}
+                        {task.module_code && <span style={taskModuleColor ? { color: taskModuleColor } : undefined}><BookOpen size={10} />{task.module_code}</span>}
+                        {task.class_summary && <span><Calendar size={10} />{task.class_relation === "due_before" ? "Before " : task.class_relation === "bring_to" ? "For " : "After "}{task.class_summary}</span>}
+                      </div>
+                    )}
+                    {task.created_at && <small className="task-added-at">Added {formatAddedAt(task.created_at)}</small>}
+                  </div>
+                  <div className="task-row-actions">
+                    <button
+                      type="button"
+                      className="task-row-edit-button"
+                      aria-label={`Edit ${task.title}`}
+                      title="Edit task"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        startEditing(task);
+                      }}
+                    >
+                      <Pencil size={12} />
+                      <span>Edit</span>
+                    </button>
+                  </div>
+                </>
               )}
-              {selected && interactionMode === "keyboard" && !editing && <small>Space to complete · Enter to edit</small>}
+              {selected && interactionMode === "keyboard" && !editing && <small>Space to complete · {task.external_url ? "Enter to open · " : ""}E to edit</small>}
             </div>
           );
         })}
+        {!loading && !loadError && (
+          !isComposerOpen ? (
+            <button
+              type="button"
+              className="task-add-trigger"
+              onClick={() => setIsComposerOpen(true)}
+            >
+              <Plus size={14} />
+              <span>Add new task</span>
+            </button>
+          ) : (
+            <TaskInputBar
+              token={token}
+              variant={embedded ? "panel" : "inline"}
+              isOpen={true}
+              initialMode="task"
+              allowedModes={["task"]}
+              autoFocus={true}
+              showCancel={true}
+              onClose={() => setIsComposerOpen(false)}
+              focusRequestScope={composerFocusRequestScope}
+              onEmptyArrowKey={navigateFromComposer}
+              onTaskCreated={(task) => {
+                window.dispatchEvent(new CustomEvent("canvenient-task-created", { detail: task }));
+              }}
+            />
+          )
+        )}
       </div>
-      <TaskInputBar
-        token={token}
-        variant={embedded ? "panel" : "inline"}
-        isOpen={active}
-        initialMode="task"
-        allowedModes={["task"]}
-        autoFocus={composerAutoFocus}
-        focusRequestScope={composerFocusRequestScope}
-        onTaskCreated={(task) => window.dispatchEvent(new CustomEvent("canvenient-task-created", { detail: task }))}
-      />
     </div>
   );
 }

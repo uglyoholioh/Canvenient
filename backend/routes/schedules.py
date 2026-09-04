@@ -2,11 +2,11 @@
 import asyncio
 import re
 from datetime import date, datetime, time, timedelta, timezone
-from urllib.parse import parse_qs, urlparse
+from urllib.parse import parse_qs, quote, urlparse
 
 import httpx
 from dateutil.rrule import rruleset, rrulestr
-from fastapi import APIRouter, HTTPException, UploadFile, status
+from fastapi import APIRouter, HTTPException, Response, UploadFile, status
 from icalendar import Calendar
 from pydantic import BaseModel
 from zoneinfo import ZoneInfo
@@ -79,6 +79,49 @@ NUS_HOLIDAYS = {
 
 class NUSModsImportRequest(BaseModel):
     url: str
+
+
+def class_occurrence_key(record, occurrence_date: date) -> str:
+    return "|".join((
+        str(record["module_code"] or "").strip().upper(),
+        occurrence_date.isoformat() if hasattr(occurrence_date, "isoformat") else str(occurrence_date),
+        str(record["start_time"] or ""),
+        str(record["lesson_type"] or "").strip().lower(),
+        str(record["class_no"] or "").strip().upper(),
+    ))
+
+
+def class_series_key(record) -> str:
+    return "|".join((
+        str(record["module_code"] or "").strip().upper(),
+        "recurring",
+        str(record["start_time"] or ""),
+        str(record["lesson_type"] or "").strip().lower(),
+        str(record["class_no"] or "").strip().upper(),
+    ))
+
+
+def class_summary(record) -> str:
+    details = str(record["lesson_type"] or "Class").strip()
+    if record["class_no"]:
+        details = f"{details} [{record['class_no']}]"
+    return f"{record['module_code']} {details}"
+
+
+async def class_occurrence_for_user(class_id: int, occurrence_date: date, user_id: int):
+    record = await db.fetch_one(
+        query="""
+            SELECT id, module_code, module_name, lesson_type, class_no, start_time, end_time, venue, class_date, attend_in_person
+            FROM classes
+            WHERE id = :class_id AND user_id = :user_id
+        """,
+        values={"class_id": class_id, "user_id": user_id},
+    )
+    if not record:
+        raise HTTPException(status_code=404, detail="Class not found.")
+    if record["class_date"] is not None and str(record["class_date"]) != occurrence_date.isoformat():
+        raise HTTPException(status_code=400, detail="That class does not occur on the selected date.")
+    return record
 
 
 def to_sgt_datetime(value):
@@ -483,6 +526,156 @@ async def import_nusmods(payload: NUSModsImportRequest, current_user: CurrentUse
     }
 
 
+@router.get("/classes/{class_id}/context")
+async def get_class_context(
+    class_id: int,
+    occurrence_date: date,
+    current_user: CurrentUser,
+):
+    class_record = await class_occurrence_for_user(class_id, occurrence_date, current_user.id)
+    occurrence_key = class_occurrence_key(class_record, occurrence_date)
+    series_key = class_series_key(class_record)
+    tasks = await db.fetch_all(
+        query="""
+            SELECT t.id, t.title, t.status, t.due_at_override, t.source_due_at, ctl.relation,
+                   ctl.occurrence_date AS class_occurrence_date,
+                   ctl.class_occurrence_key
+            FROM class_task_links ctl
+            JOIN tasks t ON t.id = ctl.task_id
+            WHERE ctl.user_id = :user_id AND ctl.class_occurrence_key IN (:occurrence_key, :series_key)
+            ORDER BY CASE WHEN t.status = 'done' THEN 1 ELSE 0 END,
+                     COALESCE(t.due_at_override, t.source_due_at) ASC NULLS LAST, t.created_at DESC
+        """,
+        values={"user_id": current_user.id, "occurrence_key": occurrence_key, "series_key": series_key},
+    )
+    notes = await db.fetch_all(
+        query="""
+            SELECT n.id, n.title, n.updated_at,
+                   cnl.occurrence_date AS class_occurrence_date,
+                   cnl.class_occurrence_key
+            FROM class_note_links cnl
+            JOIN notes n ON n.id = cnl.note_id
+            WHERE cnl.user_id = :user_id AND cnl.class_occurrence_key IN (:occurrence_key, :series_key)
+            ORDER BY n.updated_at DESC
+        """,
+        values={"user_id": current_user.id, "occurrence_key": occurrence_key, "series_key": series_key},
+    )
+    files = await db.fetch_all(
+        query="""
+            SELECT id, filename, media_type, byte_size, created_at,
+                   occurrence_date,
+                   class_occurrence_key
+            FROM class_files
+            WHERE user_id = :user_id AND class_occurrence_key IN (:occurrence_key, :series_key)
+            ORDER BY created_at DESC
+        """,
+        values={"user_id": current_user.id, "occurrence_key": occurrence_key, "series_key": series_key},
+    )
+    def _with_recurring(records):
+        out = []
+        for r in records:
+            d = dict(r)
+            d["is_recurring"] = bool("|recurring|" in (d.get("class_occurrence_key") or ""))
+            out.append(d)
+        return out
+
+    return {
+        "class": {
+            "id": class_record["id"],
+            "module_code": class_record["module_code"],
+            "module_name": class_record["module_name"],
+            "lesson_type": class_record["lesson_type"],
+            "class_no": class_record["class_no"],
+            "start_time": class_record["start_time"],
+            "end_time": class_record["end_time"],
+            "venue": class_record["venue"],
+            "occurrence_date": occurrence_date,
+            "summary": class_summary(class_record),
+            "attend_in_person": class_record.get("attend_in_person", True),
+        },
+        "tasks": _with_recurring(tasks),
+        "notes": _with_recurring(notes),
+        "files": _with_recurring(files),
+    }
+
+class ClassUpdate(BaseModel):
+    attend_in_person: bool
+
+@router.patch("/classes/{class_id}")
+async def update_class(class_id: int, payload: ClassUpdate, current_user: CurrentUser):
+    record = await db.fetch_one(
+        "UPDATE classes SET attend_in_person = :attend_in_person WHERE id = :class_id AND user_id = :user_id RETURNING id",
+        {"attend_in_person": payload.attend_in_person, "class_id": class_id, "user_id": current_user.id}
+    )
+    if not record:
+        raise HTTPException(status_code=404, detail="Class not found.")
+    return {"status": "ok"}
+
+@router.post("/classes/{class_id}/files", status_code=status.HTTP_201_CREATED)
+async def upload_class_file(
+    class_id: int,
+    occurrence_date: date,
+    file: UploadFile,
+    is_recurring: bool = False,
+    current_user: CurrentUser = None,
+):
+    class_record = await class_occurrence_for_user(class_id, occurrence_date, current_user.id)
+    filename = (file.filename or "attachment").strip()[:255]
+    if not filename:
+        raise HTTPException(status_code=400, detail="Choose a file to attach.")
+    content = await file.read()
+    if not content:
+        raise HTTPException(status_code=400, detail="That file is empty.")
+    if len(content) > 15_000_000:
+        raise HTTPException(status_code=400, detail="Files must be 15 MB or smaller.")
+    key = class_series_key(class_record) if is_recurring else class_occurrence_key(class_record, occurrence_date)
+    record = await db.fetch_one(
+        query="""
+            INSERT INTO class_files (
+                user_id, class_occurrence_key, occurrence_date, class_summary,
+                filename, media_type, byte_size, content
+            )
+            VALUES (
+                :user_id, :class_occurrence_key, :occurrence_date, :class_summary,
+                :filename, :media_type, :byte_size, :content
+            )
+            RETURNING id, filename, media_type, byte_size, created_at
+        """,
+        values={
+            "user_id": current_user.id,
+            "class_occurrence_key": key,
+            "occurrence_date": occurrence_date,
+            "class_summary": class_summary(class_record),
+            "filename": filename,
+            "media_type": file.content_type or "application/octet-stream",
+            "byte_size": len(content),
+            "content": content,
+        },
+    )
+    result = dict(record)
+    result["is_recurring"] = is_recurring
+    return result
+
+
+@router.get("/class-files/{file_id}")
+async def download_class_file(file_id: int, current_user: CurrentUser):
+    record = await db.fetch_one(
+        query="""
+            SELECT filename, media_type, content
+            FROM class_files
+            WHERE id = :file_id AND user_id = :user_id
+        """,
+        values={"file_id": file_id, "user_id": current_user.id},
+    )
+    if not record:
+        raise HTTPException(status_code=404, detail="File not found.")
+    return Response(
+        content=record["content"],
+        media_type=record["media_type"] or "application/octet-stream",
+        headers={"Content-Disposition": f"attachment; filename*=UTF-8''{quote(record['filename'])}"},
+    )
+
+
 @router.get("", response_model=ScheduleOut)
 async def list_schedule(current_user: CurrentUser):
     await ensure_discovered_module_colors(current_user.id)
@@ -532,4 +725,46 @@ async def list_schedule(current_user: CurrentUser):
         """,
         values={"user_id": current_user.id},
     )
-    return {"classes": classes, "exams": exams, "events": events}
+    task_counts = {
+        item["class_occurrence_key"]: item["total"]
+        for item in await db.fetch_all(
+            query="""
+                SELECT class_occurrence_key, COUNT(*) AS total
+                FROM class_task_links WHERE user_id = :user_id
+                GROUP BY class_occurrence_key
+            """,
+            values={"user_id": current_user.id},
+        )
+    }
+    note_counts = {
+        item["class_occurrence_key"]: item["total"]
+        for item in await db.fetch_all(
+            query="""
+                SELECT class_occurrence_key, COUNT(*) AS total
+                FROM class_note_links WHERE user_id = :user_id
+                GROUP BY class_occurrence_key
+            """,
+            values={"user_id": current_user.id},
+        )
+    }
+    file_counts = {
+        item["class_occurrence_key"]: item["total"]
+        for item in await db.fetch_all(
+            query="""
+                SELECT class_occurrence_key, COUNT(*) AS total
+                FROM class_files WHERE user_id = :user_id
+                GROUP BY class_occurrence_key
+            """,
+            values={"user_id": current_user.id},
+        )
+    }
+    class_results = []
+    for record in classes:
+        item = dict(record)
+        key = class_occurrence_key(record, record["class_date"]) if record["class_date"] else None
+        skey = class_series_key(record)
+        item["linked_task_count"] = (task_counts.get(key, 0) if key else 0) + task_counts.get(skey, 0)
+        item["linked_note_count"] = (note_counts.get(key, 0) if key else 0) + note_counts.get(skey, 0)
+        item["linked_file_count"] = (file_counts.get(key, 0) if key else 0) + file_counts.get(skey, 0)
+        class_results.append(item)
+    return {"classes": class_results, "exams": exams, "events": events}

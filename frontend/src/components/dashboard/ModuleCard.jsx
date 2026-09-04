@@ -1,5 +1,5 @@
 import React from "react";
-import { ChevronDown, Maximize2 } from "lucide-react";
+import { ArrowUpRight } from "lucide-react";
 
 const MIN_COLUMN_PIXELS = 96;
 const MIN_ROW_PIXELS = 72;
@@ -56,10 +56,7 @@ function resizeTrackEnd(tracks, boundary, delta, minimum) {
 
 export default function ModuleCard({
   moduleId,
-  icon: Icon,
   title,
-  collapsed,
-  onToggle,
   onViewFull,
   children,
   className = "",
@@ -92,7 +89,7 @@ export default function ModuleCard({
   const enterCard = () => {
     const firstControl = localCardRef.current?.querySelector(
       ".dashboard-module-body button:not([disabled]), .dashboard-module-body input:not([disabled]), .dashboard-module-body textarea:not([disabled]), .dashboard-module-body select:not([disabled])",
-    ) || localCardRef.current?.querySelector(".dashboard-module-header button:not([disabled])");
+    ) || localCardRef.current?.querySelector(".module-view-full:not([disabled])");
     firstControl?.focus();
   };
 
@@ -111,11 +108,6 @@ export default function ModuleCard({
     if (browsingCard && event.key.toLowerCase() === "o") {
       event.preventDefault();
       onViewFull?.();
-      return;
-    }
-    if (browsingCard && event.key.toLowerCase() === "c") {
-      event.preventDefault();
-      onToggle?.();
       return;
     }
     if (browsingCard && event.key.toLowerCase() === "n") {
@@ -394,12 +386,12 @@ export default function ModuleCard({
   return (
     <section
       ref={setCardRef}
-      className={`dashboard-module ${collapsed ? "is-collapsed" : ""} ${editing ? "is-editing" : ""} ${dragging ? "is-dragging" : ""} ${resizing ? "is-resizing" : ""} ${className}`}
+      className={`dashboard-module ${editing ? "is-editing" : ""} ${dragging ? "is-dragging" : ""} ${resizing ? "is-resizing" : ""} ${className}`}
       data-module={moduleId}
       data-columns={size.columns}
       data-rows={size.rows}
       tabIndex={browseActive ? 0 : -1}
-      aria-label={`${title} dashboard card. Use arrow keys to move, Enter to interact, N for a new task, O to open, or C to collapse.`}
+      aria-label={`${title} dashboard card. Use arrow keys to move, Enter to interact, or N for a new task.${onViewFull ? " Press O to open the full view." : ""}`}
       onFocus={(event) => {
         if (event.target === event.currentTarget) onBrowseFocus?.();
       }}
@@ -436,13 +428,19 @@ export default function ModuleCard({
           ))}
         </>
       )}
-      <header className="dashboard-module-header">
-        <button type="button" className="module-collapse-button" onClick={onToggle} aria-expanded={!collapsed}>
-          <Icon size={16} /><span>{title}</span><ChevronDown size={14} className="module-chevron" />
+      <div className="dashboard-module-body">{children}</div>
+      {onViewFull && (
+        <button
+          type="button"
+          className="module-view-full"
+          onClick={onViewFull}
+          aria-label={`Open ${title.toLowerCase()}`}
+          title={`Open ${title.toLowerCase()}`}
+        >
+          <span>Open {title.toLowerCase()}</span>
+          <ArrowUpRight size={11} className="module-view-full-icon" aria-hidden="true" />
         </button>
-        {onViewFull && <button type="button" className="module-view-full" onClick={onViewFull} aria-label={`Open full ${title}`} title={`Open full ${title}`}><Maximize2 size={13} /></button>}
-      </header>
-      {!collapsed && <div className="dashboard-module-body">{children}</div>}
+      )}
     </section>
   );
 }

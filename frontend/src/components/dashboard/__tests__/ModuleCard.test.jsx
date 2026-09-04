@@ -13,6 +13,28 @@ describe("ModuleCard resizing", () => {
     delete document.elementFromPoint;
   });
 
+  it("hides section titles and only renders an open text button when onViewFull is provided", () => {
+    const onViewFull = vi.fn();
+    const { container, rerender } = render(
+      <ModuleCard moduleId="tasks" title="Tasks" onViewFull={onViewFull}>
+        <span>Module content</span>
+      </ModuleCard>,
+    );
+
+    expect(container.querySelector(".module-heading")).not.toBeInTheDocument();
+    const openButton = screen.getByRole("button", { name: "Open tasks" });
+    expect(openButton).toHaveTextContent("Open tasks");
+    fireEvent.click(openButton);
+    expect(onViewFull).toHaveBeenCalledOnce();
+
+    rerender(
+      <ModuleCard moduleId="isb" title="NUS ISB">
+        <span>Bus timings</span>
+      </ModuleCard>,
+    );
+    expect(screen.queryByRole("button", { name: /Open/i })).not.toBeInTheDocument();
+  });
+
   it("moves a shared row boundary continuously so the card above stretches", () => {
     const onResizePreview = vi.fn();
     const onResizeCommit = vi.fn();

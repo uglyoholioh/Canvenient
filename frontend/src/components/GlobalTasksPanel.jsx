@@ -4,6 +4,13 @@ import React, { useEffect, useRef } from "react";
 import { Maximize2, X } from "lucide-react";
 import TaskView from "./TaskView";
 
+function getFocusableElements(container) {
+  if (!container) return [];
+  return Array.from(container.querySelectorAll(
+    "button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex='-1'])",
+  )).filter((element) => !element.closest("[inert]") && element.getAttribute("aria-hidden") !== "true");
+}
+
 export default function GlobalTasksPanel({
   token,
   isOpen,
@@ -16,7 +23,7 @@ export default function GlobalTasksPanel({
 
   useEffect(() => {
     if (!isOpen || focusComposer) return;
-    requestAnimationFrame(() => panelRef.current?.focus());
+    requestAnimationFrame(() => getFocusableElements(panelRef.current)[0]?.focus());
   }, [focusComposer, isOpen]);
 
   return (
@@ -36,12 +43,24 @@ export default function GlobalTasksPanel({
         aria-labelledby="global-tasks-title"
         tabIndex={-1}
         onKeyDownCapture={(event) => {
-          if (event.key === "Tab" && event.shiftKey) {
+          if (event.key === "Escape") {
             event.preventDefault();
             event.stopPropagation();
             onClose();
             return;
           }
+          if (event.key !== "Tab") return;
+          const focusable = getFocusableElements(panelRef.current);
+          if (!focusable.length) {
+            event.preventDefault();
+            return;
+          }
+          const currentIndex = focusable.indexOf(document.activeElement);
+          const nextIndex = event.shiftKey
+            ? (currentIndex <= 0 ? focusable.length - 1 : currentIndex - 1)
+            : (currentIndex === focusable.length - 1 ? 0 : currentIndex + 1);
+          event.preventDefault();
+          focusable[nextIndex]?.focus();
         }}
       >
         <header className="global-tasks-header">

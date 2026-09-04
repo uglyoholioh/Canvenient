@@ -1,7 +1,7 @@
 // React is required by the test JSX transform.
 // eslint-disable-next-line no-unused-vars
 import React from "react";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import TaskInputBar from "../TaskInputBar";
 import { createTask, getAcademicModules } from "../../api";
@@ -69,6 +69,73 @@ describe("TaskInputBar quick capture", () => {
     await waitFor(() => expect(createTask).toHaveBeenCalledWith("token", expect.objectContaining({
       title: "Email tutor",
       description: "",
+    })));
+  });
+
+  it("hands empty task-composer arrow presses to task navigation", async () => {
+    const onEmptyArrowKey = vi.fn();
+    render(
+      <TaskInputBar token="token" isOpen initialMode="task" allowedModes={["task"]} onEmptyArrowKey={onEmptyArrowKey} />,
+    );
+    await act(async () => {});
+
+    const title = screen.getByPlaceholderText("Short task title...");
+    fireEvent.keyDown(title, { key: "ArrowDown" });
+    fireEvent.keyDown(title, { key: "ArrowUp" });
+
+    expect(onEmptyArrowKey).toHaveBeenCalledTimes(2);
+    expect(onEmptyArrowKey).toHaveBeenNthCalledWith(1, "ArrowDown");
+    expect(onEmptyArrowKey).toHaveBeenNthCalledWith(2, "ArrowUp");
+  });
+
+  it("labels task time entry as a 24-hour clock", async () => {
+    render(<TaskInputBar token="token" isOpen initialMode="task" allowedModes={["task"]} />);
+    await act(async () => {});
+
+    expect(screen.getByLabelText("Task time (24-hour HH:MM)")).toHaveAttribute("placeholder", "24-hour HH:MM");
+  });
+
+  it("shows only modules selected in settings", async () => {
+    getAcademicModules.mockResolvedValue([
+      { id: 42, module_code: "CS2040", is_selected: true },
+      { id: 43, module_code: "ST2334", is_selected: false },
+    ]);
+    render(<TaskInputBar token="token" isOpen initialMode="task" allowedModes={["task"]} />);
+
+    fireEvent.click(screen.getByRole("button", { name: /No Module/i }));
+    await waitFor(() => expect(screen.getByRole("button", { name: /CS2040/i })).toBeInTheDocument());
+    expect(screen.queryByRole("button", { name: /ST2334/i })).not.toBeInTheDocument();
+  });
+
+  it("calls onClose when Cancel button is clicked or Escape is pressed", async () => {
+    const onClose = vi.fn();
+    render(<TaskInputBar token="token" isOpen initialMode="task" allowedModes={["task"]} showCancel onClose={onClose} />);
+
+    act(() => {
+      fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    });
+    expect(onClose).toHaveBeenCalledTimes(1);
+
+    const title = screen.getByPlaceholderText("Short task title...");
+    act(() => {
+      fireEvent.keyDown(title, { key: "Escape" });
+    });
+    expect(onClose).toHaveBeenCalledTimes(2);
+  });
+
+  it("submits task with Cmd+Enter from note field", async () => {
+    render(<TaskInputBar token="token" isOpen initialMode="task" allowedModes={["task"]} />);
+
+    fireEvent.change(screen.getByPlaceholderText("Short task title..."), { target: { value: "Cmd enter task" } });
+    fireEvent.click(screen.getByRole("button", { name: "Add note" }));
+
+    const note = screen.getByLabelText("Task note");
+    fireEvent.change(note, { target: { value: "Some details" } });
+    fireEvent.keyDown(note, { key: "Enter", metaKey: true });
+
+    await waitFor(() => expect(createTask).toHaveBeenCalledWith("token", expect.objectContaining({
+      title: "Cmd enter task",
+      description: "Some details",
     })));
   });
 });

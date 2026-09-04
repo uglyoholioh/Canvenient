@@ -2,6 +2,8 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+  <key>NSLocationWhenInUseUsageDescription</key>
+  <string>Canvenient uses your location only to show the nearest NUS shuttle bus stops.</string>
   <key>CFBundleDocumentTypes</key>
   <array>
     <dict>

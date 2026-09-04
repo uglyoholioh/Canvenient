@@ -78,6 +78,10 @@ export default defineConfig({
         target: 'http://localhost:8000',
         changeOrigin: true,
       },
+      '/campus-bus': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
+      },
     },
   },
 })

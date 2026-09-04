@@ -57,6 +57,27 @@ async def test_get_current_user_profile(client: AsyncClient, auth):
     assert data["email"] == email
 
 
+async def test_profile_update_persists_canvas_token(client: AsyncClient, auth):
+    """A saved Canvas token is returned by later authenticated profile requests."""
+    token, _, _ = auth
+    headers = auth_headers(token)
+    payload = {
+        "name": "Canvas Test User",
+        "canvas_token": "canvas-token-for-persistence-test",
+        "theme": "graphite",
+    }
+
+    save_response = await client.patch("/auth/profile", json=payload, headers=headers)
+
+    assert save_response.status_code == 200
+    assert save_response.json()["canvas_token"] == payload["canvas_token"]
+
+    profile_response = await client.get("/auth/me", headers=headers)
+
+    assert profile_response.status_code == 200
+    assert profile_response.json()["canvas_token"] == payload["canvas_token"]
+
+
 async def test_unauthenticated_request_fails(client: AsyncClient):
     """Test calling protected endpoint without token returns 401."""
     resp = await client.get("/auth/me")

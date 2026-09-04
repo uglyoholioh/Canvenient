@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { normalizeDashboardSize, normalizeDashboardTracks, normalizeDashboardTypography, readDashboardConfig } from "../dashboardConfig";
+import { normalizeDashboardSize, normalizeDashboardTracks, normalizeDashboardTypography, readDashboardConfig, threeColumnDashboardConfig } from "../dashboardConfig";
 
 describe("dashboard card sizes", () => {
   beforeEach(() => {
@@ -20,8 +20,8 @@ describe("dashboard card sizes", () => {
     expect(readDashboardConfig().sizes).toEqual({
       tasks: { columns: 3, rows: 3 },
       schedule: { columns: 3, rows: 1 },
+      isb: { columns: 1, rows: 1 },
       canvas: { columns: 1, rows: 2 },
-      notes: { columns: 4, rows: 1 },
     });
   });
 
@@ -41,5 +41,16 @@ describe("dashboard card sizes", () => {
     expect(normalizeDashboardTypography({ family: "serif", size: 13.3 })).toEqual({ family: "serif", size: 13.5 });
     expect(normalizeDashboardTypography({ family: "comic", size: 30 })).toEqual({ family: "sans", size: 16 });
     expect(readDashboardConfig().typography).toEqual({ family: "sans", size: 11 });
+  });
+
+  it("keeps NUS ISB available alongside the primary dashboard modules", () => {
+    const config = threeColumnDashboardConfig(readDashboardConfig());
+    expect(config.order.slice(0, 3)).toEqual(["tasks", "schedule", "canvas"]);
+    expect(config.sizes.tasks).toEqual({ columns: 2, rows: 2 });
+    expect(config.sizes.schedule).toEqual({ columns: 1, rows: 1 });
+    expect(config.sizes.canvas).toEqual({ columns: 1, rows: 2 });
+    expect(config.sizes.isb).toEqual({ columns: 1, rows: 1 });
+    expect(config.tracks.columns).toEqual([1.35, 1.35, 1, 1]);
+    expect(config.tracks.rows).toEqual([220, 520]);
   });
 });

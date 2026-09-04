@@ -104,3 +104,127 @@ async def test_reads_legacy_weekly_classes_without_exact_date(client: AsyncClien
 
     assert response.status_code == 200, response.text
     assert response.json()["classes"][0]["class_date"] is None
+
+
+async def test_class_context_links_tasks_notes_and_files_to_one_occurrence(client: AsyncClient, auth):
+    token, user_id, _ = auth
+    class_row = await db.fetch_one(
+        query="""
+            INSERT INTO classes
+                (user_id, module_code, module_name, lesson_type, class_no,
+                 day_of_week, start_time, end_time, venue, class_date)
+            VALUES
+                (:user_id, 'CS2040S', 'Data Structures and Algorithms', 'Laboratory', '05',
+                 4, '10:00:00', '12:00:00', 'COM1-0201', '2026-09-03')
+            RETURNING id
+        """,
+        values={"user_id": user_id},
+    )
+    class_id = class_row["id"]
+    headers = auth_headers(token)
+
+    task_response = await client.post(
+        "/tasks",
+        json={
+            "title": "Submit Lab 4",
+            "class_id": class_id,
+            "class_occurrence_date": "2026-09-03",
+            "class_relation": "due_before",
+            "due_at_override": "2026-09-03T10:00:00+08:00",
+        },
+        headers=headers,
+    )
+    assert task_response.status_code == 201, task_response.text
+    assert task_response.json()["class_summary"] == "CS2040S Laboratory [05]"
+    assert task_response.json()["class_relation"] == "due_before"
+
+    note_response = await client.post(
+        "/notes",
+        json={
+            "title": "Lab 4 preparation",
+            "content": "Bring the completed worksheet.",
+            "class_id": class_id,
+            "class_occurrence_date": "2026-09-03",
+        },
+        headers=headers,
+    )
+    assert note_response.status_code == 200, note_response.text
+    assert note_response.json()["class_summary"] == "CS2040S Laboratory [05]"
+
+    file_response = await client.post(
+        f"/schedule/classes/{class_id}/files",
+        params={"occurrence_date": "2026-09-03"},
+        files={"file": ("lab4.txt", b"submission draft", "text/plain")},
+        headers=headers,
+    )
+    assert file_response.status_code == 201, file_response.text
+    file_id = file_response.json()["id"]
+
+    context_response = await client.get(
+        f"/schedule/classes/{class_id}/context",
+        params={"occurrence_date": "2026-09-03"},
+        headers=headers,
+    )
+    assert context_response.status_code == 200, context_response.text
+    context = context_response.json()
+    assert [task["title"] for task in context["tasks"]] == ["Submit Lab 4"]
+    assert [note["title"] for note in context["notes"]] == ["Lab 4 preparation"]
+    assert [file["filename"] for file in context["files"]] == ["lab4.txt"]
+
+    download_response = await client.get(f"/schedule/class-files/{file_id}", headers=headers)
+    assert download_response.status_code == 200
+    assert download_response.content == b"submission draft"
+
+    schedule_response = await client.get("/schedule", headers=headers)
+    schedule_class = schedule_response.json()["classes"][0]
+    assert schedule_class["linked_task_count"] == 1
+    assert schedule_class["linked_note_count"] == 1
+    assert schedule_class["linked_file_count"] == 1
+
+    # Add recurring task, note, file
+    rec_task = await client.post(
+        "/tasks",
+        json={
+            "title": "Weekly worksheet",
+            "class_id": class_id,
+            "class_occurrence_date": "2026-09-03",
+            "is_recurring": True,
+        },
+        headers=headers,
+    )
+    assert rec_task.status_code == 201
+    assert rec_task.json()["is_recurring"] is True
+
+    rec_note = await client.post(
+        "/notes",
+        json={
+            "title": "Recurring notes",
+            "content": "All lab notes",
+            "class_id": class_id,
+            "class_occurrence_date": "2026-09-03",
+            "is_recurring": True,
+        },
+        headers=headers,
+    )
+    assert rec_note.status_code == 200
+    assert rec_note.json()["is_recurring"] is True
+
+    rec_file = await client.post(
+        f"/schedule/classes/{class_id}/files",
+        params={"occurrence_date": "2026-09-03", "is_recurring": True},
+        files={"file": ("syllabus.pdf", b"pdf syllabus", "application/pdf")},
+        headers=headers,
+    )
+    assert rec_file.status_code == 201
+    assert rec_file.json()["is_recurring"] is True
+
+    # Both specific and recurring items appear in context
+    context2 = (await client.get(
+        f"/schedule/classes/{class_id}/context",
+        params={"occurrence_date": "2026-09-03"},
+        headers=headers,
+    )).json()
+    assert len(context2["tasks"]) == 2
+    assert len(context2["notes"]) == 2
+    assert len(context2["files"]) == 2
+    assert any(t["title"] == "Weekly worksheet" and t["is_recurring"] for t in context2["tasks"])

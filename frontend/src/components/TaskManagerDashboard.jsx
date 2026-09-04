@@ -1,4 +1,9 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
+import { DndContext, DragOverlay, closestCorners, KeyboardSensor, PointerSensor, useSensor, useSensors, defaultDropAnimationSideEffects } from '@dnd-kit/core';
+import { sortableKeyboardCoordinates } from '@dnd-kit/sortable';
+import { useDroppable, useDraggable } from '@dnd-kit/core';
+import { CSS } from '@dnd-kit/utilities';
+
 
 import {
   createCategory,
@@ -11,6 +16,7 @@ import {
   syncCanvasTasks,
   updateTask,
 } from "../api";
+import { getTaskModuleColor } from "./scheduleUtils";
 
 const emptyTaskForm = {
   title: "",
@@ -108,6 +114,150 @@ async function loadWorkspaceData(token) {
   };
 }
 
+
+function DraggableTaskCard({ task, academicModules, isDragging, onStatusChange, onDelete, busyKey, currentTime }) {
+  const { attributes, listeners, setNodeRef, transform, isDragging: isDndDragging } = useDraggable({
+    id: String(task.id),
+    data: { task },
+    disabled: busyKey !== "",
+  });
+
+  const style = {
+    transform: CSS.Translate.toString(transform),
+    opacity: isDndDragging ? 0.4 : 1,
+    zIndex: isDndDragging ? 999 : "auto",
+    position: isDndDragging ? "relative" : "static",
+  };
+
+  const taskModuleColor = getTaskModuleColor(task, academicModules);
+
+  return (
+    <article
+      ref={setNodeRef}
+      style={style}
+      {...listeners}
+      {...attributes}
+      className={`card--draggable card--status-${task.status === "in_progress" ? "progress" : task.status} ${
+        isDragging || isDndDragging ? "is-dragging" : ""
+      } ${taskModuleColor ? "has-module" : ""}`}
+      style={{ ...(taskModuleColor ? { "--task-module-color": taskModuleColor } : {}), ...style }}
+    >
+      {taskModuleColor && (
+        <span
+          className="task-module-strip"
+          aria-hidden="true"
+          style={{ backgroundColor: taskModuleColor }}
+        />
+      )}
+      <div className="flex justify-between items-start gap-lg">
+        <div>
+          <p
+            style={{
+              margin: "0 0 10px",
+              padding: "4px 8px",
+              backgroundColor: "var(--surface-warm)",
+              borderLeft: taskModuleColor ? `3px solid ${taskModuleColor}` : "none",
+              borderRadius: "var(--radius-pill)",
+              display: "inline-block",
+              fontSize: "12px",
+              color: "var(--text-muted)",
+            }}
+          >
+            {task.module_code || "No module"}
+            {task.category_name ? ` - ${task.category_name}` : ""}
+          </p>
+          <h3 className="text-h" style={{ fontSize: "18px" }}>
+            {task.title}
+          </h3>
+        </div>
+
+        {task.source_type !== "canvas" && (
+          <button
+            className="btn btn--ghost-danger btn--sm"
+            type="button"
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={(e) => { e.stopPropagation(); onDelete(task.id); }}
+            disabled={busyKey === `task-delete-${task.id}`}
+          >
+            Delete
+          </button>
+        )}
+      </div>
+
+      <div className="flex gap-md flex-wrap">
+        <span className="text-xs text-muted">
+          Source: <strong className="text-h">{task.source_type}</strong>
+        </span>
+        <span className="text-xs text-muted">
+          Due:{" "}
+          <strong
+            className={
+              isPastDue(task, currentTime) && task.status !== "done"
+                ? "text-error"
+                : "text-h"
+            }
+          >
+            {formatDueDate(task.effective_due_at)}
+          </strong>
+        </span>
+        <span className="text-xs text-muted">
+          Suggested: <strong className="text-h">{task.recommended_priority}</strong>
+        </span>
+      </div>
+
+      {task.external_url && (
+        <a
+          className="text-info no-underline text-sm"
+          style={{ fontWeight: "700" }}
+          href={task.external_url}
+          target="_blank"
+          rel="noreferrer"
+          onPointerDown={(e) => e.stopPropagation()}
+        >
+          Open in Canvas
+        </a>
+      )}
+
+      <div style={{ marginTop: "10px" }}>
+        <label className="form-group task-status-control" onPointerDown={(e) => e.stopPropagation()}>
+          <span>Status</span>
+          <select
+            className={`form-input text-xs themed-select task-status-select status-${task.status}`}
+            value={task.status}
+            onChange={(event) => onStatusChange(task.id, event.target.value)}
+            disabled={busyKey === `task-status-${task.id}`}
+          >
+            <option value="todo">To do</option>
+            <option value="in_progress">In progress</option>
+            <option value="done">Done</option>
+          </select>
+        </label>
+      </div>
+    </article>
+  );
+}
+
+function DroppableLane({ lane, count, children, isOver }) {
+  const { setNodeRef } = useDroppable({
+    id: lane.value,
+  });
+
+  return (
+    <section
+      ref={setNodeRef}
+      className={`planner-column ${isOver ? "planner-column--dragover" : ""}`}
+    >
+      <div className="planner-column-header">
+        <h3>{lane.label}</h3>
+        <span>{count}</span>
+      </div>
+      <div className="list">
+        {children}
+      </div>
+    </section>
+  );
+}
+
 function TaskManagerDashboard({ token, currentUser, onLogout }) {
   const [tasks, setTasks] = useState([]);
   const [categories, setCategories] = useState([]);
@@ -120,8 +270,42 @@ function TaskManagerDashboard({ token, currentUser, onLogout }) {
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [busyKey, setBusyKey] = useState("");
-  const [draggedTaskId, setDraggedTaskId] = useState("");
-  const [dragOverPriority, setDragOverPriority] = useState("");
+  
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 5,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  const [activeId, setActiveId] = useState(null);
+  const activeTask = useMemo(() => tasks.find((t) => String(t.id) === activeId), [activeId, tasks]);
+
+  function handleDragStart(event) {
+    setActiveId(event.active.id);
+  }
+
+  function handleDragEnd(event) {
+    setActiveId(null);
+    const { active, over } = event;
+    if (over && over.id) {
+      const priorityValue = String(over.id);
+      const taskId = Number.parseInt(active.id, 10);
+      const task = tasks.find((t) => t.id === taskId);
+      if (task && task.priority_manual !== priorityValue) {
+        handleTaskPriorityChange(taskId, priorityValue);
+      }
+    }
+  }
+
+  function handleDragCancel() {
+    setActiveId(null);
+  }
+
   const [currentTime, setCurrentTime] = useState(() => Date.now());
 
   async function reloadWorkspace() {
@@ -225,29 +409,12 @@ function TaskManagerDashboard({ token, currentUser, onLogout }) {
     }
   }
 
-  function handleTaskDragStart(event, taskId) {
-    if (busyKey !== "") {
-      event.preventDefault();
-      return;
-    }
     setDraggedTaskId(taskId);
     event.dataTransfer.effectAllowed = "move";
     event.dataTransfer.setData("text/plain", String(taskId));
   }
 
-  function handleTaskDragEnd() {
-    setDraggedTaskId("");
-    setDragOverPriority("");
-  }
 
-  async function handlePriorityDrop(event, priorityValue) {
-    event.preventDefault();
-    setDragOverPriority("");
-
-    const taskIdStr = event.dataTransfer.getData("text/plain");
-    if (!taskIdStr) {
-      return;
-    }
 
     const taskId = Number.parseInt(taskIdStr, 10);
     const task = tasks.find((t) => t.id === taskId);
@@ -794,29 +961,22 @@ function TaskManagerDashboard({ token, currentUser, onLogout }) {
             </p>
           </div>
         ) : (
-          <div className="planner-board">
-            {priorityLanes.map((lane) => (
-              <section
-                className={`planner-column ${
-                  dragOverPriority === lane.value
-                    ? "planner-column--dragover"
-                    : ""
-                }`}
-                key={lane.value}
-                onDragOver={(event) => {
-                  event.preventDefault();
-                  event.dataTransfer.dropEffect = "move";
-                  setDragOverPriority(lane.value);
-                }}
-                onDragLeave={() => setDragOverPriority("")}
-                onDrop={(event) => handlePriorityDrop(event, lane.value)}
-              >
-                <div className="planner-column-header">
-                  <h3>{lane.label}</h3>
-                  <span>{visibleTasksByPriority[lane.value].length}</span>
-                </div>
-
-                <div className="list">
+          
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCorners}
+            onDragStart={handleDragStart}
+            onDragEnd={handleDragEnd}
+            onDragCancel={handleDragCancel}
+          >
+            <div className="planner-board">
+              {priorityLanes.map((lane) => (
+                <DroppableLane
+                  key={lane.value}
+                  lane={lane}
+                  count={visibleTasksByPriority[lane.value].length}
+                  isOver={false}
+                >
                   {visibleTasksByPriority[lane.value].length === 0 ? (
                     <p
                       className="text-sm text-muted text-center"
@@ -826,121 +986,36 @@ function TaskManagerDashboard({ token, currentUser, onLogout }) {
                     </p>
                   ) : (
                     visibleTasksByPriority[lane.value].map((task) => (
-                      <article
-                        className={`card--draggable card--status-${task.status === "in_progress" ? "progress" : task.status} ${
-                          draggedTaskId === task.id ? "is-dragging" : ""
-                        }`}
-                        draggable={busyKey === ""}
+                      <DraggableTaskCard
                         key={task.id}
-                        onDragStart={(event) =>
-                          handleTaskDragStart(event, task.id)
-                        }
-                        onDragEnd={handleTaskDragEnd}
-                      >
-                        <div className="flex justify-between items-start gap-lg">
-                          <div>
-                            <p
-                              style={{
-                                margin: "0 0 10px",
-                                padding: "4px 8px",
-                                backgroundColor: "var(--surface-warm)",
-                                borderRadius: "var(--radius-pill)",
-                                display: "inline-block",
-                                fontSize: "12px",
-                                color: "var(--text-muted)",
-                              }}
-                            >
-                              {task.module_code || "No module"}
-                              {task.category_name
-                                ? ` - ${task.category_name}`
-                                : ""}
-                            </p>
-                            <h3 className="text-h" style={{ fontSize: "18px" }}>
-                              {task.title}
-                            </h3>
-                          </div>
-
-                          {task.source_type !== "canvas" && (
-                            <button
-                              className="btn btn--ghost-danger btn--sm"
-                              type="button"
-                              onClick={() => handleDeleteTask(task.id)}
-                              disabled={busyKey === `task-delete-${task.id}`}
-                            >
-                              Delete
-                            </button>
-                          )}
-                        </div>
-
-                        <div className="flex gap-md flex-wrap">
-                          <span className="text-xs text-muted">
-                            Source:{" "}
-                            <strong className="text-h">
-                              {task.source_type}
-                            </strong>
-                          </span>
-                          <span className="text-xs text-muted">
-                            Due:{" "}
-                            <strong
-                              className={
-                                isPastDue(task, currentTime) &&
-                                task.status !== "done"
-                                  ? "text-error"
-                                  : "text-h"
-                              }
-                            >
-                              {formatDueDate(task.effective_due_at)}
-                            </strong>
-                          </span>
-                          <span className="text-xs text-muted">
-                            Suggested:{" "}
-                            <strong className="text-h">
-                              {task.recommended_priority}
-                            </strong>
-                          </span>
-                        </div>
-
-                        {task.external_url && (
-                          <a
-                            className="text-info no-underline text-sm"
-                            style={{ fontWeight: "700" }}
-                            href={task.external_url}
-                            target="_blank"
-                            rel="noreferrer"
-                          >
-                            Open in Canvas
-                          </a>
-                        )}
-
-                        <div style={{ marginTop: "10px" }}>
-                          <label className="form-group task-status-control">
-                            <span>Status</span>
-                            <select
-                              className={`form-input text-xs themed-select task-status-select status-${task.status}`}
-                              value={task.status}
-                              onChange={(event) =>
-                                handleTaskStatusChange(
-                                  task.id,
-                                  event.target.value,
-                                )
-                              }
-                              disabled={busyKey === `task-status-${task.id}`}
-                            >
-                              <option value="todo">To do</option>
-                              <option value="in_progress">In progress</option>
-                              <option value="done">Done</option>
-                            </select>
-                          </label>
-                        </div>
-                      </article>
+                        task={task}
+                        academicModules={academicModules}
+                        isDragging={false}
+                        onStatusChange={handleTaskStatusChange}
+                        onDelete={handleDeleteTask}
+                        busyKey={busyKey}
+                        currentTime={currentTime}
+                      />
                     ))
                   )}
-                </div>
-              </section>
-            ))}
-          </div>
-        )}
-      </section>
+                </DroppableLane>
+              ))}
+            </div>
+            <DragOverlay dropAnimation={{ sideEffects: defaultDropAnimationSideEffects({ styles: { active: { opacity: "0.4" } } }) }}>
+              {activeTask ? (
+                <DraggableTaskCard
+                  task={activeTask}
+                  academicModules={academicModules}
+                  isDragging={true}
+                  onStatusChange={() => {}}
+                  onDelete={() => {}}
+                  busyKey={busyKey}
+                  currentTime={currentTime}
+                />
+              ) : null}
+            </DragOverlay>
+          </DndContext>
+</section>
     </main>
   );
 }

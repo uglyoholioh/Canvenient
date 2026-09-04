@@ -10,6 +10,7 @@ from routes.categories import router as categories_router
 from routes.tasks import router as tasks_router
 from routes.canvas import router as canvas_router
 from routes.schedules import router as schedule_router
+from routes.campus_bus import router as campus_bus_router
 from routes.events import router as events_router
 from routes.ai import router as ai_router
 from routes.communities import router as communities_router
@@ -21,6 +22,7 @@ from routes.study_sessions import router as study_sessions_router
 from routes.telegram import router as telegram_router
 from routes.notes import router as notes_router
 from routes.folders import router as folders_router
+from routes.venues import router as venues_router
 
 
 from schema import initialize_schema
@@ -50,6 +52,7 @@ app.include_router(module_colors_router)
 app.include_router(tasks_router)
 app.include_router(canvas_router)
 app.include_router(schedule_router)
+app.include_router(campus_bus_router)
 app.include_router(events_router)
 app.include_router(ai_router)
 app.include_router(communities_router)
@@ -61,6 +64,7 @@ app.include_router(study_sessions_router)
 app.include_router(telegram_router)
 app.include_router(notes_router)
 app.include_router(folders_router)
+app.include_router(venues_router)
 
 
 

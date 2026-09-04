@@ -3,6 +3,7 @@ import asyncio
 import base64
 from datetime import datetime, timedelta, timezone
 from typing import Any
+from urllib.parse import quote
 
 import httpx
 from database import db
@@ -30,6 +31,10 @@ async def attach_course_colors(user_id: int, courses: list[dict[str, Any]]) -> l
     ]
 
 
+
+class DismissAnnouncementRequest(BaseModel):
+    announcement_id: int
+
 class CanvasSubmissionRequest(BaseModel):
     type: str
     content: str = ""
@@ -38,7 +43,7 @@ class CanvasSubmissionRequest(BaseModel):
 
 
 async def require_canvas_course(current_user: CurrentUser, course_id: int) -> dict[str, Any]:
-    courses = await list_canvas_courses(current_user)
+    courses = await list_canvas_courses(current_user, force_refresh=False)
     course = next((item for item in courses if int(item["id"]) == course_id), None)
     if not course:
         raise HTTPException(status_code=404, detail="Canvas course not found.")
@@ -212,10 +217,24 @@ async def list_canvas_announcements(
     if not token:
         return []
 
+    try:
+        dismissed_rows = await db.fetch_all(
+            "SELECT announcement_id FROM dismissed_canvas_announcements WHERE user_id = :user_id",
+            {"user_id": current_user.id}
+        )
+        dismissed_ids = {row["announcement_id"] for row in dismissed_rows}
+    except Exception:
+        dismissed_ids = set()
+
+    def attach_dismissed(data):
+        for item in data:
+            item["is_dismissed"] = item["id"] in dismissed_ids
+        return data
+
     if not force_refresh:
         cached_data, synced_at = await get_canvas_cache(current_user.id, "announcements")
         if cached_data is not None and is_cache_fresh(synced_at):
-            return cached_data
+            return attach_dismissed(cached_data)
 
     courses = await list_canvas_courses(current_user, force_refresh=force_refresh)
     if not courses:
@@ -311,7 +330,7 @@ async def list_canvas_announcements(
 
     result.sort(key=lambda x: x["posted_at"] or "", reverse=True)
     await save_canvas_cache(current_user.id, "announcements", result)
-    return result
+    return attach_dismissed(result)
 
 
 async def fetch_course_assignments(
@@ -345,8 +364,8 @@ async def fetch_course_assignments(
             continue
 
         due_at = asgn.get("due_at")
-        submission = asgn.get("submission") or {}
-        if not has_canvas_submission(submission):
+        submission = asgn.get("submission")
+        if submission is None:
             submission = await fetch_assignment_submission(
                 client, headers, course_id, assignment_id
             )
@@ -382,6 +401,30 @@ async def fetch_course_assignments(
             }
         )
     return result
+
+
+
+
+@router.post("/announcements/dismiss", response_model=dict[str, Any])
+async def dismiss_canvas_announcement(
+    req: DismissAnnouncementRequest,
+    current_user: CurrentUser,
+):
+    try:
+        is_sqlite = "sqlite" in str(db.url).lower()
+        if is_sqlite:
+            await db.execute(
+                "INSERT OR IGNORE INTO dismissed_canvas_announcements (user_id, announcement_id) VALUES (:user_id, :announcement_id)",
+                {"user_id": current_user.id, "announcement_id": req.announcement_id}
+            )
+        else:
+            await db.execute(
+                "INSERT INTO dismissed_canvas_announcements (user_id, announcement_id) VALUES (:user_id, :announcement_id) ON CONFLICT DO NOTHING",
+                {"user_id": current_user.id, "announcement_id": req.announcement_id}
+            )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail="Failed to dismiss announcement")
+    return {"ok": True}
 
 
 @router.get("/assignments", response_model=list[dict[str, Any]])
@@ -450,8 +493,8 @@ async def get_canvas_assignment(
             detail=canvas_error_detail(response, "Could not load this Canvas assignment."),
         )
     assignment = response.json()
-    submission = assignment.get("submission") or {}
-    if not has_canvas_submission(submission):
+    submission = assignment.get("submission")
+    if submission is None:
         async with httpx.AsyncClient() as client:
             submission = await fetch_assignment_submission(
                 client, headers, course_id, assignment_id
@@ -636,25 +679,46 @@ async def list_canvas_grades(
     token = current_user.canvas_token
     if not token:
         return []
+    
+    cache_key = f"grades_{course_id}" if course_id else "grades_all"
+    cached_data, synced_at = await get_canvas_cache(current_user.id, cache_key)
+    if cached_data is not None and is_cache_fresh(synced_at):
+        return cached_data
+
     courses = await list_canvas_courses(current_user)
     if course_id is not None:
         courses = [course for course in courses if int(course["id"]) == course_id]
         if not courses:
             raise HTTPException(status_code=404, detail="Canvas course not found.")
+            
     headers = {"Authorization": f"Bearer {token}"}
-    async with httpx.AsyncClient() as client:
-        results = await asyncio.gather(
-            *(fetch_course_grades(client, headers, course) for course in courses),
-            return_exceptions=True,
-        )
-    return [result for result in results if isinstance(result, dict)]
+    try:
+        async with httpx.AsyncClient() as client:
+            results = await asyncio.gather(
+                *(fetch_course_grades(client, headers, course) for course in courses),
+                return_exceptions=True,
+            )
+        valid_results = [result for result in results if isinstance(result, dict)]
+        await save_canvas_cache(current_user.id, cache_key, valid_results)
+        return valid_results
+    except Exception:
+        return cached_data if cached_data is not None else []
 
 
 @router.get("/files", response_model=list[dict[str, Any]])
-async def list_canvas_files(course_id: int, current_user: CurrentUser):
+async def list_canvas_files(
+    course_id: int,
+    current_user: CurrentUser,
+    force_refresh: bool = Query(False),
+):
     token = current_user.canvas_token
     if not token:
         return []
+
+    cache_key = f"files_{course_id}"
+    cached_data, synced_at = await get_canvas_cache(current_user.id, cache_key)
+    if not force_refresh and cached_data is not None and is_cache_fresh(synced_at):
+        return cached_data
 
     headers = {"Authorization": f"Bearer {token}"}
     async with httpx.AsyncClient() as client:
@@ -668,10 +732,10 @@ async def list_canvas_files(course_id: int, current_user: CurrentUser):
             response.raise_for_status()
             files = response.json()
         except Exception:
-            return []
+            return cached_data if cached_data is not None else []
 
     if not isinstance(files, list):
-        return []
+        return cached_data if cached_data is not None else []
 
     result = []
     for f in files:
@@ -683,11 +747,181 @@ async def list_canvas_files(course_id: int, current_user: CurrentUser):
                 "url": f["url"],
                 "size": f["size"],
                 "updated_at": f["updated_at"],
+                "folder_id": f.get("folder_id"),
                 "external_url": f.get("html_url")
                 or f"https://canvas.nus.edu.sg/courses/{course_id}/files/{f['id']}",
             }
         )
+    await save_canvas_cache(current_user.id, cache_key, result)
     return result
+
+
+@router.get("/folders", response_model=list[dict[str, Any]])
+async def list_canvas_folders(course_id: int, current_user: CurrentUser):
+    """Return the Canvas folder tree metadata needed by the dashboard browser."""
+    token = current_user.canvas_token
+    if not token:
+        return []
+
+    cache_key = f"folders_{course_id}"
+    cached_data, synced_at = await get_canvas_cache(current_user.id, cache_key)
+    if cached_data is not None and is_cache_fresh(synced_at):
+        return cached_data
+
+    headers = {"Authorization": f"Bearer {token}"}
+    async with httpx.AsyncClient() as client:
+        try:
+            response = await client.get(
+                f"https://canvas.nus.edu.sg/api/v1/courses/{course_id}/folders"
+                "?per_page=100",
+                headers=headers,
+                timeout=5.0,
+            )
+            response.raise_for_status()
+            folders = response.json()
+        except Exception:
+            return cached_data if cached_data is not None else []
+
+    if not isinstance(folders, list):
+        return cached_data if cached_data is not None else []
+
+    result = [
+        {
+            "id": folder["id"],
+            "name": folder.get("name") or "Untitled folder",
+            "full_name": folder.get("full_name") or folder.get("name") or "Untitled folder",
+            "parent_folder_id": folder.get("parent_folder_id"),
+            "files_count": folder.get("files_count") or 0,
+            "folders_count": folder.get("folders_count") or 0,
+        }
+        for folder in folders
+        if isinstance(folder, dict) and folder.get("id") is not None
+    ]
+    await save_canvas_cache(current_user.id, cache_key, result)
+    return result
+
+
+@router.get("/navigation", response_model=list[dict[str, Any]])
+async def list_canvas_course_navigation(course_id: int, current_user: CurrentUser):
+    """Expose each enabled Canvas course section for the dashboard browser."""
+    token = current_user.canvas_token
+    if not token:
+        return []
+
+    cache_key = f"navigation_{course_id}"
+    cached_data, synced_at = await get_canvas_cache(current_user.id, cache_key)
+    if cached_data is not None and is_cache_fresh(synced_at):
+        return cached_data
+
+    headers = {"Authorization": f"Bearer {token}"}
+    async with httpx.AsyncClient() as client:
+        try:
+            response = await client.get(
+                f"https://canvas.nus.edu.sg/api/v1/courses/{course_id}/navigation",
+                headers=headers,
+                timeout=5.0,
+            )
+            response.raise_for_status()
+            navigation = response.json()
+        except Exception:
+            return cached_data if cached_data is not None else []
+
+    if not isinstance(navigation, list):
+        return cached_data if cached_data is not None else []
+    result = [
+        {
+            "id": item["id"],
+            "label": item.get("label") or item["id"].replace("_", " ").title(),
+            "html_url": item.get("html_url"),
+        }
+        for item in navigation
+        if isinstance(item, dict) and item.get("id") and not item.get("hidden")
+    ]
+    await save_canvas_cache(current_user.id, cache_key, result)
+    return result
+
+
+async def canvas_course_get(course_id: int, current_user: CurrentUser, path: str, params: list[tuple[str, str]] | None = None) -> Any:
+    if not current_user.canvas_token:
+        raise HTTPException(status_code=400, detail="Connect Canvas in Settings first.")
+    await require_canvas_course(current_user, course_id)
+    async with httpx.AsyncClient() as client:
+        response = await client.get(
+            f"https://canvas.nus.edu.sg/api/v1/courses/{course_id}/{path}",
+            headers={"Authorization": f"Bearer {current_user.canvas_token}"},
+            params=params,
+            timeout=10.0,
+        )
+    if not response.is_success:
+        raise HTTPException(status_code=response.status_code, detail=canvas_error_detail(response, "Could not load this Canvas section."))
+    return response.json()
+
+
+@router.get("/pages", response_model=list[dict[str, Any]])
+async def list_canvas_pages(
+    course_id: int,
+    current_user: CurrentUser,
+    force_refresh: bool = Query(False),
+):
+    cache_key = f"pages_{course_id}"
+    cached_data, synced_at = await get_canvas_cache(current_user.id, cache_key)
+    if not force_refresh and cached_data is not None and is_cache_fresh(synced_at):
+        return cached_data
+    try:
+        pages = await canvas_course_get(course_id, current_user, "pages", [("per_page", "100")])
+        if not isinstance(pages, list):
+            return cached_data if cached_data is not None else []
+        result = [{"url": page.get("url"), "title": page.get("title") or "Untitled page", "updated_at": page.get("updated_at")} for page in pages if isinstance(page, dict) and page.get("url")]
+        await save_canvas_cache(current_user.id, cache_key, result)
+        return result
+    except Exception:
+        return cached_data if cached_data is not None else []
+
+
+@router.get("/pages/{page_url}", response_model=dict[str, Any])
+async def get_canvas_page(page_url: str, course_id: int, current_user: CurrentUser):
+    page = await canvas_course_get(course_id, current_user, f"pages/{quote(page_url, safe='')}")
+    return {"title": page.get("title") or "Untitled page", "body": page.get("body") or "", "updated_at": page.get("updated_at")}
+
+
+@router.get("/modules", response_model=list[dict[str, Any]])
+async def list_canvas_course_modules(
+    course_id: int,
+    current_user: CurrentUser,
+    force_refresh: bool = Query(False),
+):
+    cache_key = f"modules_{course_id}"
+    cached_data, synced_at = await get_canvas_cache(current_user.id, cache_key)
+    if not force_refresh and cached_data is not None and is_cache_fresh(synced_at):
+        return cached_data
+    try:
+        modules = await canvas_course_get(course_id, current_user, "modules", [("include[]", "items"), ("per_page", "100")])
+        if not isinstance(modules, list):
+            return cached_data if cached_data is not None else []
+        result = [{"id": module.get("id"), "name": module.get("name") or "Untitled module", "items": [{"id": item.get("id"), "title": item.get("title") or "Untitled item", "type": item.get("type"), "page_url": item.get("page_url"), "content_id": item.get("content_id"), "html_url": item.get("html_url"), "external_url": item.get("external_url")} for item in module.get("items", []) if isinstance(item, dict)]} for module in modules if isinstance(module, dict) and module.get("id") is not None]
+        await save_canvas_cache(current_user.id, cache_key, result)
+        return result
+    except Exception:
+        return cached_data if cached_data is not None else []
+
+
+@router.get("/syllabus", response_model=dict[str, Any])
+async def get_canvas_syllabus(
+    course_id: int,
+    current_user: CurrentUser,
+    force_refresh: bool = Query(False),
+):
+    cache_key = f"syllabus_{course_id}"
+    cached_data, synced_at = await get_canvas_cache(current_user.id, cache_key)
+    if not force_refresh and cached_data is not None and is_cache_fresh(synced_at):
+        return cached_data
+    try:
+        course = await canvas_course_get(course_id, current_user, "")
+        result = {"body": course.get("syllabus_body") or ""}
+        await save_canvas_cache(current_user.id, cache_key, result)
+        return result
+    except Exception:
+        return cached_data if cached_data is not None else {"body": ""}
 
 
 def get_file_type(filename: str) -> str:

@@ -11,6 +11,193 @@ export function startOfLocalDay(date) {
   return result;
 }
 
+export const SEMESTER_STARTS = {
+  "2023/2024": { 1: "2023-08-07", 2: "2024-01-15", 3: "2024-05-13", 4: "2024-06-24" },
+  "2024/2025": { 1: "2024-08-12", 2: "2025-01-13", 3: "2025-05-12", 4: "2025-06-23" },
+  "2025/2026": { 1: "2025-08-11", 2: "2026-01-12", 3: "2026-05-11", 4: "2026-06-22" },
+  "2026/2027": { 1: "2026-08-10", 2: "2027-01-11", 3: "2027-05-10", 4: "2027-06-21" },
+  "2027/2028": { 1: "2027-08-09", 2: "2028-01-10", 3: "2028-05-08", 4: "2028-06-19" },
+};
+
+function parseDateOnly(str) {
+  const [y, m, d] = str.split("-").map(Number);
+  return new Date(y, m - 1, d);
+}
+
+function getMondayOfDate(date) {
+  const d = startOfLocalDay(date);
+  const offset = (d.getDay() + 6) % 7;
+  d.setDate(d.getDate() - offset);
+  return d;
+}
+
+function getSemesterStart(academicYear, semester) {
+  const known = SEMESTER_STARTS[academicYear]?.[semester];
+  if (known) return startOfLocalDay(parseDateOnly(known));
+  const startYear = parseInt(academicYear.split("/")[0], 10);
+  if (semester === 1) {
+    const base = new Date(startYear, 7, 8);
+    const offset = (base.getDay() + 6) % 7;
+    return getMondayOfDate(new Date(startYear, 7, 8 + ((7 - offset) % 7)));
+  }
+  if (semester === 2) {
+    const base = new Date(startYear + 1, 0, 8);
+    const offset = (base.getDay() + 6) % 7;
+    return getMondayOfDate(new Date(startYear + 1, 0, 8 + ((7 - offset) % 7)));
+  }
+  if (semester === 3) {
+    const base = new Date(startYear + 1, 4, 8);
+    const offset = (base.getDay() + 6) % 7;
+    return getMondayOfDate(new Date(startYear + 1, 4, 8 + ((7 - offset) % 7)));
+  }
+  const base = new Date(startYear + 1, 5, 19);
+  const offset = (base.getDay() + 6) % 7;
+  return getMondayOfDate(new Date(startYear + 1, 5, 19 + ((7 - offset) % 7)));
+}
+
+export function getAcademicWeek(date) {
+  const d = startOfLocalDay(date);
+  const currentMon = getMondayOfDate(d);
+  const year = currentMon.getFullYear();
+
+  const candidateAy = `${year}/${year + 1}`;
+  const candidateSem1 = getSemesterStart(candidateAy, 1);
+  const candidateOrientationMon = new Date(candidateSem1.getTime() - 7 * 86400000);
+
+  let ayStartYear = currentMon >= candidateOrientationMon ? year : year - 1;
+  let ay = `${ayStartYear}/${ayStartYear + 1}`;
+  let sem1Start = getSemesterStart(ay, 1);
+  let sem2Start = getSemesterStart(ay, 2);
+  let st1Start = getSemesterStart(ay, 3);
+  let st2Start = getSemesterStart(ay, 4);
+  const nextAy = `${ayStartYear + 1}/${ayStartYear + 2}`;
+  const nextSem1Start = getSemesterStart(nextAy, 1);
+  const nextOrientationMon = new Date(nextSem1Start.getTime() - 7 * 86400000);
+
+  const shortAy = `AY${String(ayStartYear).slice(-2)}/${String(ayStartYear + 1).slice(-2)}`;
+
+  let semester = 1;
+  let semesterLabel = "Semester 1";
+  let shortSemester = "Sem 1";
+  let label = "";
+  let weekNumber = null;
+  let type = "instructional";
+
+  const diffWeeks = (a, b) => Math.round((a.getTime() - b.getTime()) / (7 * 86400000));
+
+  if (currentMon < sem1Start) {
+    semester = 1;
+    semesterLabel = "Semester 1";
+    shortSemester = "Sem 1";
+    const diff = diffWeeks(currentMon, sem1Start);
+    if (diff === -1) {
+      label = "Orientation Week";
+      type = "orientation";
+    } else {
+      label = "Vacation";
+      type = "vacation";
+    }
+  } else if (currentMon < sem2Start) {
+    semester = 1;
+    semesterLabel = "Semester 1";
+    shortSemester = "Sem 1";
+    const diff = diffWeeks(currentMon, sem1Start);
+    if (diff >= 0 && diff <= 5) {
+      weekNumber = diff + 1;
+      label = `Week ${weekNumber}`;
+      type = "instructional";
+    } else if (diff === 6) {
+      label = "Recess Week";
+      type = "recess";
+    } else if (diff >= 7 && diff <= 13) {
+      weekNumber = diff;
+      label = `Week ${weekNumber}`;
+      type = "instructional";
+    } else if (diff === 14) {
+      label = "Reading Week";
+      type = "reading";
+    } else if (diff === 15) {
+      label = "Exam Week 1";
+      type = "exam";
+    } else if (diff === 16) {
+      label = "Exam Week 2";
+      type = "exam";
+    } else {
+      label = "Vacation";
+      type = "vacation";
+    }
+  } else if (currentMon < st1Start) {
+    semester = 2;
+    semesterLabel = "Semester 2";
+    shortSemester = "Sem 2";
+    const diff = diffWeeks(currentMon, sem2Start);
+    if (diff >= 0 && diff <= 5) {
+      weekNumber = diff + 1;
+      label = `Week ${weekNumber}`;
+      type = "instructional";
+    } else if (diff === 6) {
+      label = "Recess Week";
+      type = "recess";
+    } else if (diff >= 7 && diff <= 13) {
+      weekNumber = diff;
+      label = `Week ${weekNumber}`;
+      type = "instructional";
+    } else if (diff === 14) {
+      label = "Reading Week";
+      type = "reading";
+    } else if (diff === 15) {
+      label = "Exam Week 1";
+      type = "exam";
+    } else if (diff === 16) {
+      label = "Exam Week 2";
+      type = "exam";
+    } else {
+      label = "Vacation";
+      type = "vacation";
+    }
+  } else if (currentMon < st2Start) {
+    semester = 3;
+    semesterLabel = "Special Term I";
+    shortSemester = "ST I";
+    const diff = diffWeeks(currentMon, st1Start);
+    if (diff >= 0 && diff <= 5) {
+      weekNumber = diff + 1;
+      label = `ST I Week ${weekNumber}`;
+      type = "instructional";
+    } else {
+      label = "Vacation";
+      type = "vacation";
+    }
+  } else if (currentMon < nextOrientationMon) {
+    semester = 4;
+    semesterLabel = "Special Term II";
+    shortSemester = "ST II";
+    const diff = diffWeeks(currentMon, st2Start);
+    if (diff >= 0 && diff <= 5) {
+      weekNumber = diff + 1;
+      label = `ST II Week ${weekNumber}`;
+      type = "instructional";
+    } else {
+      label = "Vacation";
+      type = "vacation";
+    }
+  } else {
+    return getAcademicWeek(currentMon);
+  }
+
+  return {
+    academicYear: ay,
+    shortAcademicYear: shortAy,
+    semester,
+    semesterLabel,
+    shortSemester,
+    weekNumber,
+    label,
+    type,
+    formatted: `${shortAy} ${shortSemester} · ${label}`,
+  };
+}
+
 export function weekDates(anchor) {
   const monday = startOfLocalDay(anchor);
   const offset = (monday.getDay() + 6) % 7;
@@ -55,7 +242,26 @@ export function moduleHue(value) {
 }
 
 export function moduleColor(item, fallbackValue) {
-  return item?.module_color || `hsl(${moduleHue(fallbackValue)} 64% 58%)`;
+  return item?.module_color || (fallbackValue ? `hsl(${moduleHue(fallbackValue)} 64% 58%)` : undefined);
+}
+
+export function getTaskModuleColor(task, modules = []) {
+  if (!task) return null;
+  if (task.module_color) return task.module_color;
+  if (task.module_id && Array.isArray(modules) && modules.length > 0) {
+    const mod = modules.find((m) => m.id === task.module_id || String(m.id) === String(task.module_id));
+    if (mod?.color) return mod.color;
+    if (mod?.module_code) return moduleColor(mod, mod.module_code);
+  }
+  const code = task.module_code || (Array.isArray(modules) && modules.find((m) => m.id === task.module_id || String(m.id) === String(task.module_id))?.module_code);
+  if (code) {
+    if (Array.isArray(modules) && modules.length > 0) {
+      const mod = modules.find((m) => m.module_code === code);
+      if (mod?.color) return mod.color;
+    }
+    return moduleColor(task, code);
+  }
+  return null;
 }
 
 export function moduleCardInk(color) {
@@ -95,7 +301,10 @@ export function scheduleItemsForDate(schedule, selectedDate) {
     items.push({
       id: `class-${item.id}`,
       kind: "class",
+      classId: item.id,
+      occurrenceDate: localDateKey(selectedDate),
       moduleCode: item.module_code,
+      moduleName: item.module_name,
       title: item.module_code,
       subtitle: item.lesson_type,
       classNo: item.class_no,
@@ -105,6 +314,10 @@ export function scheduleItemsForDate(schedule, selectedDate) {
       hue: moduleHue(item.module_code),
       color: moduleColor(item, item.module_code),
       ink: moduleCardInk(moduleColor(item, item.module_code)),
+      attendInPerson: item.attend_in_person !== false,
+      linkedTaskCount: Number(item.linked_task_count || 0),
+      linkedNoteCount: Number(item.linked_note_count || 0),
+      linkedFileCount: Number(item.linked_file_count || 0),
     });
   }
 

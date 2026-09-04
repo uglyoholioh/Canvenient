@@ -170,6 +170,8 @@ fn native_menu() -> Menu {
         .add_native_item(MenuItem::Separator)
         .add_item(CustomMenuItem::new("settings", "Settings…").accelerator("CmdOrCtrl+,"))
         .add_native_item(MenuItem::Separator)
+        .add_item(CustomMenuItem::new("restart-app", "Restart Canvenient"))
+        .add_native_item(MenuItem::Separator)
         .add_native_item(MenuItem::Services)
         .add_native_item(MenuItem::Separator)
         .add_native_item(MenuItem::Hide)
@@ -324,6 +326,9 @@ fn main() {
             Ok(())
         })
         .on_menu_event(|event| {
+            if event.menu_item_id() == "restart-app" {
+                event.window().app_handle().restart();
+            }
             let _ = event.window().emit("menu-action", event.menu_item_id().to_string());
         })
         .on_window_event(|event| {
