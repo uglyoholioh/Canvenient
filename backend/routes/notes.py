@@ -20,6 +20,7 @@ class NoteUpdate(BaseModel):
     title: Optional[str] = None
     content: Optional[str] = None
     folder_id: Optional[int] = None
+    is_pinned: Optional[bool] = None
 
 @router.get("", response_model=list[dict[str, Any]])
 async def get_notes(current_user: CurrentUser):
@@ -118,6 +119,9 @@ async def update_note(note_id: int, data: NoteUpdate, current_user: CurrentUser)
         # Note: If we want to unset folder_id, we'd need a special sentinel, but for now we just allow setting
         updates.append("folder_id = :folder_id")
         values["folder_id"] = data.folder_id
+    if hasattr(data, 'is_pinned') and data.is_pinned is not None:
+        updates.append("is_pinned = :is_pinned")
+        values["is_pinned"] = data.is_pinned
 
     query = f"""
         UPDATE notes 

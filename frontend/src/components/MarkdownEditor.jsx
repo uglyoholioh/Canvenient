@@ -3,13 +3,13 @@ import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Placeholder from '@tiptap/extension-placeholder';
 import Mention from '@tiptap/extension-mention';
-import { getNotes, updateNote, getCachedCanvasFiles } from '../api';
-import { Save, Trash2, Bold, Italic, List, ListOrdered, Heading1, Heading2, Quote, Code, Download } from 'lucide-react';
+import { getNotes, updateNote, getCachedCanvasFiles, createTask } from '../api';
+import { Save, Trash2, Bold, Italic, List, ListOrdered, Heading1, Heading2, Quote, Code, Download, CheckSquare, Pin } from 'lucide-react';
 import createSuggestionOptions from './editor/suggestions';
 import TurndownService from 'turndown';
 import './markdown.css';
 
-const MenuBar = ({ editor, onExportPDF, onExportMD }) => {
+const MenuBar = ({ editor, onExportPDF, onExportMD, onCreateTask }) => {
   if (!editor) return null;
 
   const btnStyle = (isActive) => ({
@@ -57,7 +57,19 @@ const MenuBar = ({ editor, onExportPDF, onExportMD }) => {
       </div>
 
       <div style={{ display: 'flex', gap: '8px' }}>
-        <button onClick={onExportMD} style={{ ...btnStyle(false), fontSize: '12px', padding: '4px 8px', fontWeight: '500' }} title="Export as Markdown">
+        
+        <button onClick={() => {
+          const { from, to } = editor.state.selection;
+          if (from === to) {
+            alert("Please select some text to create a task.");
+            return;
+          }
+          const text = editor.state.doc.textBetween(from, to, ' ');
+          onCreateTask(text);
+        }} style={{ ...btnStyle(false), fontSize: '12px', padding: '4px 8px', fontWeight: '500', color: 'var(--blue)' }} title="Create Task from selection">
+          <CheckSquare size={14} style={{ marginRight: '4px' }} /> Create Task
+        </button>
+<button onClick={onExportMD} style={{ ...btnStyle(false), fontSize: '12px', padding: '4px 8px', fontWeight: '500' }} title="Export as Markdown">
           <Download size={14} style={{ marginRight: '4px' }} /> .md
         </button>
         <button onClick={onExportPDF} style={{ ...btnStyle(false), fontSize: '12px', padding: '4px 8px', fontWeight: '500' }} title="Export as PDF">
@@ -86,7 +98,7 @@ const CanvasMention = Mention.extend({
   },
 });
 
-export default function MarkdownEditor({ noteId, token, onDelete }) {
+export default function MarkdownEditor({ noteId, token, onDelete, onUpdate, folders = [] }) {
   const [note, setNote] = useState(null);
   const [title, setTitle] = useState('');
   const [saveState, setSaveState] = useState('saved');
@@ -177,15 +189,20 @@ export default function MarkdownEditor({ noteId, token, onDelete }) {
     fetchNote();
   }, [noteId, token, editor]);
 
-  const handleSave = async (newTitle, newContent) => {
+  
+  const handleSave = async (newTitle, newContent, extras = {}) => {
     setSaveState('saving');
     try {
-      await updateNote(noteId, { title: newTitle, content: newContent }, token);
+      const payload = { title: newTitle, content: newContent, ...extras };
+      const updated = await updateNote(noteId, payload, token);
       setSaveState('saved');
+      if (onUpdate) onUpdate(updated);
+      setNote(curr => ({ ...curr, ...updated }));
     } catch (err) {
       setSaveState('unsaved');
     }
   };
+
 
   const handleTitleChange = (e) => {
     const val = e.target.value;
@@ -193,6 +210,16 @@ export default function MarkdownEditor({ noteId, token, onDelete }) {
     setSaveState('unsaved');
     if (debounceTimer.current) clearTimeout(debounceTimer.current);
     debounceTimer.current = setTimeout(() => handleSave(val, editor.getHTML()), 1000);
+  };
+
+
+  const handleCreateTask = async (text) => {
+    try {
+      await createTask(token, { title: text, description: `Created from note: ${title}` });
+      alert("Task created successfully!");
+    } catch (e) {
+      alert("Failed to create task.");
+    }
   };
 
   const exportMarkdown = () => {
@@ -239,7 +266,21 @@ export default function MarkdownEditor({ noteId, token, onDelete }) {
           <span style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px' }}>
             {saveState === 'saving' ? 'Saving...' : saveState === 'saved' ? <><Save size={12} /> Saved</> : 'Unsaved changes'}
           </span>
-          {onDelete && (
+          
+          <select 
+            value={note.folder_id || ''} 
+            onChange={(e) => handleSave(title, editor.getHTML(), { folder_id: e.target.value ? parseInt(e.target.value) : null })}
+            style={{ background: 'transparent', border: '1px solid var(--border-subtle)', borderRadius: '4px', padding: '4px 8px', fontSize: '12px', color: 'var(--text)', outline: 'none' }}
+          >
+            <option value="">No Folder</option>
+            {folders.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
+          </select>
+          <button 
+            onClick={() => handleSave(title, editor.getHTML(), { is_pinned: !note.is_pinned })}
+            style={{ padding: '6px', background: note.is_pinned ? 'var(--surface-active)' : 'transparent', border: '1px solid var(--border-subtle)', borderRadius: '4px', color: note.is_pinned ? 'var(--blue)' : 'var(--text-muted)', cursor: 'pointer' }}
+            title={note.is_pinned ? "Unpin Note" : "Pin Note"}
+          ><Pin size={14} /></button>
+{onDelete && (
             <button 
               onClick={onDelete}
               style={{ padding: '6px', background: 'transparent', border: '1px solid var(--border-subtle)', borderRadius: '4px', color: 'var(--text-muted)', cursor: 'pointer' }}
@@ -249,7 +290,7 @@ export default function MarkdownEditor({ noteId, token, onDelete }) {
         </div>
       </div>
 
-      <div className="no-print"><MenuBar editor={editor} onExportMD={exportMarkdown} onExportPDF={exportPDF} /></div>
+      <div className="no-print"><MenuBar editor={editor} onExportMD={exportMarkdown} onExportPDF={exportPDF} onCreateTask={handleCreateTask} /></div>
 
       <div className="tiptap-editor-container" style={{ flex: 1, overflowY: 'auto', padding: '24px 32px' }}>
         <h1 className="only-print" style={{ display: 'none' }}>{title}</h1>

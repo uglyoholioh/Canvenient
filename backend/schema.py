@@ -660,6 +660,9 @@ SCHEMA_STATEMENTS = [
     ALTER TABLE notes ADD COLUMN IF NOT EXISTS title TEXT NOT NULL DEFAULT 'Untitled'
     """,
     """
+    ALTER TABLE notes ADD COLUMN IF NOT EXISTS is_pinned BOOLEAN NOT NULL DEFAULT FALSE
+    """,
+    """
     CREATE UNIQUE INDEX IF NOT EXISTS study_sessions_one_active_per_user
     ON study_sessions (user_id) WHERE status = 'active'
     """,
