@@ -299,30 +299,34 @@ export default function Schedule({ token }) {
           <span className="schedule-week-label">{weekInfo.label}</span>
           <span className="schedule-week-ay">{weekInfo.shortAcademicYear} {weekInfo.shortSemester}</span>
         </div>
-        <div className="schedule-week-days">
-          {days.map((day) => {
-            const active = localDateKey(day) === localDateKey(selectedDate);
-            const today = localDateKey(day) === localDateKey(now);
-            const count = scheduleItemsForDate(schedule, day).length;
-            return (
-              <button
-                type="button"
-                key={localDateKey(day)}
-                className={`${active ? "is-active" : ""} ${today ? "is-today" : ""}`}
-                onClick={() => {
-                  setSelectedDate(startOfLocalDay(day));
-                  if (view !== "day") setView("day");
-                }}
-                aria-pressed={active}
-                aria-label={`${day.toLocaleDateString([], { weekday: "long", month: "long", day: "numeric" })}${count ? `, ${count} scheduled` : ""}`}
-              >
-                <span>{day.toLocaleDateString([], { weekday: "short" })}</span>
-                <strong>{day.getDate()}</strong>
-                <i className={count ? "has-items" : ""}>{count || ""}</i>
-              </button>
-            );
-          })}
-        </div>
+        {view === "day" ? (
+          <div className="schedule-week-days">
+            {days.map((day) => {
+              const active = localDateKey(day) === localDateKey(selectedDate);
+              const today = localDateKey(day) === localDateKey(now);
+              const count = scheduleItemsForDate(schedule, day).length;
+              return (
+                <button
+                  type="button"
+                  key={localDateKey(day)}
+                  className={`${active ? "is-active" : ""} ${today ? "is-today" : ""}`}
+                  onClick={() => {
+                    setSelectedDate(startOfLocalDay(day));
+                    if (view !== "day") setView("day");
+                  }}
+                  aria-pressed={active}
+                  aria-label={`${day.toLocaleDateString([], { weekday: "long", month: "long", day: "numeric" })}${count ? `, ${count} scheduled` : ""}`}
+                >
+                  <span>{day.toLocaleDateString([], { weekday: "short" })}</span>
+                  <strong>{day.getDate()}</strong>
+                  <i className={count ? "has-items" : ""}>{count || ""}</i>
+                </button>
+              );
+            })}
+          </div>
+        ) : (
+          <div style={{ flex: 1, background: "var(--color-schedule-paper)" }} />
+        )}
         <div className="schedule-view-tabs" role="group" aria-label="Schedule view">
           {VIEWS.map((option) => <button type="button" key={option.id} className={view === option.id ? "is-active" : ""} aria-pressed={view === option.id} onClick={() => setView(option.id)}>{option.label}</button>)}
         </div>

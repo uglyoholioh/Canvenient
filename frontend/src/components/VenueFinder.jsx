@@ -350,6 +350,15 @@ export default function VenueFinder({ token }) {
     const list = [];
     const q = searchQuery.toLowerCase().trim();
 
+    // Determine target date for the selected day of the week
+    const now = new Date();
+    const currentDayIdx = (now.getDay() + 6) % 7; // Monday=0, Sunday=6
+    const selectedDayIdx = DAYS_OF_WEEK.indexOf(selectedDay);
+    let daysDiff = selectedDayIdx - currentDayIdx;
+    if (daysDiff < 0) daysDiff += 7; // Next occurrence
+    const targetDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() + daysDiff);
+    const targetDateStr = `${targetDate.getFullYear()}-${String(targetDate.getMonth() + 1).padStart(2, '0')}-${String(targetDate.getDate()).padStart(2, '0')}`;
+
     for (const [venueCode, dayList] of Object.entries(venuesData)) {
       const loc = locationsData[venueCode] || {};
       const coords = loc.location;
@@ -386,10 +395,28 @@ export default function VenueFinder({ token }) {
       }
 
       const dayData = (dayList || []).find((d) => (d.day || "").toLowerCase() === selectedDay.toLowerCase());
-      const rawAvail = dayData?.availability || {};
-      const classesToday = dayData?.classes || [];
+      const rawClasses = dayData?.classes || [];
+      
+      const classesToday = rawClasses.filter(cls => {
+        if (cls.weeks && typeof cls.weeks === 'object' && cls.weeks.start && cls.weeks.end) {
+          return targetDateStr >= cls.weeks.start && targetDateStr <= cls.weeks.end;
+        }
+        return true;
+      });
 
-      const isVacantNow = (rawAvail[selectedTime] || "vacant") === "vacant";
+      const computedAvail = {};
+      TIME_SLOTS.forEach(slot => computedAvail[slot] = "vacant");
+      classesToday.forEach(cls => {
+        const start = cls.startTime || "0000";
+        const end = cls.endTime || "0000";
+        TIME_SLOTS.forEach(slot => {
+          if (slot >= start && slot < end) {
+            computedAvail[slot] = "occupied";
+          }
+        });
+      });
+
+      const isVacantNow = (computedAvail[selectedTime] || "vacant") === "vacant";
       
       let freeMinutes = 0;
       const targetIdx = TIME_SLOTS.indexOf(selectedTime);
@@ -397,7 +424,7 @@ export default function VenueFinder({ token }) {
       if (isVacantNow) {
         let occupiedSlot = null;
         for (let i = targetIdx; i < TIME_SLOTS.length; i++) {
-          if ((rawAvail[TIME_SLOTS[i]] || "vacant") === "occupied") {
+          if ((computedAvail[TIME_SLOTS[i]] || "vacant") === "occupied") {
             occupiedSlot = TIME_SLOTS[i];
             break;
           }
@@ -431,7 +458,7 @@ export default function VenueFinder({ token }) {
         distanceM,
         walkMins,
         isFree: isVacantNow,
-        rawAvail,
+        rawAvail: computedAvail,
         classesToday,
       });
     }
