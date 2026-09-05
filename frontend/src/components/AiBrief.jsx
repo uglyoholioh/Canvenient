@@ -156,17 +156,7 @@ export default function AiBrief({ token, onTaskCreated }) {
                         borderRadius: "6px" 
                     }}>
                         <div style={{ flex: 1 }}>
-                            <span style={{ 
-                                fontSize: "0.7rem", 
-                                textTransform: "uppercase", 
-                                fontWeight: "600", 
-                                color: "var(--primary)",
-                                display: "inline-block",
-                                marginBottom: "0.25rem"
-                            }}>
-                                {item.type} {item.priority ? `(${item.priority})` : ""}
-                            </span>
-                            <h5 style={{ margin: 0, fontSize: "0.9rem", color: "var(--text-h)" }}>{item.title || item.message}</h5>
+                            <h5 style={{ margin: 0, fontSize: "0.9rem", color: "var(--text-h)" }}>{item.type} {item.priority ? `(${item.priority})` : ""} - {item.title || item.message}</h5>
                             {item.description && <p style={{ margin: "0.25rem 0 0 0", fontSize: "0.75rem", color: "var(--text-muted)" }}>{item.description}</p>}
                         </div>
                         {item.type === "task" && (

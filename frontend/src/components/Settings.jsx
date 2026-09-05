@@ -314,7 +314,7 @@ function Settings({ token, currentUser, onUpdateProfile }) {
                       backgroundColor: theme.isDark ? "#14161F" : "#FFFFFF",
                       boxShadow: isSelected ? "var(--shadow)" : "var(--shadow-soft)",
                       transform: isSelected ? "scale(1.02)" : "scale(1)",
-                      transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+                      transition: "all 0.2s ease",
                       position: "relative",
                       borderRadius: "var(--radius-lg)"
                     }}
