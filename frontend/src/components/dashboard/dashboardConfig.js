@@ -23,19 +23,8 @@ export const DEFAULT_DASHBOARD_SIZES = {
 };
 
 export const DEFAULT_DASHBOARD_TRACKS = {
-  columns: [1.35, 1.35, 1, 1],
+  columns: [0.25, 0.25, 0.25, 0.25],
   rows: [220, 520],
-};
-
-export const DASHBOARD_FONT_FAMILIES = [
-  { id: "sans", label: "System" },
-  { id: "serif", label: "Serif" },
-  { id: "mono", label: "Mono" },
-];
-
-export const DEFAULT_DASHBOARD_TYPOGRAPHY = {
-  family: "sans",
-  size: 11,
 };
 
 export const DEFAULT_DASHBOARD_CONFIG = {
@@ -43,7 +32,6 @@ export const DEFAULT_DASHBOARD_CONFIG = {
   hidden: [],
   sizes: DEFAULT_DASHBOARD_SIZES,
   tracks: DEFAULT_DASHBOARD_TRACKS,
-  typography: DEFAULT_DASHBOARD_TYPOGRAPHY,
 };
 
 export function threeColumnDashboardConfig(config = DEFAULT_DASHBOARD_CONFIG) {
@@ -79,35 +67,36 @@ export function readDashboardConfig() {
       hidden: Array.isArray(stored.hidden) ? stored.hidden.filter((id) => validIds.includes(id)) : [],
       sizes,
       tracks: normalizeDashboardTracks(stored.tracks),
-      typography: normalizeDashboardTypography(stored.typography),
     };
   } catch {
     return DEFAULT_DASHBOARD_CONFIG;
   }
 }
 
-export function normalizeDashboardTypography(typography) {
-  const validFamilies = DASHBOARD_FONT_FAMILIES.map(({ id }) => id);
-  const family = validFamilies.includes(typography?.family)
-    ? typography.family
-    : DEFAULT_DASHBOARD_TYPOGRAPHY.family;
-  const requestedSize = Number(typography?.size);
-  const size = Number.isFinite(requestedSize)
-    ? Math.min(16, Math.max(9, Math.round(requestedSize * 2) / 2))
-    : DEFAULT_DASHBOARD_TYPOGRAPHY.size;
-  return { family, size };
-}
-
 export function normalizeDashboardTracks(tracks) {
-  const columns = Array.isArray(tracks?.columns)
+  const rawColumns = Array.isArray(tracks?.columns)
     ? tracks.columns.map(Number).filter((value) => Number.isFinite(value) && value > 0)
     : [];
-  const rows = Array.isArray(tracks?.rows)
+  const rawRows = Array.isArray(tracks?.rows)
     ? tracks.rows.map(Number).filter((value) => Number.isFinite(value) && value > 0)
     : [];
+
+  let columns = rawColumns.length === 4 ? rawColumns : [...DEFAULT_DASHBOARD_TRACKS.columns];
+  const rows = rawRows.length > 0 ? rawRows : [...DEFAULT_DASHBOARD_TRACKS.rows];
+
+  const snapToFraction = 12;
+  const colTotal = columns.reduce((s, v) => s + v, 0);
+  const snappedColumns = columns.map((value) => Math.round((value / colTotal) * snapToFraction) / snapToFraction);
+  const sum = snappedColumns.reduce((a, b) => a + b, 0);
+  if (Math.abs(sum - 1) > 0.001) {
+    const diff = Math.round((1 - sum) * snapToFraction);
+    const maxIdx = snappedColumns.indexOf(Math.max(...snappedColumns));
+    snappedColumns[maxIdx] += (diff / snapToFraction);
+  }
+
   return {
-    columns: columns.length === 4 ? columns : [...DEFAULT_DASHBOARD_TRACKS.columns],
-    rows: rows.length > 0 ? rows : [...DEFAULT_DASHBOARD_TRACKS.rows],
+    columns: snappedColumns,
+    rows: rows,
   };
 }
 

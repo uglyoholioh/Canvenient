@@ -246,21 +246,7 @@ export default function Dashboard({ token, user, onNavigate, onOpenSearch, searc
     return () => setToolbar(null);
   }, [setToolbar, dayLabel, isEditingLayout, beginLayoutEdit, isCustomizing, layout, config, selectLayout, changeConfig]);
 
-  const rawGridTracks = previewTracks || config.tracks;
-  const gridTracks = useMemo(() => {
-    if (!rawGridTracks || !rawGridTracks.columns) return rawGridTracks;
-    const columns = rawGridTracks.columns;
-    const snapToFraction = 12;
-    const colTotal = columns.reduce((s, v) => s + v, 0);
-    const snapped = columns.map((value) => Math.round((value / colTotal) * snapToFraction) / snapToFraction);
-    const sum = snapped.reduce((a, b) => a + b, 0);
-    if (Math.abs(sum - 1) > 0.001) {
-      const diff = Math.round((1 - sum) * snapToFraction);
-      const maxIdx = snapped.indexOf(Math.max(...snapped));
-      snapped[maxIdx] += (diff / snapToFraction);
-    }
-    return { ...rawGridTracks, columns: snapped };
-  }, [rawGridTracks]);
+  const gridTracks = previewTracks || config.tracks;
 
   const totalRequestedRowHeight = gridTracks.rows.reduce((sum, value) => sum + value, 0) || 1;
   const availableGridHeight = Math.max(gridTracks.rows.length * 96, Math.min(gridTracks.rows.length * 400, viewportHeight - 120));

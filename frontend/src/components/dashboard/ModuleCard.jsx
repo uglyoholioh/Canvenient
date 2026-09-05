@@ -23,6 +23,18 @@ function parseTrackPixels(value) {
   return [...String(value).matchAll(/(-?\d*\.?\d+)px/g)].map((match) => Number(match[1]));
 }
 
+function snapColumns(columns, snapToFraction = 12) {
+  const colTotal = columns.reduce((s, v) => s + v, 0);
+  const snapped = columns.map((value) => Math.round((value / colTotal) * snapToFraction) / snapToFraction);
+  const sum = snapped.reduce((a, b) => a + b, 0);
+  if (Math.abs(sum - 1) > 0.001) {
+    const diff = Math.round((1 - sum) * snapToFraction);
+    const maxIdx = snapped.indexOf(Math.max(...snapped));
+    snapped[maxIdx] += (diff / snapToFraction);
+  }
+  return snapped;
+}
+
 function nearestBoundary(offset, tracks) {
   let closestIndex = 0;
   let closestDistance = Math.abs(offset);
@@ -219,9 +231,8 @@ export default function ModuleCard({
       : session.direction.includes("s")
         ? resizeTrackEnd(session.rows, session.rowBoundary, deltaY, MIN_ROW_PIXELS)
         : moveTrackBoundary(session.rows, session.rowBoundary, deltaY, MIN_ROW_PIXELS);
-    const columnTotal = columns.reduce((sum, value) => sum + value, 0);
     return {
-      columns: columns.map((value) => value / columnTotal),
+      columns: snapColumns(columns),
       rows,
     };
   };
@@ -280,7 +291,7 @@ export default function ModuleCard({
       columnBoundary,
       rowBoundary,
       currentTracks: {
-        columns: columns.map((value) => value / columns.reduce((sum, item) => sum + item, 0)),
+        columns: snapColumns(columns),
         rows,
       },
       direction,
@@ -373,9 +384,8 @@ export default function ModuleCard({
         );
         nextRows[session.rowStart - 1] += appliedDelta;
         nextRows[session.rowEnd] -= appliedDelta;
-        const columnTotal = session.columns.reduce((sum, value) => sum + value, 0);
         session.currentTracks = {
-          columns: session.columns.map((value) => value / columnTotal),
+          columns: snapColumns(session.columns),
           rows: nextRows,
         };
         onResizePreview?.(session.currentTracks);

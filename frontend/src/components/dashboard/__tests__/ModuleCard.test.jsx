@@ -191,13 +191,13 @@ describe("ModuleCard resizing", () => {
     fireEvent.mouseMove(window, { clientX: 80, clientY: 150 });
 
     expect(onResizePreview).toHaveBeenLastCalledWith({
-      columns: [0.12, 0.38, 0.25, 0.25],
+      columns: [0.08333333333333333, 0.4166666666666667, 0.25, 0.25],
       rows: [150, 150, 150, 150],
     });
 
     fireEvent.mouseUp(window, { clientX: 80, clientY: 150 });
     expect(onResizeCommit).toHaveBeenCalledWith({
-      columns: [0.12, 0.38, 0.25, 0.25],
+      columns: [0.08333333333333333, 0.4166666666666667, 0.25, 0.25],
       rows: [150, 150, 150, 150],
     });
   });
