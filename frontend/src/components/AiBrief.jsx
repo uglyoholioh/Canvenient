@@ -115,7 +115,7 @@ export default function AiBrief({ token, onTaskCreated }) {
         return (
             <div className="card ai-brief-card" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <div>
-                    <h3 style={{ margin: 0, fontFamily: "var(--font-serif)" }}>Daily Academic Briefing</h3>
+                    <h3 style={{ margin: 0, fontFamily: "var(--font-sans)" }}>Daily Academic Briefing</h3>
                     <p style={{ margin: "0.25rem 0 0 0", color: "var(--text-muted)", fontSize: "0.85rem" }}>
                         Analyze tasks, timetable schedule, and Canvas updates.
                     </p>
@@ -131,7 +131,7 @@ export default function AiBrief({ token, onTaskCreated }) {
         <div className="card ai-brief-card">
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "1rem" }}>
                 <div>
-                    <h3 style={{ margin: 0, fontFamily: "var(--font-serif)" }}>Your Academic Briefing</h3>
+                    <h3 style={{ margin: 0, fontFamily: "var(--font-sans)" }}>Your Academic Briefing</h3>
                     <span style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>Today: {context?.current_date}</span>
                 </div>
                 <div style={{ display: "flex", gap: "0.5rem" }}>

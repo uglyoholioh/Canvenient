@@ -26,8 +26,8 @@
   border: 1px solid var(--border-strong);
   border-radius: 4px;
   padding: 32px;
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.2);
-  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: all 0.15s ease;
   font-family: var(--font-mono);
 }
 
@@ -74,7 +74,7 @@
   font-size: 14px;
   border-radius: 2px;
   outline: none;
-  transition: all 0.2s ease;
+  transition: all 0.15s ease;
 }
 
 .retro-input:focus {
@@ -106,7 +106,7 @@
 }
 
 .retro-btn:active {
-  transform: scale(0.98);
+  
 }
 
 .retro-btn:disabled {

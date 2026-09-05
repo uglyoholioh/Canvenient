@@ -101,7 +101,7 @@
   --z-schedule-line: 20;
   --z-schedule-modal: 400;
 
-  --ease-schedule-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-schedule-out: ease;
   --dur-schedule-micro: 100ms;
 }
 

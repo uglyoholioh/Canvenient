@@ -43,7 +43,7 @@ export default function SubmitModal({ assignment, onClose, onSubmit }) {
   return (
     <div className="modal-backdrop">
       <form className="submit-modal" onSubmit={submit}>
-        <header><div><small>Submit assignment</small><h3>{assignment.title}</h3></div><button type="button" onClick={onClose} aria-label="Close"><X size={18} /></button></header>
+        <header><div><h3>{assignment.title}</h3></div><button type="button" onClick={onClose} aria-label="Close"><X size={18} /></button></header>
         {types.length === 0 ? <div className="module-empty">This assignment does not accept an online submission supported by Canvenient.</div> : <>
           <div className="submit-tabs">
             {types.includes("text_entry") && <button type="button" className={type === "text_entry" ? "is-active" : ""} onClick={() => setType("text_entry")}><Type size={13} />Text</button>}

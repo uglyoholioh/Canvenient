@@ -30,7 +30,7 @@ export default function CanvasDrawer({ item, token, onClose }) {
   return <>
     <div className="drawer-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
       <aside className="app-drawer canvas-drawer" role="dialog" aria-modal="true" aria-labelledby="canvas-inspector-title">
-        <header className="canvas-drawer-header"><div><small>{detail.course_code || (isAssignment ? "Assignment" : item.itemType === "page" ? "Page" : item.itemType === "syllabus" ? "Syllabus" : "Announcement")}</small><h2 id="canvas-inspector-title">{detail.title}</h2></div><button type="button" className="drawer-close" onClick={onClose} aria-label="Close Canvas details"><X size={18} /></button></header>
+        <header className="canvas-drawer-header"><div><h2>{detail.title}</h2></div><button type="button" className="drawer-close" onClick={onClose} aria-label="Close Canvas details"><X size={18} /></button></header>
         <div className="canvas-drawer-content">
           {loading ? <div className="module-empty">Loading details...</div> : <>
             {isAssignment && <div className="canvas-detail-meta">
