@@ -254,10 +254,10 @@ export default function CanvasModule({ token, enabled, onOpenItem }) {
           className="canvas-triage-trigger-btn"
           onClick={() => setShowTriage(true)}
           title="Open Canvas Inbox"
-          style={{ background: unreadAnnouncementsCount > 0 ? "var(--accent)" : "var(--surface-muted)", color: unreadAnnouncementsCount > 0 ? "var(--text-inverse)" : "var(--text-muted)" }}
         >
           <Inbox size={11} />
-          <span>Inbox {unreadAnnouncementsCount > 0 ? `(${unreadAnnouncementsCount})` : ""}</span>
+          <span>Inbox</span>
+          {unreadAnnouncementsCount > 0 && <span className="canvas-triage-badge">{unreadAnnouncementsCount}</span>}
         </button>
       </div>
       {attentionItems.length === 0 ? <div className="module-empty compact">No announcements need attention.</div> : <div className="canvas-compact-list">{attentionItems.map((item) => <button type="button" className="canvas-compact-row" key={`announcement-${item.id}`} onClick={() => onOpenItem({ ...item, itemType: "announcement" })}>

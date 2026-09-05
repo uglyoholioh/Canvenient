@@ -12,11 +12,7 @@ import { useQuickCapture } from "./QuickCaptureContext";
 import { WorkspaceToolbarContext } from "./WorkspaceToolbarContext";
 import { useContext } from "react";
 
-const DASHBOARD_FONT_VALUES = {
-  sans: "-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', sans-serif",
-  serif: "'New York', 'Iowan Old Style', 'Palatino Linotype', Georgia, serif",
-  mono: "'SF Mono', SFMono-Regular, Menlo, Monaco, monospace",
-};
+
 
 export default function Dashboard({ token, user, onNavigate, onOpenSearch, searchShortcutLabel }) {
   const { openQuickCapture } = useQuickCapture();
@@ -250,7 +246,22 @@ export default function Dashboard({ token, user, onNavigate, onOpenSearch, searc
     return () => setToolbar(null);
   }, [setToolbar, dayLabel, isEditingLayout, beginLayoutEdit, isCustomizing, layout, config, selectLayout, changeConfig]);
 
-  const gridTracks = previewTracks || config.tracks;
+  const rawGridTracks = previewTracks || config.tracks;
+  const gridTracks = useMemo(() => {
+    if (!rawGridTracks || !rawGridTracks.columns) return rawGridTracks;
+    const columns = rawGridTracks.columns;
+    const snapToFraction = 12;
+    const colTotal = columns.reduce((s, v) => s + v, 0);
+    const snapped = columns.map((value) => Math.round((value / colTotal) * snapToFraction) / snapToFraction);
+    const sum = snapped.reduce((a, b) => a + b, 0);
+    if (Math.abs(sum - 1) > 0.001) {
+      const diff = Math.round((1 - sum) * snapToFraction);
+      const maxIdx = snapped.indexOf(Math.max(...snapped));
+      snapped[maxIdx] += (diff / snapToFraction);
+    }
+    return { ...rawGridTracks, columns: snapped };
+  }, [rawGridTracks]);
+
   const totalRequestedRowHeight = gridTracks.rows.reduce((sum, value) => sum + value, 0) || 1;
   const availableGridHeight = Math.max(gridTracks.rows.length * 96, Math.min(gridTracks.rows.length * 400, viewportHeight - 120));
   const rowScale = availableGridHeight / totalRequestedRowHeight;
@@ -263,8 +274,6 @@ export default function Dashboard({ token, user, onNavigate, onOpenSearch, searc
           style={{
             "--dashboard-column-tracks": gridTracks.columns.map((value) => `${value}fr`).join(" "),
             "--dashboard-row-tracks": gridTracks.rows.map((value) => `${Math.max(72, Math.round(value * rowScale))}px`).join(" "),
-            "--dashboard-font-family": DASHBOARD_FONT_VALUES[config.typography?.family] || DASHBOARD_FONT_VALUES.sans,
-            "--dashboard-font-size": `${config.typography?.size || 11}px`,
           }}
         >
           {visibleModules.map(renderModule)}

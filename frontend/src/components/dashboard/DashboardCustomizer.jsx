@@ -1,11 +1,5 @@
-import { ArrowDown, ArrowUp, Columns3, Eye, EyeOff, Grid3X3, LayoutGrid, Type } from "lucide-react";
-import { DASHBOARD_FONT_FAMILIES, DASHBOARD_MODULES, DEFAULT_DASHBOARD_TYPOGRAPHY } from "./dashboardConfig";
-
-const FONT_PREVIEWS = {
-  sans: "-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', sans-serif",
-  serif: "'New York', 'Iowan Old Style', 'Palatino Linotype', Georgia, serif",
-  mono: "'SF Mono', SFMono-Regular, Menlo, Monaco, monospace",
-};
+import { ArrowDown, ArrowUp, Columns3, Eye, EyeOff, Grid3X3, LayoutGrid } from "lucide-react";
+import { DASHBOARD_MODULES } from "./dashboardConfig";
 
 export default function DashboardCustomizer({ layout, config, onLayoutChange, onConfigChange, compact = false }) {
   const updateVisibility = (moduleId) => {
@@ -24,10 +18,6 @@ export default function DashboardCustomizer({ layout, config, onLayoutChange, on
     onConfigChange({ ...config, order });
   };
 
-  const typography = config.typography || DEFAULT_DASHBOARD_TYPOGRAPHY;
-  const updateTypography = (change) => {
-    onConfigChange({ ...config, typography: { ...typography, ...change } });
-  };
 
   return (
     <div className={`dashboard-customizer ${compact ? "is-compact" : ""}`}>
@@ -43,38 +33,7 @@ export default function DashboardCustomizer({ layout, config, onLayoutChange, on
         </button>
       </div>
       <p className="dashboard-customizer-hint">Choose Edit to move cards or resize them from any edge. Shared edges adjust neighboring cards live.</p>
-      <section className="dashboard-typography-settings" aria-labelledby="dashboard-typography-title">
-        <header>
-          <span id="dashboard-typography-title"><Type size={13} /> Typography</span>
-          <output htmlFor="dashboard-font-size">{typography.size}px</output>
-        </header>
-        <div className="dashboard-font-options" role="group" aria-label="Dashboard font family">
-          {DASHBOARD_FONT_FAMILIES.map((font) => (
-            <button
-              key={font.id}
-              type="button"
-              className={typography.family === font.id ? "is-active" : ""}
-              onClick={() => updateTypography({ family: font.id })}
-              style={{ fontFamily: FONT_PREVIEWS[font.id] }}
-              aria-pressed={typography.family === font.id}
-            >
-              {font.label}
-            </button>
-          ))}
-        </div>
-        <label className="dashboard-font-size-control" htmlFor="dashboard-font-size">
-          <span>Text size</span>
-          <input
-            id="dashboard-font-size"
-            type="range"
-            min="9"
-            max="16"
-            step="0.5"
-            value={typography.size}
-            onChange={(event) => updateTypography({ size: Number(event.target.value) })}
-          />
-        </label>
-      </section>
+
       <div className="dashboard-module-settings">
         {config.order.map((moduleId, index) => {
           const module = DASHBOARD_MODULES.find((item) => item.id === moduleId);
