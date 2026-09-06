@@ -18,3 +18,9 @@ state, a recovery succeeds, or a build/release workflow changes.
 - **Do not overwrite casually:** `frontend/src/index.css`,
   `frontend/src/components/Dashboard.jsx`, and
   `frontend/src/components/WorkspaceLayout.jsx` define this accepted layout.
+
+## 2026-09-06 — Restored timeline schedule on dashboard
+
+- **Commit:** `cb9c48d` (`feat(dashboard): restore ScheduleModule with timeline and view controls`)
+- **Accepted state:** Restored `ScheduleModule` with the time-scaled vertical timeline, current-time indicator line, and day/view navigation controls (`< Today >`). Removed the temporary compact schedule list widget (`ScheduleCompactModule`).
+- **Verification:** Frontend test suite (115/115 passing), Vite production build, packaged macOS desktop rebuild, and local backend `/health` response.
