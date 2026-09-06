@@ -4239,12 +4239,10 @@ textarea {
 
 @media (max-width: 680px) {
   .dashboard-grid.is-focus { grid-template-columns: 1fr !important; }
-  .dashboard-grid.is-focus .dashboard-module[data-module="tasks"], .dashboard-grid.is-focus .dashboard-module[data-module="schedule"], .dashboard-grid.is-focus .dashboard-module[data-module="canvas"], .dashboard-grid.is-focus .dashboard-module[data-module="isb"], .dashboard-grid.is-focus .dashboard-module[data-module="notes"] { grid-column: 1 !important; }
+  .dashboard-grid.is-focus .dashboard-module[data-module="tasks"], .dashboard-grid.is-focus .dashboard-module[data-module="schedule"], .dashboard-grid.is-focus .dashboard-module[data-module="canvas"] { grid-column: 1 !important; }
   .dashboard-grid.is-focus .dashboard-module[data-module="tasks"] { grid-row: 1 !important; }
   .dashboard-grid.is-focus .dashboard-module[data-module="schedule"] { grid-row: 2 !important; }
-  .dashboard-grid.is-focus .dashboard-module[data-module="isb"] { grid-row: 3 !important; }
-  .dashboard-grid.is-focus .dashboard-module[data-module="canvas"] { grid-row: 4 !important; }
-  .dashboard-grid.is-focus .dashboard-module[data-module="notes"] { grid-row: 5 !important; }
+  .dashboard-grid.is-focus .dashboard-module[data-module="canvas"] { grid-row: 3 !important; }
 }
 
 /* Hallmark · genre: modern-minimal · macrostructure: Workbench · design-system: design.md · designed-as-app

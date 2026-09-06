@@ -60,17 +60,25 @@ export function saveDashboardLayout(layout) {
 }
 
 export function readDashboardConfig() {
+  const raw = localStorage.getItem("canvenient-dashboard-config");
+  if (!raw) return DEFAULT_DASHBOARD_CONFIG;
   try {
-    const stored = JSON.parse(localStorage.getItem("canvenient-dashboard-config") || "{}");
+    const stored = JSON.parse(raw);
     const validIds = DASHBOARD_MODULES.map((module) => module.id);
     const storedOrder = Array.isArray(stored.order) ? stored.order.filter((id) => validIds.includes(id)) : [];
+    const storedHidden = Array.isArray(stored.hidden) ? stored.hidden.filter((id) => validIds.includes(id)) : [];
+    
+    const missing = validIds.filter((id) => !storedOrder.includes(id) && !storedHidden.includes(id));
+    const missingOrder = missing.filter((id) => DEFAULT_DASHBOARD_CONFIG.order.includes(id));
+    const missingHidden = missing.filter((id) => DEFAULT_DASHBOARD_CONFIG.hidden.includes(id));
+
     const sizes = Object.fromEntries(validIds.map((id) => [
       id,
       normalizeDashboardSize(stored.sizes?.[id], DEFAULT_DASHBOARD_SIZES[id]),
     ]));
     return {
-      order: [...storedOrder, ...validIds.filter((id) => !storedOrder.includes(id))],
-      hidden: Array.isArray(stored.hidden) ? stored.hidden.filter((id) => validIds.includes(id)) : [],
+      order: [...storedOrder, ...missingOrder],
+      hidden: [...storedHidden, ...missingHidden],
       sizes,
       tracks: normalizeDashboardTracks(stored.tracks),
     };
