@@ -45,9 +45,9 @@ describe("dashboard card sizes", () => {
     expect(config.order.slice(0, 3)).toEqual(["tasks", "schedule", "canvas"]);
     expect(config.sizes.tasks).toEqual({ columns: 2, rows: 2 });
     expect(config.sizes.schedule).toEqual({ columns: 1, rows: 1 });
-    expect(config.sizes.canvas).toEqual({ columns: 1, rows: 2 });
+    expect(config.sizes.canvas).toEqual({ columns: 1, rows: 1 });
     expect(config.sizes.isb).toEqual({ columns: 1, rows: 1 });
-    expect(config.tracks.columns).toEqual([0.25, 0.25, 0.25, 0.25]);
-    expect(config.tracks.rows).toEqual([220, 520]);
+    expect(config.tracks.columns).toEqual([0.333, 0.333, 0.334]);
+    expect(config.tracks.rows).toEqual([220, 220]);
   });
 });

@@ -353,7 +353,7 @@ export default function ModuleCard({
     const cardBottom = cardRect ? cardRect.bottom ?? cardRect.top + cardRect.height : 0;
     const rowStart = cardRect && gridRect ? nearestBoundary(cardRect.top - gridRect.top, rows) : 0;
     const rowEnd = cardRect && gridRect ? nearestBoundary(cardBottom - gridRect.top, rows) : rows.length;
-    const canSlideVertically = columns.length === 4 && rowStart > 0 && rowEnd < rows.length;
+    const canSlideVertically = columns.length >= 3 && rowStart > 0 && rowEnd < rows.length;
 
     const handleMouseMove = (moveEvent) => {
       const session = moveSession.current;

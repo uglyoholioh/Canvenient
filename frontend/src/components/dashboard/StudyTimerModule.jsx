@@ -13,14 +13,21 @@ const RulerSlider = ({ value, onChange }) => {
   const startXRef = useRef(0);
   const startScrollLeftRef = useRef(0);
   const internalValueRef = useRef(value);
+  const isFirstRender = useRef(true);
 
   useEffect(() => {
-    if (internalValueRef.current !== value && scrollRef.current) {
-      scrollRef.current.scrollTo({
-        left: (value - 1) * 8,
-        behavior: 'smooth'
-      });
-      internalValueRef.current = value;
+    if (scrollRef.current) {
+      if (isFirstRender.current) {
+        scrollRef.current.scrollLeft = (value - 1) * 8;
+        isFirstRender.current = false;
+        internalValueRef.current = value;
+      } else if (internalValueRef.current !== value) {
+        scrollRef.current.scrollTo({
+          left: (value - 1) * 8,
+          behavior: 'smooth'
+        });
+        internalValueRef.current = value;
+      }
     }
   }, [value]);
 
@@ -238,6 +245,7 @@ export default function StudyTimerModule({ token }) {
         setActiveSession(session);
       } catch {
         // Fallback local
+        setActiveSession({ id: 'local', title: 'Deep Focus', planned_minutes: durationMinutes });
       }
     }
     setIsRunning(true);
@@ -245,37 +253,45 @@ export default function StudyTimerModule({ token }) {
 
   const handlePause = () => {
     setIsRunning(false);
+    clearInterval(timerRef.current);
   };
 
   const handleReset = async () => {
     setIsRunning(false);
-    if (activeSession) {
+    clearInterval(timerRef.current);
+    const sessionToCancel = activeSession;
+    setActiveSession(null);
+    setRemainingSeconds(durationMinutes * 60);
+
+    if (sessionToCancel && sessionToCancel.id !== 'local') {
       try {
-        await cancelStudySession(token, activeSession.id);
+        await cancelStudySession(token, sessionToCancel.id);
       } catch {
         // ignore error
       }
-      setActiveSession(null);
     }
-    setRemainingSeconds(durationMinutes * 60);
   };
 
   const handleComplete = async () => {
     setIsRunning(false);
-    if (activeSession) {
+    clearInterval(timerRef.current);
+    const sessionToComplete = activeSession;
+    setActiveSession(null);
+    const currentRemaining = remainingSeconds;
+    setRemainingSeconds(durationMinutes * 60);
+    setIsOpen(false);
+
+    if (sessionToComplete && sessionToComplete.id !== 'local') {
       try {
-        const elapsed = durationMinutes * 60 - remainingSeconds;
-        await completeStudySession(token, activeSession.id, {
+        const elapsed = durationMinutes * 60 - currentRemaining;
+        await completeStudySession(token, sessionToComplete.id, {
           actual_seconds: Math.max(60, elapsed),
           pause_count: 0,
         });
       } catch {
         // ignore error
       }
-      setActiveSession(null);
     }
-    setRemainingSeconds(durationMinutes * 60);
-    setIsOpen(false);
   };
 
   useEffect(() => {
