@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { FileUp, Link, Send, Type, X } from "lucide-react";
 
 function normalizedTypes(types = []) {
@@ -16,6 +16,17 @@ export default function SubmitModal({ assignment, onClose, onSubmit }) {
   const [file, setFile] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        onClose();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [onClose]);
 
   const submit = async (event) => {
     event.preventDefault();
@@ -41,7 +52,7 @@ export default function SubmitModal({ assignment, onClose, onSubmit }) {
   };
 
   return (
-    <div className="modal-backdrop">
+    <div className="modal-backdrop" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
       <form className="submit-modal" onSubmit={submit}>
         <header><div><h3>{assignment.title}</h3></div><button type="button" onClick={onClose} aria-label="Close"><X size={18} /></button></header>
         {types.length === 0 ? <div className="module-empty">This assignment does not accept an online submission supported by Canvenient.</div> : <>

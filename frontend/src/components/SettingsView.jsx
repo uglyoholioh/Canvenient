@@ -347,7 +347,7 @@ export default function SettingsView({ token, user, onUpdateUser }) {
             <select 
               value={checkboxStyle} 
               onChange={handleCheckboxStyleChange}
-              style={{ padding: '6px 12px', backgroundColor: 'var(--bg)', border: '1px solid var(--border-strong)', borderRadius: '4px', color: 'var(--text-h)', outline: 'none', cursor: 'pointer', fontFamily: 'var(--font-mono)' }}
+              className="form-input font-mono"
               tabIndex={0}
             >
               <option value="brackets">[ ] Brackets</option>
@@ -367,7 +367,7 @@ export default function SettingsView({ token, user, onUpdateUser }) {
             <select 
               value={sidebarBehavior} 
               onChange={handleSidebarBehaviorChange}
-              style={{ padding: '6px 12px', backgroundColor: 'var(--bg)', border: '1px solid var(--border-strong)', borderRadius: '4px', color: 'var(--text-h)', outline: 'none', cursor: 'pointer' }}
+              className="form-input"
               tabIndex={0}
             >
               <option value="hover">Hover to Expand</option>
@@ -428,17 +428,16 @@ export default function SettingsView({ token, user, onUpdateUser }) {
               placeholder="Canvas API Token..." 
               value={canvasToken}
               onChange={e => setCanvasToken(e.target.value)}
-              style={{ flex: 1, padding: '10px 12px', borderRadius: '4px', border: '1px solid var(--border-strong)', backgroundColor: 'var(--bg)', color: 'var(--text-h)', outline: 'none' }}
+              className="form-input"
+              style={{ flex: 1 }}
               tabIndex={0}
             />
             <button 
               type="button"
               tabIndex={0} 
               disabled={canvasTokenSaving}
-              style={{ padding: '0 20px', backgroundColor: 'var(--text-h)', color: 'var(--bg)', border: 'none', borderRadius: '4px', fontWeight: '600', cursor: 'pointer', outline: 'none' }}
+              className="primary-button"
               onClick={saveCanvasToken}
-              onMouseEnter={e => e.currentTarget.style.opacity = '0.9'}
-              onMouseLeave={e => e.currentTarget.style.opacity = '1'}
             >
               {canvasTokenSaving ? 'Saving…' : 'Save'}
             </button>

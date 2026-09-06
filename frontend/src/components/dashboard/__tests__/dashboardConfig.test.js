@@ -22,6 +22,9 @@ describe("dashboard card sizes", () => {
       schedule: { columns: 3, rows: 1 },
       isb: { columns: 1, rows: 1 },
       canvas: { columns: 1, rows: 2 },
+      notes: { columns: 4, rows: 1 },
+      aibrief: { columns: 2, rows: 1 },
+      studytimer: { columns: 1, rows: 1 },
     });
   });
 

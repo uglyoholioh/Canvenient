@@ -394,11 +394,11 @@ export default function WorkspaceLayout({ token, user, onLogout, onUpdateUser })
               {!isSlim && (
                 <div className="mac-source-label mac-folder-label">
                   <span>Folders</span>
-                  <button type="button" onClick={() => alert('Folder creation coming soon!')} aria-label="Create folder"><Plus size={13} /></button>
+                  <button type="button" onClick={() => window.dispatchEvent(new CustomEvent('canvenient-toast', { detail: { message: 'Folder creation coming soon!' } }))} aria-label="Create folder"><Plus size={13} /></button>
                 </div>
               )}
               <div className="mac-source-list">
-                <NavItem isSlim={isSlim} icon={Folder} label="Empty Workspace" active={false} onClick={() => alert('Click the + button to create a folder. Feature coming soon!')} />
+                <NavItem isSlim={isSlim} icon={Folder} label="Empty Workspace" active={false} onClick={() => window.dispatchEvent(new CustomEvent('canvenient-toast', { detail: { message: 'Click the + button to create a folder. Feature coming soon!' } }))} />
                 <NavItem isSlim={isSlim} icon={Plus} label="New Note" active={false} onClick={createAndOpenNote} />
               </div>
             </div>

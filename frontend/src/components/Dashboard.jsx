@@ -7,6 +7,9 @@ import ScheduleModule from "./dashboard/ScheduleModule";
 import CampusBusModule from "./dashboard/CampusBusModule";
 import TasksModule from "./dashboard/TasksModule";
 import DashboardCustomizer from "./dashboard/DashboardCustomizer";
+import NotesModule from "./dashboard/NotesModule";
+import AiBriefModule from "./dashboard/AiBriefModule";
+import StudyTimerModule from "./dashboard/StudyTimerModule";
 import { readDashboardConfig, readDashboardLayout, saveDashboardConfig, saveDashboardLayout, threeColumnDashboardConfig } from "./dashboard/dashboardConfig";
 import { useQuickCapture } from "./QuickCaptureContext";
 import { WorkspaceToolbarContext } from "./WorkspaceToolbarContext";
@@ -104,6 +107,19 @@ export default function Dashboard({ token, user, onNavigate, onOpenSearch, searc
       title: "Canvas",
       onViewFull: () => onNavigate("canvas"),
       body: <CanvasModule token={token} enabled={Boolean(user?.canvas_token)} onOpenItem={setActiveCanvasItem} />,
+    },
+    notes: {
+      title: "Notes",
+      onViewFull: () => onNavigate("notes"),
+      body: <NotesModule token={token} onOpenNote={(note) => onNavigate("notes", { openNoteId: note.id })} />,
+    },
+    aibrief: {
+      title: "AI Briefing",
+      body: <AiBriefModule token={token} />,
+    },
+    studytimer: {
+      title: "Study Timer",
+      body: <StudyTimerModule token={token} />,
     },
   };
 

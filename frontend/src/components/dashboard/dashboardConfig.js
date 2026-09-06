@@ -3,6 +3,9 @@ export const DASHBOARD_MODULES = [
   { id: "schedule", label: "Schedule" },
   { id: "isb", label: "NUS ISB" },
   { id: "canvas", label: "Canvas" },
+  { id: "notes", label: "Notes" },
+  { id: "aibrief", label: "AI Brief" },
+  { id: "studytimer", label: "Study Timer" },
 ];
 
 const LEGACY_DASHBOARD_SIZES = {
@@ -20,6 +23,9 @@ export const DEFAULT_DASHBOARD_SIZES = {
   schedule: { columns: 1, rows: 1 },
   isb: { columns: 1, rows: 1 },
   canvas: { columns: 1, rows: 2 },
+  notes: { columns: 1, rows: 1 },
+  aibrief: { columns: 2, rows: 1 },
+  studytimer: { columns: 1, rows: 1 },
 };
 
 export const DEFAULT_DASHBOARD_TRACKS = {
