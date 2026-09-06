@@ -750,8 +750,8 @@ export default function NotesView({ token, initialNoteId = null }) {
             {isSidebarOpen && (
               <aside className="notes-page-sidebar" style={{ width: '280px', flexShrink: 0, borderRight: '1px solid var(--border-subtle)', display: 'flex', flexDirection: 'column', backgroundColor: 'var(--surface-muted)' }}>
                 
-                <div style={{ padding: '12px', borderBottom: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', flex: 1, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '6px', padding: '4px 8px' }}>
+                <div style={{ padding: '12px', borderBottom: '1px solid var(--border-subtle)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '6px', padding: '4px 8px' }}>
                     <Search size={14} color="var(--text-muted)" />
                     <input 
                       type="text" 
@@ -761,24 +761,6 @@ export default function NotesView({ token, initialNoteId = null }) {
                       style={{ border: 'none', background: 'transparent', outline: 'none', marginLeft: '8px', fontSize: '13px', width: '100%', color: 'var(--text)' }}
                     />
                   </div>
-                  <button
-                    type="button"
-                    onClick={toggleSidebar}
-                    title="Collapse sidebar"
-                    aria-label="Collapse sidebar"
-                    style={{
-                      background: 'transparent',
-                      border: 'none',
-                      padding: '4px',
-                      borderRadius: '4px',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      color: 'var(--text-muted)'
-                    }}
-                  >
-                    <PanelLeft size={14} />
-                  </button>
                 </div>
 
                 <div style={{ flex: 1, overflowY: 'auto', padding: '8px 0' }}>
