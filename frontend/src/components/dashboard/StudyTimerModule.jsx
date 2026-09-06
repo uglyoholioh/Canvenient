@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Play, Pause, Square, Check, Timer } from "lucide-react";
 import {
   createStudySession,
@@ -6,6 +6,155 @@ import {
   cancelStudySession,
   getStudySessions,
 } from "../../api";
+
+const RulerSlider = ({ value, onChange }) => {
+  const scrollRef = useRef(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const startXRef = useRef(0);
+  const startScrollLeftRef = useRef(0);
+  const internalValueRef = useRef(value);
+
+  useEffect(() => {
+    if (internalValueRef.current !== value && scrollRef.current) {
+      scrollRef.current.scrollTo({
+        left: (value - 1) * 8,
+        behavior: 'smooth'
+      });
+      internalValueRef.current = value;
+    }
+  }, [value]);
+
+  const handleScroll = () => {
+    if (!scrollRef.current) return;
+    const scrollLeft = scrollRef.current.scrollLeft;
+    let newValue = Math.round(scrollLeft / 8) + 1;
+    if (newValue < 1) newValue = 1;
+    if (newValue > 120) newValue = 120;
+    
+    if (newValue !== internalValueRef.current) {
+      internalValueRef.current = newValue;
+      onChange(newValue);
+    }
+  };
+
+  const handlePointerDown = (e) => {
+    setIsDragging(true);
+    startXRef.current = e.pageX;
+    startScrollLeftRef.current = scrollRef.current.scrollLeft;
+  };
+
+  useEffect(() => {
+    const handlePointerMove = (e) => {
+      if (!isDragging || !scrollRef.current) return;
+      e.preventDefault();
+      const x = e.pageX;
+      const walk = (startXRef.current - x); 
+      scrollRef.current.scrollLeft = startScrollLeftRef.current + walk;
+    };
+
+    const handlePointerUp = () => {
+      setIsDragging(false);
+    };
+
+    if (isDragging) {
+      window.addEventListener('pointermove', handlePointerMove, { passive: false });
+      window.addEventListener('pointerup', handlePointerUp);
+      return () => {
+        window.removeEventListener('pointermove', handlePointerMove);
+        window.removeEventListener('pointerup', handlePointerUp);
+      };
+    }
+  }, [isDragging]);
+
+  return (
+    <div style={{ position: 'relative', width: '100%', height: '56px', userSelect: 'none', margin: '8px 0' }}>
+      <style>{`
+        .ruler-scroll-container::-webkit-scrollbar {
+          display: none;
+        }
+      `}</style>
+      {/* Center indicator */}
+      <div style={{
+        position: 'absolute',
+        left: '50%',
+        top: '16px',
+        bottom: 0,
+        width: '2px',
+        marginLeft: '-1px',
+        backgroundColor: 'var(--color-mac-accent, #007aff)',
+        zIndex: 2,
+        borderRadius: '2px'
+      }} />
+      
+      {/* Scrollable area */}
+      <div 
+        className="ruler-scroll-container"
+        ref={scrollRef}
+        onScroll={handleScroll}
+        onPointerDown={handlePointerDown}
+        style={{
+          overflowX: 'auto',
+          overflowY: 'hidden',
+          scrollbarWidth: 'none', 
+          msOverflowStyle: 'none', 
+          scrollSnapType: isDragging ? 'none' : 'x mandatory',
+          width: '100%',
+          height: '100%',
+          display: 'flex',
+          alignItems: 'center',
+          cursor: isDragging ? 'grabbing' : 'grab'
+        }}
+      >
+        <div style={{ 
+          display: 'flex', 
+          padding: '0 calc(50% - 4px)',
+          height: '100%',
+          alignItems: 'flex-end',
+          paddingBottom: '4px'
+        }}>
+          {Array.from({ length: 120 }).map((_, i) => {
+            const min = i + 1;
+            const isTen = min % 10 === 0;
+            const isFive = min % 5 === 0;
+            return (
+              <div key={min} style={{
+                width: '8px',
+                height: '100%',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'flex-end',
+                alignItems: 'center',
+                flexShrink: 0,
+                position: 'relative',
+                scrollSnapAlign: 'center'
+              }}>
+                {isTen && (
+                  <span style={{
+                    position: 'absolute',
+                    top: '2px',
+                    fontSize: '10px',
+                    fontWeight: 500,
+                    color: 'var(--color-mac-muted)',
+                    fontVariantNumeric: 'tabular-nums',
+                  }}>
+                    {min}
+                  </span>
+                )}
+                <div style={{
+                  width: '1px',
+                  height: isTen ? '16px' : (isFive ? '12px' : '6px'),
+                  backgroundColor: 'var(--color-mac-divider, #ccc)',
+                  marginTop: 'auto'
+                }} />
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+};
+
 
 export default function StudyTimerModule({ token }) {
   const [isOpen, setIsOpen] = useState(false);
@@ -109,7 +258,6 @@ export default function StudyTimerModule({ token }) {
       setActiveSession(null);
     }
     setRemainingSeconds(durationMinutes * 60);
-    setIsOpen(false);
   };
 
   const handleComplete = async () => {
@@ -204,25 +352,10 @@ export default function StudyTimerModule({ token }) {
 
           {!isRunning && !activeSession ? (
             <>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '4px' }}>
-                {[15, 25, 45, 60].map(m => (
-                  <button
-                    key={m}
-                    className="mac-toolbar-action"
-                    onClick={() => handlePreset(m)}
-                    style={{
-                      height: '24px',
-                      justifyContent: 'center',
-                      background: durationMinutes === m ? 'var(--color-mac-selection)' : undefined,
-                      color: durationMinutes === m ? 'var(--color-mac-selection-ink)' : undefined,
-                      fontSize: '11px',
-                      fontWeight: durationMinutes === m ? 500 : 400
-                    }}
-                  >
-                    {m}
-                  </button>
-                ))}
-              </div>
+              <RulerSlider 
+                value={durationMinutes} 
+                onChange={handlePreset} 
+              />
               <button 
                 className="mac-toolbar-action is-primary" 
                 style={{ width: '100%', height: '28px', justifyContent: 'center' }}
