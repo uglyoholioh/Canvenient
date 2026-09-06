@@ -1,6 +1,18 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { Bell, BookOpen, CheckCircle2, Download, File, Loader2, RefreshCw, LayoutGrid } from "lucide-react";
-import { getAcademicModules, getCanvasAnnouncements, getCanvasAssignments, getCanvasCourses, getCanvasFiles, getCanvasGrades, syncCanvasAssignments } from "../api";
+import { Bell, BookOpen, CheckCircle2, Download, File, Loader2, RefreshCw, LayoutGrid, Link as LinkIcon } from "lucide-react";
+import { 
+  getAcademicModules, 
+  getCanvasAnnouncements, 
+  getCanvasAssignments, 
+  getCanvasCourses, 
+  getCanvasFiles, 
+  getCanvasGrades, 
+  syncCanvasAssignments,
+  getCanvasCourseModules,
+  getCanvasPages,
+  getCanvasSyllabus,
+  getCanvasCourseNavigation
+} from "../api";
 import CanvasDrawer from "./drawers/CanvasDrawer";
 import { useWorkspaceToolbar } from "./WorkspaceToolbarContext";
 
@@ -11,13 +23,23 @@ function stripHtml(value = "") {
 export default function CanvasView({ token }) {
   const [courses, setCourses] = useState([]);
   const [academicModules, setAcademicModules] = useState([]);
+  
+  // Global data
   const [assignments, setAssignments] = useState([]);
   const [announcements, setAnnouncements] = useState([]);
   const [grades, setGrades] = useState([]);
+  
+  // Specific course data
   const [files, setFiles] = useState([]);
   const [selectedFile, setSelectedFile] = useState(null);
+  const [courseModules, setCourseModules] = useState([]);
+  const [coursePages, setCoursePages] = useState([]);
+  const [courseSyllabus, setCourseSyllabus] = useState(null);
+
   const [selectedCourseId, setSelectedCourseId] = useState("all");
   const [tab, setTab] = useState("assignments");
+  const [navigation, setNavigation] = useState([{id: "assignments", label: "Assignments"}, {id: "announcements", label: "Announcements"}]);
+  
   const [assignmentFilter, setAssignmentFilter] = useState("upcoming");
   const [activeItem, setActiveItem] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -37,26 +59,96 @@ export default function CanvasView({ token }) {
   }, [token]);
   
   useEffect(() => {
-    Promise.all([getCanvasCourses(token), getCanvasAssignments(token), getCanvasAnnouncements(token), getAcademicModules(token)])
-      .then(([courseData, assignmentData, announcementData, modulesData]) => {
-        setCourses(courseData || []); setAssignments(assignmentData || []); setAnnouncements(announcementData || []); setAcademicModules(modulesData || []);
-      })
-      .catch((loadError) => setError(loadError.message || "Could not load Canvas."))
-      .finally(() => setLoading(false));
-  }, [token]);
+    load();
+  }, [load]);
 
+  // Handle course selection changes
+  useEffect(() => {
+    setFiles([]);
+    setCourseModules([]);
+    setCoursePages([]);
+    setCourseSyllabus(null);
+    setSelectedFile(null);
+    
+    if (selectedCourseId === "all") {
+      setNavigation([
+        {id: "assignments", label: "Assignments"}, 
+        {id: "announcements", label: "Announcements"},
+        {id: "grades", label: "Grades"}
+      ]);
+      setTab("assignments");
+      return;
+    }
+    
+    let canceled = false;
+    setTabLoading(true);
+    getCanvasCourseNavigation(token, selectedCourseId).then(nav => {
+      if (canceled) return;
+      if (nav.length === 0) {
+        nav.push({id: "assignments", label: "Assignments"});
+      }
+      setNavigation(nav);
+      setTab(nav[0].id);
+    }).catch(err => {
+      console.error(err);
+      if (!canceled) {
+        setNavigation([
+          {id: "assignments", label: "Assignments"},
+          {id: "announcements", label: "Announcements"},
+          {id: "grades", label: "Grades"},
+          {id: "files", label: "Files"}
+        ]);
+        setTab("assignments");
+      }
+    }).finally(() => { 
+      if (!canceled) setTabLoading(false); 
+    });
+    
+    return () => { canceled = true; };
+  }, [selectedCourseId, token]);
+
+  // Load Grades globally if tab is active
   useEffect(() => {
     if (tab !== "grades" || grades.length) return;
+    let canceled = false;
     Promise.resolve().then(() => setTabLoading(true));
-    getCanvasGrades(token).then(setGrades).catch((loadError) => setError(loadError.message)).finally(() => setTabLoading(false));
+    getCanvasGrades(token).then(data => { if (!canceled) setGrades(data); }).catch((err) => { if (!canceled) setError(err.message); }).finally(() => { if (!canceled) setTabLoading(false); });
+    return () => { canceled = true; };
   }, [grades.length, tab, token]);
 
+  // Load specific course tabs
   useEffect(() => {
-    if (tab !== "files") return;
     if (selectedCourseId === "all") return;
-    Promise.resolve().then(() => setTabLoading(true));
-    getCanvasFiles(token, selectedCourseId).then((data) => { setFiles(data || []); setSelectedFile(data?.[0] || null); }).catch((loadError) => setError(loadError.message)).finally(() => setTabLoading(false));
-  }, [selectedCourseId, tab, token]);
+    let canceled = false;
+    
+    if (tab === "files" && files.length === 0) {
+      setTabLoading(true);
+      getCanvasFiles(token, selectedCourseId)
+        .then(data => { if (!canceled) { setFiles(data || []); setSelectedFile(data?.[0] || null); } })
+        .catch(err => { if (!canceled) setError(err.message); })
+        .finally(() => { if (!canceled) setTabLoading(false); });
+    } else if (tab === "modules" && courseModules.length === 0) {
+      setTabLoading(true);
+      getCanvasCourseModules(token, selectedCourseId)
+        .then(data => { if (!canceled) setCourseModules(data || []); })
+        .catch(err => { if (!canceled) setError(err.message); })
+        .finally(() => { if (!canceled) setTabLoading(false); });
+    } else if (tab === "pages" && coursePages.length === 0) {
+      setTabLoading(true);
+      getCanvasPages(token, selectedCourseId)
+        .then(data => { if (!canceled) setCoursePages(data || []); })
+        .catch(err => { if (!canceled) setError(err.message); })
+        .finally(() => { if (!canceled) setTabLoading(false); });
+    } else if (tab === "syllabus" && courseSyllabus === null) {
+      setTabLoading(true);
+      getCanvasSyllabus(token, selectedCourseId)
+        .then(data => { if (!canceled) setCourseSyllabus(data); })
+        .catch(err => { if (!canceled) setError(err.message); })
+        .finally(() => { if (!canceled) setTabLoading(false); });
+    }
+    
+    return () => { canceled = true; };
+  }, [tab, selectedCourseId, token, files.length, courseModules.length, coursePages.length, courseSyllabus]);
 
   const displayedCourses = useMemo(() => {
     const validModules = academicModules
@@ -68,8 +160,6 @@ export default function CanvasView({ token }) {
     return courses.filter(c => {
        if (!c.course_code) return false;
        return validModules.some(mod => {
-         // Match the module code with word boundaries to avoid substring matching (e.g., CS101 in CS1010)
-         // We use [^A-Z0-9] as a generic boundary since course codes are alphanumeric
          const regex = new RegExp(`(?:^|[^a-zA-Z0-9])${mod}(?![a-zA-Z0-9])`, 'i');
          return regex.test(c.course_code);
        });
@@ -118,7 +208,7 @@ export default function CanvasView({ token }) {
 
   const sync = useCallback(async () => {
     setSyncing(true); setError("");
-    try { await syncCanvasAssignments(token); await load(true); setGrades([]); setFiles([]); }
+    try { await syncCanvasAssignments(token); await load(true); setGrades([]); setFiles([]); setCourseModules([]); setCoursePages([]); setCourseSyllabus(null); }
     catch (syncError) { setError(syncError.message || "Canvas sync failed."); }
     finally { setSyncing(false); }
   }, [load, token]);
@@ -127,20 +217,7 @@ export default function CanvasView({ token }) {
   const toolbarConfig = useMemo(() => ({
     title: "Modules",
     subtitle: selectedCourse ? selectedCourse.course_code : "Overview",
-    actions: (
-      <>
-        <div className="canvas-tabs">
-          <button type="button" className={tab === "assignments" ? "is-active" : ""} onClick={() => setTab("assignments")}>Assignments</button>
-          <button type="button" className={tab === "announcements" ? "is-active" : ""} onClick={() => setTab("announcements")}>Announcements</button>
-          <button type="button" className={tab === "grades" ? "is-active" : ""} onClick={() => setTab("grades")}>Grades</button>
-          {selectedCourseId !== "all" && (
-            <button type="button" className={tab === "files" ? "is-active" : ""} onClick={() => setTab("files")}>Files</button>
-          )}
-        </div>
-        <button type="button" className="canvas-sync" onClick={sync} disabled={syncing}><RefreshCw size={14} className={syncing ? "retro-icon-spin" : ""} />{syncing ? "Syncing" : "Sync"}</button>
-      </>
-    ),
-  }), [selectedCourse, syncing, sync, tab, selectedCourseId]);
+  }), [selectedCourse]);
   useWorkspaceToolbar(toolbarConfig);
 
   return (
@@ -158,7 +235,7 @@ export default function CanvasView({ token }) {
                background: selectedCourseId === "all" ? 'var(--surface-muted)' : 'var(--surface)',
                boxShadow: selectedCourseId === "all" ? 'var(--shadow-soft)' : 'none'
              }}
-             onClick={() => { setSelectedCourseId("all"); if (tab === "files") setTab("assignments"); }}
+             onClick={() => setSelectedCourseId("all")}
            >
              <span className="canvas-item-icon" style={{ background: 'transparent', color: 'var(--text-muted)', border: '1px solid var(--border)' }}><LayoutGrid size={15} /></span>
              <span className="canvas-item-copy">
@@ -186,7 +263,7 @@ export default function CanvasView({ token }) {
                        background: selectedCourseId === String(course.id) ? 'var(--surface-muted)' : 'var(--surface)',
                        boxShadow: selectedCourseId === String(course.id) ? 'var(--shadow-soft)' : 'none'
                      }}
-                     onClick={() => { setSelectedCourseId(String(course.id)); setSelectedFile(null); }}
+                     onClick={() => setSelectedCourseId(String(course.id))}
                    >
                      <span className="canvas-item-icon"><BookOpen size={15} /></span>
                      <span className="canvas-item-copy">
@@ -207,6 +284,51 @@ export default function CanvasView({ token }) {
       </aside>
 
       <main className="canvas-main" style={{ flex: 1, minWidth: 0, padding: '24px 40px', overflowY: 'auto' }}>
+        <div className="canvas-view-header" style={{ maxWidth: '960px', margin: '0 auto', width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px', borderBottom: '1px solid var(--border)', paddingBottom: '16px' }}>
+          <div style={{ display: 'flex', gap: '8px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '6px', padding: '4px' }}>
+            {navigation.map(nav => (
+              <button 
+                key={nav.id} 
+                type="button" 
+                style={{
+                  padding: '6px 12px',
+                  borderRadius: '4px',
+                  border: 'none',
+                  background: tab === nav.id ? 'var(--surface-hover)' : 'transparent',
+                  color: tab === nav.id ? 'var(--text-h)' : 'var(--text-muted)',
+                  fontSize: '13px',
+                  fontWeight: tab === nav.id ? '600' : '400',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease'
+                }}
+                onClick={() => setTab(nav.id)}
+              >
+                {nav.label}
+              </button>
+            ))}
+          </div>
+          <button 
+            type="button" 
+            className="canvas-sync" 
+            onClick={sync} 
+            disabled={syncing}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '6px 12px',
+              borderRadius: '6px',
+              border: '1px solid var(--border)',
+              background: 'var(--surface)',
+              color: 'var(--text-h)',
+              fontSize: '13px',
+              cursor: syncing ? 'default' : 'pointer',
+              opacity: syncing ? 0.7 : 1
+            }}
+          >
+            <RefreshCw size={14} className={syncing ? "retro-icon-spin" : ""} />{syncing ? "Syncing" : "Sync"}
+          </button>
+        </div>
         <div className="canvas-content" style={{ maxWidth: '960px', margin: '0 auto', width: '100%' }}>
           {error && <div className="module-error">{error}</div>}
 
@@ -258,6 +380,91 @@ export default function CanvasView({ token }) {
                 <h2 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--text-h)' }}>Files</h2>
               </div>
               {tabLoading ? <div className="module-empty">Loading files...</div> : files.length === 0 ? <div className="module-empty">No files found for this course.</div> : <div className="canvas-file-layout"><div className="canvas-item-list">{files.map((item) => <div className={`canvas-item-row ${selectedFile?.id === item.id ? "is-selected" : ""}`} key={item.id}><button type="button" className="canvas-file-select" onClick={() => setSelectedFile(item)}><span className="canvas-item-icon"><File size={15} /></span><span className="canvas-item-copy"><strong>{item.display_name || item.filename}</strong><small>{item.size ? `${Math.ceil(item.size / 1024)} KB` : "Canvas file"}</small></span></button><a href={item.url || item.external_url} target="_blank" rel="noreferrer" title="Download"><Download size={15} /></a></div>)}</div>{selectedFile && <aside className="canvas-file-preview"><header><strong>{selectedFile.display_name || selectedFile.filename}</strong><a href={selectedFile.url || selectedFile.external_url} target="_blank" rel="noreferrer">Open</a></header>{/\.(png|jpe?g|gif|webp|svg)$/i.test(selectedFile.filename || selectedFile.display_name || "") ? <img src={selectedFile.url} alt={selectedFile.display_name || selectedFile.filename} /> : /\.pdf$/i.test(selectedFile.filename || selectedFile.display_name || "") ? <iframe src={selectedFile.url} title={selectedFile.display_name || selectedFile.filename} /> : <div className="module-empty">Preview is available for PDF and image files.</div>}</aside>}</div>}</section>}
+              
+            {tab === "modules" && selectedCourseId !== "all" && <section>
+              <div className="canvas-content-toolbar" style={{ marginBottom: '20px' }}>
+                <h2 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--text-h)' }}>Modules</h2>
+              </div>
+              {tabLoading ? <div className="module-empty">Loading modules...</div> : courseModules.length === 0 ? <div className="module-empty">No modules found for this course.</div> : 
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                  {courseModules.map(mod => (
+                    <div key={mod.id} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '6px', overflow: 'hidden' }}>
+                      <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)', background: 'var(--surface-muted)' }}>
+                        <h3 style={{ margin: 0, fontSize: '14px', fontWeight: '600', color: 'var(--text-h)' }}>{mod.name}</h3>
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column' }}>
+                        {mod.items.map(item => (
+                           <a 
+                             key={item.id} 
+                             href={item.external_url || item.html_url || "#"} 
+                             target="_blank" 
+                             rel="noreferrer"
+                             style={{ padding: '10px 16px', display: 'flex', alignItems: 'center', gap: '12px', color: 'var(--text)', textDecoration: 'none', borderBottom: '1px solid var(--border)' }}
+                           >
+                             <span style={{ color: 'var(--text-muted)' }}><LinkIcon size={14} /></span>
+                             <span style={{ fontSize: '14px' }}>{item.title}</span>
+                           </a>
+                        ))}
+                        {mod.items.length === 0 && <div style={{ padding: '10px 16px', fontSize: '12px', color: 'var(--text-muted)' }}>Empty module.</div>}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              }
+            </section>}
+
+            {tab === "pages" && selectedCourseId !== "all" && <section>
+              <div className="canvas-content-toolbar" style={{ marginBottom: '20px' }}>
+                <h2 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--text-h)' }}>Pages</h2>
+              </div>
+              {tabLoading ? <div className="module-empty">Loading pages...</div> : coursePages.length === 0 ? <div className="module-empty">No pages found.</div> : 
+                <div className="canvas-item-list">
+                  {coursePages.map(page => (
+                     <a 
+                       key={page.url} 
+                       href={`https://canvas.nus.edu.sg/courses/${selectedCourseId}/pages/${page.url}`} 
+                       target="_blank" 
+                       rel="noreferrer"
+                       className="canvas-item-row"
+                       style={{ textDecoration: 'none', color: 'inherit' }}
+                     >
+                       <span className="canvas-item-icon"><File size={15} /></span>
+                       <span className="canvas-item-copy">
+                         <strong>{page.title}</strong>
+                         <small>Updated: {new Date(page.updated_at).toLocaleDateString()}</small>
+                       </span>
+                     </a>
+                  ))}
+                </div>
+              }
+            </section>}
+
+            {tab === "syllabus" && selectedCourseId !== "all" && <section>
+              <div className="canvas-content-toolbar" style={{ marginBottom: '20px' }}>
+                <h2 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--text-h)' }}>Syllabus</h2>
+              </div>
+              {tabLoading ? <div className="module-empty">Loading syllabus...</div> : !courseSyllabus?.body ? <div className="module-empty">No syllabus content available.</div> : 
+                <div className="canvas-syllabus-body" style={{ background: 'var(--surface)', padding: '32px', borderRadius: '6px', border: '1px solid var(--border)' }} dangerouslySetInnerHTML={{ __html: courseSyllabus.body }} />
+              }
+            </section>}
+
+            {!["assignments", "announcements", "grades", "files", "modules", "pages", "syllabus"].includes(tab) && selectedCourseId !== "all" && <section>
+              <div className="canvas-content-toolbar" style={{ marginBottom: '20px' }}>
+                <h2 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--text-h)' }}>{navigation.find(n => n.id === tab)?.label || "External Tool"}</h2>
+              </div>
+              <div className="module-empty" style={{ display: 'flex', flexDirection: 'column', gap: '16px', alignItems: 'center' }}>
+                <p>This content is hosted outside of Canvenient.</p>
+                <a 
+                  href={navigation.find(n => n.id === tab)?.html_url || `https://canvas.nus.edu.sg/courses/${selectedCourseId}/${tab}`} 
+                  target="_blank" 
+                  rel="noreferrer" 
+                  className="retro-btn" 
+                  style={{ padding: '8px 16px', borderRadius: '4px', background: 'var(--accent)', color: '#fff', textDecoration: 'none', fontWeight: 'bold' }}
+                >
+                  Open in Canvas
+                </a>
+              </div>
+            </section>}
           </>}
         </div>
       </main>
@@ -265,5 +472,4 @@ export default function CanvasView({ token }) {
     </div>
   );
 }
-
 

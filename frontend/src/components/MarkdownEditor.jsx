@@ -98,13 +98,20 @@ const CanvasMention = Mention.extend({
   },
 });
 
-export default function MarkdownEditor({ noteId, token, onDelete, onUpdate, folders = [] }) {
-  const [note, setNote] = useState(null);
-  const [title, setTitle] = useState('');
+export default function MarkdownEditor({ noteId, token, onDelete, onUpdate, onTitleChange, initialNote, folders = [] }) {
+  const [note, setNote] = useState(initialNote || null);
+  const [title, setTitle] = useState(initialNote?.title || '');
   const [saveState, setSaveState] = useState('saved');
   const [cachedData, setCachedData] = useState({ notes: [], files: [] });
 
+  const instanceId = useRef(`editor-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`);
   const debounceTimer = useRef(null);
+  const titleRef = useRef(title);
+  titleRef.current = title;
+  const saveStateRef = useRef(saveState);
+  saveStateRef.current = saveState;
+  const noteRef = useRef(note);
+  noteRef.current = note;
 
   useEffect(() => {
     // Pre-fetch for mentions
@@ -159,58 +166,214 @@ export default function MarkdownEditor({ noteId, token, onDelete, onUpdate, fold
         }
       })
     ],
-    content: '',
+    content: initialNote?.content || '',
     onUpdate: ({ editor }) => {
       setSaveState('unsaved');
+      saveStateRef.current = 'unsaved';
       const html = editor.getHTML();
+      window.dispatchEvent(new CustomEvent('canvenient-note-sync', {
+        detail: {
+          noteId: parseInt(noteId),
+          sourceId: instanceId.current,
+          type: 'content',
+          content: html,
+        }
+      }));
       if (debounceTimer.current) clearTimeout(debounceTimer.current);
       debounceTimer.current = setTimeout(() => {
-        handleSave(title, html);
+        handleSave(titleRef.current, html);
       }, 1000);
     },
-  }, [cachedData]); // re-init if cache changes significantly, but actually we use a ref or just keep it simple
+  }, [cachedData]);
+
+  // Peer synchronization between multiple editor instances for the same note
+  useEffect(() => {
+    const handleSync = (e) => {
+      const detail = e.detail;
+      if (!detail) return;
+      const { noteId: syncNoteId, sourceId, type, content: syncContent, title: syncTitle, note: syncNote, saveState: syncSaveState } = detail;
+
+      if (parseInt(syncNoteId) !== parseInt(noteId) || sourceId === instanceId.current) {
+        return;
+      }
+
+      if (type === 'content') {
+        if (editor && !editor.isDestroyed) {
+          const curHtml = editor.getHTML();
+          if (curHtml !== syncContent) {
+            editor.commands.setContent(syncContent, false);
+          }
+        }
+        setSaveState('unsaved');
+        saveStateRef.current = 'unsaved';
+      } else if (type === 'title') {
+        setTitle(syncTitle);
+        titleRef.current = syncTitle;
+        setSaveState('unsaved');
+        saveStateRef.current = 'unsaved';
+      } else if (type === 'saveState') {
+        setSaveState(syncSaveState);
+        saveStateRef.current = syncSaveState;
+      } else if (type === 'saved') {
+        if (syncNote) {
+          setNote(curr => ({ ...curr, ...syncNote }));
+          noteRef.current = { ...noteRef.current, ...syncNote };
+        }
+        setSaveState('saved');
+        saveStateRef.current = 'saved';
+        if (debounceTimer.current) {
+          clearTimeout(debounceTimer.current);
+          debounceTimer.current = null;
+        }
+      } else if (type === 'request-sync') {
+        if (editor && !editor.isDestroyed) {
+          window.dispatchEvent(new CustomEvent('canvenient-note-sync', {
+            detail: {
+              noteId: parseInt(noteId),
+              sourceId: instanceId.current,
+              type: 'sync-response',
+              content: editor.getHTML(),
+              title: titleRef.current,
+              saveState: saveStateRef.current,
+              note: noteRef.current
+            }
+          }));
+        }
+      } else if (type === 'sync-response') {
+        if (syncContent !== undefined && editor && !editor.isDestroyed) {
+          editor.commands.setContent(syncContent, false);
+        }
+        if (syncTitle !== undefined) {
+          setTitle(syncTitle);
+          titleRef.current = syncTitle;
+        }
+        if (syncNote) {
+          setNote(curr => ({ ...curr, ...syncNote }));
+          noteRef.current = { ...noteRef.current, ...syncNote };
+        }
+        if (syncSaveState) {
+          setSaveState(syncSaveState);
+          saveStateRef.current = syncSaveState;
+        }
+      }
+    };
+
+    window.addEventListener('canvenient-note-sync', handleSync);
+    return () => window.removeEventListener('canvenient-note-sync', handleSync);
+  }, [noteId, editor]);
+
+  // On mount or editor ready, request active peer state if any
+  useEffect(() => {
+    if (editor && !editor.isDestroyed) {
+      window.dispatchEvent(new CustomEvent('canvenient-note-sync', {
+        detail: {
+          noteId: parseInt(noteId),
+          sourceId: instanceId.current,
+          type: 'request-sync'
+        }
+      }));
+    }
+  }, [noteId, editor]);
 
   useEffect(() => {
+    let isMounted = true;
     const fetchNote = async () => {
       try {
         const notes = await getNotes(token);
+        if (!isMounted) return;
         const target = notes.find(n => n.id === parseInt(noteId));
         if (target) {
           setNote(target);
+          noteRef.current = target;
           setTitle(target.title || 'Untitled');
+          titleRef.current = target.title || 'Untitled';
           if (editor && !editor.isDestroyed) {
              let content = target.content || '';
-             editor.commands.setContent(content);
+             editor.commands.setContent(content, false);
           }
           setSaveState('saved');
+          saveStateRef.current = 'saved';
         }
       } catch (err) {}
     };
     fetchNote();
+    return () => { isMounted = false; };
   }, [noteId, token, editor]);
 
-  
   const handleSave = async (newTitle, newContent, extras = {}) => {
     setSaveState('saving');
+    saveStateRef.current = 'saving';
+    window.dispatchEvent(new CustomEvent('canvenient-note-sync', {
+      detail: {
+        noteId: parseInt(noteId),
+        sourceId: instanceId.current,
+        type: 'saveState',
+        saveState: 'saving'
+      }
+    }));
     try {
       const payload = { title: newTitle, content: newContent, ...extras };
       const updated = await updateNote(noteId, payload, token);
       setSaveState('saved');
+      saveStateRef.current = 'saved';
       if (onUpdate) onUpdate(updated);
       setNote(curr => ({ ...curr, ...updated }));
+      noteRef.current = { ...noteRef.current, ...updated };
+      window.dispatchEvent(new CustomEvent('canvenient-note-sync', {
+        detail: {
+          noteId: parseInt(noteId),
+          sourceId: instanceId.current,
+          type: 'saved',
+          note: updated,
+          saveState: 'saved'
+        }
+      }));
     } catch (err) {
       setSaveState('unsaved');
+      saveStateRef.current = 'unsaved';
+      window.dispatchEvent(new CustomEvent('canvenient-note-sync', {
+        detail: {
+          noteId: parseInt(noteId),
+          sourceId: instanceId.current,
+          type: 'saveState',
+          saveState: 'unsaved'
+        }
+      }));
     }
   };
-
 
   const handleTitleChange = (e) => {
     const val = e.target.value;
     setTitle(val);
+    titleRef.current = val;
     setSaveState('unsaved');
+    saveStateRef.current = 'unsaved';
+    if (onTitleChange) {
+      onTitleChange(parseInt(noteId), val);
+    }
+    window.dispatchEvent(new CustomEvent('canvenient-note-sync', {
+      detail: {
+        noteId: parseInt(noteId),
+        sourceId: instanceId.current,
+        type: 'title',
+        title: val,
+      }
+    }));
     if (debounceTimer.current) clearTimeout(debounceTimer.current);
-    debounceTimer.current = setTimeout(() => handleSave(val, editor.getHTML()), 1000);
+    debounceTimer.current = setTimeout(() => {
+      const currentContent = editor && !editor.isDestroyed ? editor.getHTML() : '';
+      handleSave(val, currentContent);
+    }, 1000);
   };
+
+  useEffect(() => {
+    return () => {
+      if (debounceTimer.current) {
+        clearTimeout(debounceTimer.current);
+        debounceTimer.current = null;
+      }
+    };
+  }, []);
 
 
   const handleCreateTask = async (text) => {

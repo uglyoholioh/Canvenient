@@ -5664,3 +5664,59 @@ select.form-input {
   border-color: var(--border-strong);
   color: var(--text-h);
 }
+
+.canvas-syllabus-body {
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--text);
+  overflow-x: auto;
+}
+.canvas-syllabus-body h1,
+.canvas-syllabus-body h2,
+.canvas-syllabus-body h3,
+.canvas-syllabus-body h4 {
+  margin-top: 24px;
+  margin-bottom: 16px;
+  font-weight: 600;
+  color: var(--text-h);
+}
+.canvas-syllabus-body h1 { font-size: 20px; }
+.canvas-syllabus-body h2 { font-size: 18px; }
+.canvas-syllabus-body h3 { font-size: 16px; }
+.canvas-syllabus-body p,
+.canvas-syllabus-body ul,
+.canvas-syllabus-body ol {
+  margin-bottom: 16px;
+}
+.canvas-syllabus-body ul {
+  padding-left: 24px;
+  list-style: disc;
+}
+.canvas-syllabus-body ol {
+  padding-left: 24px;
+  list-style: decimal;
+}
+.canvas-syllabus-body a {
+  color: var(--accent);
+  text-decoration: underline;
+}
+.canvas-syllabus-body img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 4px;
+}
+.canvas-syllabus-body table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 16px;
+}
+.canvas-syllabus-body th,
+.canvas-syllabus-body td {
+  border: 1px solid var(--border);
+  padding: 8px 12px;
+  text-align: left;
+}
+.canvas-syllabus-body th {
+  background: var(--surface-muted);
+  font-weight: 600;
+}

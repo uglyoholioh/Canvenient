@@ -146,53 +146,39 @@ export default function NotesView({ token, initialNoteId = null }) {
       setIsSplit(true);
       setActivePane(1);
       setActiveNoteIds(prev => {
-        if (!prev[1]) {
-          const currentLeft = prev[0];
-          const other = notes.find(n => n.id !== currentLeft);
-          const chosenId = other ? other.id : currentLeft;
-          if (chosenId) {
-            setOpenTabs(tabsPrev => ({
-              ...tabsPrev,
-              1: tabsPrev[1].includes(chosenId) ? tabsPrev[1] : [...tabsPrev[1], chosenId]
-            }));
-            return { ...prev, 1: chosenId };
-          }
+        const currentLeft = prev[0];
+        const existingPane1Active = prev[1];
+        if (existingPane1Active && openTabs[1]?.includes(existingPane1Active)) {
+          return prev;
+        }
+        const otherTab = openTabs[0]?.find(id => id !== currentLeft);
+        const chosenId = otherTab || currentLeft;
+        if (chosenId) {
+          setOpenTabs(tabsPrev => ({
+            ...tabsPrev,
+            1: tabsPrev[1]?.includes(chosenId) ? tabsPrev[1] : [...(tabsPrev[1] || []), chosenId]
+          }));
+          return { ...prev, 1: chosenId };
         }
         return prev;
       });
     }
-  }, [isSplit, notes]);
+  }, [isSplit, openTabs]);
 
-  const moveTabToPane = useCallback((noteId, fromPane) => {
+  const splitTabToOtherPane = useCallback((noteId, fromPane) => {
     const toPane = fromPane === 0 ? 1 : 0;
     setIsSplit(true);
 
     setOpenTabs(prev => {
-      const fromTabs = prev[fromPane] || [];
       const toTabs = prev[toPane] || [];
-      const newFrom = fromTabs.filter(id => id !== noteId);
       const newTo = toTabs.includes(noteId) ? toTabs : [...toTabs, noteId];
-      return { ...prev, [fromPane]: newFrom, [toPane]: newTo };
+      return { ...prev, [toPane]: newTo };
     });
 
-    setActiveNoteIds(prev => {
-      let nextFromActive = prev[fromPane];
-      if (prev[fromPane] === noteId) {
-        setOpenTabs(currentTabs => {
-          const fromTabs = currentTabs[fromPane] || [];
-          const closedIdx = fromTabs.indexOf(noteId);
-          const remaining = fromTabs.filter(id => id !== noteId);
-          if (remaining.length > 0) {
-            const nextIdx = closedIdx > 0 ? closedIdx - 1 : 0;
-            nextFromActive = remaining[nextIdx] || remaining[0];
-          } else {
-            nextFromActive = null;
-          }
-          return currentTabs;
-        });
-      }
-      return { ...prev, [fromPane]: nextFromActive, [toPane]: noteId };
-    });
+    setActiveNoteIds(prev => ({
+      ...prev,
+      [toPane]: noteId
+    }));
 
     setActivePane(toPane);
   }, []);
@@ -247,9 +233,13 @@ export default function NotesView({ token, initialNoteId = null }) {
     }
   }, [token, isSplit]);
 
-  const handleUpdateNote = (updatedNote) => {
+  const handleUpdateNote = useCallback((updatedNote) => {
     setNotes(curr => curr.map(n => n.id === updatedNote.id ? { ...n, ...updatedNote } : n));
-  };
+  }, []);
+
+  const handleNoteTitleChange = useCallback((id, newTitle) => {
+    setNotes(curr => curr.map(n => n.id === id ? { ...n, title: newTitle } : n));
+  }, []);
 
   // Quick capture note created listener
   useEffect(() => {
@@ -512,11 +502,11 @@ export default function NotesView({ token, initialNoteId = null }) {
                 {/* Move to other pane / split button */}
                 <button
                   type="button"
-                  aria-label={isSplit ? `Move to ${paneIndex === 0 ? "right" : "left"} pane` : "Open in split right"}
-                  title={isSplit ? `Move to ${paneIndex === 0 ? "right" : "left"} pane` : "Open in split right"}
+                  aria-label={isSplit ? `Open tab in ${paneIndex === 0 ? "right" : "left"} pane` : "Open tab alongside (split right)"}
+                  title={isSplit ? `Open tab in ${paneIndex === 0 ? "right" : "left"} pane` : "Open tab alongside (split right)"}
                   onClick={(e) => {
                     e.stopPropagation();
-                    moveTabToPane(noteId, paneIndex);
+                    splitTabToOtherPane(noteId, paneIndex);
                   }}
                   style={{
                     background: 'transparent',
@@ -662,6 +652,8 @@ export default function NotesView({ token, initialNoteId = null }) {
               token={token} 
               onDelete={() => handleDelete(currentActiveId)}
               onUpdate={handleUpdateNote}
+              onTitleChange={handleNoteTitleChange}
+              initialNote={notes.find(n => n.id === currentActiveId)}
               folders={folders}
             />
           ) : (
