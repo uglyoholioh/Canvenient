@@ -13,6 +13,7 @@ import Schedule from "./Schedule";
 import MarkdownEditor from "./MarkdownEditor";
 import VenueFinder from "./VenueFinder";
 import CanvasDrawer from "./drawers/CanvasDrawer";
+import StudyTimerModule from "./dashboard/StudyTimerModule";
 import { WorkspaceToolbarContext } from "./WorkspaceToolbarContext";
 import { QuickCaptureContext } from "./QuickCaptureContext";
 import { Folder, Search, Settings, CheckSquare, PanelLeft, BookOpen, Plus, LogOut, LayoutDashboard, FileText, CalendarDays, DoorOpen, ChevronLeft, ChevronRight } from "lucide-react";
@@ -359,6 +360,7 @@ export default function WorkspaceLayout({ token, user, onLogout, onUpdateUser })
         )}
         {toolbar?.hideSearch && <div aria-hidden="true" />}
         <div className="mac-toolbar-actions">
+          <StudyTimerModule token={token} />
           {toolbar?.actions}
         </div>
       </header>

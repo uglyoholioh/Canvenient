@@ -17,6 +17,7 @@ vi.mock("../../api", () => ({
   createNote: vi.fn(),
   createTask: vi.fn(),
   getAcademicModules: vi.fn(() => new Promise(() => {})),
+  getStudySessions: vi.fn(() => new Promise(() => {})),
 }));
 
 describe("WorkspaceLayout", () => {

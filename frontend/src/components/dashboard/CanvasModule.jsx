@@ -205,6 +205,16 @@ export default function CanvasModule({ token, enabled, onOpenItem }) {
       <div className="module-subheading">
         <span className="canvas-subheading-label"><ClipboardList size={13} />Upcoming due dates</span>
         <div className="canvas-sync-status-group">
+          <button
+            type="button"
+            className="canvas-triage-trigger-btn"
+            onClick={() => setShowTriage(true)}
+            title="Open Canvas Inbox"
+          >
+            <Inbox size={11} />
+            <span>Inbox</span>
+            {unreadAnnouncementsCount > 0 && <span className="canvas-triage-badge">{unreadAnnouncementsCount}</span>}
+          </button>
           {refreshing ? (
             <span className="canvas-syncing-badge" role="status" aria-label="Syncing with Canvas" title="Fetching latest Canvas data">
               <RefreshCw size={10} className="retro-icon-spin" />
@@ -245,24 +255,6 @@ export default function CanvasModule({ token, enabled, onOpenItem }) {
           {isAssignmentAdded(item) ? <Check size={13} /> : addingId === item.id ? <Loader2 className="retro-icon-spin" size={13} /> : <Plus size={13} />}
         </button>
       </div>)}</div>}
-    </section>
-    <section className="canvas-module-section canvas-announcements-summary">
-      <div className="module-subheading">
-        <span className="canvas-subheading-label"><Bell size={13} />Announcements</span>
-        <button
-          type="button"
-          className="canvas-triage-trigger-btn"
-          onClick={() => setShowTriage(true)}
-          title="Open Canvas Inbox"
-        >
-          <Inbox size={11} />
-          <span>Inbox</span>
-          {unreadAnnouncementsCount > 0 && <span className="canvas-triage-badge">{unreadAnnouncementsCount}</span>}
-        </button>
-      </div>
-      {attentionItems.length === 0 ? <div className="module-empty compact">No announcements need attention.</div> : <div className="canvas-compact-list">{attentionItems.map((item) => <button type="button" className="canvas-compact-row" key={`announcement-${item.id}`} onClick={() => onOpenItem({ ...item, itemType: "announcement" })}>
-        <span className="canvas-course-code">{item.course_code}</span><span className="canvas-row-copy"><strong>{item.title}</strong><small>{item.posted_at ? new Date(item.posted_at).toLocaleDateString([], { month: "short", day: "numeric" }) : "Canvas update"}</small></span><ExternalLink size={13} />
-      </button>)}</div>}
     </section>
     {showTriage && (
       <AnnouncementTriageModal

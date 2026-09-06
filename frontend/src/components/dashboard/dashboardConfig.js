@@ -34,8 +34,8 @@ export const DEFAULT_DASHBOARD_TRACKS = {
 };
 
 export const DEFAULT_DASHBOARD_CONFIG = {
-  order: DASHBOARD_MODULES.map((module) => module.id),
-  hidden: [],
+  order: ["tasks", "schedule", "canvas"],
+  hidden: ["isb", "notes", "aibrief", "studytimer"],
   sizes: DEFAULT_DASHBOARD_SIZES,
   tracks: DEFAULT_DASHBOARD_TRACKS,
 };

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Play, Pause, RotateCcw, Check } from "lucide-react";
 import {
   createStudySession,
@@ -118,54 +118,27 @@ export default function StudyTimerModule({ token }) {
   );
 
   return (
-    <div className="study-timer-module">
-      <div className="study-timer-display">
-        <div className="study-timer-time">
-          {formatTime(remainingSeconds)}
-        </div>
-        
-        <div className="study-timer-progress-track">
-          <div className="study-timer-progress-fill" style={{ width: `${progressPercent}%` }} />
-        </div>
-
-        {!isRunning && !activeSession && (
-          <div className="study-timer-presets">
-            {[15, 25, 45, 60].map((m) => (
-              <button
-                key={m}
-                type="button"
-                className={durationMinutes === m ? 'is-active' : ''}
-                onClick={() => {
-                  setDurationMinutes(m);
-                  setRemainingSeconds(m * 60);
-                }}
-              >
-                {m}m
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
-
-      <div className="study-timer-actions">
+    <div className="study-timer-widget" style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'var(--surface-muted)', border: '1px solid var(--border-strong)', borderRadius: 'var(--radius-pill)', padding: '2px 8px', fontSize: '12px', marginRight: '8px' }}>
+      <span style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 600, color: isRunning ? 'var(--accent)' : 'var(--text-h)' }}>
+        {formatTime(remainingSeconds)}
+      </span>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
         {!isRunning ? (
-          <button type="button" className="timer-action-main" onClick={handleStart}>
-            <Play size={14} /> Start
+          <button type="button" className="slim-icon-btn" style={{ width: 22, height: 22, borderRadius: 4 }} onClick={handleStart} title="Start">
+            <Play size={12} />
           </button>
         ) : (
-          <button type="button" className="timer-action-main" onClick={handlePause}>
-            <Pause size={14} /> Pause
+          <button type="button" className="slim-icon-btn" style={{ width: 22, height: 22, borderRadius: 4 }} onClick={handlePause} title="Pause">
+            <Pause size={12} />
           </button>
         )}
-
         {(isRunning || remainingSeconds < durationMinutes * 60) && (
-          <button type="button" className="timer-action-secondary" onClick={handleComplete} aria-label="Finish & Save" title="Finish & Save">
-            <Check size={14} />
+          <button type="button" className="slim-icon-btn" style={{ width: 22, height: 22, borderRadius: 4 }} onClick={handleComplete} title="Finish & Save">
+            <Check size={12} />
           </button>
         )}
-
-        <button type="button" className="timer-action-secondary" onClick={handleReset} aria-label="Reset" title="Reset">
-          <RotateCcw size={14} />
+        <button type="button" className="slim-icon-btn" style={{ width: 22, height: 22, borderRadius: 4 }} onClick={handleReset} title="Reset">
+          <RotateCcw size={12} />
         </button>
       </div>
     </div>

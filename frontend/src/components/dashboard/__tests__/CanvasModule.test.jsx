@@ -41,22 +41,19 @@ describe("CanvasModule", () => {
     updateTask.mockResolvedValue({ id: 40, status: "todo" });
   });
 
-  it("keeps the dashboard Canvas card to due dates and announcements", async () => {
+  it("keeps the dashboard Canvas card to due dates", async () => {
     render(<CanvasModule token="token" enabled onOpenItem={() => {}} />);
     expect(await screen.findByText("Assignment 1")).toBeInTheDocument();
     expect(screen.getByText("Quiz 1")).toBeInTheDocument();
-    expect(screen.getByText("Assessment update")).toBeInTheDocument();
     expect(screen.getByText("Upcoming due dates")).toBeInTheDocument();
     expect(screen.queryByText("Module resources")).not.toBeInTheDocument();
   });
 
-  it("opens the matching deadline and announcement details", async () => {
+  it("opens the matching deadline details", async () => {
     const onOpenItem = vi.fn();
     render(<CanvasModule token="token" enabled onOpenItem={onOpenItem} />);
     fireEvent.click(await screen.findByRole("button", { name: /^ST2334 Assignment 1/i }));
-    fireEvent.click(screen.getByRole("button", { name: /assessment update/i }));
     expect(onOpenItem).toHaveBeenCalledWith(expect.objectContaining({ itemType: "assignment", id: 10 }));
-    expect(onOpenItem).toHaveBeenCalledWith(expect.objectContaining({ itemType: "announcement", id: 20 }));
   });
 
   it("imports a Canvas deadline to Tasks with stripped HTML and character limit", async () => {
