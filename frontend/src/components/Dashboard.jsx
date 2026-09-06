@@ -11,7 +11,7 @@ import DashboardCustomizer from "./dashboard/DashboardCustomizer";
 import NotesModule from "./dashboard/NotesModule";
 import AiBriefModule from "./dashboard/AiBriefModule";
 import StudyTimerModule from "./dashboard/StudyTimerModule";
-import { readDashboardConfig, readDashboardLayout, saveDashboardConfig, saveDashboardLayout, threeColumnDashboardConfig } from "./dashboard/dashboardConfig";
+import { DEFAULT_DASHBOARD_CONFIG, readDashboardConfig, readDashboardLayout, saveDashboardConfig, saveDashboardLayout, threeColumnDashboardConfig } from "./dashboard/dashboardConfig";
 import { useQuickCapture } from "./QuickCaptureContext";
 import { WorkspaceToolbarContext } from "./WorkspaceToolbarContext";
 import { useContext } from "react";
@@ -42,14 +42,17 @@ export default function Dashboard({ token, user, onNavigate, onOpenSearch, searc
 
   useEffect(() => {
     const layoutKey = "canvenient-dashboard-three-column-layout";
-    if (localStorage.getItem(layoutKey) === "10") return;
+    if (localStorage.getItem(layoutKey) === "11") return;
     Promise.resolve().then(() => {
-      const nextConfig = threeColumnDashboardConfig(readDashboardConfig());
+      try {
+        localStorage.removeItem("canvenient-dashboard-bento-layout-v1");
+      } catch {}
+      const nextConfig = threeColumnDashboardConfig(DEFAULT_DASHBOARD_CONFIG);
       saveDashboardConfig(nextConfig);
       saveDashboardLayout("focus");
       setConfig(nextConfig);
       setLayout("focus");
-      localStorage.setItem(layoutKey, "10");
+      localStorage.setItem(layoutKey, "11");
     });
   }, []);
 

@@ -2,6 +2,7 @@ from fastapi import APIRouter, HTTPException, Response, status
 from database import db
 from dependencies import CurrentUser
 from models.group import GroupCreate, GroupOut, GroupUpdate, GroupMemberOut
+from models.task import TaskOut
 
 router = APIRouter(prefix = "/groups", tags = ["groups"])
 
@@ -168,4 +169,31 @@ async def delete_group(group_id: int, current_user: CurrentUser):
         values={"id": group_id}
     )
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.get("/{group_id}/tasks", response_model=list[TaskOut])
+async def get_group_tasks(group_id: int, current_user: CurrentUser):
+    member = await db.fetch_one(
+        query="SELECT 1 FROM g_members WHERE g_id = :g_id AND user_id = :user_id",
+        values={"g_id": group_id, "user_id": current_user.id}
+    )
+    if not member:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You are not a member of this group."
+        )
+
+    from routes.tasks import TASK_SELECT_FIELDS, build_task
+    rows = await db.fetch_all(
+        query=f"""
+            SELECT {TASK_SELECT_FIELDS}
+            WHERE t.group_id = :group_id
+            ORDER BY
+                CASE WHEN t.status = 'done' THEN 1 ELSE 0 END,
+                COALESCE(t.due_at_override, t.source_due_at) ASC NULLS LAST,
+                t.created_at DESC
+        """,
+        values={"group_id": group_id, "current_user_id": current_user.id}
+    )
+    return [build_task(row) for row in rows]
 

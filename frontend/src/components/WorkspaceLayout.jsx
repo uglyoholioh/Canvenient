@@ -14,9 +14,10 @@ import MarkdownEditor from "./MarkdownEditor";
 import VenueFinder from "./VenueFinder";
 import CanvasDrawer from "./drawers/CanvasDrawer";
 import StudyTimerModule from "./dashboard/StudyTimerModule";
+import GroupsView from "./GroupsView";
 import { WorkspaceToolbarContext } from "./WorkspaceToolbarContext";
 import { QuickCaptureContext } from "./QuickCaptureContext";
-import { Folder, Search, Settings, CheckSquare, PanelLeft, BookOpen, Plus, LogOut, LayoutDashboard, FileText, CalendarDays, DoorOpen, ChevronLeft, ChevronRight } from "lucide-react";
+import { Folder, Search, Settings, CheckSquare, PanelLeft, BookOpen, Plus, LogOut, LayoutDashboard, FileText, CalendarDays, DoorOpen, ChevronLeft, ChevronRight, Users } from "lucide-react";
 import { createNote } from "../api";
 import { formatShortcut, matchesShortcut, readKeyboardShortcuts } from "../keyboardShortcuts";
 
@@ -27,7 +28,7 @@ const getSidebarBehavior = () => {
 
 const getInitialView = () => {
   const stored = localStorage.getItem("canvenient-active-view") || "dashboard";
-  return ["dashboard", "tasks", "schedule", "venues", "settings", "canvas", "notes"].includes(stored) || /^note-\d+$/.test(stored)
+  return ["dashboard", "tasks", "schedule", "venues", "settings", "canvas", "notes", "groups"].includes(stored) || /^note-\d+$/.test(stored)
     ? stored
     : "dashboard";
 };
@@ -54,6 +55,7 @@ const viewTitle = (activeTab) => {
   if (activeTab === "settings") return "Settings";
   if (activeTab === "canvas") return "Modules";
   if (activeTab === "notes") return "Notes";
+  if (activeTab === "groups") return "Groups";
   return "Note";
 };
 
@@ -389,6 +391,7 @@ export default function WorkspaceLayout({ token, user, onLogout, onUpdateUser })
                 <NavItem isSlim={isSlim} icon={CalendarDays} label="Schedule" active={activeTab === 'schedule'} onClick={() => setActiveTab("schedule")} />
                 <NavItem isSlim={isSlim} icon={DoorOpen} label="Venue Finder" active={activeTab === 'venues'} onClick={() => setActiveTab("venues")} />
                 <NavItem isSlim={isSlim} icon={BookOpen} label="Modules" active={activeTab === 'canvas'} onClick={() => setActiveTab("canvas")} />
+                <NavItem isSlim={isSlim} icon={Users} label="Groups" active={activeTab === 'groups'} onClick={() => setActiveTab("groups")} />
                 <NavItem isSlim={isSlim} icon={FileText} label="Notes" active={activeTab === 'notes' || activeTab.startsWith('note-')} onClick={() => setActiveTab("notes")} />
                 <NavItem isSlim={isSlim} icon={Search} label="Search" active={false} onClick={() => setIsOmnibarOpen(true)} />
               </nav>
@@ -430,6 +433,7 @@ export default function WorkspaceLayout({ token, user, onLogout, onUpdateUser })
             {activeTab === 'venues' && <VenueFinder token={token} />}
             {activeTab === 'settings' && <SettingsView token={token} user={user} onUpdateUser={onUpdateUser} />}
             {activeTab === 'canvas' && <CanvasView token={token} />}
+            {activeTab === 'groups' && <GroupsView token={token} currentUser={user} />}
             {activeTab === 'notes' && <NotesView token={token} />}
             {activeTab.startsWith('note-') && <MarkdownEditor key={activeTab} noteId={activeTab.split('-')[1]} token={token} />}
           </div>

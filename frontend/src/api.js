@@ -258,8 +258,16 @@ export function updateModuleColor(token, moduleCode, color) {
   });
 }
 
-export function getTasks(token) {
-  return apiRequest("/tasks", { token });
+export function getTasks(token, { groupId, filter } = {}) {
+  const params = new URLSearchParams();
+  if (groupId != null) params.set("group_id", groupId);
+  if (filter) params.set("filter", filter);
+  const qs = params.toString();
+  return apiRequest(`/tasks${qs ? `?${qs}` : ""}`, { token });
+}
+
+export function getGroupTasks(token, groupId) {
+  return apiRequest(`/groups/${groupId}/tasks`, { token });
 }
 
 export function createTask(token, payload) {

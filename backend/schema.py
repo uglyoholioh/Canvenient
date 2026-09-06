@@ -670,6 +670,18 @@ SCHEMA_STATEMENTS = [
     CREATE INDEX IF NOT EXISTS study_sessions_user_ended_idx
     ON study_sessions (user_id, ended_at DESC)
     """,
+    """
+    ALTER TABLE tasks ADD COLUMN IF NOT EXISTS group_id BIGINT REFERENCES groups(id) ON DELETE CASCADE
+    """,
+    """
+    ALTER TABLE tasks ADD COLUMN IF NOT EXISTS assignee_id BIGINT REFERENCES users(id) ON DELETE SET NULL
+    """,
+    """
+    CREATE INDEX IF NOT EXISTS tasks_group_id_idx ON tasks (group_id)
+    """,
+    """
+    CREATE INDEX IF NOT EXISTS tasks_assignee_id_idx ON tasks (assignee_id)
+    """,
 ]
 
 

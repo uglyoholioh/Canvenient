@@ -1,7 +1,7 @@
 // React is required by the test JSX transform.
 // eslint-disable-next-line no-unused-vars
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { BookOpen, Calendar, CheckCircle, Flag, Pencil, Plus, Trash2 } from "lucide-react";
+import { BookOpen, Calendar, CheckCircle, Flag, Pencil, Plus, Trash2, Users } from "lucide-react";
 import { getAcademicModules, getTasks, updateTask } from "../api";
 import { notifyTasksChanged } from "../taskEvents";
 import { queueTaskDeletion } from "../taskDeleteBuffer";
@@ -99,48 +99,60 @@ function DueDateEditor({ value, onChange }) {
     setIsTyping(false);
   };
 
-  const typeDigit = (digit) => {
-    const length = DUE_SEGMENT_LENGTHS[segment];
-    const next = isTyping ? `${value[segment] || ""}${digit}`.slice(-length) : digit;
-    onChange({ ...value, [segment]: next });
-    if (next.length === length && selectedSegment < DUE_SEGMENTS.length - 1) {
-      setSelectedSegment((current) => current + 1);
-      setIsTyping(false);
-    } else {
+  const setSegmentValue = (raw) => {
+    const numeric = raw.replace(/\D/g, "");
+    if (!numeric) return;
+    const valueNum = Number(numeric);
+    const currentDate = new Date();
+    const defaults = { day: 1, month: currentDate.getMonth() + 1, year: currentDate.getFullYear(), hour: 0, minute: 0 };
+    const daysInMonth = new Date(Number(value.year || defaults.year), Number(value.month || defaults.month), 0).getDate();
+    let validated = valueNum;
+    if (segment === "day") validated = Math.max(1, Math.min(daysInMonth, valueNum));
+    if (segment === "month") validated = Math.max(1, Math.min(12, valueNum));
+    if (segment === "year") validated = Math.max(2000, Math.min(2099, valueNum));
+    if (segment === "hour") validated = Math.max(0, Math.min(23, valueNum));
+    if (segment === "minute") validated = Math.max(0, Math.min(59, valueNum));
+    onChange({ ...value, [segment]: String(validated).padStart(DUE_SEGMENT_LENGTHS[segment], "0") });
+  };
+
+  const handleKeyDown = (event) => {
+    if (event.key === "ArrowLeft") {
+      event.preventDefault();
+      moveSegment(-1);
+    } else if (event.key === "ArrowRight") {
+      event.preventDefault();
+      moveSegment(1);
+    } else if (event.key === "ArrowUp") {
+      event.preventDefault();
+      adjustSegment(1);
+    } else if (event.key === "ArrowDown") {
+      event.preventDefault();
+      adjustSegment(-1);
+    } else if (/^\d$/.test(event.key)) {
+      event.preventDefault();
+      const currentText = isTyping ? value[segment] || "" : "";
+      const nextText = `${currentText}${event.key}`.slice(-DUE_SEGMENT_LENGTHS[segment]);
       setIsTyping(true);
+      setSegmentValue(nextText);
+      if (nextText.length === DUE_SEGMENT_LENGTHS[segment] && selectedSegment < DUE_SEGMENTS.length - 1) {
+        moveSegment(1);
+      }
     }
   };
 
-  const displaySegment = (segmentName) => {
-    const segmentValue = value[segmentName];
-    if (!segmentValue) return ({ day: "DD", month: "MM", year: "YYYY", hour: "HH", minute: "MM" })[segmentName];
-    return segmentName === "year" ? segmentValue : segmentValue.padStart(2, "0");
-  };
-
   return (
-    <div
-      className="task-due-editor"
-      role="group"
-      tabIndex={0}
-      aria-label="Edit task due date and time. Use left and right arrows to choose a part, up and down arrows to adjust it, or type digits to replace it."
-      onFocus={() => { setSelectedSegment(0); setIsTyping(false); }}
-      onBlur={() => { setSelectedSegment(null); setIsTyping(false); }}
-      onKeyDown={(event) => {
-        if (event.key === "ArrowLeft") { event.preventDefault(); moveSegment(-1); }
-        else if (event.key === "ArrowRight") { event.preventDefault(); moveSegment(1); }
-        else if (event.key === "ArrowUp") { event.preventDefault(); adjustSegment(1); }
-        else if (event.key === "ArrowDown") { event.preventDefault(); adjustSegment(-1); }
-        else if (/^\d$/.test(event.key)) { event.preventDefault(); typeDigit(event.key); }
-        else if (event.key === "Backspace" || event.key === "Delete") { event.preventDefault(); onChange({ ...value, [segment]: "" }); setIsTyping(true); }
-        else if (event.key === "Enter") event.preventDefault();
-        else if (event.key === "Escape") { event.preventDefault(); event.currentTarget.blur(); }
-      }}
-    >
-      <span className={selectedSegment === 0 ? "is-active" : ""}> {displaySegment("day")} </span><i>/</i>
-      <span className={selectedSegment === 1 ? "is-active" : ""}> {displaySegment("month")} </span><i>/</i>
-      <span className={selectedSegment === 2 ? "is-active" : ""}> {displaySegment("year")} </span><i> · </i>
-      <span className={selectedSegment === 3 ? "is-active" : ""}> {displaySegment("hour")} </span><i>:</i>
-      <span className={selectedSegment === 4 ? "is-active" : ""}> {displaySegment("minute")} </span>
+    <div className="due-date-editor" tabIndex={0} onFocus={() => selectedSegment === null && setSelectedSegment(0)} onKeyDown={handleKeyDown}>
+      {DUE_SEGMENTS.map((seg, index) => (
+        <React.Fragment key={seg}>
+          <span className={`due-segment ${selectedSegment === index ? "is-selected" : ""}`} onClick={() => { setSelectedSegment(index); setIsTyping(false); }}>
+            {value[seg] || seg.toUpperCase()}
+          </span>
+          {index === 0 && <span className="due-sep">/</span>}
+          {index === 1 && <span className="due-sep">/</span>}
+          {index === 2 && <span className="due-sep">&nbsp;</span>}
+          {index === 3 && <span className="due-sep">:</span>}
+        </React.Fragment>
+      ))}
     </div>
   );
 }
@@ -150,13 +162,12 @@ function taskDueDate(task) {
 }
 
 function taskCreatedTime(task) {
-  return normalizeDate(task?.created_at)?.getTime() || 0;
+  const date = normalizeDate(task?.created_at);
+  return date?.getTime() ?? 0;
 }
 
 function sortPendingTasks(data) {
-  if (!Array.isArray(data)) return [];
-
-  return data
+  return (data || [])
     .filter((task) => task && task.status !== "done")
     .sort((a, b) => {
       const aDue = taskDueDate(a)?.getTime() ?? Infinity;
@@ -181,7 +192,15 @@ function priorityColor(priority) {
   return "var(--text-muted)";
 }
 
-export default function TaskView({ token, embedded = false, active = true, composerAutoFocus = false, composerFocusRequestScope }) {
+export default function TaskView({
+  token,
+  user,
+  groupId = null,
+  embedded = false,
+  active = true,
+  composerAutoFocus = false,
+  composerFocusRequestScope
+}) {
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
@@ -194,6 +213,7 @@ export default function TaskView({ token, embedded = false, active = true, compo
   const [isSavingEdit, setIsSavingEdit] = useState(false);
   const [isComposerOpen, setIsComposerOpen] = useState(Boolean(composerAutoFocus));
   const [checkboxStyle, setCheckboxStyle] = useState(() => localStorage.getItem("canvenient-checkbox-style") || "brackets");
+  const [filterScope, setFilterScope] = useState("all");
   const itemRefs = useRef({});
   const editRef = useRef(null);
   const taskViewRef = useRef(null);
@@ -217,14 +237,24 @@ export default function TaskView({ token, embedded = false, active = true, compo
     setLoading(true);
     setLoadError("");
     try {
-      const data = await getTasks(token);
+      const data = await getTasks(token, { groupId });
       setTasks(sortPendingTasks(data));
     } catch (error) {
       setLoadError(error.message || "Could not load tasks.");
     } finally {
       setLoading(false);
     }
-  }, [token]);
+  }, [token, groupId]);
+
+  const groupTaskCount = useMemo(() => tasks.filter(t => Boolean(t.group_id)).length, [tasks]);
+  const personalTaskCount = useMemo(() => tasks.filter(t => !t.group_id).length, [tasks]);
+
+  const displayedTasks = useMemo(() => {
+    if (groupId) return tasks;
+    if (filterScope === "personal") return tasks.filter(t => !t.group_id);
+    if (filterScope === "groups") return tasks.filter(t => Boolean(t.group_id));
+    return tasks;
+  }, [tasks, groupId, filterScope]);
 
   useEffect(() => {
     void Promise.resolve().then(loadTasks);
@@ -351,20 +381,20 @@ export default function TaskView({ token, embedded = false, active = true, compo
   };
 
   const toolbarConfig = useMemo(() => ({
-    title: "Tasks",
-    subtitle: loading ? "Loading" : `${tasks.length} pending`,
+    title: groupId ? "Group Tasks" : "Tasks",
+    subtitle: loading ? "Loading" : `${displayedTasks.length} pending`,
     actions: <button type="button" className="mac-toolbar-action" onClick={() => setIsComposerOpen(true)}><Plus size={14} />New Task</button>,
-  }), [loading, tasks.length]);
+  }), [loading, displayedTasks.length, groupId]);
   useWorkspaceToolbar(toolbarConfig, !embedded);
 
   const navigateFromComposer = useCallback((key) => {
     setInteractionMode("keyboard");
     setSelectedIndex((index) => {
-      if (!tasks.length) return null;
-      if (key === "ArrowUp") return index === null ? tasks.length - 1 : Math.max(0, index - 1);
-      return index === null ? 0 : Math.min(tasks.length - 1, index + 1);
+      if (!displayedTasks.length) return null;
+      if (key === "ArrowUp") return index === null ? displayedTasks.length - 1 : Math.max(0, index - 1);
+      return index === null ? 0 : Math.min(displayedTasks.length - 1, index + 1);
     });
-  }, [tasks.length]);
+  }, [displayedTasks.length]);
 
   useEffect(() => {
     if (!active) return undefined;
@@ -373,42 +403,96 @@ export default function TaskView({ token, embedded = false, active = true, compo
       setInteractionMode("keyboard");
       if (event.key === "ArrowUp") {
         event.preventDefault();
-        setSelectedIndex((index) => index === null ? tasks.length - 1 : Math.max(0, index - 1));
+        setSelectedIndex((index) => index === null ? displayedTasks.length - 1 : Math.max(0, index - 1));
       } else if (event.key === "ArrowDown") {
         event.preventDefault();
-        setSelectedIndex((index) => index === null ? 0 : Math.min(tasks.length - 1, index + 1));
+        setSelectedIndex((index) => index === null ? 0 : Math.min(displayedTasks.length - 1, index + 1));
       } else if (event.key === "Home") {
         event.preventDefault();
-        setSelectedIndex(tasks.length ? 0 : null);
+        setSelectedIndex(displayedTasks.length ? 0 : null);
       } else if (event.key === "End") {
         event.preventDefault();
-        setSelectedIndex(tasks.length ? tasks.length - 1 : null);
+        setSelectedIndex(displayedTasks.length ? displayedTasks.length - 1 : null);
       } else if (event.key === "Escape") {
         event.preventDefault();
         setSelectedIndex(null);
       } else if (selectedIndex !== null && event.key === " ") {
         event.preventDefault();
-        completeTask(tasks[selectedIndex]);
+        if (displayedTasks[selectedIndex]) completeTask(displayedTasks[selectedIndex]);
       } else if (selectedIndex !== null && (event.key === "Backspace" || event.key === "Delete")) {
         event.preventDefault();
-        removeTask(tasks[selectedIndex]);
+        if (displayedTasks[selectedIndex]) removeTask(displayedTasks[selectedIndex]);
       } else if (selectedIndex !== null && (event.key === "e" || event.key === "E") && !event.metaKey && !event.ctrlKey && !event.altKey) {
         event.preventDefault();
-        startEditing(tasks[selectedIndex]);
+        if (displayedTasks[selectedIndex]) startEditing(displayedTasks[selectedIndex]);
       } else if (selectedIndex !== null && event.key === "Enter") {
         event.preventDefault();
-        openTask(tasks[selectedIndex]);
+        if (displayedTasks[selectedIndex]) openTask(displayedTasks[selectedIndex]);
       } else if (selectedIndex !== null && event.key.length === 1 && !event.metaKey && !event.ctrlKey && !event.altKey) {
         event.preventDefault();
-        startEditing(tasks[selectedIndex], `${tasks[selectedIndex].title}${event.key}`);
+        if (displayedTasks[selectedIndex]) startEditing(displayedTasks[selectedIndex], `${displayedTasks[selectedIndex].title}${event.key}`);
       }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [active, completeTask, editingId, openTask, selectedIndex, tasks]);
+  }, [active, completeTask, editingId, openTask, selectedIndex, displayedTasks]);
 
   return (
     <div ref={taskViewRef} className={`task-view is-${interactionMode}-mode ${embedded ? "is-embedded" : ""}`} data-interaction-mode={interactionMode}>
+      {!embedded && !groupId && groupTaskCount > 0 && (
+        <div style={{ display: "flex", gap: "6px", padding: "8px 16px 6px", borderBottom: "1px solid var(--border, rgba(255,255,255,0.08))" }}>
+          <button
+            type="button"
+            onClick={() => setFilterScope("all")}
+            style={{
+              padding: "3px 9px",
+              fontSize: "11px",
+              borderRadius: "5px",
+              border: "1px solid var(--border, rgba(255,255,255,0.12))",
+              background: filterScope === "all" ? "var(--color-mac-control, rgba(255,255,255,0.15))" : "transparent",
+              color: filterScope === "all" ? "var(--text-h, #fff)" : "var(--color-mac-muted, #888)",
+              cursor: "pointer"
+            }}
+          >
+            All ({tasks.length})
+          </button>
+          <button
+            type="button"
+            onClick={() => setFilterScope("personal")}
+            style={{
+              padding: "3px 9px",
+              fontSize: "11px",
+              borderRadius: "5px",
+              border: "1px solid var(--border, rgba(255,255,255,0.12))",
+              background: filterScope === "personal" ? "var(--color-mac-control, rgba(255,255,255,0.15))" : "transparent",
+              color: filterScope === "personal" ? "var(--text-h, #fff)" : "var(--color-mac-muted, #888)",
+              cursor: "pointer"
+            }}
+          >
+            Personal ({personalTaskCount})
+          </button>
+          <button
+            type="button"
+            onClick={() => setFilterScope("groups")}
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "4px",
+              padding: "3px 9px",
+              fontSize: "11px",
+              borderRadius: "5px",
+              border: "1px solid var(--border, rgba(255,255,255,0.12))",
+              background: filterScope === "groups" ? "var(--color-mac-control, rgba(255,255,255,0.15))" : "transparent",
+              color: filterScope === "groups" ? "var(--text-h, #fff)" : "var(--color-mac-muted, #888)",
+              cursor: "pointer"
+            }}
+          >
+            <Users size={11} />
+            Group Tasks ({groupTaskCount})
+          </button>
+        </div>
+      )}
+
       <div className="task-feed" role="list" aria-label="Pending tasks">
         {loading ? <div className="empty-state">Loading tasks...</div> : loadError ? (
           <div className="empty-state task-load-error">
@@ -416,9 +500,9 @@ export default function TaskView({ token, embedded = false, active = true, compo
             <span>{loadError}</span>
             <button type="button" onClick={loadTasks}>Retry</button>
           </div>
-        ) : tasks.length === 0 ? (
+        ) : displayedTasks.length === 0 ? (
           <div className="empty-state"><strong>No tasks pending</strong><span>Add one below without leaving this view.</span></div>
-        ) : tasks.map((task, index) => {
+        ) : displayedTasks.map((task, index) => {
           const selected = selectedIndex === index;
           const editing = editingId === task.id;
           const dueDate = taskDueDate(task);
@@ -486,12 +570,23 @@ export default function TaskView({ token, embedded = false, active = true, compo
                   <div className="task-row-content">
                     <span>{task.title}</span>
                     {task.description && <small className="task-row-note">{task.description}</small>}
-                    {(priority || dueDate || task.module_code) && (
+                    {(priority || dueDate || task.module_code || task.group_name || task.assignee_name) && (
                       <div className="task-meta">
                         {priority && <span style={{ color: priorityColor(priority) }}><Flag size={10} />{priority.toUpperCase()}</span>}
                         {dueDate && <span><Calendar size={10} />{formatDueDate(dueDate)}</span>}
                         {task.module_code && <span style={taskModuleColor ? { color: taskModuleColor } : undefined}><BookOpen size={10} />{task.module_code}</span>}
                         {task.class_summary && <span><Calendar size={10} />{task.class_relation === "due_before" ? "Before " : task.class_relation === "bring_to" ? "For " : "After "}{task.class_summary}</span>}
+                        {task.group_name && (
+                          <span style={{ display: "inline-flex", alignItems: "center", gap: "3px", color: "var(--color-mac-accent, #5bc0be)", fontWeight: 550 }}>
+                            <Users size={10} />
+                            {task.group_name}
+                          </span>
+                        )}
+                        {task.assignee_name && (
+                          <span style={{ display: "inline-flex", alignItems: "center", gap: "3px", opacity: 0.85 }}>
+                            {task.assignee_id === user?.id ? "Assigned to you" : `Assigned: ${task.assignee_name}`}
+                          </span>
+                        )}
                       </div>
                     )}
                     {task.created_at && <small className="task-added-at">Added {formatAddedAt(task.created_at)}</small>}

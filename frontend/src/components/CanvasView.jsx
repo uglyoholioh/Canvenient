@@ -135,27 +135,31 @@ export default function CanvasView({ token }) {
               courses.length === 0 ? (
                 <div className="module-empty">No courses available. Sync to fetch modules.</div>
               ) : (
-                <div className="module-grid">
-                  {courses.map(course => (
-                    <button
-                      key={course.id}
-                      className="module-card"
-                      style={{ "--module-color": course.color }}
-                      onClick={() => { setSelectedCourseId(course.id); setSelectedFile(null); }}
-                    >
-                      <div className="module-card-color-bar" />
-                      <div className="module-card-content">
-                        <strong>{course.course_code}</strong>
-                        <small>{course.name}</small>
-                      </div>
-                      <div className="module-card-stats" style={{ display: 'flex', gap: '16px', marginTop: 'auto', paddingTop: '12px', borderTop: '1px solid var(--border)' }}>
-                        <span className="module-card-stat" style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: 'var(--text-muted)' }}>
-                          <BookOpen size={12} /> {assignments.filter(a => String(a.course_id) === String(course.id) && a.due_at && new Date(a.due_at) >= new Date() && !a.has_submitted).length} upcoming assignment{assignments.filter(a => String(a.course_id) === String(course.id) && a.due_at && new Date(a.due_at) >= new Date() && !a.has_submitted).length !== 1 ? 's' : ''}
-                        </span>
-                      </div>
-                    </button>
-                  ))}
-                </div>
+                <section>
+                  <div className="canvas-item-list">
+                    {courses.map(course => {
+                      const upcomingCount = assignments.filter(a => String(a.course_id) === String(course.id) && a.due_at && new Date(a.due_at) >= new Date() && !a.has_submitted).length;
+                      return (
+                        <button
+                          type="button"
+                          key={course.id}
+                          className="canvas-item-row"
+                          style={{ "--module-color": course.color }}
+                          onClick={() => { setSelectedCourseId(course.id); setSelectedFile(null); }}
+                        >
+                          <span className="canvas-item-icon"><BookOpen size={15} /></span>
+                          <span className="canvas-item-copy">
+                            <strong>{course.course_code}</strong>
+                            <small>{course.name}</small>
+                          </span>
+                          <span className="canvas-status">
+                            {upcomingCount} upcoming assignment{upcomingCount !== 1 ? 's' : ''}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </section>
               )
             ) : (
               <>

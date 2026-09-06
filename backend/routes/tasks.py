@@ -174,10 +174,72 @@ def build_task(record) -> TaskOut:
         category_id=record["category_id"],
         category_name=record["category_name"],
         category_color=record["category_color"],
+        group_id=rec_dict.get("group_id"),
+        group_name=rec_dict.get("group_name"),
+        assignee_id=rec_dict.get("assignee_id"),
+        assignee_name=rec_dict.get("assignee_name"),
+        assignee_email=rec_dict.get("assignee_email"),
+        creator_id=rec_dict.get("creator_id") or record.get("user_id"),
+        creator_name=rec_dict.get("creator_name"),
         completed_at=completed_at,
         created_at=created_at,
         updated_at=updated_at,
     )
+
+
+TASK_SELECT_FIELDS = """
+    t.id,
+    t.title,
+    t.description,
+    t.status,
+    t.priority_manual,
+    t.estimated_minutes,
+    t.source_type,
+    t.source_id,
+    t.source_due_at,
+    t.due_at_override,
+    t.external_url,
+    t.module_id,
+    t.category_id,
+    t.completed_at,
+    t.created_at,
+    t.updated_at,
+    t.group_id,
+    t.assignee_id,
+    t.user_id AS creator_id,
+    g.name AS group_name,
+    COALESCE(NULLIF(uas.name, ''), au.email) AS assignee_name,
+    au.email AS assignee_email,
+    COALESCE(NULLIF(ucs.name, ''), cu.email) AS creator_name,
+    m.module_code AS module_code,
+    m.name AS module_name,
+    mc.color AS module_color,
+    ctl.occurrence_date AS class_occurrence_date,
+    ctl.class_summary AS class_summary,
+    ctl.relation AS class_relation,
+    ctl.class_occurrence_key AS class_occurrence_key,
+    c.name AS category_name,
+    c.color AS category_color
+FROM tasks t
+LEFT JOIN groups g
+    ON g.id = t.group_id
+LEFT JOIN users au
+    ON au.id = t.assignee_id
+LEFT JOIN user_settings uas
+    ON uas.user_id = t.assignee_id
+LEFT JOIN users cu
+    ON cu.id = t.user_id
+LEFT JOIN user_settings ucs
+    ON ucs.user_id = t.user_id
+LEFT JOIN academic_modules m
+    ON m.id = t.module_id
+LEFT JOIN module_colors mc
+    ON mc.user_id = :current_user_id AND mc.module_code = m.module_code
+LEFT JOIN class_task_links ctl
+    ON ctl.task_id = t.id AND ctl.user_id = :current_user_id
+LEFT JOIN categories c
+    ON c.id = t.category_id
+"""
 
 
 async def ensure_reference_belongs_to_user(
@@ -198,45 +260,18 @@ async def ensure_reference_belongs_to_user(
 
 async def fetch_task_for_user(task_id: int, user_id: int):
     row = await db.fetch_one(
-        query="""
-            SELECT
-                t.id,
-                t.title,
-                t.description,
-                t.status,
-                t.priority_manual,
-                t.estimated_minutes,
-                t.source_type,
-                t.source_id,
-                t.source_due_at,
-                t.due_at_override,
-                t.external_url,
-                t.module_id,
-                t.category_id,
-                t.completed_at,
-                t.created_at,
-                t.updated_at,
-                m.module_code AS module_code,
-                m.name AS module_name,
-                mc.color AS module_color,
-                ctl.occurrence_date AS class_occurrence_date,
-                ctl.class_summary AS class_summary,
-                ctl.relation AS class_relation,
-                ctl.class_occurrence_key AS class_occurrence_key,
-                c.name AS category_name,
-                c.color AS category_color
-            FROM tasks t
-            LEFT JOIN academic_modules m
-                ON m.id = t.module_id
-            LEFT JOIN module_colors mc
-                ON mc.user_id = t.user_id AND mc.module_code = m.module_code
-            LEFT JOIN class_task_links ctl
-                ON ctl.task_id = t.id AND ctl.user_id = t.user_id
-            LEFT JOIN categories c
-                ON c.id = t.category_id
-            WHERE t.id = :task_id AND t.user_id = :user_id
+        query=f"""
+            SELECT {TASK_SELECT_FIELDS}
+            WHERE t.id = :task_id
+              AND (
+                  t.user_id = :current_user_id
+                  OR t.assignee_id = :current_user_id
+                  OR (t.group_id IS NOT NULL AND EXISTS (
+                      SELECT 1 FROM g_members gm WHERE gm.g_id = t.group_id AND gm.user_id = :current_user_id
+                  ))
+              )
         """,
-        values={"task_id": task_id, "user_id": user_id},
+        values={"task_id": task_id, "current_user_id": user_id},
     )
 
     if not row:
@@ -246,51 +281,76 @@ async def fetch_task_for_user(task_id: int, user_id: int):
 
 
 @router.get("", response_model=list[TaskOut])
-async def list_tasks(current_user: CurrentUser):
+async def list_tasks(
+    current_user: CurrentUser,
+    group_id: int | None = None,
+    filter: str | None = None,
+):
+    if group_id is not None:
+        member = await db.fetch_one(
+            query="SELECT 1 FROM g_members WHERE g_id = :g_id AND user_id = :user_id",
+            values={"g_id": group_id, "user_id": current_user.id},
+        )
+        if not member:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You are not a member of this group.",
+            )
+
+        where_clause = "WHERE t.group_id = :group_id"
+        query_values = {"group_id": group_id, "current_user_id": current_user.id}
+
+        if filter == "assigned_to_me":
+            where_clause += " AND t.assignee_id = :current_user_id"
+        elif filter == "unassigned":
+            where_clause += " AND t.assignee_id IS NULL"
+
+        rows = await db.fetch_all(
+            query=f"""
+                SELECT {TASK_SELECT_FIELDS}
+                {where_clause}
+                ORDER BY
+                    CASE WHEN t.status = 'done' THEN 1 ELSE 0 END,
+                    COALESCE(t.due_at_override, t.source_due_at) ASC NULLS LAST,
+                    t.created_at DESC
+            """,
+            values=query_values,
+        )
+        return [build_task(row) for row in rows]
+
+    query_values = {"current_user_id": current_user.id}
+    if filter == "personal":
+        where_clause = "WHERE t.user_id = :current_user_id AND t.group_id IS NULL"
+    elif filter == "assigned_to_me":
+        where_clause = "WHERE t.assignee_id = :current_user_id AND t.group_id IS NOT NULL"
+    elif filter == "group":
+        where_clause = """
+            WHERE t.group_id IS NOT NULL
+              AND (
+                  t.assignee_id = :current_user_id
+                  OR t.user_id = :current_user_id
+                  OR EXISTS (
+                      SELECT 1 FROM g_members gm WHERE gm.g_id = t.group_id AND gm.user_id = :current_user_id
+                  )
+              )
+        """
+    else:
+        # Default: personal tasks + group tasks assigned to user or created by user
+        where_clause = """
+            WHERE (t.user_id = :current_user_id AND t.group_id IS NULL)
+               OR (t.group_id IS NOT NULL AND (t.assignee_id = :current_user_id OR t.user_id = :current_user_id))
+        """
+
     rows = await db.fetch_all(
-        query="""
-            SELECT
-                t.id,
-                t.title,
-                t.description,
-                t.status,
-                t.priority_manual,
-                t.estimated_minutes,
-                t.source_type,
-                t.source_id,
-                t.source_due_at,
-                t.due_at_override,
-                t.external_url,
-                t.module_id,
-                t.category_id,
-                t.completed_at,
-                t.created_at,
-                t.updated_at,
-                m.module_code AS module_code,
-                m.name AS module_name,
-                mc.color AS module_color,
-                ctl.occurrence_date AS class_occurrence_date,
-                ctl.class_summary AS class_summary,
-                ctl.relation AS class_relation,
-                ctl.class_occurrence_key AS class_occurrence_key,
-                c.name AS category_name,
-                c.color AS category_color
-            FROM tasks t
-            LEFT JOIN academic_modules m
-                ON m.id = t.module_id
-            LEFT JOIN module_colors mc
-                ON mc.user_id = t.user_id AND mc.module_code = m.module_code
-            LEFT JOIN class_task_links ctl
-                ON ctl.task_id = t.id AND ctl.user_id = t.user_id
-            LEFT JOIN categories c
-                ON c.id = t.category_id
-            WHERE t.user_id = :user_id
+        query=f"""
+            SELECT {TASK_SELECT_FIELDS}
+            {where_clause}
             ORDER BY
                 CASE WHEN t.status = 'done' THEN 1 ELSE 0 END,
                 COALESCE(t.due_at_override, t.source_due_at) ASC NULLS LAST,
                 t.created_at DESC
         """,
-        values={"user_id": current_user.id},
+        values=query_values,
     )
     return [build_task(row) for row in rows]
 
@@ -478,6 +538,27 @@ async def sync_canvas_tasks(current_user: CurrentUser):
 
 @router.post("", response_model=TaskOut, status_code=status.HTTP_201_CREATED)
 async def create_task(payload: TaskCreate, current_user: CurrentUser):
+    if payload.group_id is not None:
+        member = await db.fetch_one(
+            query="SELECT role FROM g_members WHERE g_id = :g_id AND user_id = :user_id",
+            values={"g_id": payload.group_id, "user_id": current_user.id},
+        )
+        if not member:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You are not a member of this group.",
+            )
+        if payload.assignee_id is not None:
+            assignee_member = await db.fetch_one(
+                query="SELECT 1 FROM g_members WHERE g_id = :g_id AND user_id = :user_id",
+                values={"g_id": payload.group_id, "user_id": payload.assignee_id},
+            )
+            if not assignee_member:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Assignee must be a member of this group.",
+                )
+
     await ensure_reference_belongs_to_user(
         "academic_modules",
         payload.module_id,
@@ -521,7 +602,9 @@ async def create_task(payload: TaskCreate, current_user: CurrentUser):
                 source_due_at,
                 due_at_override,
                 external_url,
-                completed_at
+                completed_at,
+                group_id,
+                assignee_id
             )
             VALUES (
                 :user_id,
@@ -537,7 +620,9 @@ async def create_task(payload: TaskCreate, current_user: CurrentUser):
                 :source_due_at,
                 :due_at_override,
                 :external_url,
-                :completed_at
+                :completed_at,
+                :group_id,
+                :assignee_id
             )
             RETURNING id
         """,
@@ -556,6 +641,8 @@ async def create_task(payload: TaskCreate, current_user: CurrentUser):
             "due_at_override": payload.due_at_override,
             "external_url": payload.external_url,
             "completed_at": completed_at,
+            "group_id": payload.group_id,
+            "assignee_id": payload.assignee_id,
         },
     )
     if linked_class is not None:
@@ -584,6 +671,30 @@ async def create_task(payload: TaskCreate, current_user: CurrentUser):
 async def update_task(task_id: int, payload: TaskUpdate, current_user: CurrentUser):
     existing = await fetch_task_for_user(task_id, current_user.id)
     updates = payload.model_dump(exclude_unset=True)
+
+    group_id = updates.get("group_id", existing["group_id"])
+    assignee_id = updates.get("assignee_id", existing["assignee_id"])
+
+    if group_id is not None:
+        member = await db.fetch_one(
+            query="SELECT role FROM g_members WHERE g_id = :g_id AND user_id = :user_id",
+            values={"g_id": group_id, "user_id": current_user.id},
+        )
+        if not member:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You are not a member of this group.",
+            )
+        if assignee_id is not None:
+            assignee_member = await db.fetch_one(
+                query="SELECT 1 FROM g_members WHERE g_id = :g_id AND user_id = :user_id",
+                values={"g_id": group_id, "user_id": assignee_id},
+            )
+            if not assignee_member:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Assignee must be a member of this group.",
+                )
 
     module_id = updates.get("module_id", existing["module_id"])
     category_id = updates.get("category_id", existing["category_id"])
@@ -630,12 +741,13 @@ async def update_task(task_id: int, payload: TaskUpdate, current_user: CurrentUs
                 due_at_override = :due_at_override,
                 external_url = :external_url,
                 completed_at = :completed_at,
+                group_id = :group_id,
+                assignee_id = :assignee_id,
                 updated_at = CURRENT_TIMESTAMP
-            WHERE id = :task_id AND user_id = :user_id
+            WHERE id = :task_id
         """,
         values={
             "task_id": task_id,
-            "user_id": current_user.id,
             "module_id": module_id,
             "category_id": category_id,
             "title": updates.get("title", existing["title"]),
@@ -655,6 +767,8 @@ async def update_task(task_id: int, payload: TaskUpdate, current_user: CurrentUs
             ),
             "external_url": updates.get("external_url", existing["external_url"]),
             "completed_at": completed_at,
+            "group_id": group_id,
+            "assignee_id": assignee_id,
         },
     )
     return build_task(await fetch_task_for_user(task_id, current_user.id))
@@ -662,9 +776,29 @@ async def update_task(task_id: int, payload: TaskUpdate, current_user: CurrentUs
 
 @router.delete("/{task_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_task(task_id: int, current_user: CurrentUser):
-    await fetch_task_for_user(task_id, current_user.id)
+    existing = await fetch_task_for_user(task_id, current_user.id)
+    if existing["group_id"] is not None:
+        is_creator = existing["creator_id"] == current_user.id
+        is_assignee = existing["assignee_id"] == current_user.id
+        if not (is_creator or is_assignee):
+            admin_check = await db.fetch_one(
+                query="SELECT 1 FROM g_members WHERE g_id = :g_id AND user_id = :user_id AND role = 'admin'",
+                values={"g_id": existing["group_id"], "user_id": current_user.id},
+            )
+            if not admin_check:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Only task creator, assignee, or group admin can delete this task.",
+                )
+    else:
+        if existing["creator_id"] != current_user.id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You do not own this task.",
+            )
+
     await db.execute(
-        query="DELETE FROM tasks WHERE id = :task_id AND user_id = :user_id",
-        values={"task_id": task_id, "user_id": current_user.id},
+        query="DELETE FROM tasks WHERE id = :task_id",
+        values={"task_id": task_id},
     )
     return Response(status_code=status.HTTP_204_NO_CONTENT)

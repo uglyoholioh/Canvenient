@@ -2614,13 +2614,6 @@ button.module-item-main:hover, .module-list-item.task-module-item:hover { backgr
 
 /* Full Canvas workspace */
 .canvas-page { display: flex; height: 100%; min-height: 0; background: var(--bg); }
-.module-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; max-width: 980px; margin: 0 auto; }
-.module-card { position: relative; display: flex; flex-direction: column; padding: 24px; border-radius: var(--radius-lg); background: var(--surface); border: 1px solid var(--border); text-align: left; cursor: pointer; transition: var(--transition-fast); overflow: hidden; }
-.module-card:hover { border-color: var(--border-strong);  box-shadow: var(--shadow-soft); }
-.module-card-color-bar { position: absolute; top: 0; left: 0; right: 0; height: 4px; background: var(--module-color, var(--accent)); }
-.module-card-content { display: flex; flex-direction: column; gap: 8px; margin-top: 4px; }
-.module-card-content strong { color: var(--text-h); font-size: 16px; font-weight: 600; line-height: 1.2; }
-.module-card-content small { color: var(--text-muted); font-size: 13px; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .canvas-back-button { display: inline-flex; align-items: center; gap: 8px; margin-bottom: 24px; padding: 8px 12px; background: var(--surface-muted); border: 1px solid var(--border); border-radius: var(--radius-md); color: var(--text); font-size: 13px; font-weight: 500; cursor: pointer; transition: var(--transition-fast); }
 .canvas-back-button:hover { background: var(--surface-hover); color: var(--text-h); border-color: var(--border-focus); }
 .canvas-main { flex: 1; min-width: 0; display: flex; flex-direction: column; }.canvas-page-header { height: 49px; flex: none; padding: 0 18px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
@@ -2634,7 +2627,6 @@ button.module-item-main:hover, .module-list-item.task-module-item:hover { backgr
 .grade-course-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px; }.grade-course-card { overflow: hidden; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); }.grade-course-card > header { padding: 14px; border-bottom: 1px solid var(--border); display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }.grade-course-card header > div:first-child { min-width: 0; display: flex; flex-direction: column; }.grade-course-card header small { color: var(--accent); font: 500 9px var(--font-mono); }.grade-course-card header strong { overflow: hidden; color: var(--text-h); font-size: 11px; white-space: nowrap; text-overflow: ellipsis; }.grade-total { flex: none; text-align: right; display: flex; flex-direction: column; }.grade-total strong { font-size: 18px !important; }.grade-total span { color: var(--text-muted); font-size: 9px; }.grade-assignment-list { max-height: 250px; overflow-y: auto; padding: 7px 12px 11px; }.grade-assignment-list > div { padding: 7px 2px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; gap: 12px; font-size: 10px; }.grade-assignment-list > div:last-child { border-bottom: 0; }.grade-assignment-list span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }.grade-assignment-list strong { color: var(--text-h); white-space: nowrap; }
 @media (max-width: 720px) { 
   .canvas-page { flex-direction: column; }
-  .module-grid { grid-template-columns: 1fr; gap: 12px; }
   .canvas-back-button { width: 100%; justify-content: center; padding: 10px 16px; font-size: 14px; }
   .canvas-tabs button { padding: 0 7px; font-size: 9px; }
   .canvas-sync { font-size: 0; }

@@ -25,7 +25,7 @@ const MenuBar = ({ editor, onExportPDF, onExportMD, onCreateTask }) => {
   });
 
   return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 24px', borderBottom: '1px solid var(--border-subtle)', backgroundColor: 'var(--surface-muted)' }}>
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 16px', borderBottom: '1px solid var(--border-subtle)', backgroundColor: 'var(--surface-muted)', flexWrap: 'wrap', gap: '8px' }}>
       <div style={{ display: 'flex', gap: '4px' }}>
         <button onClick={() => editor.chain().focus().toggleBold().run()} style={btnStyle(editor.isActive('bold'))} title="Bold">
           <Bold size={16} />
@@ -253,16 +253,16 @@ export default function MarkdownEditor({ noteId, token, onDelete, onUpdate, fold
         }
       `}</style>
       
-      <div className="no-print" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 24px', backgroundColor: 'var(--surface)' }}>
+      <div className="no-print" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 16px', backgroundColor: 'var(--surface)', gap: '12px', flexWrap: 'wrap' }}>
         <input 
           type="text" 
           value={title} 
           onChange={handleTitleChange}
-          style={{ fontSize: '20px', fontWeight: '600', color: 'var(--text-h)', background: 'transparent', border: 'none', outline: 'none', width: '50%', fontFamily: 'var(--font-sans)' }}
+          style={{ fontSize: '18px', fontWeight: '600', color: 'var(--text-h)', background: 'transparent', border: 'none', outline: 'none', flex: '1 1 180px', minWidth: 0, fontFamily: 'var(--font-sans)' }}
           placeholder="Untitled Note"
         />
         
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
           <span style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px' }}>
             {saveState === 'saving' ? 'Saving...' : saveState === 'saved' ? <><Save size={12} /> Saved</> : 'Unsaved changes'}
           </span>
@@ -292,7 +292,7 @@ export default function MarkdownEditor({ noteId, token, onDelete, onUpdate, fold
 
       <div className="no-print"><MenuBar editor={editor} onExportMD={exportMarkdown} onExportPDF={exportPDF} onCreateTask={handleCreateTask} /></div>
 
-      <div className="tiptap-editor-container" style={{ flex: 1, overflowY: 'auto', padding: '24px 32px' }}>
+      <div className="tiptap-editor-container" style={{ flex: 1, overflowY: 'auto', padding: '20px 24px' }}>
         <h1 className="only-print" style={{ display: 'none' }}>{title}</h1>
         <style>{`@media print { .only-print { display: block !important; margin-bottom: 24px; color: black; } }`}</style>
         <EditorContent editor={editor} />

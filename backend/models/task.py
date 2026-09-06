@@ -28,6 +28,8 @@ class TaskCreate(BaseModel):
     class_relation: ClassRelation = "due_before"
     is_recurring: bool = False
     class_recurring: bool = False
+    group_id: int | None = None
+    assignee_id: int | None = None
 
     @field_validator("title")
     @classmethod
@@ -60,6 +62,8 @@ class TaskUpdate(BaseModel):
     source_due_at: datetime | None = None
     due_at_override: datetime | None = None
     external_url: str | None = Field(default=None, max_length=500)
+    group_id: int | None = None
+    assignee_id: int | None = None
 
     @field_validator("title")
     @classmethod
@@ -108,6 +112,13 @@ class TaskOut(BaseModel):
     category_id: int | None = None
     category_name: str | None = None
     category_color: str | None = None
+    group_id: int | None = None
+    group_name: str | None = None
+    assignee_id: int | None = None
+    assignee_name: str | None = None
+    assignee_email: str | None = None
+    creator_id: int | None = None
+    creator_name: str | None = None
     completed_at: datetime | None = None
     created_at: datetime
     updated_at: datetime
