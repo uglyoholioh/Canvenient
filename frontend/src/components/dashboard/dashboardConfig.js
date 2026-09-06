@@ -22,20 +22,21 @@ export const DEFAULT_DASHBOARD_SIZES = {
   tasks: { columns: 2, rows: 2 },
   schedule: { columns: 1, rows: 1 },
   isb: { columns: 1, rows: 1 },
-  canvas: { columns: 1, rows: 2 },
+  canvas: { columns: 1, rows: 1 },
   notes: { columns: 1, rows: 1 },
   aibrief: { columns: 2, rows: 1 },
   studytimer: { columns: 1, rows: 1 },
 };
 
+// 3 columns: tasks takes left 2, widgets stack in the right 1
 export const DEFAULT_DASHBOARD_TRACKS = {
-  columns: [0.25, 0.25, 0.25, 0.25],
-  rows: [220, 520],
+  columns: [0.333, 0.333, 0.334],
+  rows: [220, 220],
 };
 
 export const DEFAULT_DASHBOARD_CONFIG = {
-  order: ["tasks", "schedule", "canvas"],
-  hidden: ["isb", "notes", "aibrief", "studytimer"],
+  order: ["tasks", "schedule", "canvas", "notes"],
+  hidden: ["isb", "aibrief", "studytimer"],
   sizes: DEFAULT_DASHBOARD_SIZES,
   tracks: DEFAULT_DASHBOARD_TRACKS,
 };
@@ -43,11 +44,13 @@ export const DEFAULT_DASHBOARD_CONFIG = {
 export function threeColumnDashboardConfig(config = DEFAULT_DASHBOARD_CONFIG) {
   return {
     ...config,
-    order: ["tasks", "schedule", "canvas", "isb"],
+    order: ["tasks", "schedule", "canvas", "notes"],
+    hidden: (config.hidden || []).filter((id) => !["schedule", "canvas", "notes"].includes(id)),
     sizes: { ...config.sizes, ...DEFAULT_DASHBOARD_SIZES },
     tracks: { ...DEFAULT_DASHBOARD_TRACKS },
   };
 }
+
 
 export function readDashboardLayout() {
   const stored = localStorage.getItem("canvenient-dashboard-layout");
@@ -95,7 +98,7 @@ export function normalizeDashboardTracks(tracks) {
     ? tracks.rows.map(Number).filter((value) => Number.isFinite(value) && value > 0)
     : [];
 
-  let columns = rawColumns.length === 4 ? rawColumns : [...DEFAULT_DASHBOARD_TRACKS.columns];
+  let columns = (rawColumns.length === 3 || rawColumns.length === 4) ? rawColumns : [...DEFAULT_DASHBOARD_TRACKS.columns];
   const rows = rawRows.length > 0 ? rawRows : [...DEFAULT_DASHBOARD_TRACKS.rows];
 
   const snapToFraction = 12;
@@ -113,6 +116,7 @@ export function normalizeDashboardTracks(tracks) {
     rows: rows,
   };
 }
+
 
 export function normalizeDashboardSize(size, fallback = { columns: 1, rows: 1 }) {
   const candidate = typeof size === "string" ? LEGACY_DASHBOARD_SIZES[size] : size;

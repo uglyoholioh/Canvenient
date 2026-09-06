@@ -258,7 +258,7 @@ export default function ModuleCard({
     const cardRect = card.getBoundingClientRect();
     const columns = parseTrackPixels(gridStyle.gridTemplateColumns);
     const rows = parseTrackPixels(gridStyle.gridTemplateRows);
-    if (columns.length !== 4 || rows.length === 0) return;
+    if (columns.length < 3 || rows.length === 0) return;
     const cardRight = cardRect.right ?? cardRect.left + cardRect.width;
     const cardBottom = cardRect.bottom ?? cardRect.top + cardRect.height;
     const columnStart = nearestBoundary(cardRect.left - gridRect.left, columns);
@@ -314,7 +314,7 @@ export default function ModuleCard({
     const cardRect = card.getBoundingClientRect();
     const columns = parseTrackPixels(gridStyle.gridTemplateColumns);
     const rows = parseTrackPixels(gridStyle.gridTemplateRows);
-    if (columns.length !== 4 || rows.length === 0) return;
+    if (columns.length < 3 || rows.length === 0) return;
     const horizontalDelta = event.key === "ArrowLeft" ? -KEYBOARD_RESIZE_STEP : event.key === "ArrowRight" ? KEYBOARD_RESIZE_STEP : 0;
     const verticalDelta = event.key === "ArrowUp" ? -KEYBOARD_RESIZE_STEP : event.key === "ArrowDown" ? KEYBOARD_RESIZE_STEP : 0;
     if ((!horizontalDelta || !/[ew]/.test(direction)) && (!verticalDelta || !/[ns]/.test(direction))) return;

@@ -4,6 +4,7 @@ import CanvasDrawer from "./drawers/CanvasDrawer";
 import CanvasModule from "./dashboard/CanvasModule";
 import ModuleCard from "./dashboard/ModuleCard";
 import ScheduleModule from "./dashboard/ScheduleModule";
+import ScheduleCompactModule from "./dashboard/ScheduleCompactModule";
 import CampusBusModule from "./dashboard/CampusBusModule";
 import TasksModule from "./dashboard/TasksModule";
 import DashboardCustomizer from "./dashboard/DashboardCustomizer";
@@ -14,6 +15,7 @@ import { readDashboardConfig, readDashboardLayout, saveDashboardConfig, saveDash
 import { useQuickCapture } from "./QuickCaptureContext";
 import { WorkspaceToolbarContext } from "./WorkspaceToolbarContext";
 import { useContext } from "react";
+
 
 
 
@@ -40,16 +42,17 @@ export default function Dashboard({ token, user, onNavigate, onOpenSearch, searc
 
   useEffect(() => {
     const layoutKey = "canvenient-dashboard-three-column-layout";
-    if (localStorage.getItem(layoutKey) === "9") return;
+    if (localStorage.getItem(layoutKey) === "10") return;
     Promise.resolve().then(() => {
       const nextConfig = threeColumnDashboardConfig(readDashboardConfig());
       saveDashboardConfig(nextConfig);
       saveDashboardLayout("focus");
       setConfig(nextConfig);
       setLayout("focus");
-      localStorage.setItem(layoutKey, "9");
+      localStorage.setItem(layoutKey, "10");
     });
   }, []);
+
 
   useEffect(() => {
     const syncSettings = () => { setLayout(readDashboardLayout()); setConfig(readDashboardConfig()); };
@@ -97,7 +100,7 @@ export default function Dashboard({ token, user, onNavigate, onOpenSearch, searc
     schedule: {
       title: "Schedule",
       onViewFull: () => onNavigate("schedule"),
-      body: <ScheduleModule token={token} onNavigate={onNavigate} />,
+      body: <ScheduleCompactModule token={token} onNavigate={onNavigate} />,
     },
     isb: {
       title: "NUS ISB",
@@ -122,6 +125,7 @@ export default function Dashboard({ token, user, onNavigate, onOpenSearch, searc
       body: <StudyTimerModule token={token} />,
     },
   };
+
 
   const visibleModules = useMemo(
     () => config.order.filter((moduleId) => !config.hidden.includes(moduleId)),
