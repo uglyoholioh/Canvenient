@@ -162,7 +162,11 @@ export default function ScheduleModule({ token, onNavigate }) {
               </div>
             </div>
           ) : (
-            <div className="schedule-module-message">No scheduled classes or dated tasks in the next two weeks.</div>
+            <div className="schedule-module-message">
+              {dayOffset === 0
+                ? "No scheduled classes or dated tasks today."
+                : `No scheduled classes or dated tasks ${dayOffset === 1 ? "tomorrow" : dayOffset === -1 ? "yesterday" : "for this day"}.`}
+            </div>
           )}
         </>
       )}

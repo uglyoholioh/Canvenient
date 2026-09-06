@@ -1,4 +1,6 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+// React is required by the test JSX transform.
+// eslint-disable-next-line no-unused-vars
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CalendarDays, ChevronLeft, ChevronRight, FileUp, Link2, Loader2, MapPin, Upload, X } from "lucide-react";
 import { getSchedule, importIcs, importNusmods } from "../api";
 import ClassContextDrawer from "./drawers/ClassContextDrawer";
@@ -53,7 +55,12 @@ function TimelineItem({ item, startHour, hourHeight = HOUR_HEIGHT, now, isToday,
     >
       <div className="schedule-item-copy">
         <div><strong>{item.title}</strong><span className="schedule-class-type">{classTypeBadge(item)}</span></div>
-        <small><MapPin size={11} />{item.venue}</small>
+        {(item.venue || item.weeksLabel) && (
+          <small>
+            {item.venue && <><MapPin size={11} />{item.venue}</>}
+            {item.weeksLabel && <span className="schedule-item-weeks">{item.venue ? " · " : ""}{item.weeksLabel}</span>}
+          </small>
+        )}
         {isLinkable && linkCount > 0 && <small className="schedule-linked-count">{linkCount} linked</small>}
       </div>
       {!compact && (isPast || item.kind === "exam") && (
@@ -90,14 +97,20 @@ function HorizontalScheduleItem({ item, startHour, totalHours, now, isToday, row
       tabIndex={isLinkable ? 0 : undefined}
       onClick={openClass}
       onKeyDown={(event) => { if (isLinkable && (event.key === "Enter" || event.key === " ")) { event.preventDefault(); openClass(); } }}
-      aria-label={`${item.title}, ${formatScheduleTime(item.start)} to ${formatScheduleTime(item.end)}, ${item.subtitle}${item.classNo ? ` ${item.classNo}` : ""}, ${item.venue}${linkCount ? `, ${linkCount} linked item${linkCount === 1 ? "" : "s"}` : ""}`}
+      aria-label={`${item.title}, ${formatScheduleTime(item.start)} to ${formatScheduleTime(item.end)}, ${item.subtitle}${item.classNo ? ` ${item.classNo}` : ""}${item.weeksLabel ? `, ${item.weeksLabel}` : ""}, ${item.venue}${linkCount ? `, ${linkCount} linked item${linkCount === 1 ? "" : "s"}` : ""}`}
+      title={`${item.title} - ${item.subtitle}${item.classNo ? ` [${item.classNo}]` : ""}${item.weeksLabel ? ` (${item.weeksLabel})` : ""}${item.venue ? ` at ${item.venue}` : ""}`}
     >
       <div className="schedule-item-copy">
         <div className="schedule-item-heading">
           <strong>{item.title}</strong>
           <span className="schedule-class-type">{classTypeBadge(item)}</span>
         </div>
-        {item.venue && <small><MapPin size={10} />{item.venue}</small>}
+        {(item.venue || item.weeksLabel) && (
+          <small>
+            {item.venue && <><MapPin size={10} />{item.venue}</>}
+            {item.weeksLabel && <span className="schedule-item-weeks">{item.venue ? " · " : ""}{item.weeksLabel}</span>}
+          </small>
+        )}
         {isLinkable && linkCount > 0 && <small className="schedule-linked-count">{linkCount} linked</small>}
       </div>
     </article>
@@ -125,7 +138,7 @@ export default function Schedule({ token }) {
   const [schedule, setSchedule] = useState(EMPTY_SCHEDULE);
   const [selectedDate, setSelectedDate] = useState(() => startOfLocalDay(new Date()));
   const [view, setView] = useState("week");
-  const [weekLayout, setWeekLayout] = useState(() => window.localStorage.getItem(WEEK_LAYOUT_STORAGE_KEY) === "vertical" ? "vertical" : "horizontal");
+  const [weekLayout, setWeekLayout] = useState(() => (typeof window !== "undefined" && typeof window.localStorage?.getItem === "function" ? window.localStorage.getItem(WEEK_LAYOUT_STORAGE_KEY) : null) === "vertical" ? "vertical" : "horizontal");
   const [now, setNow] = useState(new Date());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -159,7 +172,11 @@ export default function Schedule({ token }) {
     const timer = window.setInterval(() => setNow(new Date()), 30000);
     return () => window.clearInterval(timer);
   }, []);
-  useEffect(() => { window.localStorage.setItem(WEEK_LAYOUT_STORAGE_KEY, weekLayout); }, [weekLayout]);
+  useEffect(() => {
+    if (typeof window !== "undefined" && typeof window.localStorage?.setItem === "function") {
+      window.localStorage.setItem(WEEK_LAYOUT_STORAGE_KEY, weekLayout);
+    }
+  }, [weekLayout]);
 
   const days = useMemo(() => weekDates(selectedDate), [selectedDate]);
   const items = useMemo(() => scheduleItemsForDate(schedule, selectedDate), [schedule, selectedDate]);

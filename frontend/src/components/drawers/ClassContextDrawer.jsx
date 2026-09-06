@@ -1,4 +1,6 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+// React is required by the test JSX transform.
+// eslint-disable-next-line no-unused-vars
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Calendar, CalendarClock, CheckCircle2, Download, FileText, Paperclip, Plus, Repeat, Upload, X } from "lucide-react";
 import { createNote, createTask, downloadClassFile, getClassContext, uploadClassFile } from "../../api";
 
@@ -149,7 +151,7 @@ export default function ClassContextDrawer({ item, token, onClose, onContextChan
         <header className="class-context-header" style={{ "--class-color": item.color }}>
           <div style={{ flex: 1 }}>
             <strong>{item.title}</strong>
-            <span>{item.subtitle}{item.classNo ? ` [${item.classNo}]` : ""} · {classDate}</span>
+            <span>{item.subtitle}{item.classNo ? ` [${item.classNo}]` : ""}{item.weeksLabel ? ` · ${item.weeksLabel}` : ""} · {classDate}</span>
             <small>{times}{item.venue ? ` · ${item.venue}` : ""}</small>
           </div>
           <label style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.8em', cursor: 'pointer', marginRight: '8px' }}>

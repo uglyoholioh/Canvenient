@@ -74,4 +74,56 @@ describe("ScheduleModule", () => {
       firstClass.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }),
     );
   });
+
+  it("only shows recurring classes if happening for the current week", async () => {
+    const { getAcademicWeek } = await import("../../scheduleUtils");
+    const today = new Date();
+    const currentWeekInfo = getAcademicWeek(today);
+    const currentWeek = currentWeekInfo.weekNumber || 1;
+    const otherWeek = currentWeek === 2 ? 3 : 2;
+
+    getSchedule.mockResolvedValue({
+      classes: [
+        {
+          id: 10,
+          module_code: "THIS-WEEK-CLASS",
+          lesson_type: "Tutorial",
+          day_of_week: today.getDay(),
+          start_time: "10:00",
+          end_time: "11:00",
+          venue: "COM1",
+          weeks: [currentWeek],
+        },
+        {
+          id: 11,
+          module_code: "OTHER-WEEK-CLASS",
+          lesson_type: "Tutorial",
+          day_of_week: today.getDay(),
+          start_time: "12:00",
+          end_time: "13:00",
+          venue: "COM1",
+          weeks: [otherWeek],
+        },
+      ],
+      exams: [],
+      events: [],
+    });
+    getTasks.mockResolvedValue([]);
+
+    render(<ScheduleModule token="token" onNavigate={() => {}} />);
+
+    expect(await screen.findByText("THIS-WEEK-CLASS")).toBeInTheDocument();
+    expect(screen.queryByText("OTHER-WEEK-CLASS")).not.toBeInTheDocument();
+    // On the dashboard, it just shows the class and does not display weeksLabel
+    expect(screen.queryByText(/Weeks/)).not.toBeInTheDocument();
+  });
+
+  it("displays accurate empty message when no classes or tasks scheduled for today", async () => {
+    getSchedule.mockResolvedValue({ classes: [], exams: [], events: [] });
+    getTasks.mockResolvedValue([]);
+
+    render(<ScheduleModule token="token" onNavigate={() => {}} />);
+
+    expect(await screen.findByText("No scheduled classes or dated tasks today.")).toBeInTheDocument();
+  });
 });

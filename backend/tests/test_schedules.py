@@ -41,6 +41,9 @@ async def test_import_nusmods_timetable(client: AsyncClient, auth, monkeypatch):
     assert schedule.status_code == 200
     payload = schedule.json()
     assert [item["class_date"] for item in payload["classes"]] == ["2026-08-17", "2026-08-19", "2026-08-24"]
+    assert payload["classes"][0]["weeks"] == [2, 3]
+    assert payload["classes"][1]["weeks"] == [2]
+    assert payload["classes"][2]["weeks"] == [2, 3]
     assert payload["classes"][0]["module_name"] == "Data Structures and Algorithms"
     assert payload["exams"][0]["module_code"] == "CS2040S"
 
@@ -84,6 +87,7 @@ END:VCALENDAR
     assert imported["class_date"] == "2026-09-01"
     assert imported["start_time"] == "10:00:00"
     assert imported["class_no"] == "1"
+    assert imported["weeks"] == [4]
 
 
 async def test_reads_legacy_weekly_classes_without_exact_date(client: AsyncClient, auth):
@@ -104,6 +108,7 @@ async def test_reads_legacy_weekly_classes_without_exact_date(client: AsyncClien
 
     assert response.status_code == 200, response.text
     assert response.json()["classes"][0]["class_date"] is None
+    assert response.json()["classes"][0]["weeks"] == list(range(1, 14))
 
 
 async def test_class_context_links_tasks_notes_and_files_to_one_occurrence(client: AsyncClient, auth):

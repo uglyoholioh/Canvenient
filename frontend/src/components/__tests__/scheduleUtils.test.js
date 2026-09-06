@@ -197,4 +197,57 @@ describe("schedule module cards", () => {
       });
     });
   });
+
+  describe("formatWeeksLabel", () => {
+    it("formats different week arrangements accurately", async () => {
+      const { formatWeeksLabel } = await import("../scheduleUtils");
+      expect(formatWeeksLabel([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13])).toBe("Weeks 1–13");
+      expect(formatWeeksLabel([3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13])).toBe("Weeks 3–13");
+      expect(formatWeeksLabel([3, 5, 7, 9, 11, 13])).toBe("Weeks 3–13 (Odd)");
+      expect(formatWeeksLabel([1, 3, 5, 7, 9, 11, 13])).toBe("Odd Weeks");
+      expect(formatWeeksLabel([2, 4, 6, 8, 10, 12])).toBe("Even Weeks");
+      expect(formatWeeksLabel([4, 6, 8, 10, 12])).toBe("Weeks 4–12 (Even)");
+      expect(formatWeeksLabel([3, 4])).toBe("Weeks 3, 4");
+      expect(formatWeeksLabel([5])).toBe("Week 5");
+      expect(formatWeeksLabel([1, 2, 3, 7, 8, 9])).toBe("Weeks 1–3, 7–9");
+      expect(formatWeeksLabel([])).toBe("");
+      expect(formatWeeksLabel(null)).toBe("");
+      expect(formatWeeksLabel({ start: "2026-08-11", end: "2026-11-10" })).toMatch(/Aug/);
+    });
+  });
+
+  describe("isClassHappeningInWeek and scheduleItemsForDate weeks", () => {
+    it("filters classes happening in the given week", async () => {
+      const { isClassHappeningInWeek, scheduleItemsForDate } = await import("../scheduleUtils");
+
+      // 2026-08-17 is Week 2 Monday
+      const week2Monday = new Date(2026, 7, 17);
+      // 2026-08-24 is Week 3 Monday
+      const week3Monday = new Date(2026, 7, 24);
+
+      const oddWeekClass = {
+        id: 10,
+        module_code: "CS2040S",
+        lesson_type: "Tutorial",
+        class_no: "2",
+        day_of_week: 1, // Monday
+        start_time: "10:00:00",
+        end_time: "11:00:00",
+        weeks: [3, 5, 7, 9, 11, 13],
+      };
+
+      // Odd-week class should NOT happen in Week 2
+      expect(isClassHappeningInWeek(oddWeekClass, week2Monday)).toBe(false);
+      // Odd-week class SHOULD happen in Week 3
+      expect(isClassHappeningInWeek(oddWeekClass, week3Monday)).toBe(true);
+
+      const schedule = { classes: [oddWeekClass], exams: [], events: [] };
+      const itemsWeek2 = scheduleItemsForDate(schedule, week2Monday);
+      expect(itemsWeek2).toHaveLength(0);
+
+      const itemsWeek3 = scheduleItemsForDate(schedule, week3Monday);
+      expect(itemsWeek3).toHaveLength(1);
+      expect(itemsWeek3[0].weeksLabel).toBe("Weeks 3–13 (Odd)");
+    });
+  });
 });

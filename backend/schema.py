@@ -52,6 +52,10 @@ SCHEMA_STATEMENTS = [
     ADD COLUMN IF NOT EXISTS attend_in_person BOOLEAN NOT NULL DEFAULT TRUE
     """,
     """
+    ALTER TABLE classes
+    ADD COLUMN IF NOT EXISTS weeks JSONB
+    """,
+    """
     CREATE TABLE IF NOT EXISTS user_settings (
         user_id BIGINT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
         name TEXT NOT NULL DEFAULT '',

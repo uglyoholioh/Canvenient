@@ -17,6 +17,7 @@ class ClassOut(BaseModel):
     # stored day_of_week. Keep those rows readable while the frontend uses the
     # weekday as a compatibility fallback.
     class_date: date | None = None
+    weeks: list[int] | dict | None = None
     module_color: str | None = None
     attend_in_person: bool = True
     linked_task_count: int = 0

@@ -277,10 +277,96 @@ export function moduleCardInk(color) {
     : "var(--color-schedule-card-ink-light)";
 }
 
-function classFallsOnDate(item, selectedDate) {
-  if (item.class_date) return item.class_date === localDateKey(selectedDate);
+export function formatWeeksLabel(weeks) {
+  if (!weeks) return "";
+  if (typeof weeks === "string") return weeks;
+  if (typeof weeks === "object" && !Array.isArray(weeks)) {
+    if (Array.isArray(weeks.weeks)) return formatWeeksLabel(weeks.weeks);
+    if (weeks.start && weeks.end) {
+      const [sy, sm, sd] = String(weeks.start).split("-").map(Number);
+      const [ey, em, ed] = String(weeks.end).split("-").map(Number);
+      if (sy && ey) {
+        const sDate = new Date(sy, sm - 1, sd);
+        const eDate = new Date(ey, em - 1, ed);
+        const sStr = sDate.toLocaleDateString([], { day: "numeric", month: "short" });
+        const eStr = eDate.toLocaleDateString([], { day: "numeric", month: "short" });
+        return `${sStr} – ${eStr}`;
+      }
+      return `${weeks.start} – ${weeks.end}`;
+    }
+    return "";
+  }
+  if (!Array.isArray(weeks) || weeks.length === 0) return "";
+  const sorted = Array.from(new Set(weeks.map(Number))).filter(Number.isFinite).sort((a, b) => a - b);
+  if (sorted.length === 0) return "";
+  if (sorted.length === 1) return `Week ${sorted[0]}`;
+
+  if (sorted.length === 13 && sorted[0] === 1 && sorted[12] === 13) {
+    return "Weeks 1–13";
+  }
+
+  const isOdd = sorted.every((w) => w % 2 === 1);
+  const isStep2 = sorted.slice(1).every((w, i) => w - sorted[i] === 2);
+  if (isOdd && isStep2) {
+    if (sorted[0] === 1 && sorted[sorted.length - 1] === 13) return "Odd Weeks";
+    return `Weeks ${sorted[0]}–${sorted[sorted.length - 1]} (Odd)`;
+  }
+
+  const isEven = sorted.every((w) => w % 2 === 0);
+  if (isEven && isStep2) {
+    if (sorted[0] === 2 && sorted[sorted.length - 1] === 12) return "Even Weeks";
+    return `Weeks ${sorted[0]}–${sorted[sorted.length - 1]} (Even)`;
+  }
+
+  const ranges = [];
+  let start = sorted[0];
+  let prev = sorted[0];
+  for (let i = 1; i < sorted.length; i++) {
+    const curr = sorted[i];
+    if (curr === prev + 1) {
+      prev = curr;
+    } else {
+      ranges.push(start === prev ? `${start}` : prev === start + 1 ? `${start}, ${prev}` : `${start}–${prev}`);
+      start = curr;
+      prev = curr;
+    }
+  }
+  ranges.push(start === prev ? `${start}` : prev === start + 1 ? `${start}, ${prev}` : `${start}–${prev}`);
+
+  return ranges.length === 1 && ranges[0].includes("–")
+    ? `Weeks ${ranges[0]}`
+    : ranges.length === sorted.length && sorted.length <= 3
+    ? `Weeks ${sorted.join(", ")}`
+    : `Weeks ${ranges.join(", ")}`;
+}
+
+export function isClassHappeningInWeek(item, targetDate) {
+  if (item.class_date) {
+    return item.class_date === localDateKey(targetDate);
+  }
   const numeric = Number(item.day_of_week);
-  return Number.isFinite(numeric) && numeric % 7 === selectedDate.getDay();
+  if (!Number.isFinite(numeric) || numeric % 7 !== targetDate.getDay()) {
+    return false;
+  }
+  const weekInfo = getAcademicWeek(targetDate);
+  if (!item.weeks) {
+    return weekInfo.type === "instructional" && weekInfo.weekNumber >= 1 && weekInfo.weekNumber <= 13;
+  }
+  if (weekInfo.type !== "instructional" || !weekInfo.weekNumber) {
+    return false;
+  }
+  if (Array.isArray(item.weeks)) {
+    return item.weeks.map(Number).includes(weekInfo.weekNumber);
+  }
+  if (typeof item.weeks === "object" && item.weeks.start && item.weeks.end) {
+    const key = localDateKey(targetDate);
+    return key >= item.weeks.start && key <= item.weeks.end;
+  }
+  return true;
+}
+
+function classFallsOnDate(item, selectedDate) {
+  return isClassHappeningInWeek(item, selectedDate);
 }
 
 function timedItemOnDate(item, selectedDate) {
@@ -318,6 +404,8 @@ export function scheduleItemsForDate(schedule, selectedDate) {
       linkedTaskCount: Number(item.linked_task_count || 0),
       linkedNoteCount: Number(item.linked_note_count || 0),
       linkedFileCount: Number(item.linked_file_count || 0),
+      weeks: item.weeks,
+      weeksLabel: formatWeeksLabel(item.weeks),
     });
   }
 

@@ -1,5 +1,6 @@
 # pyrefly: ignore [missing-import]
 import asyncio
+import json
 import re
 from datetime import date, datetime, time, timedelta, timezone
 from urllib.parse import parse_qs, quote, urlparse
@@ -154,7 +155,9 @@ def _parse_time(raw: str) -> time:
     return time(int(digits[:2]), int(digits[2:]))
 
 
-def _current_academic_year(today: date | None = None) -> str:
+def _current_academic_year(today: date | str | None = None) -> str:
+    if isinstance(today, str):
+        today = date.fromisoformat(today[:10])
     today = today or datetime.now(SGT).date()
     start_year = today.year if today.month >= 8 else today.year - 1
     return f"{start_year}/{start_year + 1}"
@@ -176,6 +179,53 @@ def _semester_start(academic_year: str, semester: int) -> date:
     if semester == 3:
         return _monday_on_or_after(date(start_year + 1, 5, 8))
     return _monday_on_or_after(date(start_year + 1, 6, 19))
+
+
+def _to_date(val: date | str) -> date:
+    if isinstance(val, str):
+        return date.fromisoformat(val[:10])
+    return val
+
+
+def _academic_week_number(target_date: date | str, semester_start: date | str) -> int | None:
+    target_date = _to_date(target_date)
+    semester_start = _to_date(semester_start)
+    diff_days = (target_date - semester_start).days
+    calendar_week = diff_days // 7
+    if 0 <= calendar_week <= 5:
+        return calendar_week + 1
+    if calendar_week == 6:
+        return None  # Recess week
+    if 7 <= calendar_week <= 13:
+        return calendar_week
+    return None
+
+
+def _infer_semester(target_date: date | str) -> int:
+    target_date = _to_date(target_date)
+    if target_date.month >= 8:
+        return 1
+    if target_date.month <= 4 or (target_date.month == 5 and target_date.day < 11):
+        return 2
+    if target_date.month == 5 or (target_date.month == 6 and target_date.day < 21):
+        return 3
+    return 4
+
+
+def _derive_series_weeks(dates: list[date | str]) -> list[int]:
+    valid_dates = [_to_date(d) for d in dates if d is not None]
+    if not valid_dates:
+        return list(range(1, 14))
+    first_date = min(valid_dates)
+    ay = _current_academic_year(first_date)
+    sem = _infer_semester(first_date)
+    start = _semester_start(ay, sem)
+    weeks = set()
+    for d in valid_dates:
+        wn = _academic_week_number(d, start)
+        if wn is not None:
+            weeks.add(wn)
+    return sorted(weeks) if weeks else list(range(1, 14))
 
 
 def _parse_academic_year(path: str, params: dict[str, list[str]]) -> str:
@@ -351,8 +401,8 @@ async def _replace_timetable(user_id: int, classes: list[dict], exams: list[dict
         if classes:
             await db.execute_many(
                 query="""
-                    INSERT INTO classes (user_id, module_code, module_name, lesson_type, class_no, day_of_week, start_time, end_time, venue, class_date)
-                    VALUES (:user_id, :module_code, :module_name, :lesson_type, :class_no, :day_of_week, :start_time, :end_time, :venue, :class_date)
+                    INSERT INTO classes (user_id, module_code, module_name, lesson_type, class_no, day_of_week, start_time, end_time, venue, class_date, weeks)
+                    VALUES (:user_id, :module_code, :module_name, :lesson_type, :class_no, :day_of_week, :start_time, :end_time, :venue, :class_date, :weeks)
                 """,
                 values=classes,
             )
@@ -436,6 +486,8 @@ async def import_ics(file: UploadFile, current_user: CurrentUser):
             occurrences = [dtstart]
 
         duration = to_sgt_datetime(dtend) - to_sgt_datetime(dtstart)
+        occurrence_dates = [to_sgt_datetime(occ).date() for occ in occurrences]
+        derived_weeks = _derive_series_weeks(occurrence_dates)
         for occurrence in occurrences:
             start_sgt = to_sgt_datetime(occurrence)
             end_sgt = start_sgt + duration
@@ -445,6 +497,7 @@ async def import_ics(file: UploadFile, current_user: CurrentUser):
                 "class_no": class_no, "day_of_week": start_sgt.isoweekday(),
                 "start_time": start_sgt.time(), "end_time": end_sgt.time(),
                 "venue": str(component.get("LOCATION") or ""), "class_date": start_sgt.date(),
+                "weeks": json.dumps(derived_weeks),
             })
 
     await _replace_timetable(current_user.id, classes, exams)
@@ -491,6 +544,7 @@ async def import_nusmods(payload: NUSModsImportRequest, current_user: CurrentUse
                 end_time = _parse_time(lesson.get("endTime", ""))
             except ValueError:
                 continue
+            lesson_weeks = lesson.get("weeks")
             for class_date in _lesson_dates(lesson, semester_start):
                 key = (
                     module_code, lesson.get("lessonType"), lesson.get("classNo"), class_date,
@@ -506,6 +560,7 @@ async def import_nusmods(payload: NUSModsImportRequest, current_user: CurrentUse
                     "day_of_week": class_date.isoweekday(), "start_time": start_time,
                     "end_time": end_time, "venue": lesson.get("venue") or "",
                     "class_date": class_date,
+                    "weeks": json.dumps(lesson_weeks) if lesson_weeks is not None else None,
                 })
 
         exam_date = semester_data.get("examDate")
@@ -591,7 +646,7 @@ async def get_class_context(
             "venue": class_record["venue"],
             "occurrence_date": occurrence_date,
             "summary": class_summary(class_record),
-            "attend_in_person": class_record.get("attend_in_person", True),
+            "attend_in_person": dict(class_record).get("attend_in_person", True),
         },
         "tasks": _with_recurring(tasks),
         "notes": _with_recurring(notes),
@@ -758,9 +813,34 @@ async def list_schedule(current_user: CurrentUser):
             values={"user_id": current_user.id},
         )
     }
+    series_dates = {}
+    for r in classes:
+        s_key = (r["module_code"], r["lesson_type"], r["class_no"])
+        if s_key not in series_dates:
+            series_dates[s_key] = []
+        if r["class_date"]:
+            series_dates[s_key].append(r["class_date"])
+    series_derived_weeks = {
+        s_key: _derive_series_weeks(dates)
+        for s_key, dates in series_dates.items()
+    }
+
     class_results = []
     for record in classes:
         item = dict(record)
+        raw_weeks = item.get("weeks")
+        if raw_weeks is not None:
+            if isinstance(raw_weeks, str):
+                try:
+                    item["weeks"] = json.loads(raw_weeks)
+                except Exception:
+                    item["weeks"] = raw_weeks
+            else:
+                item["weeks"] = raw_weeks
+        else:
+            s_key = (record["module_code"], record["lesson_type"], record["class_no"])
+            item["weeks"] = series_derived_weeks.get(s_key, list(range(1, 14)))
+
         key = class_occurrence_key(record, record["class_date"]) if record["class_date"] else None
         skey = class_series_key(record)
         item["linked_task_count"] = (task_counts.get(key, 0) if key else 0) + task_counts.get(skey, 0)
