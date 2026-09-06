@@ -4,7 +4,6 @@ import CanvasDrawer from "./drawers/CanvasDrawer";
 import CanvasModule from "./dashboard/CanvasModule";
 import ModuleCard from "./dashboard/ModuleCard";
 import ScheduleModule from "./dashboard/ScheduleModule";
-import ScheduleCompactModule from "./dashboard/ScheduleCompactModule";
 import CampusBusModule from "./dashboard/CampusBusModule";
 import TasksModule from "./dashboard/TasksModule";
 import DashboardCustomizer from "./dashboard/DashboardCustomizer";
@@ -103,7 +102,7 @@ export default function Dashboard({ token, user, onNavigate, onOpenSearch, searc
     schedule: {
       title: "Schedule",
       onViewFull: () => onNavigate("schedule"),
-      body: <ScheduleCompactModule token={token} onNavigate={onNavigate} />,
+      body: <ScheduleModule token={token} onNavigate={onNavigate} />,
     },
     isb: {
       title: "NUS ISB",
