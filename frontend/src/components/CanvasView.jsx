@@ -284,23 +284,13 @@ export default function CanvasView({ token }) {
       </aside>
 
       <main className="canvas-main" style={{ flex: 1, minWidth: 0, padding: '24px 40px', overflowY: 'auto' }}>
-        <div className="canvas-view-header" style={{ maxWidth: '960px', margin: '0 auto', width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px', borderBottom: '1px solid var(--border)', paddingBottom: '16px' }}>
-          <div style={{ display: 'flex', gap: '8px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '6px', padding: '4px' }}>
+        <div className="canvas-view-header" style={{ maxWidth: '960px', margin: '0 auto', width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: '48px', marginBottom: '24px', borderBottom: '1px solid var(--border)' }}>
+          <div className="canvas-tabs">
             {navigation.map(nav => (
               <button 
                 key={nav.id} 
                 type="button" 
-                style={{
-                  padding: '6px 12px',
-                  borderRadius: '4px',
-                  border: 'none',
-                  background: tab === nav.id ? 'var(--surface-hover)' : 'transparent',
-                  color: tab === nav.id ? 'var(--text-h)' : 'var(--text-muted)',
-                  fontSize: '13px',
-                  fontWeight: tab === nav.id ? '600' : '400',
-                  cursor: 'pointer',
-                  transition: 'all 0.15s ease'
-                }}
+                className={tab === nav.id ? "is-active" : ""}
                 onClick={() => setTab(nav.id)}
               >
                 {nav.label}
@@ -312,19 +302,6 @@ export default function CanvasView({ token }) {
             className="canvas-sync" 
             onClick={sync} 
             disabled={syncing}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              padding: '6px 12px',
-              borderRadius: '6px',
-              border: '1px solid var(--border)',
-              background: 'var(--surface)',
-              color: 'var(--text-h)',
-              fontSize: '13px',
-              cursor: syncing ? 'default' : 'pointer',
-              opacity: syncing ? 0.7 : 1
-            }}
           >
             <RefreshCw size={14} className={syncing ? "retro-icon-spin" : ""} />{syncing ? "Syncing" : "Sync"}
           </button>
