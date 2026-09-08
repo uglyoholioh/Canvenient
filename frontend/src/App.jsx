@@ -20,7 +20,7 @@ function App() {
   const [token, setToken] = useState(() => getStoredToken())
   const [currentUser, setCurrentUser] = useState(() => getStoredUser())
   const [isCheckingSession, setIsCheckingSession] = useState(
-    () => Boolean(getStoredToken()) && !getStoredUser()
+    () => Boolean(getStoredToken())
   )
 
   useEffect(() => {
