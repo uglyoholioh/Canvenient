@@ -2,10 +2,34 @@
 // eslint-disable-next-line no-unused-vars
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { RotateCw, ChevronLeft, ChevronRight } from "lucide-react";
-import { getSchedule, getTasks } from "../../api";
+import { getSchedule, getTasks, SCHEDULE_CACHE_KEY, TASKS_CACHE_KEY } from "../../api";
 import { dashboardAgendaItems, dashboardAgendaView, formatScheduleTime, getAcademicWeek } from "../scheduleUtils";
 
 const PIXELS_PER_HOUR = 52;
+
+function getCachedSchedule() {
+  try {
+    const raw = window.localStorage.getItem(SCHEDULE_CACHE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    const data = parsed?.data ?? parsed;
+    return data && typeof data === "object" ? data : null;
+  } catch {
+    return null;
+  }
+}
+
+function getCachedTasks() {
+  try {
+    const raw = window.localStorage.getItem(TASKS_CACHE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    const data = parsed?.data ?? parsed;
+    return Array.isArray(data) ? data : [];
+  } catch {
+    return [];
+  }
+}
 
 function minutesIntoDay(date) {
   return (date.getHours() * 60) + date.getMinutes();
@@ -33,10 +57,16 @@ function timelineGeometry(items, now, showNow = true) {
 }
 
 export default function ScheduleModule({ token, onNavigate }) {
-  const [schedule, setSchedule] = useState({ classes: [], exams: [], events: [] });
-  const [tasks, setTasks] = useState([]);
+  const [schedule, setSchedule] = useState(() => {
+    const cached = getCachedSchedule();
+    return cached && typeof cached === "object" ? cached : { classes: [], exams: [], events: [] };
+  });
+  const [tasks, setTasks] = useState(getCachedTasks);
   const [now, setNow] = useState(new Date());
-  const [status, setStatus] = useState("loading");
+  const [status, setStatus] = useState(() => {
+    const cached = getCachedSchedule();
+    return cached ? "success" : "loading";
+  });
   const [dayOffset, setDayOffset] = useState(0);
 
   const loadAgenda = useCallback(() => {

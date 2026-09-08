@@ -12,7 +12,7 @@ const API_BASE_URL = configuredApiBaseUrl
 // initialize its data directory and database. Keep retries bounded, but long
 // enough that the first login request does not surface a false connection error.
 const DESKTOP_STARTUP_RETRIES = 48;
-const DESKTOP_RETRY_DELAY_MS = 250;
+const DESKTOP_RETRY_DELAY_MS = 100;
 
 function wait(ms) {
   return new Promise((resolve) => window.setTimeout(resolve, ms));
@@ -44,6 +44,9 @@ function buildUrl(path) {
   const cleanPath = path.startsWith("/") ? path : `/${path}`;
   return API_BASE_URL ? `${API_BASE_URL}${cleanPath}` : cleanPath;
 }
+
+// In-flight request deduplication for concurrent GET requests
+const inFlightRequests = new Map();
 
 // Auth
 function getErrorMessage(payload, fallbackMessage) {
@@ -79,7 +82,7 @@ function getErrorMessage(payload, fallbackMessage) {
   return fallbackMessage;
 }
 
-async function apiRequest(path, { method = "GET", body, token } = {}) {
+async function executeApiRequest(path, { method = "GET", body, token } = {}) {
   const headers = {};
 
   if (body !== undefined) {
@@ -146,6 +149,48 @@ async function apiRequest(path, { method = "GET", body, token } = {}) {
   }
 
   return payload;
+}
+
+async function apiRequest(path, options = {}) {
+  const method = (options.method || "GET").toUpperCase();
+  if (method === "GET") {
+    const dedupeKey = `${path}::${options.token || ""}`;
+    if (inFlightRequests.has(dedupeKey)) {
+      return inFlightRequests.get(dedupeKey);
+    }
+    const promise = executeApiRequest(path, options).finally(() => {
+      inFlightRequests.delete(dedupeKey);
+    });
+    inFlightRequests.set(dedupeKey, promise);
+    return promise;
+  }
+  return executeApiRequest(path, options);
+}
+
+// Storage helpers for stale-while-revalidate client-side caching
+export function getCachedApiData(key, ttlMs) {
+  try {
+    const raw = window.localStorage.getItem(key);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed || !parsed.timestamp) return null;
+    if (ttlMs && Date.now() - parsed.timestamp > ttlMs) return null;
+    return parsed.data;
+  } catch {
+    return null;
+  }
+}
+
+export function setCachedApiData(key, data) {
+  try {
+    window.localStorage.setItem(key, JSON.stringify({ timestamp: Date.now(), data }));
+  } catch {}
+}
+
+export function clearCachedApiData(key) {
+  try {
+    window.localStorage.removeItem(key);
+  } catch {}
 }
 
 export function getStoredToken() {
@@ -226,11 +271,26 @@ export function deleteCategory(token, categoryId) {
   });
 }
 
+const ACADEMIC_MODULES_CACHE_KEY = "canvenient.academic_modules";
+
 export function getAcademicModules(token) {
-  return apiRequest("/academic-modules", { token });
+  try {
+    const cached = window.sessionStorage.getItem(ACADEMIC_MODULES_CACHE_KEY);
+    if (cached) return Promise.resolve(JSON.parse(cached));
+  } catch {}
+
+  return apiRequest("/academic-modules", { token }).then((data) => {
+    try {
+      window.sessionStorage.setItem(ACADEMIC_MODULES_CACHE_KEY, JSON.stringify(data));
+    } catch {}
+    return data;
+  });
 }
 
 export function updateAcademicModuleSelection(token, moduleIds) {
+  try {
+    window.sessionStorage.removeItem(ACADEMIC_MODULES_CACHE_KEY);
+  } catch {}
   return apiRequest("/academic-modules/selection", {
     method: "PUT",
     body: { module_ids: moduleIds.map(Number) },
@@ -258,12 +318,24 @@ export function updateModuleColor(token, moduleCode, color) {
   });
 }
 
+export const TASKS_CACHE_KEY = "canvenient.cache.tasks";
+
 export function getTasks(token, { groupId, filter } = {}) {
   const params = new URLSearchParams();
   if (groupId != null) params.set("group_id", groupId);
   if (filter) params.set("filter", filter);
   const qs = params.toString();
-  return apiRequest(`/tasks${qs ? `?${qs}` : ""}`, { token });
+  const request = apiRequest(`/tasks${qs ? `?${qs}` : ""}`, { token });
+  
+  // Cache the default general task list
+  if (groupId == null && !filter) {
+    request.then((tasks) => {
+      if (Array.isArray(tasks)) {
+        setCachedApiData(TASKS_CACHE_KEY, tasks);
+      }
+    }).catch(() => {});
+  }
+  return request;
 }
 
 export function getGroupTasks(token, groupId) {
@@ -275,6 +347,9 @@ export function createTask(token, payload) {
     method: "POST",
     body: payload,
     token,
+  }).then((task) => {
+    clearCachedApiData(TASKS_CACHE_KEY);
+    return task;
   });
 }
 
@@ -283,6 +358,9 @@ export function updateTask(token, taskId, payload) {
     method: "PATCH",
     body: payload,
     token,
+  }).then((task) => {
+    clearCachedApiData(TASKS_CACHE_KEY);
+    return task;
   });
 }
 
@@ -290,6 +368,9 @@ export function deleteTask(token, taskId) {
   return apiRequest(`/tasks/${taskId}`, {
     method: "DELETE",
     token,
+  }).then((res) => {
+    clearCachedApiData(TASKS_CACHE_KEY);
+    return res;
   });
 }
 
@@ -451,16 +532,27 @@ export async function importIcs(token, file, fileName = "timetable.ics") {
   return payload;
 }
 
+export const SCHEDULE_CACHE_KEY = "canvenient.cache.schedule";
+
 export function importNusmods(token, url) {
   return apiRequest("/schedule/import/nusmods", {
     method: "POST",
     body: { url },
     token,
+  }).then((res) => {
+    clearCachedApiData(SCHEDULE_CACHE_KEY);
+    return res;
   });
 }
 
 export function getSchedule(token) {
-  return apiRequest("/schedule", { token });
+  const request = apiRequest("/schedule", { token });
+  request.then((schedule) => {
+    if (schedule && typeof schedule === "object") {
+      setCachedApiData(SCHEDULE_CACHE_KEY, schedule);
+    }
+  }).catch(() => {});
+  return request;
 }
 
 export function getClassContext(token, classId, occurrenceDate) {
@@ -472,6 +564,9 @@ export function updateClass(token, classId, payload) {
     method: "PATCH",
     body: payload,
     token,
+  }).then((res) => {
+    clearCachedApiData(SCHEDULE_CACHE_KEY);
+    return res;
   });
 }
 
@@ -680,8 +775,11 @@ export function markAllNotificationsAsRead(token) {
   });
 }
 
-export function getAiBrief(token, forceRefresh = false) {
-  const query = forceRefresh ? "?force_refresh=true" : "";
+export function getAiBrief(token, forceRefresh = false, timeframe = "this_week") {
+  const params = new URLSearchParams();
+  if (forceRefresh) params.append("force_refresh", "true");
+  if (timeframe) params.append("timeframe", timeframe);
+  const query = params.toString() ? `?${params.toString()}` : "";
   return apiRequest(`/ai/brief${query}`, {
     method: "POST",
     token,

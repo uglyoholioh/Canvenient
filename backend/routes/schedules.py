@@ -655,16 +655,28 @@ async def get_class_context(
 
 class ClassUpdate(BaseModel):
     attend_in_person: bool
+    occurrence_date: date | None = None
 
 @router.patch("/classes/{class_id}")
 async def update_class(class_id: int, payload: ClassUpdate, current_user: CurrentUser):
-    record = await db.fetch_one(
-        "UPDATE classes SET attend_in_person = :attend_in_person WHERE id = :class_id AND user_id = :user_id RETURNING id",
-        {"attend_in_person": payload.attend_in_person, "class_id": class_id, "user_id": current_user.id}
-    )
-    if not record:
-        raise HTTPException(status_code=404, detail="Class not found.")
-    return {"status": "ok"}
+    if payload.occurrence_date:
+        await db.execute(
+            """
+            INSERT INTO class_attendance_overrides (user_id, class_id, occurrence_date, attend_in_person)
+            VALUES (:user_id, :class_id, :occurrence_date, :attend_in_person)
+            ON CONFLICT (class_id, occurrence_date) DO UPDATE SET attend_in_person = EXCLUDED.attend_in_person
+            """,
+            {"user_id": current_user.id, "class_id": class_id, "occurrence_date": payload.occurrence_date, "attend_in_person": payload.attend_in_person}
+        )
+        return {"status": "ok"}
+    else:
+        record = await db.fetch_one(
+            "UPDATE classes SET attend_in_person = :attend_in_person WHERE id = :class_id AND user_id = :user_id RETURNING id",
+            {"attend_in_person": payload.attend_in_person, "class_id": class_id, "user_id": current_user.id}
+        )
+        if not record:
+            raise HTTPException(status_code=404, detail="Class not found.")
+        return {"status": "ok"}
 
 @router.post("/classes/{class_id}/files", status_code=status.HTTP_201_CREATED)
 async def upload_class_file(
@@ -734,7 +746,8 @@ async def download_class_file(file_id: int, current_user: CurrentUser):
 @router.get("", response_model=ScheduleOut)
 async def list_schedule(current_user: CurrentUser):
     await ensure_discovered_module_colors(current_user.id)
-    classes = await db.fetch_all(
+    
+    classes_query = db.fetch_all(
         query="""
             SELECT c.*, mc.color AS module_color
             FROM classes c
@@ -746,7 +759,7 @@ async def list_schedule(current_user: CurrentUser):
         """,
         values={"user_id": current_user.id},
     )
-    exams = await db.fetch_all(
+    exams_query = db.fetch_all(
         query="""
             SELECT e.*, mc.color AS module_color
             FROM exams e
@@ -758,7 +771,7 @@ async def list_schedule(current_user: CurrentUser):
         """,
         values={"user_id": current_user.id},
     )
-    events = await db.fetch_all(
+    events_query = db.fetch_all(
         query="""
             SELECT DISTINCT e.*, mc.color AS module_color,
                    CASE WHEN ea.is_attending IS NOT NULL THEN ea.is_attending
@@ -780,38 +793,64 @@ async def list_schedule(current_user: CurrentUser):
         """,
         values={"user_id": current_user.id},
     )
+    task_counts_query = db.fetch_all(
+        query="""
+            SELECT class_occurrence_key, COUNT(*) AS total
+            FROM class_task_links WHERE user_id = :user_id
+            GROUP BY class_occurrence_key
+        """,
+        values={"user_id": current_user.id},
+    )
+    note_counts_query = db.fetch_all(
+        query="""
+            SELECT class_occurrence_key, COUNT(*) AS total
+            FROM class_note_links WHERE user_id = :user_id
+            GROUP BY class_occurrence_key
+        """,
+        values={"user_id": current_user.id},
+    )
+    file_counts_query = db.fetch_all(
+        query="""
+            SELECT class_occurrence_key, COUNT(*) AS total
+            FROM class_files WHERE user_id = :user_id
+            GROUP BY class_occurrence_key
+        """,
+        values={"user_id": current_user.id},
+    )
+    attendance_overrides_query = db.fetch_all(
+        "SELECT class_id, occurrence_date, attend_in_person FROM class_attendance_overrides WHERE user_id = :user_id",
+        {"user_id": current_user.id}
+    )
+
+    (
+        classes,
+        exams,
+        events,
+        task_counts_raw,
+        note_counts_raw,
+        file_counts_raw,
+        attendance_overrides,
+    ) = await asyncio.gather(
+        classes_query,
+        exams_query,
+        events_query,
+        task_counts_query,
+        note_counts_query,
+        file_counts_query,
+        attendance_overrides_query,
+    )
+
     task_counts = {
         item["class_occurrence_key"]: item["total"]
-        for item in await db.fetch_all(
-            query="""
-                SELECT class_occurrence_key, COUNT(*) AS total
-                FROM class_task_links WHERE user_id = :user_id
-                GROUP BY class_occurrence_key
-            """,
-            values={"user_id": current_user.id},
-        )
+        for item in task_counts_raw
     }
     note_counts = {
         item["class_occurrence_key"]: item["total"]
-        for item in await db.fetch_all(
-            query="""
-                SELECT class_occurrence_key, COUNT(*) AS total
-                FROM class_note_links WHERE user_id = :user_id
-                GROUP BY class_occurrence_key
-            """,
-            values={"user_id": current_user.id},
-        )
+        for item in note_counts_raw
     }
     file_counts = {
         item["class_occurrence_key"]: item["total"]
-        for item in await db.fetch_all(
-            query="""
-                SELECT class_occurrence_key, COUNT(*) AS total
-                FROM class_files WHERE user_id = :user_id
-                GROUP BY class_occurrence_key
-            """,
-            values={"user_id": current_user.id},
-        )
+        for item in file_counts_raw
     }
     series_dates = {}
     for r in classes:
@@ -847,4 +886,7 @@ async def list_schedule(current_user: CurrentUser):
         item["linked_note_count"] = (note_counts.get(key, 0) if key else 0) + note_counts.get(skey, 0)
         item["linked_file_count"] = (file_counts.get(key, 0) if key else 0) + file_counts.get(skey, 0)
         class_results.append(item)
-    return {"classes": class_results, "exams": exams, "events": events}
+        
+    overrides_list = [dict(o) for o in attendance_overrides]
+    
+    return {"classes": class_results, "exams": exams, "events": events, "class_attendance_overrides": overrides_list}

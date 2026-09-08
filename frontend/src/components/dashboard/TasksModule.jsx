@@ -2,10 +2,22 @@
 // eslint-disable-next-line no-unused-vars
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CalendarClock, Check, Pencil, Trash2 } from "lucide-react";
-import { createTask, getAcademicModules, getTasks, updateTask } from "../../api";
+import { createTask, getAcademicModules, getTasks, TASKS_CACHE_KEY, updateTask } from "../../api";
 import { notifyTasksChanged } from "../../taskEvents";
 import { queueTaskDeletion } from "../../taskDeleteBuffer";
 import { getTaskModuleColor } from "../scheduleUtils";
+
+function getCachedTasks() {
+  try {
+    const raw = window.localStorage.getItem(TASKS_CACHE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    const data = parsed?.data ?? parsed;
+    return Array.isArray(data) ? data.filter((task) => task.status !== "done") : [];
+  } catch {
+    return [];
+  }
+}
 
 function taskDueDate(task) {
   const raw = task.effective_due_at || task.due_at_override || task.source_due_at;
@@ -36,7 +48,7 @@ function sortByDueTime(tasks) {
 }
 
 export default function TasksModule({ token, refreshKey = 0 }) {
-  const [tasks, setTasks] = useState([]);
+  const [tasks, setTasks] = useState(getCachedTasks);
   const [modules, setModules] = useState([]);
   const [filter, setFilter] = useState("all");
   const [isDraftingNew, setIsDraftingNew] = useState(false);
