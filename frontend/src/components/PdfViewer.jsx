@@ -28,7 +28,10 @@ function loadPdfjs() {
 const ZOOM_STEPS = [0.5, 0.65, 0.8, 1, 1.25, 1.5, 2, 2.5, 3];
 const MIN_SCALE = 0.35;
 const MAX_SCALE = 4;
-const PAGE_RENDER_MARGIN = "700px 0px";
+// Pre-render well beyond the viewport so pages are painted before the
+// reader scrolls to them (avoids placeholder flashing mid-scroll).
+const PAGE_RENDER_MARGIN = "1500px 0px";
+const RENDER_MARGIN_PX = 1500;
 // Upper bound for eagerly reading page dimensions; beyond this the last known
 // size doubles as an estimate so huge documents still open quickly.
 const EAGER_PAGE_DIMENSION_LIMIT = 400;
@@ -176,13 +179,29 @@ export default function PdfViewer({ token, fileId, name = "", externalUrl = "" }
   const renderPage = useCallback(async (pageNumber) => {
     const doc = docRef.current;
     const div = pageDivsRef.current.get(pageNumber);
-    const state = renderStateRef.current;
     const info = pageInfosRef.current.get(pageNumber);
-    if (!doc || !div || !info || state.get(pageNumber) !== "pending") return;
-    state.set(pageNumber, "rendering");
+    if (!doc || !div || !info) return;
+    const state = renderStateRef.current;
+    const key = `${info.w}x${info.h}`;
+    let entry = state.get(pageNumber);
+    if (!entry) {
+      entry = { status: "pending", key: null, desired: null };
+      state.set(pageNumber, entry);
+    }
+    if (entry.status === "rendering") {
+      // Remember the newest size; the running render re-checks when it finishes.
+      entry.desired = key;
+      return;
+    }
+    if (entry.key === key) return;
+    entry.status = "rendering";
+    entry.desired = key;
     try {
       const page = await doc.getPage(pageNumber);
-      if (pageDivsRef.current.get(pageNumber) !== div) return;
+      if (pageDivsRef.current.get(pageNumber) !== div) {
+        entry.status = entry.key ? "done" : "pending";
+        return;
+      }
       const dpr = Math.min(window.devicePixelRatio || 1, 2);
       const canvas = document.createElement("canvas");
       canvas.width = Math.floor(info.w * dpr);
@@ -192,23 +211,35 @@ export default function PdfViewer({ token, fileId, name = "", externalUrl = "" }
       const viewport = page.getViewport({ scale: info.scale * dpr });
       const renderTask = page.render({ canvasContext: canvas.getContext("2d"), viewport });
       renderTasksRef.current.set(pageNumber, renderTask);
-      // A cancelled render may have already appended a canvas; keep exactly one.
+      await renderTask.promise;
+      // Swap in place: the previously rendered page stays visible until this
+      // canvas is ready, so zooming never blanks the page out.
       div.querySelectorAll("canvas").forEach((existing) => existing.remove());
       div.appendChild(canvas);
       div.classList.add("is-rendered");
-      await renderTask.promise;
-      state.set(pageNumber, "done");
+      entry.key = key;
+      entry.status = "done";
     } catch (err) {
-      const cancelledRender = err?.name === "RenderingCancelledException" || div.classList.contains("is-rendered") === false;
-      if (!cancelledRender) {
-        state.set(pageNumber, "error");
-        div.classList.add("is-error");
+      if (err?.name === "RenderingCancelledException") {
+        entry.status = entry.key ? "done" : "pending";
       } else {
-        state.set(pageNumber, "pending");
+        entry.status = "error";
+        entry.key = key;
+        div.classList.add("is-error");
       }
     } finally {
       renderTasksRef.current.delete(pageNumber);
+      if (entry.desired && entry.desired !== entry.key) renderPage(pageNumber);
     }
+  }, []);
+
+  const needsRender = useCallback((pageNumber) => {
+    const info = pageInfosRef.current.get(pageNumber);
+    if (!info) return false;
+    const entry = renderStateRef.current.get(pageNumber);
+    if (!entry) return true;
+    if (entry.status === "rendering") return false;
+    return entry.key !== `${info.w}x${info.h}`;
   }, []);
 
   // IntersectionObserver is the primary lazy-render trigger, but some webviews
@@ -217,13 +248,35 @@ export default function PdfViewer({ token, fileId, name = "", externalUrl = "" }
   const renderVisiblePages = useCallback(() => {
     const el = scrollRef.current;
     if (!el) return;
-    const top = el.scrollTop - 700;
-    const bottom = el.scrollTop + el.clientHeight + 700;
+    const top = el.scrollTop - RENDER_MARGIN_PX;
+    const bottom = el.scrollTop + el.clientHeight + RENDER_MARGIN_PX;
     pageDivsRef.current.forEach((div, n) => {
       const offset = div.offsetTop;
-      if (offset + div.offsetHeight >= top && offset <= bottom) renderPage(n);
+      if (offset + div.offsetHeight >= top && offset <= bottom && needsRender(n)) renderPage(n);
     });
-  }, [renderPage]);
+  }, [needsRender, renderPage]);
+
+  // Stable per-page ref: page elements persist across zoom changes so the old
+  // canvas can stay on screen until the re-render swaps in.
+  const attachPageDiv = useCallback((div) => {
+    if (!div) return undefined;
+    const pageNumber = Number(div.dataset.page);
+    if (!pageNumber) return undefined;
+    pageDivsRef.current.set(pageNumber, div);
+    if (!renderStateRef.current.has(pageNumber)) {
+      renderStateRef.current.set(pageNumber, { status: "pending", key: null, desired: null });
+    }
+    if (observerRef.current) observerRef.current.observe(div);
+    return () => {
+      pageDivsRef.current.delete(pageNumber);
+      const task = renderTasksRef.current.get(pageNumber);
+      if (task) {
+        task.cancel();
+        renderTasksRef.current.delete(pageNumber);
+      }
+      renderStateRef.current.delete(pageNumber);
+    };
+  }, []);
 
   // Track the scroll container so "fit width" keeps filling the pane.
   useEffect(() => {
@@ -264,9 +317,21 @@ export default function PdfViewer({ token, fileId, name = "", externalUrl = "" }
     };
   }, [status, pageInfos, renderPage, renderVisiblePages]);
 
-  // Zoom and rotation rebuild every page div; keep the reading position stable.
+  // Zoom and rotation resize the page boxes; keep the reading position stable
+  // and stretch the already-rendered canvases until the re-renders swap in.
   useLayoutEffect(() => {
-    if (scrollRatioRef.current == null) return;
+    pageDivsRef.current.forEach((div, n) => {
+      const info = pageInfosRef.current.get(n);
+      const canvas = div.querySelector("canvas");
+      if (canvas && info) {
+        canvas.style.width = `${info.w}px`;
+        canvas.style.height = `${info.h}px`;
+      }
+    });
+    if (scrollRatioRef.current == null) {
+      renderVisiblePages();
+      return;
+    }
     const el = scrollRef.current;
     if (el && el.scrollHeight > 0) {
       el.scrollTop = scrollRatioRef.current * el.scrollHeight;
@@ -294,23 +359,6 @@ export default function PdfViewer({ token, fileId, name = "", externalUrl = "" }
   const rotate = useCallback(() => {
     applyLayoutChange(() => setRotation((r) => (r + 90) % 360));
   }, [applyLayoutChange]);
-
-  const registerPageDiv = useCallback((n) => (div) => {
-    if (div) {
-      pageDivsRef.current.set(n, div);
-      renderStateRef.current.set(n, "pending");
-      if (observerRef.current) observerRef.current.observe(div);
-      else if (typeof IntersectionObserver === "undefined") renderPage(n);
-    } else {
-      pageDivsRef.current.delete(n);
-      const task = renderTasksRef.current.get(n);
-      if (task) {
-        task.cancel();
-        renderTasksRef.current.delete(n);
-      }
-      renderStateRef.current.delete(n);
-    }
-  }, [renderPage]);
 
   const handleScroll = useCallback(() => {
     if (scrollFrameRef.current) return;
@@ -427,8 +475,8 @@ export default function PdfViewer({ token, fileId, name = "", externalUrl = "" }
         <div className="cv-pdf-pages">
           {pageInfos.map((info) => (
             <div
-              key={`${info.n}-${info.w}x${info.h}`}
-              ref={registerPageDiv(info.n)}
+              key={info.n}
+              ref={attachPageDiv}
               className="cv-pdf-page"
               data-page={info.n}
               style={{ width: `${info.w}px`, height: `${info.h}px` }}

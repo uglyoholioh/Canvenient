@@ -127,7 +127,9 @@ export function FileBrowser({ token, courseId, allFiles }) {
 
   const selectFile = useCallback((file) => {
     setSelectedFile(file);
-    setIsPdfFocus(false);
+    // PDFs open straight into the full-width reading view; the side pane stays
+    // for quick peeks at images and other files.
+    setIsPdfFocus(Boolean(file) && resolvePreviewType(file) === "pdf");
   }, []);
 
   // Esc leaves the full-width reading mode.

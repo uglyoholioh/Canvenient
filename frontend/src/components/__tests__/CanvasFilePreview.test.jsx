@@ -36,6 +36,11 @@ describe("FileBrowser PDF preview", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     getCanvasFolders.mockResolvedValue([]);
+    fetchCanvasFileContent.mockResolvedValue({
+      blob: new Blob(["fake-bytes"]),
+      contentType: "application/octet-stream",
+      filename: "file",
+    });
   });
 
   it("renders the in-app pdf viewer for a selected pdf file", async () => {
@@ -45,17 +50,30 @@ describe("FileBrowser PDF preview", () => {
     const stub = await screen.findByTestId("pdf-viewer-stub");
     expect(stub).toHaveAttribute("data-file-id", "42");
     expect(stub).toHaveAttribute("data-external-url", pdfFile.external_url);
-    expect(screen.queryByRole("button", { name: "Read full width" })).toBeInTheDocument();
+    // Auto-focus: reading mode is already active for pdfs.
+    expect(screen.queryByRole("button", { name: "Exit full-width reading" })).toBeInTheDocument();
   });
 
-  it("toggles full-width reading mode and exits on Escape", async () => {
+  it("opens pdfs straight into full-width reading mode and exits on Escape", async () => {
     renderBrowser();
     fireEvent.click(await screen.findByText("lecture-03.pdf"));
-    fireEvent.click(await screen.findByRole("button", { name: "Read full width" }));
+
+    await screen.findByTestId("pdf-viewer-stub");
     expect(document.querySelector(".cv-files-split.is-pdf-focus")).not.toBeNull();
 
     fireEvent.keyDown(window, { key: "Escape" });
     await waitFor(() => expect(document.querySelector(".cv-files-split.is-pdf-focus")).toBeNull());
+
+    fireEvent.click(screen.getByRole("button", { name: "Read full width" }));
+    await waitFor(() => expect(document.querySelector(".cv-files-split.is-pdf-focus")).not.toBeNull());
+  });
+
+  it("keeps non-pdf files in the side preview pane", async () => {
+    render(<FileBrowser token="token" courseId={1} allFiles={[{ ...pdfFile, id: 7, display_name: "diagram.png", filename: "diagram.png", content_type: "image/png" }]} />);
+    fireEvent.click(await screen.findByText("diagram.png"));
+
+    await waitFor(() => expect(document.querySelector(".cv-file-preview-aside img")).not.toBeNull());
+    expect(document.querySelector(".cv-files-split.is-pdf-focus")).toBeNull();
   });
 
   it("downloads through the content proxy instead of the expiring Canvas url", async () => {
