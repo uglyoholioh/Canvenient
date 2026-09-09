@@ -5,6 +5,7 @@ __pycache__/
 *.pyc
 SESSION-LOG.md
 .agents/
+.zcode/
 skills-lock.json
 
 # Local scripts and generated calendars
@@ -16,3 +17,25 @@ testdata/*_current.ics
 # Log files
 *.log
 backend/*.log
+
+# Build output and generated sidecars — regenerate with `npm run desktop:rebuild`
+backend/build/
+backend/dist/
+frontend/src-tauri/target/
+frontend/src-tauri/bin/
+*.pyz
+*.pkg
+
+# Databases and secrets — never commit user data
+*.db
+*.sqlite
+*.sqlite3
+jwt_secret
+
+# macOS
+.DS_Store
+
+# Scratch files
+.audit/
+old_CanvasView.jsx
+frontend/test-filter.js
