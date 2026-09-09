@@ -594,15 +594,7 @@ export default function CanvasView({ token }) {
     subtitle: selectedCourse ? selectedCourse.course_code : undefined,
   }), [selectedCourse]));
 
-  // ── Render ─────────────────────────────────────────────────────────────────
-
-  if (loading) return (
-    <div className="cv-page" style={{ alignItems: "center", justifyContent: "center" }}>
-      <Loader2 className="retro-icon-spin" size={20} style={{ color: "var(--text-muted)" }} />
-    </div>
-  );
-
-  // LANDING — no course selected
+  // All hooks must be declared before any early returns
   const landingUpcoming = useMemo(() =>
     assignments
       .filter(a => validCourseIds.has(String(a.course_id)) && !a.has_submitted && (!a.due_at || new Date(a.due_at) >= new Date()))
@@ -616,6 +608,17 @@ export default function CanvasView({ token }) {
       .sort((a,b) => new Date(b.posted_at||0) - new Date(a.posted_at||0))
       .slice(0, 10),
   [announcements, validCourseIds]);
+
+  // ── Render ─────────────────────────────────────────────────────────────────
+
+  if (loading) return (
+    <div className="cv-page" style={{ alignItems: "center", justifyContent: "center" }}>
+      <Loader2 className="retro-icon-spin" size={20} style={{ color: "var(--text-muted)" }} />
+    </div>
+  );
+
+  // LANDING — no course selected
+
 
   if (!selectedCourseId) return (
     <div className="cv-page">
