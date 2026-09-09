@@ -21,6 +21,7 @@ import {
   getCanvasCourseNavigation,
 } from "../api";
 import CanvasDrawer from "./drawers/CanvasDrawer";
+import CanvasSearchSection from "./CanvasSearchSection";
 import { useWorkspaceToolbar } from "./WorkspaceToolbarContext";
 
 function stripHtml(v = "") {
@@ -439,7 +440,19 @@ function FileBrowser({ token, courseId, allFiles }) {
 
 // ─── Course Overview Component ────────────────────────────────────────────────
 
-function CourseOverview({ courseId, courseName, courseCode, assignments, announcements, files, onSelectTab, onOpenItem }) {
+function CourseOverview({
+  courseId,
+  courseName,
+  courseCode,
+  assignments,
+  announcements,
+  files,
+  filesByCourse,
+  displayedCourses,
+  courseColors,
+  onSelectTab,
+  onOpenItem,
+}) {
   const now = new Date();
   const upcoming = useMemo(() =>
     assignments
@@ -462,6 +475,15 @@ function CourseOverview({ courseId, courseName, courseCode, assignments, announc
 
   return (
     <div className="cv-overview-grid">
+      {/* Smart Search Bar Scoped to this Module */}
+      <CanvasSearchSection
+        filesByCourse={filesByCourse || { [String(courseId)]: files || [] }}
+        displayedCourses={displayedCourses}
+        courseColors={courseColors}
+        selectedCourseId={courseId}
+        onOpenItem={onOpenItem}
+      />
+
       {/* Upcoming assignments card */}
       <section className="cv-card">
         <header className="cv-card-header">
@@ -554,6 +576,7 @@ export default function CanvasView({ token }) {
   const [announcements, setAnnouncements] = useState([]);
   const [grades, setGrades] = useState([]);
   const [files, setFiles] = useState([]);
+  const [filesByCourse, setFilesByCourse] = useState({});
   const [courseModules, setCourseModules] = useState([]);
   const [coursePages, setCoursePages] = useState([]);
   const [courseSyllabus, setCourseSyllabus] = useState(null);
@@ -602,6 +625,23 @@ export default function CanvasView({ token }) {
   const validCourseIds = useMemo(() => new Set(displayedCourses.map(c => String(c.id))), [displayedCourses]);
   const courseColors = useMemo(() => new Map(courses.map(c => [c.course_code, c.color])), [courses]);
 
+  // Preload files for displayed courses so search across all modules or within modules works seamlessly
+  useEffect(() => {
+    if (!token || !displayedCourses.length) return;
+    displayedCourses.forEach(course => {
+      const cid = String(course.id);
+      if (!filesByCourse[cid]) {
+        getCanvasFiles(token, cid)
+          .then(data => {
+            if (data) {
+              setFilesByCourse(prev => ({ ...prev, [cid]: data }));
+            }
+          })
+          .catch(() => {});
+      }
+    });
+  }, [displayedCourses, token]);
+
   // If a single course is selected, reset per-course tab data and auto-fetch files/modules
   useEffect(() => {
     setFiles([]);
@@ -616,15 +656,25 @@ export default function CanvasView({ token }) {
       return;
     }
 
-    let canceled = false;
-    setTabLoading(true);
-    getCanvasFiles(token, selectedCourseId)
-      .then(d => { if (!canceled) setFiles(d || []); })
-      .catch(() => {})
-      .finally(() => { if (!canceled) setTabLoading(false); });
+    if (filesByCourse[selectedCourseId]) {
+      setFiles(filesByCourse[selectedCourseId]);
+    } else {
+      let canceled = false;
+      setTabLoading(true);
+      getCanvasFiles(token, selectedCourseId)
+        .then(d => {
+          if (!canceled) {
+            const list = d || [];
+            setFiles(list);
+            setFilesByCourse(prev => ({ ...prev, [selectedCourseId]: list }));
+          }
+        })
+        .catch(() => {})
+        .finally(() => { if (!canceled) setTabLoading(false); });
 
-    return () => { canceled = true; };
-  }, [selectedCourseId, token]);
+      return () => { canceled = true; };
+    }
+  }, [selectedCourseId, token, filesByCourse]);
 
   // Fetch modules or pages on tab switch
   useEffect(() => {
@@ -818,6 +868,19 @@ export default function CanvasView({ token }) {
           selectedCourseId === "all" ? (
             <div className="cv-all-overview">
               <div className="cv-overview-grid">
+                {/* Global Search across all modules */}
+                <CanvasSearchSection
+                  filesByCourse={filesByCourse}
+                  displayedCourses={displayedCourses}
+                  courseColors={courseColors}
+                  selectedCourseId="all"
+                  onSelectCourse={(cId) => {
+                    setSelectedCourseId(String(cId));
+                    setTab("overview");
+                  }}
+                  onOpenItem={setActiveItem}
+                />
+
                 {/* Cross-course Assignments */}
                 <section className="cv-card">
                   <header className="cv-card-header">
@@ -886,6 +949,9 @@ export default function CanvasView({ token }) {
               assignments={assignments}
               announcements={filteredAnnouncements}
               files={files}
+              filesByCourse={filesByCourse}
+              displayedCourses={displayedCourses}
+              courseColors={courseColors}
               onSelectTab={setTab}
               onOpenItem={setActiveItem}
             />

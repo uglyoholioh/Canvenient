@@ -2775,7 +2775,36 @@ button.module-item-main:hover, .module-list-item.task-module-item:hover { backgr
 
 /* Syllabus */
 .cv-syllabus-body { padding: 24px 28px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); font-size: 13px; line-height: 1.5; color: var(--text); }
-.cv-empty-pane { padding: 40px; text-align: center; color: var(--text-muted); font-size: 12px; }
+/* Quick Resource Search Card & Results */
+.cv-search-card { grid-column: span 2; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); }
+.cv-search-scope-badge { margin-left: 8px; font-size: 10px; font-weight: 500; font-family: var(--font-native-mono); padding: 1px 6px; border-radius: 4px; background: var(--surface-muted); color: var(--text-muted); border: 1px solid var(--border); }
+.cv-search-count-label { font-size: 11px; font-family: var(--font-native-mono); color: var(--text-muted); }
+.cv-search-body { display: flex; flex-direction: column; padding: 14px 16px; gap: 10px; }
+.cv-search-input-wrapper { display: flex; align-items: center; gap: 8px; padding: 0 10px; height: 34px; border: 1px solid var(--border-strong); border-radius: 6px; background: var(--bg); transition: border-color var(--transition-fast); }
+.cv-search-input-wrapper:focus-within { border-color: var(--accent); }
+.cv-search-icon { color: var(--text-muted); flex-shrink: 0; }
+.cv-search-input { border: 0; outline: none; background: transparent; color: var(--text-h); font-size: 12px; width: 100%; font-family: var(--font-native); }
+.cv-search-input::placeholder { color: var(--text-muted); }
+.cv-search-toolbar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+.cv-search-chips { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.cv-search-chip-label { font-size: 10px; font-family: var(--font-native-mono); color: var(--text-muted); }
+.cv-search-chip { border: 1px solid var(--border); border-radius: 4px; background: var(--surface-muted); color: var(--text-muted); font-size: 10px; padding: 2px 7px; cursor: pointer; font-family: var(--font-native-mono); transition: all var(--transition-fast); }
+.cv-search-chip:hover { border-color: var(--border-strong); color: var(--text-h); background: var(--surface-hover); }
+.cv-search-type-filters { display: flex; align-items: center; gap: 3px; }
+.cv-search-type-btn { height: 20px; padding: 0 6px; border: 1px solid var(--border); border-radius: 3px; background: transparent; color: var(--text-muted); font-size: 9px; cursor: pointer; font-family: var(--font-native-mono); font-weight: 500; }
+.cv-search-type-btn:hover { background: var(--surface-hover); color: var(--text-h); }
+.cv-search-type-btn.is-active { background: var(--surface-muted); color: var(--text-h); border-color: var(--border-strong); }
+.cv-search-results-pane { border: 1px solid var(--border); border-radius: 6px; background: var(--bg); max-height: 380px; overflow-y: auto; margin-top: 4px; }
+.cv-search-empty { padding: 20px 16px; font-size: 12px; color: var(--text-muted); text-align: center; }
+.cv-search-results-list { display: flex; flex-direction: column; }
+.cv-search-result-row { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-bottom: 1px solid color-mix(in srgb, var(--border) 50%, transparent); cursor: pointer; transition: background var(--transition-fast); }
+.cv-search-result-row:last-child { border-bottom: 0; }
+.cv-search-result-row:hover { background: var(--surface-hover); }
+.cv-search-result-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.cv-search-result-name { font-size: 12px; font-weight: 500; color: var(--text-h); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cv-search-result-meta { display: flex; align-items: center; gap: 8px; font-size: 10px; color: var(--text-muted); font-family: var(--font-native-mono); }
+.cv-search-module-tag { font-size: 9px; font-weight: 600; color: var(--module-color, var(--accent)); padding: 1px 4px; border-radius: 3px; background: color-mix(in srgb, var(--module-color, var(--accent)) 15%, transparent); border: 1px solid color-mix(in srgb, var(--module-color, var(--accent)) 30%, transparent); }
+.cv-search-result-actions { display: flex; align-items: center; gap: 4px; }
 
 /* Responsive adjustments */
 @media (max-width: 768px) {
