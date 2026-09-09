@@ -686,6 +686,19 @@ SCHEMA_STATEMENTS = [
     """
     CREATE INDEX IF NOT EXISTS tasks_assignee_id_idx ON tasks (assignee_id)
     """,
+    """
+    CREATE TABLE IF NOT EXISTS class_attendance_overrides (
+        user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        class_id BIGINT NOT NULL REFERENCES classes(id) ON DELETE CASCADE,
+        occurrence_date DATE NOT NULL,
+        attend_in_person BOOLEAN NOT NULL,
+        PRIMARY KEY (class_id, occurrence_date)
+    )
+    """,
+    """
+    CREATE INDEX IF NOT EXISTS class_attendance_overrides_user_idx
+    ON class_attendance_overrides (user_id)
+    """,
 ]
 
 

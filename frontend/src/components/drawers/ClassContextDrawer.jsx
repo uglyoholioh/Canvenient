@@ -23,6 +23,7 @@ export default function ClassContextDrawer({ item, token, onClose, onContextChan
   const [context, setContext] = useState(null);
   const [mode, setMode] = useState(null);
   const [isRecurring, setIsRecurring] = useState(false);
+  const [attendanceScope, setAttendanceScope] = useState("instance");
   const [taskTitle, setTaskTitle] = useState("");
   const [relation, setRelation] = useState("due_before");
   const [noteTitle, setNoteTitle] = useState("");
@@ -154,19 +155,29 @@ export default function ClassContextDrawer({ item, token, onClose, onContextChan
             <span>{item.subtitle}{item.classNo ? ` [${item.classNo}]` : ""}{item.weeksLabel ? ` · ${item.weeksLabel}` : ""} · {classDate}</span>
             <small>{times}{item.venue ? ` · ${item.venue}` : ""}</small>
           </div>
-          <label style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.8em', cursor: 'pointer', marginRight: '8px' }}>
-            <input type="checkbox" checked={item.attendInPerson !== false} onChange={async (e) => {
-              const checked = e.target.checked;
-              try {
-                const { updateClass } = await import('../../api');
-                await updateClass(token, item.classId, { attend_in_person: checked });
-                await refresh();
-              } catch (err) {
-                setError(err.message || "Failed to update attendance.");
-              }
-            }} />
-            Attend in person
-          </label>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'flex-end', marginRight: '8px', fontSize: '0.8em' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
+              <input type="checkbox" checked={item.attendInPerson !== false} onChange={async (e) => {
+                const checked = e.target.checked;
+                try {
+                  const { updateClass } = await import('../../api');
+                  const payload = { attend_in_person: checked };
+                  if (attendanceScope === "instance") {
+                    payload.occurrence_date = item.occurrenceDate;
+                  }
+                  await updateClass(token, item.classId, payload);
+                  await refresh();
+                } catch (err) {
+                  setError(err.message || "Failed to update attendance.");
+                }
+              }} />
+              Attend in person
+            </label>
+            <select style={{ fontSize: '0.9em', padding: '0 2px' }} value={attendanceScope} onChange={(e) => setAttendanceScope(e.target.value)}>
+              <option value="instance">This instance</option>
+              <option value="all">Every instance</option>
+            </select>
+          </div>
           <button type="button" onClick={onClose} aria-label="Close class context"><X size={18} /></button>
         </header>
 

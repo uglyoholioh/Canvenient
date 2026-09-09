@@ -139,6 +139,7 @@ export default function Schedule({ token }) {
   const [selectedDate, setSelectedDate] = useState(() => startOfLocalDay(new Date()));
   const [view, setView] = useState("week");
   const [weekLayout, setWeekLayout] = useState(() => (typeof window !== "undefined" && typeof window.localStorage?.getItem === "function" ? window.localStorage.getItem(WEEK_LAYOUT_STORAGE_KEY) : null) === "vertical" ? "vertical" : "horizontal");
+  const [showAllClasses, setShowAllClasses] = useState(() => (typeof window !== "undefined" && typeof window.localStorage?.getItem === "function" ? window.localStorage.getItem("canvenient-schedule-show-all") !== "false" : true));
   const [now, setNow] = useState(new Date());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -175,12 +176,13 @@ export default function Schedule({ token }) {
   useEffect(() => {
     if (typeof window !== "undefined" && typeof window.localStorage?.setItem === "function") {
       window.localStorage.setItem(WEEK_LAYOUT_STORAGE_KEY, weekLayout);
+      window.localStorage.setItem("canvenient-schedule-show-all", showAllClasses);
     }
-  }, [weekLayout]);
+  }, [weekLayout, showAllClasses]);
 
   const days = useMemo(() => weekDates(selectedDate), [selectedDate]);
-  const items = useMemo(() => scheduleItemsForDate(schedule, selectedDate), [schedule, selectedDate]);
-  const weekItems = useMemo(() => days.map((day) => ({ day, items: scheduleItemsForDate(schedule, day) })), [days, schedule]);
+  const items = useMemo(() => scheduleItemsForDate(schedule, selectedDate).filter((item) => showAllClasses || item.attendInPerson !== false), [schedule, selectedDate, showAllClasses]);
+  const weekItems = useMemo(() => days.map((day) => ({ day, items: scheduleItemsForDate(schedule, day).filter((item) => showAllClasses || item.attendInPerson !== false) })), [days, schedule, showAllClasses]);
   const weeklyTimelineItems = useMemo(() => weekItems.flatMap(({ items: dayItems }) => dayItems), [weekItems]);
   const weekInfo = useMemo(() => getAcademicWeek(selectedDate), [selectedDate]);
   const isHorizontalWeek = view === "week" && weekLayout === "horizontal";
@@ -321,7 +323,7 @@ export default function Schedule({ token }) {
             {days.map((day) => {
               const active = localDateKey(day) === localDateKey(selectedDate);
               const today = localDateKey(day) === localDateKey(now);
-              const count = scheduleItemsForDate(schedule, day).length;
+              const count = scheduleItemsForDate(schedule, day).filter((item) => showAllClasses || item.attendInPerson !== false).length;
               return (
                 <button
                   type="button"
@@ -347,6 +349,10 @@ export default function Schedule({ token }) {
         <div className="schedule-view-tabs" role="group" aria-label="Schedule view">
           {VIEWS.map((option) => <button type="button" key={option.id} className={view === option.id ? "is-active" : ""} aria-pressed={view === option.id} onClick={() => setView(option.id)}>{option.label}</button>)}
         </div>
+        <label className="schedule-attendance-toggle" style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px', cursor: 'pointer', margin: '0 8px' }}>
+          <input type="checkbox" checked={showAllClasses} onChange={(e) => setShowAllClasses(e.target.checked)} />
+          Show all
+        </label>
         {view === "week" && <div className="schedule-week-layout-toggle" role="group" aria-label="Week layout"><button type="button" className={weekLayout === "horizontal" ? "is-active" : ""} aria-pressed={weekLayout === "horizontal"} onClick={() => setWeekLayout("horizontal")}>Horizontal</button><button type="button" className={weekLayout === "vertical" ? "is-active" : ""} aria-pressed={weekLayout === "vertical"} onClick={() => setWeekLayout("vertical")}>Vertical</button></div>}
         <button type="button" className="schedule-week-arrow" onClick={() => movePeriod(1)} aria-label={`Next ${view}`}><ChevronRight size={16} /></button>
       </nav>
@@ -364,7 +370,7 @@ export default function Schedule({ token }) {
                 <div className="schedule-month-grid" role="grid" aria-label={selectedDate.toLocaleDateString([], { month: "long", year: "numeric" })}>
                   {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((label) => <strong key={label}>{label}</strong>)}
                   {monthDays.map((day) => {
-                    const dayItems = scheduleItemsForDate(schedule, day);
+                    const dayItems = scheduleItemsForDate(schedule, day).filter((item) => showAllClasses || item.attendInPerson !== false);
                     const inMonth = day.getMonth() === selectedDate.getMonth();
                     const today = localDateKey(day) === localDateKey(now);
                     return <button type="button" key={localDateKey(day)} className={`${inMonth ? "" : "is-outside"} ${today ? "is-today" : ""}`} onClick={() => { setSelectedDate(startOfLocalDay(day)); setView("day"); }}>

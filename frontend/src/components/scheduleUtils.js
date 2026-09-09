@@ -400,7 +400,16 @@ export function scheduleItemsForDate(schedule, selectedDate) {
       hue: moduleHue(item.module_code),
       color: moduleColor(item, item.module_code),
       ink: moduleCardInk(moduleColor(item, item.module_code)),
-      attendInPerson: item.attend_in_person !== false,
+      attendInPerson: (() => {
+        if (schedule.class_attendance_overrides) {
+          const occDate = localDateKey(selectedDate);
+          const override = schedule.class_attendance_overrides.find(
+            (o) => String(o.class_id) === String(item.id) && o.occurrence_date === occDate
+          );
+          if (override) return override.attend_in_person;
+        }
+        return item.attend_in_person !== false;
+      })(),
       linkedTaskCount: Number(item.linked_task_count || 0),
       linkedNoteCount: Number(item.linked_note_count || 0),
       linkedFileCount: Number(item.linked_file_count || 0),
@@ -475,7 +484,7 @@ export function dashboardAgendaItems(schedule, tasks, now, dayCount = 14) {
   for (let offset = 0; offset < dayCount; offset += 1) {
     const day = new Date(start);
     day.setDate(start.getDate() + offset);
-    scheduleItemsForDate(schedule, day).forEach((item) => {
+    scheduleItemsForDate(schedule, day).filter((item) => item.attendInPerson !== false).forEach((item) => {
       agenda.push({ ...item, destination: "schedule" });
     });
   }
