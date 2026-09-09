@@ -2646,12 +2646,13 @@ button.module-item-main:hover, .module-list-item.task-module-item:hover { backgr
 .cv-ext-link:hover { color: var(--accent); background: var(--surface-hover); }
 
 /* ── View Content Area ── */
-.cv-view-content { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; background: var(--bg); }
+.cv-view-content { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; align-items: center; background: var(--bg); width: 100%; }
 .cv-view-loading { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text-muted); padding: 20px; }
 .cv-page-loader { height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; font-size: 12px; color: var(--text-muted); }
 
 /* ── Overview Dashboard Cards ── */
-.cv-overview-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; padding: 18px 20px; max-width: 1180px; width: 100%; }
+.cv-all-overview { width: 100%; display: flex; justify-content: center; }
+.cv-overview-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; padding: 24px clamp(20px, 3vw, 40px); max-width: 1400px; width: 100%; margin: 0 auto; box-sizing: border-box; }
 .cv-card { border: 1px solid var(--border); border-radius: 8px; background: var(--surface); display: flex; flex-direction: column; overflow: hidden; }
 .cv-card.is-span-2 { grid-column: span 2; }
 .cv-card-header { height: 38px; padding: 0 12px; border-bottom: 1px solid var(--border); background: var(--surface-muted); display: flex; align-items: center; justify-content: space-between; }
@@ -2670,7 +2671,7 @@ button.module-item-main:hover, .module-list-item.task-module-item:hover { backgr
 .cv-empty-note { padding: 16px; font-size: 12px; color: var(--text-muted); text-align: center; }
 
 /* ── Finder File Browser ── */
-.cv-files-container { display: flex; flex-direction: column; height: 100%; min-height: 0; }
+.cv-files-container { display: flex; flex-direction: column; height: 100%; min-height: 0; width: 100%; }
 .cv-files-header-bar { height: 40px; padding: 0 16px; border-bottom: 1px solid var(--border); background: var(--surface); display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .cv-files-search-box { display: flex; align-items: center; gap: 6px; flex: 1; max-width: 320px; height: 26px; padding: 0 8px; border: 1px solid var(--border); border-radius: 5px; background: var(--bg); }
 .cv-files-search-box input { border: 0; outline: 0; background: transparent; color: var(--text-h); font-size: 11px; width: 100%; }
@@ -2683,7 +2684,7 @@ button.module-item-main:hover, .module-list-item.task-module-item:hover { backgr
 .cv-sort-select { height: 24px; padding: 0 6px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg); color: var(--text-muted); font-size: 10px; outline: none; cursor: pointer; }
 
 /* Files Split: Tree (Left) + Table (Right) */
-.cv-files-split { display: flex; flex: 1; min-height: 0; overflow: hidden; }
+.cv-files-split { display: flex; flex: 1; min-height: 0; overflow: hidden; width: 100%; }
 .cv-files-sidebar { width: 220px; flex: none; border-right: 1px solid var(--border); display: flex; flex-direction: column; background: var(--surface); overflow-y: auto; }
 .cv-ftree-header { height: 32px; padding: 0 10px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); font-family: var(--font-native-mono); }
 .cv-ftree-list { display: flex; flex-direction: column; padding: 4px 0; }
@@ -2736,7 +2737,7 @@ button.module-item-main:hover, .module-list-item.task-module-item:hover { backgr
 .cv-link-accent { color: var(--accent); text-decoration: none; font-size: 11px; font-weight: 500; }
 
 /* ── Generic Views (Assignments, Announcements, Modules, Pages, Syllabus) ── */
-.cv-assignments-view, .cv-announcements-view, .cv-grades-view, .cv-pages-view, .cv-syllabus-view, .cv-modules-view { padding: 18px 20px; max-width: 980px; width: 100%; }
+.cv-assignments-view, .cv-announcements-view, .cv-grades-view, .cv-pages-view, .cv-syllabus-view, .cv-modules-view { padding: 24px clamp(20px, 3vw, 40px); max-width: 1280px; width: 100%; margin: 0 auto; box-sizing: border-box; }
 .cv-toolbar-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
 .cv-toolbar-title { font-size: 13px; font-weight: 600; color: var(--text-h); }
 .cv-filter-segmented { display: flex; gap: 2px; padding: 2px; border: 1px solid var(--border); border-radius: 5px; background: var(--surface); }
