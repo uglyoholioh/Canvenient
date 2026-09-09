@@ -8,7 +8,7 @@ from urllib.parse import quote
 import httpx
 from database import db
 from dependencies import CurrentUser
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Response
 from pydantic import BaseModel
 from module_colors import ensure_module_colors, normalize_module_code
 
@@ -781,6 +781,7 @@ async def list_canvas_files(
                 "url": f["url"],
                 "size": f["size"],
                 "updated_at": f["updated_at"],
+                "content_type": f.get("content-type") or f.get("mime_class"),
                 "folder_id": f.get("folder_id"),
                 "external_url": f.get("html_url")
                 or f"https://canvas.nus.edu.sg/courses/{course_id}/files/{f['id']}",
@@ -788,6 +789,85 @@ async def list_canvas_files(
         )
     await save_canvas_cache(current_user.id, cache_key, result)
     return result
+
+
+# Canvas download URLs are short-lived S3 signatures, so stored `url` values go
+# stale. This proxy re-resolves a fresh URL for every request and streams the
+# bytes through the backend, keeping the client free of Canvas session quirks.
+CANVAS_FILE_MAX_BYTES = 100 * 1024 * 1024
+
+
+@router.get("/files/{file_id}/content")
+async def get_canvas_file_content(file_id: int, current_user: CurrentUser):
+    token = current_user.canvas_token
+    if not token:
+        raise HTTPException(
+            status_code=400,
+            detail="No Canvas token saved. Add your Canvas access token in Settings.",
+        )
+
+    headers = {"Authorization": f"Bearer {token}"}
+    async with httpx.AsyncClient(follow_redirects=True) as client:
+        try:
+            meta_response = await client.get(
+                f"https://canvas.nus.edu.sg/api/v1/files/{file_id}",
+                headers=headers,
+                timeout=5.0,
+            )
+        except httpx.TimeoutException:
+            raise HTTPException(status_code=504, detail="Canvas took too long to respond. Try again.")
+        except httpx.HTTPError:
+            raise HTTPException(status_code=502, detail="Could not reach Canvas. Check your connection and try again.")
+
+        if meta_response.status_code == 401:
+            raise HTTPException(status_code=401, detail="Your Canvas token is invalid or expired. Update it in Settings.")
+        if meta_response.status_code == 404:
+            raise HTTPException(status_code=404, detail="This file no longer exists in Canvas.")
+        try:
+            meta_response.raise_for_status()
+        except httpx.HTTPStatusError:
+            raise HTTPException(
+                status_code=502,
+                detail=canvas_error_detail(meta_response, "Canvas returned an error while locating this file."),
+            )
+
+        meta = meta_response.json()
+        if not isinstance(meta, dict) or not meta.get("url"):
+            raise HTTPException(status_code=502, detail="Canvas did not return a download location for this file.")
+
+        declared_size = meta.get("size") or 0
+        if declared_size > CANVAS_FILE_MAX_BYTES:
+            raise HTTPException(status_code=413, detail="This file is too large to preview.")
+
+        # The signed URL carries its own auth; adding the bearer header would
+        # make S3 reject the request as a duplicate auth mechanism.
+        try:
+            file_response = await client.get(meta["url"], timeout=60.0)
+        except httpx.TimeoutException:
+            raise HTTPException(status_code=504, detail="The file download timed out. Try again.")
+        except httpx.HTTPError:
+            raise HTTPException(status_code=502, detail="Could not download this file from Canvas.")
+
+    if file_response.status_code >= 400:
+        raise HTTPException(status_code=502, detail="Canvas refused the file download. Try again shortly.")
+
+    content_type = (
+        file_response.headers.get("content-type")
+        or meta.get("content-type")
+        or meta.get("mime_class")
+        or "application/octet-stream"
+    )
+    content_type = content_type.split(";")[0].strip() or "application/octet-stream"
+    filename = meta.get("display_name") or meta.get("filename") or f"canvas-file-{file_id}"
+
+    return Response(
+        content=file_response.content,
+        media_type=content_type,
+        headers={
+            "Content-Disposition": f"inline; filename*=UTF-8''{quote(filename)}",
+            "Cache-Control": "private, max-age=600",
+        },
+    )
 
 
 @router.get("/folders", response_model=list[dict[str, Any]])

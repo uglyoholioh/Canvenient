@@ -431,6 +431,52 @@ export function getCanvasFolders(token, courseId) {
   return apiRequest(`/canvas/folders?course_id=` + courseId, { token });
 }
 
+// Canvas download URLs expire quickly, so file content always goes through
+// the backend proxy, which resolves a fresh signed URL per request.
+function filenameFromDisposition(header) {
+  if (!header) return "";
+  const utf8Match = header.match(/filename\*=UTF-8''([^;]+)/i);
+  if (utf8Match) {
+    try {
+      return decodeURIComponent(utf8Match[1].trim());
+    } catch {}
+  }
+  const plainMatch = header.match(/filename="?([^";]+)"?/i);
+  return plainMatch ? plainMatch[1].trim() : "";
+}
+
+export async function fetchCanvasFileContent(token, fileId) {
+  const url = buildUrl(`/canvas/files/${fileId}/content`);
+  let response;
+  try {
+    response = await fetchWithDesktopStartupRetry(url, { headers: { Authorization: `Bearer ${token}` } });
+  } catch (error) {
+    throw new Error(`Could not connect to server at ${url}. Please check your backend connection.`, { cause: error });
+  }
+  if (!response.ok) {
+    const payload = (response.headers.get("content-type") || "").includes("application/json") ? await response.json().catch(() => null) : null;
+    throw new Error(getErrorMessage(payload, `Could not load the file (${response.status}).`));
+  }
+  const blob = await response.blob();
+  return {
+    blob,
+    contentType: (response.headers.get("content-type") || "application/octet-stream").split(";")[0].trim(),
+    filename: filenameFromDisposition(response.headers.get("content-disposition")),
+  };
+}
+
+export async function downloadCanvasFile(token, fileId, fallbackName = "canvas-file") {
+  const { blob, filename } = await fetchCanvasFileContent(token, fileId);
+  const objectUrl = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = objectUrl;
+  anchor.download = filename || fallbackName;
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  window.setTimeout(() => URL.revokeObjectURL(objectUrl), 4000);
+}
+
 export function getCanvasCourseNavigation(token, courseId) {
   return apiRequest(`/canvas/navigation?course_id=${encodeURIComponent(courseId)}`, { token });
 }

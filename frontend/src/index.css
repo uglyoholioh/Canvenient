@@ -2736,6 +2736,31 @@ button.module-item-main:hover, .module-list-item.task-module-item:hover { backgr
 .cv-preview-meta strong { color: var(--text-h); font-weight: 500; font-family: var(--font-native-mono); }
 .cv-link-accent { color: var(--accent); text-decoration: none; font-size: 11px; font-weight: 500; }
 
+/* PDF viewer (Modules → Files tab) */
+.cv-files-split.is-pdf-focus .cv-files-sidebar,
+.cv-files-split.is-pdf-focus .cv-files-main { display: none; }
+.cv-files-split.is-pdf-focus .cv-file-preview-aside { flex: 1 1 auto; width: auto; max-width: none; }
+.cv-pdf-viewer { display: flex; flex-direction: column; height: 100%; min-height: 0; background: var(--surface); outline: none; }
+.cv-pdf-toolbar { display: flex; align-items: center; gap: 8px; padding: 6px 10px; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+.cv-pdf-toolbar-group { display: flex; align-items: center; gap: 3px; }
+.cv-pdf-toolbar-sep { width: 1px; height: 14px; background: var(--border); }
+.cv-pdf-page-indicator { display: flex; align-items: center; gap: 5px; color: var(--text-muted); font-size: 11px; font-family: var(--font-native-mono); padding: 0 3px; }
+.cv-pdf-page-input { width: 34px; text-align: center; background: transparent; border: 1px solid var(--border); border-radius: 4px; color: var(--text-h); font-family: var(--font-native-mono); font-size: 11px; padding: 2px 0; }
+.cv-pdf-page-input:focus { outline: none; border-color: var(--accent); }
+.cv-pdf-zoom-label { min-width: 40px; text-align: center; background: transparent; border: 1px solid transparent; border-radius: 4px; color: var(--text-muted); cursor: pointer; font-family: var(--font-native-mono); font-size: 11px; padding: 3px 2px; }
+.cv-pdf-zoom-label:hover { border-color: var(--border); color: var(--text-h); background: var(--surface-hover); }
+.cv-pdf-scroll { flex: 1; min-height: 0; overflow: auto; background: var(--bg); }
+.cv-pdf-pages { display: flex; flex-direction: column; align-items: center; gap: 14px; padding: 16px 0 28px; }
+.cv-pdf-page { position: relative; background: #ffffff; border-radius: 2px; overflow: hidden; box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35); }
+.cv-pdf-page canvas { display: block; }
+.cv-pdf-page-placeholder { position: absolute; inset: 0; display: grid; place-items: center; color: #9aa1a9; font-size: 12px; background: linear-gradient(180deg, #f4f5f6, #ececee); }
+.cv-pdf-page.is-rendered .cv-pdf-page-placeholder { display: none; }
+.cv-pdf-status { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; color: var(--text-muted); font-size: 12px; padding: 24px; text-align: center; }
+.cv-pdf-status-actions { display: flex; align-items: center; gap: 12px; }
+@media (max-width: 768px) {
+  .cv-files-split.is-pdf-focus .cv-file-preview-aside { display: flex; }
+}
+
 /* ── Generic Views (Assignments, Announcements, Modules, Pages, Syllabus) ── */
 .cv-assignments-view, .cv-announcements-view, .cv-grades-view, .cv-pages-view, .cv-syllabus-view, .cv-modules-view { padding: 24px clamp(20px, 3vw, 40px); max-width: 1280px; width: 100%; margin: 0 auto; box-sizing: border-box; }
 .cv-toolbar-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }

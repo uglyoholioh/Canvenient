@@ -4,7 +4,8 @@ import {
   ExternalLink, File, FileText, FileVideo, Folder, FolderOpen,
   Image, Loader2, RefreshCw, Link as LinkIcon,
   MessageSquare, HelpCircle, Search, X, Clock, ArrowUpRight,
-  Filter, Eye, Layers, BookMarked, Calendar, CheckSquare, Plus, Check
+  Filter, Eye, Layers, BookMarked, Calendar, CheckSquare, Plus, Check,
+  Maximize2, Minimize2
 } from "lucide-react";
 import {
   getAcademicModules,
@@ -22,10 +23,13 @@ import {
   getTasks,
   createTask,
   updateTask,
+  fetchCanvasFileContent,
+  downloadCanvasFile,
 } from "../api";
 import { notifyTasksChanged } from "../taskEvents";
 import CanvasDrawer from "./drawers/CanvasDrawer";
 import CanvasSearchSection from "./CanvasSearchSection";
+import PdfViewer from "./PdfViewer";
 import { useWorkspaceToolbar } from "./WorkspaceToolbarContext";
 
 function stripHtml(v = "") {
@@ -40,6 +44,14 @@ function getFileType(name = "") {
   if (["doc","docx","ppt","pptx","xls","xlsx","txt","md"].includes(ext)) return "doc";
   if (["zip","tar","gz","rar","7z"].includes(ext)) return "zip";
   return "other";
+}
+
+function resolvePreviewType(file) {
+  if (!file) return null;
+  const contentType = (file.content_type || "").toLowerCase();
+  if (contentType.startsWith("image/")) return "img";
+  if (contentType === "application/pdf" || contentType.endsWith("pdf")) return "pdf";
+  return getFileType(file.display_name || file.filename || "");
 }
 
 function FileTypeIcon({ name, size = 13 }) {
@@ -85,7 +97,7 @@ function dueLabel(str) {
 
 // ─── Files Browser Component with Tree View ───────────────────────────────────
 
-function FileBrowser({ token, courseId, allFiles }) {
+export function FileBrowser({ token, courseId, allFiles }) {
   const [rawFolders, setRawFolders] = useState([]);
   const [selectedFolderId, setSelectedFolderId] = useState(null);
   const [selectedFile, setSelectedFile] = useState(null);
@@ -94,6 +106,63 @@ function FileBrowser({ token, courseId, allFiles }) {
   const [typeFilter, setTypeFilter] = useState("all");
   const [sort, setSort] = useState("name");
   const [expandedFolderIds, setExpandedFolderIds] = useState(new Set());
+  const [isPdfFocus, setIsPdfFocus] = useState(false);
+  const [previewImageSrc, setPreviewImageSrc] = useState(null);
+  const [downloadingId, setDownloadingId] = useState(null);
+
+  const previewType = resolvePreviewType(selectedFile);
+
+  const handleDownload = useCallback(async (file) => {
+    if (!file || downloadingId) return;
+    setDownloadingId(file.id);
+    try {
+      await downloadCanvasFile(token, file.id, file.display_name || file.filename || "canvas-file");
+    } catch (error) {
+      window.dispatchEvent(new CustomEvent("canvenient-toast", { detail: { message: error.message || "Download failed." } }));
+    } finally {
+      setDownloadingId(null);
+    }
+  }, [downloadingId, token]);
+
+  const selectFile = useCallback((file) => {
+    setSelectedFile(file);
+    setIsPdfFocus(false);
+  }, []);
+
+  // Esc leaves the full-width reading mode.
+  useEffect(() => {
+    if (!isPdfFocus) return undefined;
+    const onKey = (event) => {
+      if (event.key === "Escape") setIsPdfFocus(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [isPdfFocus]);
+
+  // Image previews go through the content proxy too: mirrored Canvas URLs go
+  // stale, so the plain <img src={file.url}> broke after a while.
+  useEffect(() => {
+    if (!selectedFile || previewType !== "img") {
+      setPreviewImageSrc(null);
+      return undefined;
+    }
+    let cancelled = false;
+    let objectUrl = null;
+    setPreviewImageSrc(null);
+    fetchCanvasFileContent(token, selectedFile.id)
+      .then(({ blob }) => {
+        if (cancelled) return;
+        objectUrl = URL.createObjectURL(blob);
+        setPreviewImageSrc(objectUrl);
+      })
+      .catch(() => {
+        if (!cancelled) setPreviewImageSrc(selectedFile.url || null);
+      });
+    return () => {
+      cancelled = true;
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [previewType, selectedFile, token]);
 
   useEffect(() => {
     if (!courseId) return;
@@ -102,6 +171,7 @@ function FileBrowser({ token, courseId, allFiles }) {
     setRawFolders([]);
     setSelectedFolderId(null);
     setSelectedFile(null);
+    setIsPdfFocus(false);
     getCanvasFolders(token, courseId)
       .then(data => {
         if (!canceled) {
@@ -221,8 +291,6 @@ function FileBrowser({ token, courseId, allFiles }) {
     );
   };
 
-  const previewType = selectedFile ? getFileType(selectedFile.display_name || selectedFile.filename || "") : null;
-
   return (
     <div className="cv-files-container">
       {/* Search & Filter Bar */}
@@ -262,7 +330,7 @@ function FileBrowser({ token, courseId, allFiles }) {
       </div>
 
       {/* Main Files Layout: Folders Tree (Left) + File List (Right) */}
-      <div className="cv-files-split">
+      <div className={`cv-files-split ${isPdfFocus ? "is-pdf-focus" : ""}`}>
         {/* Left Sidebar: Folder Tree */}
         <aside className="cv-files-sidebar">
           <div className="cv-ftree-header">
@@ -343,7 +411,7 @@ function FileBrowser({ token, courseId, allFiles }) {
                       <tr
                         key={file.id}
                         className={`cv-file-row ${isSelected ? "is-selected" : ""}`}
-                        onClick={() => setSelectedFile(isSelected ? null : file)}
+                        onClick={() => selectFile(isSelected ? null : file)}
                       >
                         <td className="cv-file-col-name">
                           <FileTypeIcon name={name} />
@@ -354,16 +422,14 @@ function FileBrowser({ token, courseId, allFiles }) {
                         </td>
                         <td className="cv-file-col-size">{formatSize(file.size)}</td>
                         <td className="cv-file-col-actions" onClick={e => e.stopPropagation()}>
-                          <a
-                            href={file.url || file.external_url}
-                            download
+                          <button
+                            type="button"
                             className="cv-btn-icon"
                             title="Download"
-                            target="_blank"
-                            rel="noreferrer"
+                            onClick={() => handleDownload(file)}
                           >
-                            <Download size={13} />
-                          </a>
+                            {downloadingId === file.id ? <Loader2 size={13} className="retro-icon-spin" /> : <Download size={13} />}
+                          </button>
                           <a
                             href={file.external_url || file.url}
                             target="_blank"
@@ -391,16 +457,25 @@ function FileBrowser({ token, courseId, allFiles }) {
                 {selectedFile.display_name || selectedFile.filename}
               </span>
               <div className="cv-preview-actions">
-                <a
-                  href={selectedFile.url || selectedFile.external_url}
-                  download
+                {previewType === "pdf" && (
+                  <button
+                    type="button"
+                    className="cv-btn-icon"
+                    onClick={() => setIsPdfFocus((open) => !open)}
+                    title={isPdfFocus ? "Exit full-width reading" : "Read full width"}
+                    aria-label={isPdfFocus ? "Exit full-width reading" : "Read full width"}
+                  >
+                    {isPdfFocus ? <Minimize2 size={13} /> : <Maximize2 size={13} />}
+                  </button>
+                )}
+                <button
+                  type="button"
                   className="cv-btn-icon"
                   title="Download"
-                  target="_blank"
-                  rel="noreferrer"
+                  onClick={() => handleDownload(selectedFile)}
                 >
-                  <Download size={13} />
-                </a>
+                  {downloadingId === selectedFile.id ? <Loader2 size={13} className="retro-icon-spin" /> : <Download size={13} />}
+                </button>
                 <a
                   href={selectedFile.external_url || selectedFile.url}
                   target="_blank"
@@ -410,16 +485,28 @@ function FileBrowser({ token, courseId, allFiles }) {
                 >
                   <ExternalLink size={13} />
                 </a>
-                <button type="button" className="cv-btn-icon" onClick={() => setSelectedFile(null)} title="Close Preview">
+                <button type="button" className="cv-btn-icon" onClick={() => { setIsPdfFocus(false); selectFile(null); }} title="Close Preview">
                   <X size={13} />
                 </button>
               </div>
             </div>
             <div className="cv-preview-body">
-              {previewType === "img" ? (
-                <img src={selectedFile.url} alt={selectedFile.display_name || selectedFile.filename} />
-              ) : previewType === "pdf" ? (
-                <iframe src={selectedFile.url} title={selectedFile.display_name || selectedFile.filename} />
+              {previewType === "pdf" ? (
+                <PdfViewer
+                  token={token}
+                  fileId={selectedFile.id}
+                  name={selectedFile.display_name || selectedFile.filename || ""}
+                  externalUrl={selectedFile.external_url || selectedFile.url || ""}
+                />
+              ) : previewType === "img" ? (
+                previewImageSrc ? (
+                  <img src={previewImageSrc} alt={selectedFile.display_name || selectedFile.filename} />
+                ) : (
+                  <div className="cv-preview-fallback">
+                    <Loader2 className="retro-icon-spin" size={16} />
+                    <span>Loading preview…</span>
+                  </div>
+                )
               ) : (
                 <div className="cv-preview-fallback">
                   <FileTypeIcon name={selectedFile.display_name || selectedFile.filename || ""} size={26} />
