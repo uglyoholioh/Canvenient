@@ -25,6 +25,7 @@ describe("dashboard card sizes", () => {
       notes: { columns: 4, rows: 1 },
       aibrief: { columns: 2, rows: 1 },
       studytimer: { columns: 1, rows: 1 },
+      wheel: { columns: 1, rows: 1 },
     });
   });
 
@@ -40,14 +41,15 @@ describe("dashboard card sizes", () => {
     });
   });
 
-  it("keeps NUS ISB available alongside the primary dashboard modules", () => {
+  it("keeps NUS ISB available alongside the primary dashboard modules and hides notes", () => {
     const config = threeColumnDashboardConfig(readDashboardConfig());
-    expect(config.order.slice(0, 3)).toEqual(["tasks", "schedule", "canvas"]);
+    expect(config.order).toEqual(["tasks", "schedule", "canvas", "isb"]);
+    expect(config.hidden).toContain("notes");
     expect(config.sizes.tasks).toEqual({ columns: 2, rows: 2 });
     expect(config.sizes.schedule).toEqual({ columns: 1, rows: 1 });
-    expect(config.sizes.canvas).toEqual({ columns: 1, rows: 1 });
+    expect(config.sizes.canvas).toEqual({ columns: 1, rows: 2 });
     expect(config.sizes.isb).toEqual({ columns: 1, rows: 1 });
-    expect(config.tracks.columns).toEqual([0.333, 0.333, 0.334]);
-    expect(config.tracks.rows).toEqual([220, 220]);
+    expect(config.tracks.columns).toEqual([0.25, 0.25, 0.25, 0.25]);
+    expect(config.tracks.rows).toEqual([220, 520]);
   });
 });

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Check, Pencil, Search, SlidersHorizontal, X } from "lucide-react";
 import CanvasDrawer from "./drawers/CanvasDrawer";
 import CanvasModule from "./dashboard/CanvasModule";
@@ -10,6 +10,7 @@ import DashboardCustomizer from "./dashboard/DashboardCustomizer";
 import NotesModule from "./dashboard/NotesModule";
 import AiBriefModule from "./dashboard/AiBriefModule";
 import StudyTimerModule from "./dashboard/StudyTimerModule";
+import WheelModule from "./dashboard/WheelModule";
 import { DEFAULT_DASHBOARD_CONFIG, readDashboardConfig, readDashboardLayout, saveDashboardConfig, saveDashboardLayout, threeColumnDashboardConfig } from "./dashboard/dashboardConfig";
 import { useQuickCapture } from "./QuickCaptureContext";
 import { WorkspaceToolbarContext } from "./WorkspaceToolbarContext";
@@ -41,7 +42,7 @@ export default function Dashboard({ token, user, onNavigate, onOpenSearch, searc
 
   useEffect(() => {
     const layoutKey = "canvenient-dashboard-three-column-layout";
-    if (localStorage.getItem(layoutKey) === "11") return;
+    if (localStorage.getItem(layoutKey) === "12") return;
     Promise.resolve().then(() => {
       try {
         localStorage.removeItem("canvenient-dashboard-bento-layout-v1");
@@ -51,7 +52,7 @@ export default function Dashboard({ token, user, onNavigate, onOpenSearch, searc
       saveDashboardLayout("focus");
       setConfig(nextConfig);
       setLayout("focus");
-      localStorage.setItem(layoutKey, "11");
+      localStorage.setItem(layoutKey, "12");
     });
   }, []);
 
@@ -126,6 +127,11 @@ export default function Dashboard({ token, user, onNavigate, onOpenSearch, searc
       title: "Study Timer",
       body: <StudyTimerModule token={token} />,
     },
+    wheel: {
+      title: "Spin the Wheel",
+      onViewFull: () => onNavigate("wheel"),
+      body: <WheelModule token={token} onNavigate={onNavigate} />,
+    },
   };
 
 
@@ -193,10 +199,10 @@ export default function Dashboard({ token, user, onNavigate, onOpenSearch, searc
     changeConfig({ ...config, tracks });
   };
 
-  const beginLayoutEdit = () => {
+  const beginLayoutEdit = useCallback(() => {
     setIsCustomizing(false);
     setIsEditingLayout(true);
-  };
+  }, []);
 
   useEffect(() => {
     const closeTransientUi = (event) => {

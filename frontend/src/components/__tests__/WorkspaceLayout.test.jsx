@@ -13,6 +13,7 @@ vi.mock("../CanvasView", () => ({ default: () => <div>Canvas content</div> }));
 vi.mock("../NotesView", () => ({ default: () => <div>Notes content</div> }));
 vi.mock("../MarkdownEditor", () => ({ default: () => <div>Editor content</div> }));
 vi.mock("../Omnibar", () => ({ default: () => <div>Search content</div> }));
+vi.mock("../wheel/SpinWheelView", () => ({ default: () => <div>Wheel content</div> }));
 vi.mock("../../api", () => ({
   createNote: vi.fn(),
   createTask: vi.fn(),
@@ -93,5 +94,14 @@ describe("WorkspaceLayout", () => {
     fireEvent.keyDown(screen.getByRole("textbox", { name: "Panel task composer" }), { key: "Escape" });
 
     expect(screen.queryByRole("dialog", { name: "Tasks" })).not.toBeInTheDocument();
+  });
+
+  it("navigates to Spin the Wheel view when clicked", () => {
+    render(<WorkspaceLayout token="token" user={{ id: 1 }} onLogout={() => {}} />);
+    fireEvent.click(screen.getByRole("button", { name: "Spin the Wheel" }));
+
+    expect(screen.getByRole("heading", { name: "Spin the Wheel" })).toBeInTheDocument();
+    expect(screen.getByText("Wheel content")).toBeInTheDocument();
+    expect(window.localStorage.setItem).toHaveBeenCalledWith("canvenient-active-view", "wheel");
   });
 });

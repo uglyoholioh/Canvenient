@@ -27,9 +27,19 @@ export default function Omnibar({ onClose, token, onNavigate }) {
       try {
         const [notes, tasks] = await Promise.all([getNotes(token), getTasks(token)]);
         const q = query.toLowerCase();
+        const views = [
+          { type: 'view', id: 'wheel', view: 'wheel', title: 'Spin the Wheel (NUS Food, Modules & Custom)', keywords: ['wheel', 'spin', 'eat', 'food', 'decide', 'module'] },
+          { type: 'view', id: 'dashboard', view: 'dashboard', title: 'Dashboard', keywords: ['dashboard', 'home'] },
+          { type: 'view', id: 'tasks', view: 'tasks', title: 'Tasks', keywords: ['tasks', 'todo'] },
+          { type: 'view', id: 'schedule', view: 'schedule', title: 'Schedule', keywords: ['schedule', 'calendar', 'timetable'] },
+          { type: 'view', id: 'venues', view: 'venues', title: 'Venue Finder', keywords: ['venue', 'room', 'map'] },
+          { type: 'view', id: 'canvas', view: 'canvas', title: 'Modules', keywords: ['modules', 'canvas', 'courses'] },
+          { type: 'view', id: 'notes', view: 'notes', title: 'Notes', keywords: ['notes'] },
+        ];
+        const matchedViews = views.filter(v => v.title.toLowerCase().includes(q) || v.keywords.some(k => k.includes(q)));
         const filteredNotes = notes.filter(n => n.title.toLowerCase().includes(q) || n.content.toLowerCase().includes(q)).map(n => ({ ...n, type: 'note' }));
         const filteredTasks = tasks.filter(t => t.title.toLowerCase().includes(q)).map(t => ({ ...t, type: 'task' }));
-        setResults([...filteredNotes, ...filteredTasks]);
+        setResults([...matchedViews, ...filteredNotes, ...filteredTasks]);
         setSelectedIndex(0);
       } catch (err) {
         console.error(err);
