@@ -2684,18 +2684,39 @@ button.module-item-main:hover, .module-list-item.task-module-item:hover { backgr
 /* Full-page shell — no flex row needed when no sidebar */
 .cv-page { display: flex; flex-direction: column; height: 100%; min-height: 0; background: var(--bg); overflow: hidden; }
 
-/* ── Course grid landing ── */
-.cv-landing { flex: 1; min-height: 0; overflow-y: auto; padding: 28px clamp(20px, 4vw, 48px); }
-.cv-landing-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 10px; }
-.cv-course-card { position: relative; padding: 14px 16px 14px 20px; border: 1px solid var(--border); border-radius: 7px; background: var(--surface); color: var(--text); cursor: pointer; display: flex; flex-direction: column; gap: 6px; text-align: left; transition: border-color 100ms, background 100ms; }
+/* ── Course landing — two-column dashboard ── */
+.cv-landing { flex: 1; min-height: 0; overflow-y: auto; padding: 20px clamp(16px, 3vw, 36px); }
+.cv-landing-body { display: grid; grid-template-columns: 260px 1fr; gap: 20px; min-height: 100%; }
+.cv-landing-section-label { font: 500 10px var(--font-mono); color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 7px; }
+.cv-landing-courses { display: flex; flex-direction: column; }
+.cv-landing-course-list { display: flex; flex-direction: column; gap: 6px; }
+.cv-landing-feed { display: flex; flex-direction: column; }
+.cv-landing-panel { border: 1px solid var(--border); border-radius: 7px; overflow: hidden; background: var(--surface); }
+.cv-landing-feed-row { width: 100%; padding: 9px 12px; border: 0; border-bottom: 1px solid color-mix(in srgb, var(--border) 55%, transparent); background: transparent; color: var(--text); cursor: pointer; display: flex; align-items: center; gap: 10px; text-align: left; }
+.cv-landing-feed-row:last-child { border-bottom: 0; }
+.cv-landing-feed-row:hover { background: var(--surface-hover); }
+.cv-landing-feed-dot { width: 6px; height: 6px; flex: none; border-radius: 50%; background: var(--module-color, var(--accent)); opacity: 0.7; }
+.cv-landing-feed-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.cv-landing-feed-title { font-size: 12px; color: var(--text-h); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.cv-landing-feed-meta { font-size: 10px; color: var(--text-muted); font-family: var(--font-mono); }
+.cv-landing-feed-due { flex: none; font-size: 10px; color: var(--text-muted); white-space: nowrap; }
+.cv-landing-feed-due.is-urgent { color: var(--error); font-weight: 600; }
+/* course cards in left column: no bottom border gap needed, they stack */
+.cv-course-card { position: relative; padding: 12px 14px 12px 18px; border: 1px solid var(--border); border-radius: 7px; background: var(--surface); color: var(--text); cursor: pointer; display: flex; flex-direction: column; gap: 4px; text-align: left; transition: border-color 100ms, background 100ms; }
 .cv-course-card::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; border-radius: 7px 0 0 7px; background: var(--module-color, var(--accent)); }
 .cv-course-card:hover { border-color: var(--border-strong); background: var(--surface-muted); }
-.cv-course-card-code { font: 600 11px var(--font-mono); color: var(--module-color, var(--accent)); }
-.cv-course-card-name { font-size: 13px; color: var(--text-h); font-weight: 500; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
-.cv-course-card-meta { display: flex; gap: 10px; align-items: center; margin-top: 2px; }
-.cv-course-card-badge { display: inline-flex; align-items: center; gap: 3px; padding: 2px 6px; border-radius: 4px; background: var(--error-bg); color: var(--error); font: 600 10px var(--font-mono); }
+.cv-course-card-code { font: 600 10px var(--font-mono); color: var(--module-color, var(--accent)); }
+.cv-course-card-name { font-size: 12px; color: var(--text-h); font-weight: 500; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.cv-course-card-meta { display: flex; align-items: center; margin-top: 2px; }
+.cv-course-card-badge { display: inline-flex; align-items: center; gap: 3px; padding: 1px 5px; border-radius: 3px; background: var(--error-bg); color: var(--error); font: 600 9px var(--font-mono); }
 .cv-course-card-badge.is-zero { background: transparent; color: var(--text-muted); font-weight: 400; }
 .cv-course-card-chevron { margin-left: auto; color: var(--text-muted); }
+/* Responsive: stack at 680px */
+@media (max-width: 680px) {
+  .cv-landing-body { grid-template-columns: 1fr; }
+  .cv-landing-course-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 6px; }
+}
+
 
 /* ── Course header strip (replaces sidebar when course selected) ── */
 .cv-course-header { flex: none; height: 46px; padding: 0 clamp(16px, 3vw, 32px); border-bottom: 1px solid var(--border); background: var(--surface); display: flex; align-items: center; gap: 0; }
@@ -2706,7 +2727,7 @@ button.module-item-main:hover, .module-list-item.task-module-item:hover { backgr
 .cv-course-header-actions { display: flex; align-items: center; gap: 6px; flex: none; margin-left: auto; }
 
 /* ── Tabs bar below the course header ── */
-.cv-tabs-bar { flex: none; height: 38px; padding: 0 clamp(16px, 3vw, 32px); border-bottom: 1px solid var(--border); background: var(--bg); display: flex; align-items: center; gap: 0; }
+.cv-tabs-bar { flex: none; height: 38px; padding: 0 clamp(12px, 2vw, 32px); border-bottom: 1px solid var(--border); background: var(--bg); display: flex; align-items: center; gap: 0; overflow-x: auto; scrollbar-width: none; }
 .cv-tab-btn { position: relative; height: 100%; padding: 0 11px; border: 0; background: transparent; color: var(--text-muted); cursor: pointer; font-size: 11px; white-space: nowrap; }
 .cv-tab-btn:hover { color: var(--text); }
 .cv-tab-btn.is-active { color: var(--text-h); font-weight: 500; }

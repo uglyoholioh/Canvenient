@@ -603,6 +603,20 @@ export default function CanvasView({ token }) {
   );
 
   // LANDING — no course selected
+  const landingUpcoming = useMemo(() =>
+    assignments
+      .filter(a => validCourseIds.has(String(a.course_id)) && !a.has_submitted && (!a.due_at || new Date(a.due_at) >= new Date()))
+      .sort((a,b) => (a.due_at ? new Date(a.due_at) : Infinity) - (b.due_at ? new Date(b.due_at) : Infinity))
+      .slice(0, 12),
+  [assignments, validCourseIds]);
+
+  const landingAnnouncements = useMemo(() =>
+    announcements
+      .filter(a => validCourseIds.has(String(a.course_id)))
+      .sort((a,b) => new Date(b.posted_at||0) - new Date(a.posted_at||0))
+      .slice(0, 10),
+  [announcements, validCourseIds]);
+
   if (!selectedCourseId) return (
     <div className="cv-page">
       {error && <div style={{ padding: "12px 24px", color: "var(--error)", fontSize: 12 }}>{error}</div>}
@@ -612,27 +626,85 @@ export default function CanvasView({ token }) {
             No modules configured. Add them in Settings → Academic Modules.
           </div>
         ) : (
-          <div className="cv-landing-grid">
-            {displayedCourses.map(course => {
-              const upcoming = assignments.filter(a =>
-                String(a.course_id) === String(course.id) && !a.has_submitted &&
-                a.due_at && new Date(a.due_at) >= new Date()
-              ).length;
-              return (
-                <button key={course.id} type="button" className="cv-course-card"
-                  style={{ "--module-color": course.color }}
-                  onClick={() => setSelectedCourseId(String(course.id))}>
-                  <div className="cv-course-card-code">{course.course_code}</div>
-                  <div className="cv-course-card-name">{course.name}</div>
-                  <div className="cv-course-card-meta">
-                    <span className={`cv-course-card-badge${upcoming === 0 ? " is-zero" : ""}`}>
-                      {upcoming > 0 ? `${upcoming} due` : "All clear"}
-                    </span>
-                    <ChevronRight size={13} className="cv-course-card-chevron" />
-                  </div>
-                </button>
-              );
-            })}
+          <div className="cv-landing-body">
+            {/* Left: course list */}
+            <div className="cv-landing-courses">
+              <div className="cv-landing-section-label">Modules</div>
+              <div className="cv-landing-course-list">
+                {displayedCourses.map(course => {
+                  const upcoming = assignments.filter(a =>
+                    String(a.course_id) === String(course.id) && !a.has_submitted &&
+                    a.due_at && new Date(a.due_at) >= new Date()
+                  ).length;
+                  return (
+                    <button key={course.id} type="button" className="cv-course-card"
+                      style={{ "--module-color": course.color }}
+                      onClick={() => setSelectedCourseId(String(course.id))}>
+                      <div className="cv-course-card-code">{course.course_code}</div>
+                      <div className="cv-course-card-name">{course.name}</div>
+                      <div className="cv-course-card-meta">
+                        <span className={`cv-course-card-badge${upcoming === 0 ? " is-zero" : ""}`}>
+                          {upcoming > 0 ? `${upcoming} due` : "All clear"}
+                        </span>
+                        <ChevronRight size={13} className="cv-course-card-chevron" />
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Right: upcoming + announcements feed */}
+            <div className="cv-landing-feed">
+              {/* Upcoming assignments */}
+              <div className="cv-landing-section-label">Upcoming</div>
+              <div className="cv-landing-panel">
+                {landingUpcoming.length === 0
+                  ? <div className="cv-finder-empty" style={{ padding: "14px 16px" }}>No upcoming assignments.</div>
+                  : landingUpcoming.map(a => {
+                    const courseColor = courseColors.get(a.course_code);
+                    const due = a.due_at ? new Date(a.due_at) : null;
+                    const urgent = due && (due - new Date()) < 86400000 * 2;
+                    return (
+                      <button key={`${a.course_id}-${a.id}`} type="button"
+                        className="cv-landing-feed-row"
+                        style={{ "--module-color": courseColor }}
+                        onClick={() => { setSelectedCourseId(String(a.course_id)); setActiveItem({ ...a, itemType:"assignment" }); }}>
+                        <span className="cv-landing-feed-dot" />
+                        <span className="cv-landing-feed-body">
+                          <span className="cv-landing-feed-title">{a.title}</span>
+                          <span className="cv-landing-feed-meta">{a.course_code}</span>
+                        </span>
+                        <span className={`cv-landing-feed-due${urgent ? " is-urgent" : ""}`}>
+                          {dueLabel(a.due_at)}
+                        </span>
+                      </button>
+                    );
+                  })
+                }
+              </div>
+
+              {/* Announcements */}
+              <div className="cv-landing-section-label" style={{ marginTop: 20 }}>Announcements</div>
+              <div className="cv-landing-panel">
+                {landingAnnouncements.length === 0
+                  ? <div className="cv-finder-empty" style={{ padding: "14px 16px" }}>No recent announcements.</div>
+                  : landingAnnouncements.map(a => (
+                    <button key={a.id} type="button"
+                      className="cv-landing-feed-row"
+                      style={{ "--module-color": courseColors.get(a.course_code) }}
+                      onClick={() => { setSelectedCourseId(String(a.course_id)); setActiveItem({ ...a, itemType:"announcement" }); }}>
+                      <span className="cv-landing-feed-dot" />
+                      <span className="cv-landing-feed-body">
+                        <span className="cv-landing-feed-title">{a.title}</span>
+                        <span className="cv-landing-feed-meta">{a.course_code}</span>
+                      </span>
+                      <span className="cv-landing-feed-due">{relDate(a.posted_at)}</span>
+                    </button>
+                  ))
+                }
+              </div>
+            </div>
           </div>
         )}
       </div>
