@@ -1,3 +1,4 @@
+import React from "react";
 import { ArrowDown, ArrowUp, Columns3, Eye, EyeOff, Grid3X3, LayoutGrid } from "lucide-react";
 import { DASHBOARD_MODULES } from "./dashboardConfig";
 

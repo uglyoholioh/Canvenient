@@ -1,8 +1,39 @@
-import { useState, useEffect } from "react";
-import { Moon, Sun, Monitor, Database, Keyboard, PanelLeft, MoveHorizontal, Palette, Loader2, Sparkles, Trees } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import {
+  Moon,
+  Sun,
+  Monitor,
+  Database,
+  Keyboard,
+  PanelLeft,
+  MoveHorizontal,
+  Palette,
+  Loader2,
+  Sparkles,
+  Trees,
+  User,
+  Key,
+  CheckCircle2,
+  AlertCircle,
+  Eye,
+  EyeOff,
+  ExternalLink,
+  Send,
+} from "lucide-react";
 import DashboardCustomizer from "./dashboard/DashboardCustomizer";
 import { readDashboardConfig, readDashboardLayout, saveDashboardConfig, saveDashboardLayout } from "./dashboard/dashboardConfig";
-import { applyModulePalette, getAcademicModules, getModuleColors, updateAcademicModuleSelection, updateModuleColor, updateProfile } from "../api";
+import {
+  applyModulePalette,
+  claimTelegramLink,
+  getAcademicModules,
+  getModuleColors,
+  getTelegramLink,
+  unlinkTelegram,
+  updateAcademicModuleSelection,
+  updateModuleColor,
+  updateProfile,
+  validateCanvasToken,
+} from "../api";
 import {
   DEFAULT_KEYBOARD_SHORTCUTS,
   formatShortcut,
@@ -65,7 +96,7 @@ function ShortcutRecorder({ allowShiftOnly = false, description, label, onChange
   );
 }
 
-export default function SettingsView({ token, user, onUpdateUser }) {
+export default function SettingsView({ token, user, onUpdateUser, onReplayOnboarding }) {
   const [theme, setTheme] = useState(() => {
     const savedTheme = localStorage.getItem('canvenient-theme') || 'graphite';
     return savedTheme === 'dark' ? 'graphite' : savedTheme;
@@ -75,9 +106,25 @@ export default function SettingsView({ token, user, onUpdateUser }) {
   const [checkboxStyle, setCheckboxStyle] = useState(localStorage.getItem('canvenient-checkbox-style') || 'brackets');
   const [shortcutConfig, setShortcutConfig] = useState(readKeyboardShortcuts);
   const [shortcutError, setShortcutError] = useState("");
+
+  const [profileName, setProfileName] = useState(() => user?.name || "");
+  const [profileSaving, setProfileSaving] = useState(false);
+  const [profileMessage, setProfileMessage] = useState("");
+  const [profileError, setProfileError] = useState(false);
+
   const [canvasToken, setCanvasToken] = useState(() => user?.canvas_token || "");
+  const [showCanvasToken, setShowCanvasToken] = useState(false);
+  const [canvasTokenTesting, setCanvasTokenTesting] = useState(false);
+  const [canvasTestResult, setCanvasTestResult] = useState(null);
   const [canvasTokenSaving, setCanvasTokenSaving] = useState(false);
   const [canvasTokenMessage, setCanvasTokenMessage] = useState("");
+
+  const [telegramStatus, setTelegramStatus] = useState(null);
+  const [telegramCode, setTelegramCode] = useState("");
+  const [telegramUpdating, setTelegramUpdating] = useState(false);
+  const [telegramMessage, setTelegramMessage] = useState("");
+  const [telegramError, setTelegramError] = useState(false);
+
   const [dashboardLayout, setDashboardLayout] = useState(readDashboardLayout);
   const [dashboardConfig, setDashboardConfig] = useState(readDashboardConfig);
   const [moduleColors, setModuleColors] = useState({ active_palette: "balanced", palettes: [], modules: [] });
@@ -88,6 +135,20 @@ export default function SettingsView({ token, user, onUpdateUser }) {
   const [academicModulesLoading, setAcademicModulesLoading] = useState(true);
   const [academicModulesError, setAcademicModulesError] = useState("");
   const [academicModulesSaving, setAcademicModulesSaving] = useState(false);
+
+  useEffect(() => {
+    if (user?.name !== undefined) setProfileName(user.name);
+    if (user?.canvas_token !== undefined) setCanvasToken(user.canvas_token);
+  }, [user?.name, user?.canvas_token]);
+
+  useEffect(() => {
+    if (!token) return;
+    let active = true;
+    getTelegramLink(token)
+      .then((status) => active && setTelegramStatus(status))
+      .catch(() => active && setTelegramStatus({ linked: false }));
+    return () => { active = false; };
+  }, [token]);
 
   useEffect(() => {
     if (!token) return;
@@ -190,26 +251,124 @@ export default function SettingsView({ token, user, onUpdateUser }) {
     }
   };
 
-  const saveCanvasToken = async () => {
-    if (!user?.name?.trim()) {
-      setCanvasTokenMessage("Complete your profile name before saving a Canvas token.");
+  const saveProfile = async (e) => {
+    e?.preventDefault?.();
+    if (!profileName.trim()) {
+      setProfileError(true);
+      setProfileMessage("Name cannot be empty.");
       return;
     }
+    setProfileSaving(true);
+    setProfileMessage("");
+    setProfileError(false);
+    try {
+      const updatedUser = await updateProfile(token, {
+        name: profileName.trim(),
+        canvas_token: canvasToken.trim(),
+        theme: user?.theme || "default",
+      });
+      onUpdateUser?.(updatedUser);
+      setProfileError(false);
+      setProfileMessage("Profile updated.");
+    } catch (error) {
+      setProfileError(true);
+      setProfileMessage(error.message || "Could not update profile.");
+    } finally {
+      setProfileSaving(false);
+    }
+  };
 
+  const handleTestCanvasConnection = async () => {
+    if (!canvasToken.trim()) {
+      setCanvasTestResult({ valid: false, error: "Please enter a Canvas API token." });
+      return;
+    }
+    setCanvasTokenTesting(true);
+    setCanvasTestResult(null);
+    try {
+      const res = await validateCanvasToken(token, canvasToken.trim());
+      setCanvasTestResult(res);
+    } catch (err) {
+      setCanvasTestResult({ valid: false, error: err.message || "Connection test failed." });
+    } finally {
+      setCanvasTokenTesting(false);
+    }
+  };
+
+  const saveCanvasToken = async () => {
+    const effectiveName = (profileName || user?.name || "").trim() || (user?.email ? user.email.split("@")[0] : "Student");
     setCanvasTokenSaving(true);
     setCanvasTokenMessage("");
     try {
       const updatedUser = await updateProfile(token, {
-        name: user.name.trim(),
+        name: effectiveName,
         canvas_token: canvasToken.trim(),
-        theme: user.theme || "default",
+        theme: user?.theme || "default",
       });
       onUpdateUser?.(updatedUser);
       setCanvasTokenMessage("Canvas token saved.");
+      window.dispatchEvent(new Event("academic-modules-updated"));
+      window.dispatchEvent(new Event("module-colors-updated"));
     } catch (error) {
       setCanvasTokenMessage(error.message || "Could not save the Canvas token.");
     } finally {
       setCanvasTokenSaving(false);
+    }
+  };
+
+  const disconnectCanvas = async () => {
+    const effectiveName = (profileName || user?.name || "").trim() || (user?.email ? user.email.split("@")[0] : "Student");
+    setCanvasTokenSaving(true);
+    setCanvasTokenMessage("");
+    setCanvasTestResult(null);
+    try {
+      const updatedUser = await updateProfile(token, {
+        name: effectiveName,
+        canvas_token: "",
+        theme: user?.theme || "default",
+      });
+      setCanvasToken("");
+      onUpdateUser?.(updatedUser);
+      setCanvasTokenMessage("Canvas disconnected.");
+      window.dispatchEvent(new Event("academic-modules-updated"));
+    } catch (error) {
+      setCanvasTokenMessage(error.message || "Could not disconnect Canvas.");
+    } finally {
+      setCanvasTokenSaving(false);
+    }
+  };
+
+  const handleTelegramClaim = async () => {
+    if (!telegramCode.trim()) return;
+    setTelegramUpdating(true);
+    setTelegramMessage("");
+    setTelegramError(false);
+    try {
+      const status = await claimTelegramLink(token, telegramCode.trim());
+      setTelegramStatus(status);
+      setTelegramCode("");
+      setTelegramMessage("Telegram connected successfully!");
+    } catch (err) {
+      setTelegramError(true);
+      setTelegramMessage(err.message || "Failed to connect Telegram.");
+    } finally {
+      setTelegramUpdating(false);
+    }
+  };
+
+  const handleTelegramUnlink = async () => {
+    setTelegramUpdating(true);
+    setTelegramMessage("");
+    setTelegramError(false);
+    try {
+      await unlinkTelegram(token);
+      setTelegramStatus({ linked: false });
+      setTelegramMessage("Telegram disconnected.");
+    } catch (err) {
+      setTelegramError(true);
+      setTelegramMessage(err.message || "Failed to disconnect Telegram.");
+    } finally {
+      setTelegramUpdating(false);
     }
   };
 
@@ -227,6 +386,60 @@ export default function SettingsView({ token, user, onUpdateUser }) {
   return (
     <div style={{ padding: '32px', paddingBottom: '120px', maxWidth: '800px', margin: '0 auto', width: '100%', overflowY: 'auto', height: '100%' }} tabIndex={-1}>
       <h1 style={{ fontSize: '24px', fontWeight: '600', marginBottom: '24px', fontFamily: 'var(--font-mono)' }}>Settings</h1>
+
+      <section style={{ marginBottom: '40px' }}>
+        <div className="settings-section-heading">
+          <div><User size={15} /><h2>Profile</h2></div>
+          <p>Your workspace identity and account details.</p>
+        </div>
+        <div style={{ backgroundColor: 'var(--surface)', border: '1px solid var(--border-strong)', borderRadius: '8px', padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <div>
+            <label style={{ display: 'block', fontSize: '11px', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '6px', fontWeight: '600', letterSpacing: '0.5px' }}>
+              Email Address
+            </label>
+            <input
+              type="text"
+              readOnly
+              value={user?.email || ""}
+              className="form-input"
+              style={{ width: '100%', opacity: 0.7, cursor: 'not-allowed', backgroundColor: 'var(--surface-muted)' }}
+              aria-label="Email Address"
+            />
+          </div>
+
+          <div>
+            <label htmlFor="settings-profile-name" style={{ display: 'block', fontSize: '11px', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '6px', fontWeight: '600', letterSpacing: '0.5px' }}>
+              Display Name
+            </label>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <input
+                id="settings-profile-name"
+                type="text"
+                value={profileName}
+                onChange={(e) => setProfileName(e.target.value)}
+                placeholder="e.g. Alex Tan"
+                className="form-input"
+                style={{ flex: 1 }}
+                aria-label="Display Name"
+              />
+              <button
+                type="button"
+                className="primary-button"
+                disabled={profileSaving || !profileName.trim()}
+                onClick={saveProfile}
+              >
+                {profileSaving ? 'Saving…' : 'Save Name'}
+              </button>
+            </div>
+          </div>
+
+          {profileMessage && (
+            <p className={profileError ? "settings-colors-error" : "settings-colors-state"} role="status" style={{ margin: 0 }}>
+              {profileMessage}
+            </p>
+          )}
+        </div>
+      </section>
 
       <section className="settings-appearance">
         <div className="settings-section-heading">
@@ -411,38 +624,270 @@ export default function SettingsView({ token, user, onUpdateUser }) {
       <section style={{ marginBottom: '40px' }}>
         <h2 style={{ fontSize: '14px', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '16px', letterSpacing: '1px' }}>Integrations</h2>
         
-        <div style={{ backgroundColor: 'var(--surface-muted)', padding: '20px', borderRadius: '8px', border: '1px solid var(--border)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
-            <div style={{ padding: '8px', backgroundColor: 'var(--accent)', borderRadius: '4px', color: 'var(--bg)' }}>
-              <Database size={20} />
-            </div>
-            <div>
-              <div style={{ fontWeight: '600', color: 'var(--text-h)' }}>Canvas LMS Sync</div>
-              <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Automatically pull assignments and announcements into your workspace.</div>
+        {/* Canvas LMS */}
+        <div style={{ backgroundColor: 'var(--surface)', padding: '20px', borderRadius: '8px', border: '1px solid var(--border-strong)', marginBottom: '20px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <div style={{ padding: '8px', backgroundColor: 'var(--surface-muted)', borderRadius: '4px', color: 'var(--text-h)', border: '1px solid var(--border)' }}>
+                <Database size={20} />
+              </div>
+              <div>
+                <div style={{ fontWeight: '600', color: 'var(--text-h)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span>Canvas LMS Sync</span>
+                  <span
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      fontSize: '11px',
+                      padding: '2px 8px',
+                      borderRadius: '12px',
+                      backgroundColor: user?.canvas_token ? 'var(--success-bg)' : 'var(--surface-muted)',
+                      color: user?.canvas_token ? 'var(--success)' : 'var(--text-muted)',
+                      border: `1px solid ${user?.canvas_token ? 'var(--success)' : 'var(--border)'}`,
+                    }}
+                  >
+                    <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: user?.canvas_token ? 'var(--success)' : 'var(--text-muted)' }} />
+                    {user?.canvas_token ? 'Connected' : 'Not Connected'}
+                  </span>
+                </div>
+                <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>
+                  Automatically sync course modules, assignments, deadlines, and files into your workspace.
+                </div>
+              </div>
             </div>
           </div>
           
-          <div style={{ display: 'flex', gap: '8px' }}>
-            <input 
-              type="password" 
-              placeholder="Canvas API Token..." 
-              value={canvasToken}
-              onChange={e => setCanvasToken(e.target.value)}
-              className="form-input"
-              style={{ flex: 1 }}
-              tabIndex={0}
-            />
-            <button 
-              type="button"
-              tabIndex={0} 
-              disabled={canvasTokenSaving}
-              className="primary-button"
-              onClick={saveCanvasToken}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <div style={{ position: 'relative', flex: 1 }}>
+                <input 
+                  type={showCanvasToken ? "text" : "password"} 
+                  placeholder="Canvas API Token..." 
+                  value={canvasToken}
+                  onChange={e => {
+                    setCanvasToken(e.target.value);
+                    setCanvasTestResult(null);
+                  }}
+                  className="form-input"
+                  style={{ width: '100%', paddingRight: '36px' }}
+                  tabIndex={0}
+                  aria-label="Canvas API Token"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowCanvasToken(!showCanvasToken)}
+                  style={{
+                    position: 'absolute',
+                    right: '8px',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    background: 'none',
+                    border: 'none',
+                    color: 'var(--text-muted)',
+                    cursor: 'pointer',
+                    padding: '4px',
+                    display: 'flex',
+                    alignItems: 'center',
+                  }}
+                  title={showCanvasToken ? "Hide token" : "Show token"}
+                >
+                  {showCanvasToken ? <EyeOff size={14} /> : <Eye size={14} />}
+                </button>
+              </div>
+
+              <button
+                type="button"
+                onClick={handleTestCanvasConnection}
+                disabled={canvasTokenTesting || !canvasToken.trim()}
+                className="mac-toolbar-button"
+                style={{
+                  padding: '8px 14px',
+                  border: '1px solid var(--border-strong)',
+                  borderRadius: '4px',
+                  fontSize: '12px',
+                  fontWeight: '500',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                }}
+              >
+                {canvasTokenTesting ? <Loader2 size={13} className="retro-icon-spin" /> : <Key size={13} />}
+                <span>Test</span>
+              </button>
+
+              <button 
+                type="button"
+                tabIndex={0} 
+                disabled={canvasTokenSaving}
+                className="primary-button"
+                onClick={saveCanvasToken}
+              >
+                {canvasTokenSaving ? 'Saving…' : 'Save'}
+              </button>
+
+              {user?.canvas_token && (
+                <button
+                  type="button"
+                  className="mac-toolbar-button"
+                  disabled={canvasTokenSaving}
+                  onClick={disconnectCanvas}
+                  style={{ color: 'var(--error)', border: '1px solid var(--border)' }}
+                >
+                  Disconnect
+                </button>
+              )}
+            </div>
+
+            {canvasTestResult && (
+              <div
+                style={{
+                  padding: '8px 12px',
+                  borderRadius: '4px',
+                  fontSize: '12px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  backgroundColor: canvasTestResult.valid ? 'var(--success-bg)' : 'var(--error-bg)',
+                  color: canvasTestResult.valid ? 'var(--success)' : 'var(--error)',
+                  border: `1px solid ${canvasTestResult.valid ? 'var(--success)' : 'var(--error)'}`,
+                }}
+              >
+                {canvasTestResult.valid ? <CheckCircle2 size={14} /> : <AlertCircle size={14} />}
+                <span>
+                  {canvasTestResult.valid
+                    ? `Canvas token is valid (Connected as ${canvasTestResult.name || 'Active User'})`
+                    : canvasTestResult.error || 'Invalid token'}
+                </span>
+              </div>
+            )}
+
+            {canvasTokenMessage && <p className="settings-colors-error" role="status" style={{ margin: 0 }}>{canvasTokenMessage}</p>}
+
+            <div
+              style={{
+                backgroundColor: 'var(--surface-muted)',
+                borderRadius: '6px',
+                padding: '12px 14px',
+                fontSize: '12px',
+                color: 'var(--text)',
+                lineHeight: '1.6',
+                border: '1px solid var(--border)',
+              }}
             >
-              {canvasTokenSaving ? 'Saving…' : 'Save'}
-            </button>
+              <div style={{ fontWeight: '600', color: 'var(--text-h)', marginBottom: '4px' }}>How to obtain a Canvas API token:</div>
+              <ol style={{ margin: 0, paddingLeft: '18px', color: 'var(--text-muted)' }}>
+                <li>Log in to <a href="https://canvas.nus.edu.sg" target="_blank" rel="noreferrer" style={{ color: 'var(--accent)' }}>Canvas (canvas.nus.edu.sg) <ExternalLink size={10} style={{ display: 'inline' }} /></a></li>
+                <li>Go to <strong>Account</strong> in the sidebar → <strong>Settings</strong></li>
+                <li>Scroll down to <strong>Approved Integrations</strong> and click <strong>+ New Access Token</strong></li>
+                <li>Set a purpose label (e.g. <em>Canvenient</em>) and copy the generated token above</li>
+              </ol>
+            </div>
           </div>
-          {canvasTokenMessage && <p className="settings-colors-error" role="status">{canvasTokenMessage}</p>}
+        </div>
+
+        {/* Telegram Bot */}
+        <div style={{ backgroundColor: 'var(--surface)', padding: '20px', borderRadius: '8px', border: '1px solid var(--border-strong)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
+            <div style={{ padding: '8px', backgroundColor: 'var(--surface-muted)', borderRadius: '4px', color: 'var(--text-h)', border: '1px solid var(--border)' }}>
+              <Send size={20} />
+            </div>
+            <div>
+              <div style={{ fontWeight: '600', color: 'var(--text-h)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span>Telegram Bot Integration</span>
+                <span
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    fontSize: '11px',
+                    padding: '2px 8px',
+                    borderRadius: '12px',
+                    backgroundColor: telegramStatus?.linked ? 'var(--success-bg)' : 'var(--surface-muted)',
+                    color: telegramStatus?.linked ? 'var(--success)' : 'var(--text-muted)',
+                    border: `1px solid ${telegramStatus?.linked ? 'var(--success)' : 'var(--border)'}`,
+                  }}
+                >
+                  <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: telegramStatus?.linked ? 'var(--success)' : 'var(--text-muted)' }} />
+                  {telegramStatus?.linked ? 'Connected' : 'Not Connected'}
+                </span>
+              </div>
+              <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>
+                Receive daily study briefings and task reminders directly in Telegram.
+              </div>
+            </div>
+          </div>
+
+          {telegramStatus?.linked ? (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <span style={{ fontSize: '13px', color: 'var(--text)' }}>
+                Linked to Telegram chat ID: <code style={{ fontFamily: 'var(--font-mono)' }}>{telegramStatus.telegram_chat_id}</code>
+              </span>
+              <button
+                type="button"
+                className="mac-toolbar-button"
+                disabled={telegramUpdating}
+                onClick={handleTelegramUnlink}
+                style={{ color: 'var(--error)', border: '1px solid var(--border)' }}
+              >
+                {telegramUpdating ? 'Disconnecting…' : 'Disconnect Telegram'}
+              </button>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <input
+                  type="text"
+                  placeholder="Telegram link code..."
+                  value={telegramCode}
+                  onChange={(e) => setTelegramCode(e.target.value)}
+                  className="form-input"
+                  style={{ flex: 1 }}
+                  aria-label="Telegram link code"
+                />
+                <button
+                  type="button"
+                  className="primary-button"
+                  disabled={telegramUpdating || !telegramCode.trim()}
+                  onClick={handleTelegramClaim}
+                >
+                  {telegramUpdating ? 'Connecting…' : 'Connect'}
+                </button>
+              </div>
+              <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: 0 }}>
+                To get a link code, message <code>/link</code> to the Canvenient Telegram bot.
+              </p>
+            </div>
+          )}
+          {telegramMessage && (
+            <p className={telegramError ? "settings-colors-error" : "settings-colors-state"} style={{ marginTop: '10px', marginBottom: 0 }} role="status">
+              {telegramMessage}
+            </p>
+          )}
+        </div>
+      </section>
+
+      {/* Setup Walkthrough */}
+      <section style={{ marginBottom: '40px' }}>
+        <h2 style={{ fontSize: '14px', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '16px', letterSpacing: '1px' }}>Workspace Setup</h2>
+        <div style={{ backgroundColor: 'var(--surface)', padding: '20px', borderRadius: '8px', border: '1px solid var(--border-strong)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+            <div style={{ fontWeight: '600', color: 'var(--text-h)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Sparkles size={16} />
+              <span>Onboarding Setup</span>
+            </div>
+            <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>
+              Rerun the step-by-step onboarding walkthrough to reconfigure your profile, Canvas API key, and appearance.
+            </div>
+          </div>
+          <button
+            type="button"
+            className="mac-toolbar-button"
+            onClick={onReplayOnboarding}
+            style={{ padding: '8px 16px', borderRadius: '4px', border: '1px solid var(--border-strong)', fontWeight: '500' }}
+          >
+            Replay Setup
+          </button>
         </div>
       </section>
 

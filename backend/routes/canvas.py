@@ -35,6 +35,9 @@ async def attach_course_colors(user_id: int, courses: list[dict[str, Any]]) -> l
 class DismissAnnouncementRequest(BaseModel):
     announcement_id: int
 
+class ValidateTokenRequest(BaseModel):
+    token: str
+
 class CanvasSubmissionRequest(BaseModel):
     type: str
     content: str = ""
@@ -206,6 +209,37 @@ async def list_canvas_courses(
 
     await save_canvas_cache(current_user.id, "courses", result)
     return await attach_course_colors(current_user.id, result)
+
+
+@router.post("/validate-token")
+async def validate_canvas_token(
+    current_user: CurrentUser,
+    body: ValidateTokenRequest,
+):
+    token = body.token.strip()
+    if not token:
+        return {"valid": False, "error": "Token cannot be empty."}
+
+    try:
+        async with httpx.AsyncClient() as client:
+            resp = await client.get(
+                "https://canvas.nus.edu.sg/api/v1/users/self",
+                headers={"Authorization": f"Bearer {token}"},
+                timeout=5.0,
+            )
+            if resp.status_code == 200:
+                data = resp.json()
+                return {
+                    "valid": True,
+                    "name": data.get("name") or data.get("short_name", ""),
+                    "id": data.get("id"),
+                }
+            elif resp.status_code == 401:
+                return {"valid": False, "error": "Invalid or expired Canvas API token."}
+            else:
+                return {"valid": False, "error": f"Canvas returned status {resp.status_code}."}
+    except Exception as exc:
+        return {"valid": False, "error": f"Unable to reach Canvas: {str(exc)}"}
 
 
 @router.get("/announcements", response_model=list[dict[str, Any]])
@@ -898,7 +932,30 @@ async def list_canvas_course_modules(
         modules = await canvas_course_get(course_id, current_user, "modules", [("include[]", "items"), ("per_page", "100")])
         if not isinstance(modules, list):
             return cached_data if cached_data is not None else []
-        result = [{"id": module.get("id"), "name": module.get("name") or "Untitled module", "items": [{"id": item.get("id"), "title": item.get("title") or "Untitled item", "type": item.get("type"), "page_url": item.get("page_url"), "content_id": item.get("content_id"), "html_url": item.get("html_url"), "external_url": item.get("external_url")} for item in module.get("items", []) if isinstance(item, dict)]} for module in modules if isinstance(module, dict) and module.get("id") is not None]
+        result = [
+            {
+                "id": module.get("id"), 
+                "name": module.get("name") or "Untitled module", 
+                "state": module.get("state"),
+                "items": [
+                    {
+                        "id": item.get("id"), 
+                        "title": item.get("title") or "Untitled item", 
+                        "type": item.get("type"), 
+                        "page_url": item.get("page_url"), 
+                        "content_id": item.get("content_id"), 
+                        "html_url": item.get("html_url"), 
+                        "external_url": item.get("external_url"), 
+                        "indent": item.get("indent", 0),
+                        "completion_requirement": item.get("completion_requirement")
+                    } 
+                    for item in module.get("items", []) 
+                    if isinstance(item, dict)
+                ]
+            } 
+            for module in modules 
+            if isinstance(module, dict) and module.get("id") is not None
+        ]
         await save_canvas_cache(current_user.id, cache_key, result)
         return result
     except Exception:

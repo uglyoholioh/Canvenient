@@ -6,6 +6,7 @@ import TaskInputBar from "./TaskInputBar";
 import GlobalTasksPanel from "./GlobalTasksPanel";
 import Omnibar from "./Omnibar";
 import SettingsView from "./SettingsView";
+import OnboardingModal from "./OnboardingModal";
 import CanvasView from "./CanvasView";
 import Dashboard from "./Dashboard";
 import NotesView from "./NotesView";
@@ -15,9 +16,10 @@ import VenueFinder from "./VenueFinder";
 import CanvasDrawer from "./drawers/CanvasDrawer";
 import StudyTimerModule from "./dashboard/StudyTimerModule";
 import GroupsView from "./GroupsView";
+import SpinWheelView from "./wheel/SpinWheelView";
 import { WorkspaceToolbarContext } from "./WorkspaceToolbarContext";
 import { QuickCaptureContext } from "./QuickCaptureContext";
-import { Folder, Search, Settings, CheckSquare, PanelLeft, BookOpen, Plus, LogOut, LayoutDashboard, FileText, CalendarDays, DoorOpen, ChevronLeft, ChevronRight, Users } from "lucide-react";
+import { Folder, Search, Settings, CheckSquare, PanelLeft, BookOpen, Plus, LogOut, LayoutDashboard, FileText, CalendarDays, DoorOpen, ChevronLeft, ChevronRight, Users, Dices } from "lucide-react";
 import { createNote } from "../api";
 import { formatShortcut, matchesShortcut, readKeyboardShortcuts } from "../keyboardShortcuts";
 
@@ -28,7 +30,7 @@ const getSidebarBehavior = () => {
 
 const getInitialView = () => {
   const stored = localStorage.getItem("canvenient-active-view") || "dashboard";
-  return ["dashboard", "tasks", "schedule", "venues", "settings", "canvas", "notes", "groups"].includes(stored) || /^note-\d+$/.test(stored)
+  return ["dashboard", "tasks", "schedule", "venues", "settings", "canvas", "notes", "groups", "wheel"].includes(stored) || /^note-\d+$/.test(stored)
     ? stored
     : "dashboard";
 };
@@ -56,6 +58,7 @@ const viewTitle = (activeTab) => {
   if (activeTab === "canvas") return "Modules";
   if (activeTab === "notes") return "Notes";
   if (activeTab === "groups") return "Groups";
+  if (activeTab === "wheel") return "Spin the Wheel";
   return "Note";
 };
 
@@ -94,6 +97,18 @@ export default function WorkspaceLayout({ token, user, onLogout, onUpdateUser })
   const tasksPanelReturnFocus = useRef(null);
   const quickCaptureReturnFocus = useRef(null);
   
+  const [isOnboardingOpen, setIsOnboardingOpen] = useState(() => {
+    if (!user) return false;
+    const completed = user.id ? localStorage.getItem(`canvenient_onboarding_completed_${user.id}`) === "true" : false;
+    return !user.name || !completed;
+  });
+
+  useEffect(() => {
+    if (user?.id && !user?.name) {
+      setIsOnboardingOpen(true);
+    }
+  }, [user?.id, user?.name]);
+
   const [sidebarWidth, setSidebarWidth] = useState(() => parseInt(localStorage.getItem('canvenient-sidebar-width') || '250', 10));
   const [isDragging, setIsDragging] = useState(false);
   
@@ -224,6 +239,7 @@ export default function WorkspaceLayout({ token, user, onLogout, onUpdateUser })
         "view-venues": "venues",
         "view-canvas": "canvas",
         "view-notes": "notes",
+        "view-wheel": "wheel",
         settings: "settings",
       };
       if (views[action]) setActiveTab(views[action]);
@@ -393,6 +409,7 @@ export default function WorkspaceLayout({ token, user, onLogout, onUpdateUser })
                 <NavItem isSlim={isSlim} icon={BookOpen} label="Modules" active={activeTab === 'canvas'} onClick={() => setActiveTab("canvas")} />
                 <NavItem isSlim={isSlim} icon={Users} label="Groups" active={activeTab === 'groups'} onClick={() => setActiveTab("groups")} />
                 <NavItem isSlim={isSlim} icon={FileText} label="Notes" active={activeTab === 'notes' || activeTab.startsWith('note-')} onClick={() => setActiveTab("notes")} />
+                <NavItem isSlim={isSlim} icon={Dices} label="Spin the Wheel" active={activeTab === 'wheel'} onClick={() => setActiveTab("wheel")} />
                 <NavItem isSlim={isSlim} icon={Search} label="Search" active={false} onClick={() => setIsOmnibarOpen(true)} />
               </nav>
 
@@ -431,10 +448,18 @@ export default function WorkspaceLayout({ token, user, onLogout, onUpdateUser })
             {activeTab === 'tasks' && <TaskView token={token} user={user} />}
             {activeTab === 'schedule' && <Schedule token={token} />}
             {activeTab === 'venues' && <VenueFinder token={token} />}
-            {activeTab === 'settings' && <SettingsView token={token} user={user} onUpdateUser={onUpdateUser} />}
+            {activeTab === 'settings' && (
+              <SettingsView
+                token={token}
+                user={user}
+                onUpdateUser={onUpdateUser}
+                onReplayOnboarding={() => setIsOnboardingOpen(true)}
+              />
+            )}
             {activeTab === 'canvas' && <CanvasView token={token} />}
             {activeTab === 'groups' && <GroupsView token={token} currentUser={user} />}
             {activeTab === 'notes' && <NotesView token={token} />}
+            {activeTab === 'wheel' && <SpinWheelView token={token} onNavigate={setActiveTab} />}
             {activeTab.startsWith('note-') && <MarkdownEditor key={activeTab} noteId={activeTab.split('-')[1]} token={token} />}
           </div>
           <TaskInputBar
@@ -492,6 +517,18 @@ export default function WorkspaceLayout({ token, user, onLogout, onUpdateUser })
           </section>
         </div>
       )}
+
+      <OnboardingModal
+        token={token}
+        user={user}
+        isOpen={isOnboardingOpen}
+        canDismiss={Boolean(user?.name?.trim())}
+        onClose={() => setIsOnboardingOpen(false)}
+        onComplete={(updatedUser) => {
+          onUpdateUser?.(updatedUser);
+          setIsOnboardingOpen(false);
+        }}
+      />
     </div>
     </WorkspaceToolbarContext.Provider>
     </QuickCaptureContext.Provider>

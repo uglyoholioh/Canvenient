@@ -474,6 +474,14 @@ export function syncCanvasFiles(token) {
   });
 }
 
+export function validateCanvasToken(token, canvasToken) {
+  return apiRequest("/canvas/validate-token", {
+    method: "POST",
+    body: { token: canvasToken },
+    token,
+  });
+}
+
 export async function loadCachedCanvasFiles(token, { onSyncRequired } = {}) {
   let data = await getCachedCanvasFiles(token);
   const needsCurrentCourseSnapshot =
