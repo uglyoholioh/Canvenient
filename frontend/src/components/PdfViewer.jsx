@@ -192,6 +192,8 @@ export default function PdfViewer({ token, fileId, name = "", externalUrl = "" }
       const viewport = page.getViewport({ scale: info.scale * dpr });
       const renderTask = page.render({ canvasContext: canvas.getContext("2d"), viewport });
       renderTasksRef.current.set(pageNumber, renderTask);
+      // A cancelled render may have already appended a canvas; keep exactly one.
+      div.querySelectorAll("canvas").forEach((existing) => existing.remove());
       div.appendChild(canvas);
       div.classList.add("is-rendered");
       await renderTask.promise;
