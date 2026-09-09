@@ -163,6 +163,7 @@ export default function NotesGraph({ notes, onNodeClick }) {
           linkLineDash={(link) => link.isDirectLink ? [4, 4] : null}
           d3AlphaDecay={0.02}
           d3VelocityDecay={0.3}
+          cooldownTicks={100}
         />
       )}
     </div>

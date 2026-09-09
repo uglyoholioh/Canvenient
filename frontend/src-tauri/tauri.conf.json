@@ -75,7 +75,7 @@
         "title": "Canvenient",
         "titleBarStyle": "Overlay",
         "width": 800,
-        "transparent": true
+        "transparent": false
       }
     ]
   }

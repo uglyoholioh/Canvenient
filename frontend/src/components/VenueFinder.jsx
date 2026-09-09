@@ -296,10 +296,12 @@ export default function VenueFinder({ token }) {
     return "Discover vacant rooms";
   }, [locationLabel, selectedLocations]);
 
-  useWorkspaceToolbar({
+  const toolbarConfig = useMemo(() => ({
     title: "Venue Finder",
     subtitle: toolbarSubtitle,
-  });
+  }), [toolbarSubtitle]);
+
+  useWorkspaceToolbar(toolbarConfig);
 
   const loadVenueData = useCallback(async () => {
     setIsLoading(true);
