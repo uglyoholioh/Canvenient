@@ -57,7 +57,7 @@
       }
     },
     "security": {
-      "csp": null
+      "csp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https: http://127.0.0.1:8000; media-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' http://127.0.0.1:8000 http://localhost:8000 ipc: http://ipc.localhost; worker-src 'self' blob:"
     },
     "updater": {
       "active": false

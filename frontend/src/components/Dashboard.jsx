@@ -112,7 +112,7 @@ export default function Dashboard({ token, user, onNavigate, onOpenSearch, searc
     canvas: {
       title: "Canvas",
       onViewFull: () => onNavigate("canvas"),
-      body: <CanvasModule token={token} enabled={Boolean(user?.canvas_token)} onOpenItem={setActiveCanvasItem} />,
+      body: <CanvasModule token={token} enabled={Boolean(user?.canvas_connected)} onOpenItem={setActiveCanvasItem} />,
     },
     notes: {
       title: "Notes",

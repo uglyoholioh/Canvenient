@@ -112,7 +112,10 @@ export default function SettingsView({ token, user, onUpdateUser, onReplayOnboar
   const [profileMessage, setProfileMessage] = useState("");
   const [profileError, setProfileError] = useState(false);
 
-  const [canvasToken, setCanvasToken] = useState(() => user?.canvas_token || "");
+  // The raw Canvas token is never sent back to the client, so the input
+  // starts empty and only carries a value when the user edits it.
+  const [canvasToken, setCanvasToken] = useState("");
+  const [canvasTokenDirty, setCanvasTokenDirty] = useState(false);
   const [showCanvasToken, setShowCanvasToken] = useState(false);
   const [canvasTokenTesting, setCanvasTokenTesting] = useState(false);
   const [canvasTestResult, setCanvasTestResult] = useState(null);
@@ -138,8 +141,7 @@ export default function SettingsView({ token, user, onUpdateUser, onReplayOnboar
 
   useEffect(() => {
     if (user?.name !== undefined) setProfileName(user.name);
-    if (user?.canvas_token !== undefined) setCanvasToken(user.canvas_token);
-  }, [user?.name, user?.canvas_token]);
+  }, [user?.name]);
 
   useEffect(() => {
     if (!token) return;
@@ -264,7 +266,7 @@ export default function SettingsView({ token, user, onUpdateUser, onReplayOnboar
     try {
       const updatedUser = await updateProfile(token, {
         name: profileName.trim(),
-        canvas_token: canvasToken.trim(),
+        ...(canvasTokenDirty ? { canvas_token: canvasToken.trim() } : {}),
         theme: user?.theme || "default",
       });
       onUpdateUser?.(updatedUser);
@@ -299,6 +301,11 @@ export default function SettingsView({ token, user, onUpdateUser, onReplayOnboar
     const effectiveName = (profileName || user?.name || "").trim() || (user?.email ? user.email.split("@")[0] : "Student");
     setCanvasTokenSaving(true);
     setCanvasTokenMessage("");
+    if (!canvasTokenDirty) {
+      setCanvasTokenMessage(user?.canvas_connected ? "Token unchanged." : "Enter a Canvas API token first.");
+      setCanvasTokenSaving(false);
+      return;
+    }
     try {
       const updatedUser = await updateProfile(token, {
         name: effectiveName,
@@ -306,6 +313,8 @@ export default function SettingsView({ token, user, onUpdateUser, onReplayOnboar
         theme: user?.theme || "default",
       });
       onUpdateUser?.(updatedUser);
+      setCanvasToken("");
+      setCanvasTokenDirty(false);
       setCanvasTokenMessage("Canvas token saved.");
       window.dispatchEvent(new Event("academic-modules-updated"));
       window.dispatchEvent(new Event("module-colors-updated"));
@@ -328,6 +337,7 @@ export default function SettingsView({ token, user, onUpdateUser, onReplayOnboar
         theme: user?.theme || "default",
       });
       setCanvasToken("");
+      setCanvasTokenDirty(false);
       onUpdateUser?.(updatedUser);
       setCanvasTokenMessage("Canvas disconnected.");
       window.dispatchEvent(new Event("academic-modules-updated"));
@@ -642,13 +652,13 @@ export default function SettingsView({ token, user, onUpdateUser, onReplayOnboar
                       fontSize: '11px',
                       padding: '2px 8px',
                       borderRadius: '12px',
-                      backgroundColor: user?.canvas_token ? 'var(--success-bg)' : 'var(--surface-muted)',
-                      color: user?.canvas_token ? 'var(--success)' : 'var(--text-muted)',
-                      border: `1px solid ${user?.canvas_token ? 'var(--success)' : 'var(--border)'}`,
+                      backgroundColor: user?.canvas_connected ? 'var(--success-bg)' : 'var(--surface-muted)',
+                      color: user?.canvas_connected ? 'var(--success)' : 'var(--text-muted)',
+                      border: `1px solid ${user?.canvas_connected ? 'var(--success)' : 'var(--border)'}`,
                     }}
                   >
-                    <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: user?.canvas_token ? 'var(--success)' : 'var(--text-muted)' }} />
-                    {user?.canvas_token ? 'Connected' : 'Not Connected'}
+                    <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: user?.canvas_connected ? 'var(--success)' : 'var(--text-muted)' }} />
+                    {user?.canvas_connected ? 'Connected' : 'Not Connected'}
                   </span>
                 </div>
                 <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>
@@ -661,12 +671,17 @@ export default function SettingsView({ token, user, onUpdateUser, onReplayOnboar
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
             <div style={{ display: 'flex', gap: '8px' }}>
               <div style={{ position: 'relative', flex: 1 }}>
-                <input 
-                  type={showCanvasToken ? "text" : "password"} 
-                  placeholder="Canvas API Token..." 
+                <input
+                  type={showCanvasToken ? "text" : "password"}
+                  placeholder={
+                    user?.canvas_connected
+                      ? `Connected ${user?.canvas_token_hint || "••••"} — paste a new token to replace`
+                      : "Canvas API Token..."
+                  }
                   value={canvasToken}
                   onChange={e => {
                     setCanvasToken(e.target.value);
+                    setCanvasTokenDirty(true);
                     setCanvasTestResult(null);
                   }}
                   className="form-input"
@@ -726,7 +741,7 @@ export default function SettingsView({ token, user, onUpdateUser, onReplayOnboar
                 {canvasTokenSaving ? 'Saving…' : 'Save'}
               </button>
 
-              {user?.canvas_token && (
+              {user?.canvas_connected && (
                 <button
                   type="button"
                   className="mac-toolbar-button"

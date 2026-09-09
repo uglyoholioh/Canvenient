@@ -24,6 +24,7 @@
     "@tiptap/extension-placeholder": "^3.31.1",
     "@tiptap/react": "^3.31.1",
     "@tiptap/starter-kit": "^3.31.1",
+    "dompurify": "^3.4.15",
     "lucide-react": "^1.16.0",
     "pdfjs-dist": "^6.3.289",
     "react": "^19.2.6",

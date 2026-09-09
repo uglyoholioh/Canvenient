@@ -43,14 +43,15 @@ describe("SettingsView Enhancements", () => {
       id: 1,
       name: "Jordan Lee",
       email: "jordan@example.com",
-      canvas_token: "",
+      canvas_connected: false,
+      canvas_token_hint: "",
       theme: "graphite",
     });
 
     render(
       <SettingsView
         token="test-token"
-        user={{ id: 1, name: "Jordan", email: "jordan@example.com", canvas_token: "", theme: "graphite" }}
+        user={{ id: 1, name: "Jordan", email: "jordan@example.com", canvas_connected: false, theme: "graphite" }}
         onUpdateUser={onUpdateUser}
       />
     );
@@ -67,9 +68,10 @@ describe("SettingsView Enhancements", () => {
     await user.click(saveBtn);
 
     await waitFor(() => {
+      // No canvas_token in the payload: the raw token never round-trips
+      // through the client, and an untouched input keeps the stored token.
       expect(api.updateProfile).toHaveBeenCalledWith("test-token", {
         name: "Jordan Lee",
-        canvas_token: "",
         theme: "graphite",
       });
       expect(screen.getByText("Profile updated.")).toBeInTheDocument();
@@ -85,14 +87,15 @@ describe("SettingsView Enhancements", () => {
     api.updateProfile.mockResolvedValue({
       id: 1,
       name: "Jordan",
-      canvas_token: "new-token-abc",
+      canvas_connected: true,
+      canvas_token_hint: "•••• -abc",
       theme: "graphite",
     });
 
     render(
       <SettingsView
         token="test-token"
-        user={{ id: 1, name: "Jordan", email: "jordan@example.com", canvas_token: "", theme: "graphite" }}
+        user={{ id: 1, name: "Jordan", email: "jordan@example.com", canvas_connected: false, theme: "graphite" }}
         onUpdateUser={onUpdateUser}
       />
     );
@@ -130,14 +133,15 @@ describe("SettingsView Enhancements", () => {
     api.updateProfile.mockResolvedValue({
       id: 1,
       name: "Jordan",
-      canvas_token: "",
+      canvas_connected: false,
+      canvas_token_hint: "",
       theme: "graphite",
     });
 
     render(
       <SettingsView
         token="test-token"
-        user={{ id: 1, name: "Jordan", email: "jordan@example.com", canvas_token: "existing-token", theme: "graphite" }}
+        user={{ id: 1, name: "Jordan", email: "jordan@example.com", canvas_connected: true, canvas_token_hint: "•••• oken", theme: "graphite" }}
         onUpdateUser={onUpdateUser}
       />
     );
@@ -166,7 +170,7 @@ describe("SettingsView Enhancements", () => {
     render(
       <SettingsView
         token="test-token"
-        user={{ id: 1, name: "Jordan", email: "jordan@example.com", canvas_token: "", theme: "graphite" }}
+        user={{ id: 1, name: "Jordan", email: "jordan@example.com", canvas_connected: false, theme: "graphite" }}
         onReplayOnboarding={onReplayOnboarding}
       />
     );

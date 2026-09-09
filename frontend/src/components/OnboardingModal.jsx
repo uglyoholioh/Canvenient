@@ -39,7 +39,9 @@ export default function OnboardingModal({
 }) {
   const [step, setStep] = useState(1);
   const [name, setName] = useState(() => user?.name || "");
-  const [canvasToken, setCanvasToken] = useState(() => user?.canvas_token || "");
+  // The raw Canvas token is never sent back to the client; the field starts
+  // empty and only carries a value when entered during onboarding.
+  const [canvasToken, setCanvasToken] = useState("");
   const [showCanvasToken, setShowCanvasToken] = useState(false);
   const [testingToken, setTestingToken] = useState(false);
   const [tokenResult, setTokenResult] = useState(null);
@@ -89,7 +91,9 @@ export default function OnboardingModal({
     try {
       const updatedUser = await updateProfile(token, {
         name: finalName,
-        canvas_token: canvasToken.trim(),
+        // Omitting canvas_token preserves an existing connection when the
+        // step is skipped; a typed token replaces it.
+        ...(canvasToken.trim() ? { canvas_token: canvasToken.trim() } : {}),
         theme: selectedTheme,
       });
 

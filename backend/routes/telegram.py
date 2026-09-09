@@ -104,10 +104,20 @@ async def webhook(
     x_telegram_bot_api_secret_token: str | None = Header(default=None),
 ):
     expected_secret = os.getenv("TELEGRAM_WEBHOOK_SECRET")
-    if expected_secret and not secrets.compare_digest(
-        x_telegram_bot_api_secret_token or "", expected_secret
-    ):
-        raise HTTPException(status_code=403, detail="Invalid webhook secret.")
+    provided_secret = x_telegram_bot_api_secret_token or ""
+    if expected_secret:
+        if not secrets.compare_digest(provided_secret, expected_secret):
+            raise HTTPException(status_code=403, detail="Invalid webhook secret.")
+    elif os.getenv("TELEGRAM_WEBHOOK_INSECURE") != "1":
+        # Secure by default: an unauthenticated webhook would let anyone who
+        # can reach this server spoof Telegram updates and link codes.
+        raise HTTPException(
+            status_code=403,
+            detail=(
+                "Webhook secret is not configured. Set TELEGRAM_WEBHOOK_SECRET, "
+                "or TELEGRAM_WEBHOOK_INSECURE=1 for local-only testing."
+            ),
+        )
 
     if not await claim_telegram_update(update.update_id):
         return Response(status_code=status.HTTP_204_NO_CONTENT)

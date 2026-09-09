@@ -12,6 +12,8 @@ class UserLogin(BaseModel):
 
 
 class UserSummary(BaseModel):
+    """Internal auth principal; carries the Canvas token for server-side API calls."""
+
     id: int
     email: EmailStr
     name: str = ""
@@ -19,11 +21,23 @@ class UserSummary(BaseModel):
     theme: str = "default"
 
 
+class UserPublic(BaseModel):
+    """Client-safe profile shape; never includes the raw Canvas token."""
+
+    id: int
+    email: EmailStr
+    name: str = ""
+    theme: str = "default"
+    canvas_connected: bool = False
+    canvas_token_hint: str = ""
+
+
 class ProfileUpdate(BaseModel):
     name: str = Field(..., min_length=1)
-    canvas_token: str = Field(default="")
+    # None keeps the stored token, "" disconnects, a value replaces it.
+    canvas_token: str | None = Field(default=None)
     theme: str = Field(default="default")
 
 
-class UserOut(UserSummary):
+class UserOut(UserPublic):
     pass

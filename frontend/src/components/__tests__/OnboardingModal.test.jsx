@@ -120,7 +120,8 @@ describe("OnboardingModal", () => {
     api.updateProfile.mockResolvedValue({
       id: 2,
       name: "Jamie",
-      canvas_token: "",
+      canvas_connected: false,
+      canvas_token_hint: "",
       theme: "graphite",
     });
 
@@ -149,9 +150,10 @@ describe("OnboardingModal", () => {
     await user.click(screen.getByRole("button", { name: /enter workspace/i }));
 
     await waitFor(() => {
+      // Skipping the Canvas step omits canvas_token so an existing
+      // connection is preserved rather than wiped.
       expect(api.updateProfile).toHaveBeenCalledWith("auth-token", {
         name: "Jamie",
-        canvas_token: "",
         theme: expect.any(String),
       });
     });

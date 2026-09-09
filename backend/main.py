@@ -1,4 +1,5 @@
 from contextlib import asynccontextmanager
+import os
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -38,9 +39,22 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
+# Only the app's own surfaces may call the API: the packaged Tauri webview
+# (tauri://localhost) and the Vite dev server. Override with
+# CANVENIENT_ALLOWED_ORIGINS (comma-separated) for server deployments.
+DEFAULT_ALLOWED_ORIGINS = [
+    "tauri://localhost",
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+]
+_configured_origins = [
+    origin.strip()
+    for origin in os.getenv("CANVENIENT_ALLOWED_ORIGINS", "").split(",")
+    if origin.strip()
+]
 app.add_middleware(
     CORSMiddleware,
-    allow_origin_regex=r".*",
+    allow_origins=_configured_origins or DEFAULT_ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

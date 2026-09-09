@@ -4,19 +4,36 @@ from fastapi import APIRouter, HTTPException, status
 from database import db
 from dependencies import CurrentUser
 from models.auth import AuthResponse
-from models.user import ProfileUpdate, UserCreate, UserLogin, UserSummary
+from models.user import ProfileUpdate, UserCreate, UserLogin, UserPublic, UserSummary
 from security import create_access_token
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 
-def build_user_summary(record) -> UserSummary:
-    return UserSummary(
+def canvas_token_hint(token: str | None) -> str:
+    return f"•••• {token[-4:]}" if token else ""
+
+
+def build_user_public(record) -> UserPublic:
+    token = record["canvas_token"] or ""
+    return UserPublic(
         id=record["id"],
         email=record["email"],
         name=record["name"] or "",
-        canvas_token=record["canvas_token"] or "",
         theme=record["theme"] or "default",
+        canvas_connected=bool(token),
+        canvas_token_hint=canvas_token_hint(token),
+    )
+
+
+def to_public_user(summary: UserSummary) -> UserPublic:
+    return UserPublic(
+        id=summary.id,
+        email=summary.email,
+        name=summary.name,
+        theme=summary.theme,
+        canvas_connected=bool(summary.canvas_token),
+        canvas_token_hint=canvas_token_hint(summary.canvas_token),
     )
 
 
@@ -38,10 +55,10 @@ async def register(data: UserCreate):
         query=insert_query,
         values={"email": normalized_email, "password": hashed},
     )
-    user_summary = UserSummary(id=user["id"], email=user["email"])
+    user_public = UserPublic(id=user["id"], email=user["email"])
     return AuthResponse(
-        access_token=create_access_token(user_summary.id),
-        user=user_summary,
+        access_token=create_access_token(user_public.id),
+        user=user_public,
     )
 
 
@@ -61,20 +78,28 @@ async def login(data: UserLogin):
     if not user or not bcrypt.checkpw(data.password.encode(), user["hashed_password"]):
         raise HTTPException(status_code=401, detail="Invalid email or password")
 
-    user_summary = build_user_summary(user)
     return AuthResponse(
-        access_token=create_access_token(user_summary.id),
-        user=user_summary,
+        access_token=create_access_token(user["id"]),
+        user=build_user_public(user),
     )
 
 
-@router.get("/me", response_model=UserSummary)
+@router.get("/me", response_model=UserPublic)
 async def get_current_session_user(current_user: CurrentUser):
-    return current_user
+    return to_public_user(current_user)
 
 
-@router.patch("/profile", response_model=UserSummary)
+@router.patch("/profile", response_model=UserPublic)
 async def update_profile(data: ProfileUpdate, current_user: CurrentUser):
+    # Omitted canvas_token keeps the stored one; "" disconnects.
+    effective_token = data.canvas_token
+    if effective_token is None:
+        existing = await db.fetch_one(
+            query="SELECT canvas_token FROM user_settings WHERE user_id = :user_id",
+            values={"user_id": current_user.id},
+        )
+        effective_token = (existing["canvas_token"] if existing else "") or ""
+
     await db.execute(
         query="""
             INSERT INTO user_settings (user_id, name, canvas_token, theme)
@@ -88,14 +113,15 @@ async def update_profile(data: ProfileUpdate, current_user: CurrentUser):
         values={
             "user_id": current_user.id,
             "name": data.name,
-            "canvas_token": data.canvas_token,
+            "canvas_token": effective_token,
             "theme": data.theme,
         },
     )
-    return UserSummary(
+    return UserPublic(
         id=current_user.id,
         email=current_user.email,
         name=data.name,
-        canvas_token=data.canvas_token,
         theme=data.theme,
+        canvas_connected=bool(effective_token),
+        canvas_token_hint=canvas_token_hint(effective_token),
     )

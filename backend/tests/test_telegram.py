@@ -7,7 +7,11 @@ from unittest.mock import patch
 import pytest
 from httpx import AsyncClient
 
+from conftest import WEBHOOK_SECRET
+
 pytestmark = pytest.mark.asyncio
+
+SECRET_HEADERS = {"X-Telegram-Bot-Api-Secret-Token": WEBHOOK_SECRET}
 
 
 async def test_telegram_webhook_start_command(client: AsyncClient):
@@ -20,7 +24,7 @@ async def test_telegram_webhook_start_command(client: AsyncClient):
                 "text": "/start",
             },
         }
-        resp = await client.post("/telegram/webhook", json=payload)
+        resp = await client.post("/telegram/webhook", json=payload, headers=SECRET_HEADERS)
         assert resp.status_code == 204
         assert mock_send.called
         chat_id, text = mock_send.call_args[0]
@@ -38,10 +42,31 @@ async def test_telegram_webhook_update_idempotency(client: AsyncClient):
                 "text": "/start",
             },
         }
-        resp1 = await client.post("/telegram/webhook", json=payload)
+        resp1 = await client.post("/telegram/webhook", json=payload, headers=SECRET_HEADERS)
         assert resp1.status_code == 204
         assert mock_send.call_count == 1
 
-        resp2 = await client.post("/telegram/webhook", json=payload)
+        resp2 = await client.post("/telegram/webhook", json=payload, headers=SECRET_HEADERS)
         assert resp2.status_code == 204
         assert mock_send.call_count == 1
+
+
+async def test_telegram_webhook_requires_secret(client: AsyncClient):
+    """Webhooks are rejected unless the configured secret token is presented."""
+    payload = {
+        "update_id": 900003,
+        "message": {
+            "chat": {"id": 111},
+            "text": "/start",
+        },
+    }
+
+    missing = await client.post("/telegram/webhook", json=payload)
+    assert missing.status_code == 403
+
+    wrong = await client.post(
+        "/telegram/webhook",
+        json=payload,
+        headers={"X-Telegram-Bot-Api-Secret-Token": "not-the-secret"},
+    )
+    assert wrong.status_code == 403

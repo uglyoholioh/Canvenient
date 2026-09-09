@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
+import DOMPurify from "dompurify";
 import {
   Bell, BookOpen, CheckCircle2, ChevronRight, ChevronDown, Download,
   ExternalLink, File, FileText, FileVideo, Folder, FolderOpen,
@@ -1388,7 +1389,7 @@ export default function CanvasView({ token }) {
             ) : (
               <div
                 className="cv-syllabus-body"
-                dangerouslySetInnerHTML={{ __html: courseSyllabus.body }}
+                dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(courseSyllabus.body) }}
               />
             )}
           </div>

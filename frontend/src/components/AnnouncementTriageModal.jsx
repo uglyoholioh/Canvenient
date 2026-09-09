@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import DOMPurify from "dompurify";
 import {
   Check,
   CheckCircle2,
@@ -403,7 +404,9 @@ export default function AnnouncementTriageModal({
                     <div
                       className="triage-reader-html"
                       dangerouslySetInnerHTML={{
-                        __html: currentItem.body || currentItem.message || "<p>No content.</p>",
+                        __html: DOMPurify.sanitize(
+                          currentItem.body || currentItem.message || "<p>No content.</p>"
+                        ),
                       }}
                     />
 

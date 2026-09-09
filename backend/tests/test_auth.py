@@ -58,7 +58,7 @@ async def test_get_current_user_profile(client: AsyncClient, auth):
 
 
 async def test_profile_update_persists_canvas_token(client: AsyncClient, auth):
-    """A saved Canvas token is returned by later authenticated profile requests."""
+    """A saved Canvas token persists but the raw token is never echoed to clients."""
     token, _, _ = auth
     headers = auth_headers(token)
     payload = {
@@ -70,12 +70,37 @@ async def test_profile_update_persists_canvas_token(client: AsyncClient, auth):
     save_response = await client.patch("/auth/profile", json=payload, headers=headers)
 
     assert save_response.status_code == 200
-    assert save_response.json()["canvas_token"] == payload["canvas_token"]
+    saved = save_response.json()
+    assert saved["canvas_connected"] is True
+    assert saved["canvas_token_hint"].endswith(payload["canvas_token"][-4:])
+    assert "canvas_token" not in saved
 
     profile_response = await client.get("/auth/me", headers=headers)
 
     assert profile_response.status_code == 200
-    assert profile_response.json()["canvas_token"] == payload["canvas_token"]
+    profile = profile_response.json()
+    assert profile["canvas_connected"] is True
+    assert "canvas_token" not in profile
+
+    # An omitted canvas_token on a name/theme update keeps the stored token.
+    rename_response = await client.patch(
+        "/auth/profile",
+        json={"name": "Renamed User", "theme": "graphite"},
+        headers=headers,
+    )
+    assert rename_response.status_code == 200
+    assert rename_response.json()["canvas_connected"] is True
+
+    # An explicit empty string disconnects.
+    disconnect_response = await client.patch(
+        "/auth/profile",
+        json={"name": "Renamed User", "canvas_token": "", "theme": "graphite"},
+        headers=headers,
+    )
+    assert disconnect_response.status_code == 200
+    disconnected = disconnect_response.json()
+    assert disconnected["canvas_connected"] is False
+    assert disconnected["canvas_token_hint"] == ""
 
 
 async def test_unauthenticated_request_fails(client: AsyncClient):

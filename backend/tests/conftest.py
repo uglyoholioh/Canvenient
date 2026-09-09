@@ -15,6 +15,8 @@ from httpx import AsyncClient, ASGITransport
 TEST_DB_URL = os.getenv("TEST_DATABASE_URL", "sqlite+aiosqlite:///./test.db")
 os.environ["DATABASE_URL"] = TEST_DB_URL
 os.environ["JWT_SECRET"] = os.getenv("JWT_SECRET", "test-secret-key-for-orbital-ci")
+WEBHOOK_SECRET = "test-telegram-webhook-secret"
+os.environ["TELEGRAM_WEBHOOK_SECRET"] = WEBHOOK_SECRET
 
 # Ensure backend root is importable
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
