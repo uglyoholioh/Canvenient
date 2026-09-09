@@ -4,7 +4,7 @@ import {
   ExternalLink, File, FileText, FileVideo, Folder, FolderOpen,
   Image, Loader2, RefreshCw, Link as LinkIcon,
   MessageSquare, HelpCircle, Search, X, Clock, ArrowUpRight,
-  Filter, Eye, Layers, BookMarked, Calendar, CheckSquare
+  Filter, Eye, Layers, BookMarked, Calendar, CheckSquare, Plus, Check
 } from "lucide-react";
 import {
   getAcademicModules,
@@ -19,7 +19,11 @@ import {
   getCanvasPages,
   getCanvasSyllabus,
   getCanvasCourseNavigation,
+  getTasks,
+  createTask,
+  updateTask,
 } from "../api";
+import { notifyTasksChanged } from "../taskEvents";
 import CanvasDrawer from "./drawers/CanvasDrawer";
 import CanvasSearchSection from "./CanvasSearchSection";
 import { useWorkspaceToolbar } from "./WorkspaceToolbarContext";
@@ -452,6 +456,9 @@ function CourseOverview({
   courseColors,
   onSelectTab,
   onOpenItem,
+  onAddToTasks,
+  addingTaskId,
+  isAssignmentAdded,
 }) {
   const now = new Date();
   const upcoming = useMemo(() =>
@@ -497,6 +504,8 @@ function CourseOverview({
             upcoming.map(a => {
               const due = a.due_at ? new Date(a.due_at) : null;
               const urgent = due && (due - now) < 86400000 * 3;
+              const isAdded = isAssignmentAdded ? isAssignmentAdded(a) : false;
+              const isAdding = addingTaskId === a.id;
               return (
                 <div key={a.id} className="cv-list-item" onClick={() => onOpenItem({ ...a, itemType: "assignment" })}>
                   <span className="cv-list-item-icon"><CheckSquare size={13} /></span>
@@ -505,6 +514,20 @@ function CourseOverview({
                     <div className="cv-list-item-sub">{dueLabel(a.due_at)}</div>
                   </div>
                   {urgent && <span className="cv-badge-urgent">Due soon</span>}
+                  {onAddToTasks && (
+                    <div className="cv-row-actions" onClick={e => e.stopPropagation()}>
+                      <button
+                        type="button"
+                        className={`cv-task-action-btn ${isAdded ? "is-added" : ""}`}
+                        onClick={(e) => onAddToTasks(e, a)}
+                        disabled={isAdding || isAdded}
+                        aria-label={isAdded ? "In Tasks" : "Add as Task"}
+                        title={isAdded ? "Already added to Tasks" : "Add as Task"}
+                      >
+                        {isAdding ? <Loader2 size={12} className="retro-icon-spin" /> : isAdded ? <Check size={12} /> : <Plus size={12} />}
+                      </button>
+                    </div>
+                  )}
                 </div>
               );
             })
@@ -577,6 +600,8 @@ export default function CanvasView({ token }) {
   const [grades, setGrades] = useState([]);
   const [files, setFiles] = useState([]);
   const [filesByCourse, setFilesByCourse] = useState({});
+  const [tasks, setTasks] = useState([]);
+  const [addingTaskId, setAddingTaskId] = useState(null);
   const [courseModules, setCourseModules] = useState([]);
   const [coursePages, setCoursePages] = useState([]);
   const [courseSyllabus, setCourseSyllabus] = useState(null);
@@ -590,19 +615,29 @@ export default function CanvasView({ token }) {
   const [tabLoading, setTabLoading] = useState(false);
   const [error, setError] = useState("");
 
+  const loadTasks = useCallback(async () => {
+    if (!token) return;
+    try {
+      const data = await getTasks(token);
+      setTasks(Array.isArray(data) ? data : []);
+    } catch {}
+  }, [token]);
+
   const load = useCallback(async (force = false) => {
     setLoading(true); setError("");
     try {
-      const [c, a, ann, m] = await Promise.all([
+      const [c, a, ann, m, t] = await Promise.all([
         getCanvasCourses(token, force),
         getCanvasAssignments(token, force),
         getCanvasAnnouncements(token, force),
         getAcademicModules(token),
+        getTasks(token).catch(() => []),
       ]);
       setCourses(c || []);
       setAssignments(a || []);
       setAnnouncements(ann || []);
       setAcademicModules(m || []);
+      setTasks(Array.isArray(t) ? t : []);
     } catch (e) {
       setError(e.message || "Could not load Canvas data.");
     } finally {
@@ -611,6 +646,66 @@ export default function CanvasView({ token }) {
   }, [token]);
 
   useEffect(() => { load(); }, [load]);
+
+  useEffect(() => {
+    const handleTasksChanged = () => { loadTasks(); };
+    window.addEventListener("canvenient-tasks-changed", handleTasksChanged);
+    window.addEventListener("canvenient-task-created", handleTasksChanged);
+    return () => {
+      window.removeEventListener("canvenient-tasks-changed", handleTasksChanged);
+      window.removeEventListener("canvenient-task-created", handleTasksChanged);
+    };
+  }, [loadTasks]);
+
+  const activeCanvasTaskSourceIds = useMemo(() => {
+    const set = new Set();
+    (tasks || []).forEach((task) => {
+      if (task.source_type === "canvas" && task.source_id && task.status !== "done") {
+        set.add(task.source_id);
+      }
+    });
+    return set;
+  }, [tasks]);
+
+  const isAssignmentAdded = useCallback((item) => {
+    const sourceId = `canvas:${item.course_id}:${item.id}`;
+    return activeCanvasTaskSourceIds.has(sourceId);
+  }, [activeCanvasTaskSourceIds]);
+
+  const handleAddAssignmentAsTask = useCallback(async (e, assignment) => {
+    if (e) e.stopPropagation();
+    if (!token || addingTaskId === assignment.id || isAssignmentAdded(assignment)) return;
+    const sourceId = `canvas:${assignment.course_id}:${assignment.id}`;
+    setAddingTaskId(assignment.id);
+    try {
+      const existing = (tasks || []).find((t) => t.source_type === "canvas" && t.source_id === sourceId);
+      if (existing) {
+        if (existing.status === "done") {
+          await updateTask(token, existing.id, { status: "todo" });
+          notifyTasksChanged();
+        }
+      } else {
+        const module = (academicModules || []).find(
+          (m) => String(m.source_course_id) === String(assignment.course_id) || m.module_code === assignment.course_code
+        );
+        const cleanDescription = stripHtml(assignment.description || "").slice(0, 4000);
+        await createTask(token, {
+          title: assignment.title,
+          description: cleanDescription,
+          module_id: module?.id,
+          priority_manual: assignment.is_priority ? "high" : "medium",
+          source_type: "canvas",
+          source_id: sourceId,
+          source_due_at: assignment.due_at || null,
+          external_url: assignment.external_url || null,
+        });
+        notifyTasksChanged();
+      }
+      loadTasks();
+    } catch {} finally {
+      setAddingTaskId(null);
+    }
+  }, [token, addingTaskId, isAssignmentAdded, tasks, academicModules, loadTasks]);
 
   // Derived: courses active for this student
   const displayedCourses = useMemo(() => {
@@ -894,6 +989,8 @@ export default function CanvasView({ token }) {
                       filteredAssignments.slice(0, 7).map(a => {
                         const due = a.due_at ? new Date(a.due_at) : null;
                         const urgent = due && (due - new Date()) < 86400000 * 3;
+                        const isAdded = isAssignmentAdded(a);
+                        const isAdding = addingTaskId === a.id;
                         return (
                           <div
                             key={`${a.course_id}-${a.id}`}
@@ -906,6 +1003,18 @@ export default function CanvasView({ token }) {
                               <div className="cv-list-item-sub">{a.course_code} · {dueLabel(a.due_at)}</div>
                             </div>
                             {urgent && <span className="cv-badge-urgent">{dueLabel(a.due_at)}</span>}
+                            <div className="cv-row-actions" onClick={e => e.stopPropagation()}>
+                              <button
+                                type="button"
+                                className={`cv-task-action-btn ${isAdded ? "is-added" : ""}`}
+                                onClick={(e) => handleAddAssignmentAsTask(e, a)}
+                                disabled={isAdding || isAdded}
+                                aria-label={isAdded ? "In Tasks" : "Add as Task"}
+                                title={isAdded ? "Already added to Tasks" : "Add as Task"}
+                              >
+                                {isAdding ? <Loader2 size={12} className="retro-icon-spin" /> : isAdded ? <Check size={12} /> : <Plus size={12} />}
+                              </button>
+                            </div>
                           </div>
                         );
                       })
@@ -954,6 +1063,9 @@ export default function CanvasView({ token }) {
               courseColors={courseColors}
               onSelectTab={setTab}
               onOpenItem={setActiveItem}
+              onAddToTasks={handleAddAssignmentAsTask}
+              addingTaskId={addingTaskId}
+              isAssignmentAdded={isAssignmentAdded}
             />
           )
         )}
@@ -1056,24 +1168,40 @@ export default function CanvasView({ token }) {
               <div className="cv-empty-pane">No assignments in this filter view.</div>
             ) : (
               <div className="cv-item-rows">
-                {filteredAssignments.map(item => (
-                  <div
-                    key={`${item.course_id}-${item.id}`}
-                    className="cv-assignment-row"
-                    onClick={() => setActiveItem({ ...item, itemType: "assignment" })}
-                  >
-                    <span className="cv-pill-dot" style={{ backgroundColor: courseColors.get(item.course_code) }} />
-                    <div className="cv-row-body">
-                      <div className="cv-row-title">{item.title}</div>
-                      <div className="cv-row-sub">
-                        {item.course_code} · {item.due_at ? new Date(item.due_at).toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : "No due date"}
+                {filteredAssignments.map(item => {
+                  const isAdded = isAssignmentAdded(item);
+                  const isAdding = addingTaskId === item.id;
+                  return (
+                    <div
+                      key={`${item.course_id}-${item.id}`}
+                      className="cv-assignment-row"
+                      onClick={() => setActiveItem({ ...item, itemType: "assignment" })}
+                    >
+                      <span className="cv-pill-dot" style={{ backgroundColor: courseColors.get(item.course_code) }} />
+                      <div className="cv-row-body">
+                        <div className="cv-row-title">{item.title}</div>
+                        <div className="cv-row-sub">
+                          {item.course_code} · {item.due_at ? new Date(item.due_at).toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : "No due date"}
+                        </div>
+                      </div>
+                      <div className="cv-row-actions" onClick={e => e.stopPropagation()}>
+                        <span className={`cv-badge-status ${item.has_submitted ? "is-submitted" : ""}`}>
+                          {item.has_submitted ? "Submitted" : "Not submitted"}
+                        </span>
+                        <button
+                          type="button"
+                          className={`cv-task-action-btn ${isAdded ? "is-added" : ""}`}
+                          onClick={(e) => handleAddAssignmentAsTask(e, item)}
+                          disabled={isAdding || isAdded}
+                          aria-label={isAdded ? "In Tasks" : "Add as Task"}
+                          title={isAdded ? "Already added to Tasks" : "Add as Task"}
+                        >
+                          {isAdding ? <Loader2 size={12} className="retro-icon-spin" /> : isAdded ? <Check size={12} /> : <Plus size={12} />}
+                        </button>
                       </div>
                     </div>
-                    <span className={`cv-badge-status ${item.has_submitted ? "is-submitted" : ""}`}>
-                      {item.has_submitted ? "Submitted" : "Not submitted"}
-                    </span>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>

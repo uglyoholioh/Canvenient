@@ -2806,6 +2806,18 @@ button.module-item-main:hover, .module-list-item.task-module-item:hover { backgr
 .cv-search-module-tag { font-size: 9px; font-weight: 600; color: var(--module-color, var(--accent)); padding: 1px 4px; border-radius: 3px; background: color-mix(in srgb, var(--module-color, var(--accent)) 15%, transparent); border: 1px solid color-mix(in srgb, var(--module-color, var(--accent)) 30%, transparent); }
 .cv-search-result-actions { display: flex; align-items: center; gap: 4px; }
 
+/* Assignment Row and Drawer Add to Task button */
+.cv-row-actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+.cv-task-action-btn { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; padding: 0; border: 1px solid var(--border); border-radius: 4px; background: var(--surface-muted); color: var(--text-muted); cursor: pointer; transition: all var(--transition-fast); }
+.cv-task-action-btn:hover:not(:disabled) { border-color: var(--accent); color: var(--text-h); background: var(--surface-hover); }
+.cv-task-action-btn:disabled { opacity: 0.7; cursor: default; }
+.cv-task-action-btn.is-added { border-color: color-mix(in srgb, var(--success) 40%, var(--border)); color: var(--success); background: color-mix(in srgb, var(--success) 10%, transparent); }
+
+.canvas-drawer-task-btn { display: inline-flex; align-items: center; gap: 5px; height: 31px; padding: 0 11px; border: 1px solid var(--border-strong); border-radius: 5px; background: var(--surface-muted); color: var(--text); font-size: 11px; font-weight: 500; cursor: pointer; transition: all var(--transition-fast); }
+.canvas-drawer-task-btn:hover:not(:disabled) { border-color: var(--accent); color: var(--text-h); background: var(--surface-hover); }
+.canvas-drawer-task-btn:disabled { opacity: 0.8; cursor: default; }
+.canvas-drawer-task-btn.is-added { border-color: color-mix(in srgb, var(--success) 40%, var(--border)); color: var(--success); background: color-mix(in srgb, var(--success) 10%, transparent); font-weight: 500; }
+
 /* Responsive adjustments */
 @media (max-width: 768px) {
   .cv-overview-grid { grid-template-columns: 1fr; }
@@ -4367,7 +4379,7 @@ textarea {
 .dashboard-grid.is-focus {
   --task-composer-clearance: clamp(var(--space-mac-xs), 2.5dvh, calc(var(--space-mac-md) * 1.5));
   min-height: 0;
-  grid-template-columns: minmax(0, 2fr) minmax(320px, 1fr) !important;
+  grid-template-columns: minmax(0, 1.75fr) minmax(320px, 1.05fr) minmax(320px, 1.1fr) !important;
   grid-template-rows: minmax(0, 1.1fr) minmax(0, .9fr) !important;
   column-gap: 24px;
   row-gap: 16px;
@@ -4403,10 +4415,15 @@ textarea {
   grid-column: 2 !important;
   grid-row: 1 !important;
 }
-.dashboard-grid.is-focus .dashboard-module[data-module="canvas"] {
+.dashboard-grid.is-focus .dashboard-module[data-module="isb"] {
   border: 0 !important;
   grid-column: 2 !important;
   grid-row: 2 !important;
+}
+.dashboard-grid.is-focus .dashboard-module[data-module="canvas"] {
+  border: 0 !important;
+  grid-column: 3 !important;
+  grid-row: 1 / 3 !important;
 }
 .dashboard-grid.is-focus.is-layout-editing {
   grid-template-columns: var(--dashboard-column-tracks, repeat(4, minmax(0, 1fr))) !important;
@@ -4456,18 +4473,20 @@ textarea {
 
 @media (max-width: 980px) {
   .dashboard-grid.is-focus { min-height: 0; grid-template-columns: repeat(2, minmax(0, 1fr)) !important; grid-template-rows: auto !important; grid-auto-rows: minmax(180px, auto); }
-  .dashboard-grid.is-focus .dashboard-module[data-module="tasks"] { grid-column: 1 / -1 !important; }
+  .dashboard-grid.is-focus .dashboard-module[data-module="tasks"], .dashboard-grid.is-focus .dashboard-module[data-module="isb"] { grid-column: 1 / -1 !important; }
   .dashboard-grid.is-focus .dashboard-module[data-module="tasks"] { grid-row: 1 !important; }
   .dashboard-grid.is-focus .dashboard-module[data-module="schedule"] { grid-column: 1 !important; grid-row: 2 !important; }
   .dashboard-grid.is-focus .dashboard-module[data-module="canvas"] { grid-column: 2 !important; grid-row: 2 !important; }
+  .dashboard-grid.is-focus .dashboard-module[data-module="isb"] { grid-row: 3 !important; }
 }
 
 @media (max-width: 680px) {
   .dashboard-grid.is-focus { grid-template-columns: 1fr !important; }
-  .dashboard-grid.is-focus .dashboard-module[data-module="tasks"], .dashboard-grid.is-focus .dashboard-module[data-module="schedule"], .dashboard-grid.is-focus .dashboard-module[data-module="canvas"] { grid-column: 1 !important; }
+  .dashboard-grid.is-focus .dashboard-module[data-module="tasks"], .dashboard-grid.is-focus .dashboard-module[data-module="schedule"], .dashboard-grid.is-focus .dashboard-module[data-module="canvas"], .dashboard-grid.is-focus .dashboard-module[data-module="isb"] { grid-column: 1 !important; }
   .dashboard-grid.is-focus .dashboard-module[data-module="tasks"] { grid-row: 1 !important; }
   .dashboard-grid.is-focus .dashboard-module[data-module="schedule"] { grid-row: 2 !important; }
-  .dashboard-grid.is-focus .dashboard-module[data-module="canvas"] { grid-row: 3 !important; }
+  .dashboard-grid.is-focus .dashboard-module[data-module="isb"] { grid-row: 3 !important; }
+  .dashboard-grid.is-focus .dashboard-module[data-module="canvas"] { grid-row: 4 !important; }
 }
 
 /* Hallmark · genre: modern-minimal · macrostructure: Workbench · design-system: design.md · designed-as-app
