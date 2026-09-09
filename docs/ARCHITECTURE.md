@@ -27,6 +27,8 @@ graph TD
         V5[CanvasView.jsx Canvas LMS]
         V6[NotesView.jsx Markdown + Graph]
         V7[SettingsView.jsx Native macOS Settings]
+        V8[GroupsView.jsx Group Collaboration]
+        V9[wheel/SpinWheelView.jsx Deciders]
     end
 
     subgraph Backend [FastAPI Sidecar Process]
@@ -39,13 +41,15 @@ graph TD
         TelegramBot[Telegram Sync Bot]
     end
 
-    Views --> V1
-    Views --> V2
-    Views --> V3
-    Views --> V4
-    Views --> V5
-    Views --> V6
-    Views --> V7
+        Views --> V1
+        Views --> V2
+        Views --> V3
+        Views --> V4
+        Views --> V5
+        Views --> V6
+        Views --> V7
+        Views --> V8
+        Views --> V9
 
     UI -- HTTP REST / SSE --> API
     API --> DB
@@ -84,12 +88,15 @@ graph TD
 │       ├── components/        <- CANONICAL ACTIVE COMPONENTS ONLY
 │       │   ├── WorkspaceLayout.jsx  <- Main window shell (rail, toolbar, routing)
 │       │   ├── Dashboard.jsx        <- 70/30 workbench grid
-│       │   ├── dashboard/           <- Dashboard module widgets (Tasks, Canvas, etc.)
+│       │   ├── dashboard/           <- Dashboard module widgets (Tasks, Canvas, Wheel, etc.)
 │       │   ├── TaskView.jsx         <- Full tasks management view
 │       │   ├── Schedule.jsx         <- Timetable and NUS ISB bus integration
 │       │   ├── VenueFinder.jsx      <- Free room and venue finder
-│       │   ├── CanvasView.jsx       <- Canvas LMS assignments and files
+│       │   ├── CanvasView.jsx       <- Canvas LMS assignments, files, and PDF preview
+│       │   ├── PdfViewer.jsx        <- pdfjs-based viewer for Canvas file previews
 │       │   ├── NotesView.jsx        <- Markdown notes and knowledge graph
+│       │   ├── GroupsView.jsx       <- Group collaboration (groups, invites, group tasks)
+│       │   ├── wheel/               <- Spin-the-wheel and decider views
 │       │   ├── SettingsView.jsx     <- Native macOS settings view
 │       │   ├── drawers/             <- Contextual overlay drawers
 │       │   └── editor/              <- Tiptap markdown editor extensions
@@ -111,7 +118,8 @@ graph TD
 | **Tasks** | `src/components/TaskView.jsx` & `dashboard/TasksModule.jsx` | `src/legacy/TasksPage.jsx` |
 | **Study Timer** | `src/components/dashboard/StudyTimerModule.jsx` | `src/legacy/StudyTimer.jsx`, `FloatingStudyTimer.jsx` |
 | **AI Brief** | `src/components/dashboard/AiBriefModule.jsx` | `src/legacy/AiBrief.jsx` |
-| **Team / Groups** | *Deprecated (Personal Workbench)* | `src/legacy/Organisations.jsx`, `JoinGroupLink.jsx` |
+| **Team / Groups** | `src/components/GroupsView.jsx` (revived for the personal workbench) | `src/legacy/Organisations.jsx`, `JoinGroupLink.jsx` |
+| **Deciders** | `src/components/wheel/SpinWheelView.jsx` + `dashboard/WheelModule.jsx` | — |
 | **Day Hub** | `src/components/Dashboard.jsx` | `src/legacy/TodayHub.jsx` |
 | **Workspace Shell** | `src/components/WorkspaceLayout.jsx` | `src/legacy/TerminalWorkspace.jsx` |
 
