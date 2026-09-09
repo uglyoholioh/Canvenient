@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Check, Send } from "lucide-react";
 import { getAiBrief, sendAiChat, createTask } from "../../api";
 
@@ -22,22 +22,31 @@ export default function AiBriefModule({ token }) {
   const [chatLoading, setChatLoading] = useState(false);
   const [error, setError] = useState("");
   const [addedSuggestions, setAddedSuggestions] = useState([]);
+  const [timeframe, setTimeframe] = useState("this_week");
+  const fetchIdRef = useRef(0);
   
   const { brief, context } = briefData;
 
-  const fetchBrief = async (forceRefresh = false) => {
+  const fetchBrief = async (forceRefresh = false, overrideTimeframe = null) => {
+    const selectedTimeframe = overrideTimeframe || timeframe;
     setLoadBrief(true);
     setError("");
+    const currentFetchId = ++fetchIdRef.current;
+    
     try {
-      const result = await getAiBrief(token, forceRefresh);
+      const result = await getAiBrief(token, forceRefresh, selectedTimeframe);
+      if (currentFetchId !== fetchIdRef.current) return;
       setBriefData({ brief: result.brief, context: result.context_snapshot });
       sessionStorage.setItem("user_brief", JSON.stringify(result));
       setMessages([]);
       sessionStorage.removeItem("user_brief_chat");
     } catch (err) {
+      if (currentFetchId !== fetchIdRef.current) return;
       setError(err.message || "Failed to load AI brief");
     } finally {
-      setLoadBrief(false);
+      if (currentFetchId === fetchIdRef.current) {
+        setLoadBrief(false);
+      }
     }
   };
 
@@ -96,6 +105,21 @@ export default function AiBriefModule({ token }) {
   return (
     <div className="ai-brief-module">
       <header className="ai-brief-header">
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+          <select 
+            value={timeframe} 
+            onChange={(e) => {
+              setTimeframe(e.target.value);
+              fetchBrief(false, e.target.value);
+            }}
+            className="ai-brief-timeframe-select"
+            style={{ fontSize: '0.85rem', padding: '2px 4px', borderRadius: '4px', border: '1px solid var(--border-color)', background: 'var(--bg-color)' }}
+          >
+            <option value="today">Today</option>
+            <option value="this_week">This Week</option>
+          </select>
+          <button type="button" onClick={() => fetchBrief(true)} style={{ fontSize: '0.8rem', cursor: 'pointer', background: 'none', border: 'none', color: 'var(--text-muted)' }}>Refresh</button>
+        </div>
         <p>{brief.summary}</p>
         {error && <div className="module-error">{error}</div>}
       </header>

@@ -6,7 +6,7 @@ from fastapi import APIRouter, HTTPException, status, Query
 from datetime import date, datetime, timedelta, timezone
 from database import db
 from dependencies import CurrentUser
-from routes.canvas import list_canvas_announcements
+from routes.canvas import list_canvas_announcements, list_canvas_assignments
 import json
 import traceback
 from pydantic import BaseModel
@@ -124,63 +124,79 @@ async def call_ai(
 router = APIRouter(prefix = "/ai", tags = ["ai"])
 
 @router.post("/brief")
-async def generate_brief(current_user: CurrentUser, force_refresh: bool = Query(False)):
+async def generate_brief(current_user: CurrentUser, force_refresh: bool = Query(False), timeframe: str = Query("this_week")):
     if not force_refresh:
         cached_brief, cached_context, synced_at = await get_ai_brief_cache(current_user.id)
         if cached_brief is not None and cached_context is not None and is_ai_brief_fresh(synced_at):
-            return {
-                "brief": cached_brief,
-                "context_snapshot": cached_context
-            }
+            if cached_context.get("timeframe") == timeframe:
+                return {
+                    "brief": cached_brief,
+                    "context_snapshot": cached_context
+                }
 
     try:
+        interval = "1 day" if timeframe == "today" else "7 days"
+        
         #fetching uncompleted tasks
-        tasks_query = """
+        tasks_query = f"""
             SELECT title, description, status, priority_manual, 
                    COALESCE(due_at_override, source_due_at) AS due_date,
                    source_type
             FROM tasks
             WHERE user_id = :user_id AND status != 'done'
+              AND (COALESCE(due_at_override, source_due_at) IS NULL 
+                   OR COALESCE(due_at_override, source_due_at) <= NOW() + INTERVAL '{interval}')
             ORDER BY due_date ASC NULLS LAST
         """
 
-        #fetch classes for next 7 days
-        classes_query = """
+        #fetch classes for timeframe
+        classes_query = f"""
             SELECT module_code, module_name, lesson_type, start_time, end_time, venue, class_date
             FROM classes
             WHERE user_id = :user_id 
               AND class_date >= CURRENT_DATE 
-              AND class_date <= CURRENT_DATE + INTERVAL '7 days'
+              AND class_date <= CURRENT_DATE + INTERVAL '{interval}'
             ORDER BY class_date ASC, start_time ASC
         """
 
-        # fetch exams for next 7 days
-        exams_query = """
+        # fetch exams for timeframe
+        exams_query = f"""
             SELECT module_code, module_name, start_at, end_at
             FROM exams
             WHERE user_id = :user_id
               AND start_at >= NOW()
-              AND start_at <= NOW() + INTERVAL '7 days'
+              AND start_at <= NOW() + INTERVAL '{interval}'
             ORDER BY start_at ASC
         """
 
-        # fetch events for next 7 days
-        events_query = """
+        # fetch events for timeframe
+        events_query = f"""
             SELECT title, start_at, end_at, venue
             FROM events
             WHERE user_id = :user_id
               AND start_at >= NOW()
-              AND start_at <= NOW() + INTERVAL '7 days'
+              AND start_at <= NOW() + INTERVAL '{interval}'
             ORDER BY start_at ASC
         """
 
+        # fetch files as context
+        files_query = """
+            SELECT filename, module_code, file_type, created_at_canvas
+            FROM canvas_files
+            WHERE user_id = :user_id
+            ORDER BY created_at_canvas DESC NULLS LAST
+            LIMIT 15
+        """
+
         # db queries
-        tasks, classes, exams, events, announcements = await asyncio.gather(
+        tasks, classes, exams, events, announcements, recent_files, assignments = await asyncio.gather(
             db.fetch_all(query=tasks_query, values={"user_id": current_user.id}),
             db.fetch_all(query=classes_query, values={"user_id": current_user.id}),
             db.fetch_all(query=exams_query, values={"user_id": current_user.id}),
             db.fetch_all(query=events_query, values={"user_id": current_user.id}),
-            list_canvas_announcements(current_user, force_refresh=force_refresh)
+            list_canvas_announcements(current_user, force_refresh=force_refresh),
+            db.fetch_all(query=files_query, values={"user_id": current_user.id}),
+            list_canvas_assignments(current_user, force_refresh=force_refresh)
         )
 
         # formatting for API call
@@ -227,12 +243,33 @@ async def generate_brief(current_user: CurrentUser, force_refresh: bool = Query(
                 "content": ann.get("body") or ""
             })
 
+        serialized_files = []
+        for f in recent_files:
+            serialized_files.append({
+                "filename": f["filename"],
+                "course": f["module_code"],
+                "type": f["file_type"],
+                "created_at": f["created_at_canvas"].isoformat() if f["created_at_canvas"] else None
+            })
+
+        serialized_assignments = []
+        for asgn in assignments:
+            if not asgn.get("has_submitted"):
+                serialized_assignments.append({
+                    "course": asgn.get("course_code"),
+                    "title": asgn.get("title"),
+                    "due_date": asgn.get("due_at"),
+                    "description": asgn.get("description", "")[:200]
+                })
 
         #Combined context data
         context = {
+            "timeframe": timeframe,
             "tasks": serialized_tasks,
             "schedule": serialized_schedule,
             "announcements": serialized_announcements,
+            "assignments": serialized_assignments,
+            "files": serialized_files,
             "current_date": date.today().isoformat()
         }
 
