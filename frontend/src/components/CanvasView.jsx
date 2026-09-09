@@ -1,9 +1,10 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  Bell, BookOpen, CheckCircle2, ChevronLeft, ChevronRight,
-  Download, ExternalLink, File, FileText, FileVideo, Folder, FolderOpen,
+  Bell, BookOpen, CheckCircle2, ChevronRight, ChevronDown, Download,
+  ExternalLink, File, FileText, FileVideo, Folder, FolderOpen,
   Image, Loader2, RefreshCw, Link as LinkIcon,
   MessageSquare, HelpCircle, Search, X, Clock, ArrowUpRight,
+  Filter, Eye, Layers, BookMarked, Calendar, CheckSquare
 } from "lucide-react";
 import {
   getAcademicModules,
@@ -21,8 +22,6 @@ import {
 } from "../api";
 import CanvasDrawer from "./drawers/CanvasDrawer";
 import { useWorkspaceToolbar } from "./WorkspaceToolbarContext";
-
-// ─── Utilities ────────────────────────────────────────────────────────────────
 
 function stripHtml(v = "") {
   const n = document.createElement("div"); n.innerHTML = v; return n.textContent || "";
@@ -56,12 +55,12 @@ function formatSize(b) {
 }
 
 function relDate(str) {
-  if (!str) return null;
+  if (!str) return "";
   const d = new Date(str), now = new Date();
-  const days = Math.floor((now - d) / 86400000);
-  if (days === 0) return "Today";
-  if (days === 1) return "Yesterday";
-  if (days < 7) return `${days}d ago`;
+  const diffDays = Math.floor((now - d) / 86400000);
+  if (diffDays === 0) return "Today";
+  if (diffDays === 1) return "Yesterday";
+  if (diffDays < 7) return `${diffDays}d ago`;
   return d.toLocaleDateString([], { month: "short", day: "numeric" });
 }
 
@@ -69,7 +68,7 @@ function dueLabel(str) {
   if (!str) return "No due date";
   const d = new Date(str), now = new Date();
   const diff = d - now;
-  if (diff < 0) return `Past due`;
+  if (diff < 0) return "Past due";
   const hrs = Math.floor(diff / 3600000);
   if (hrs < 24) return `Due in ${hrs}h`;
   const days = Math.floor(hrs / 24);
@@ -79,37 +78,7 @@ function dueLabel(str) {
   return `Due ${d.toLocaleDateString([], { month: "short", day: "numeric" })}`;
 }
 
-// Build a tree structure from flat folder list
-function buildFolderMap(folders) {
-  const byId = new Map((folders || []).map(f => [f.id, { ...f, children: [] }]));
-  const roots = [];
-  for (const f of byId.values()) {
-    if (f.parent_folder_id && byId.has(f.parent_folder_id)) byId.get(f.parent_folder_id).children.push(f);
-    else roots.push(f);
-  }
-  const sort = arr => arr.sort((a,b) => a.name.localeCompare(b.name));
-  const sortDeep = node => { sort(node.children); node.children.forEach(sortDeep); };
-  sort(roots); roots.forEach(sortDeep);
-  return { byId, roots };
-}
-
-function getAncestors(byId, folderId) {
-  const chain = []; let cur = byId.get(folderId);
-  while (cur) { chain.unshift(cur); cur = byId.get(cur.parent_folder_id); }
-  return chain;
-}
-
-function SmallActionBtn({ href, download, onClick, title, children }) {
-  if (href) return (
-    <a href={href} target="_blank" rel="noreferrer" download={download || undefined}
-       className="cv-file-action-btn" title={title} onClick={e => e.stopPropagation()}>
-      {children}
-    </a>
-  );
-  return <button type="button" className="cv-file-action-btn" title={title} onClick={e => { e.stopPropagation(); onClick?.(); }}>{children}</button>;
-}
-
-// ─── Finder-style File Browser ────────────────────────────────────────────────
+// ─── Files Browser Component with Tree View ───────────────────────────────────
 
 function FileBrowser({ token, courseId, allFiles }) {
   const [rawFolders, setRawFolders] = useState([]);
@@ -117,209 +86,358 @@ function FileBrowser({ token, courseId, allFiles }) {
   const [selectedFile, setSelectedFile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [typeFilter, setTypeFilter] = useState("all");
   const [sort, setSort] = useState("name");
+  const [expandedFolderIds, setExpandedFolderIds] = useState(new Set());
 
   useEffect(() => {
     if (!courseId) return;
     let canceled = false;
-    setLoading(true); setRawFolders([]); setSelectedFolderId(null); setSelectedFile(null);
+    setLoading(true);
+    setRawFolders([]);
+    setSelectedFolderId(null);
+    setSelectedFile(null);
     getCanvasFolders(token, courseId)
-      .then(data => { if (!canceled) { setRawFolders(data || []); } })
+      .then(data => {
+        if (!canceled) {
+          const list = data || [];
+          setRawFolders(list);
+          // Auto expand root folders
+          const rootIds = list.filter(f => !f.parent_folder_id).map(f => f.id);
+          setExpandedFolderIds(new Set(rootIds));
+          if (list.length > 0) {
+            setSelectedFolderId(rootIds[0] || list[0].id);
+          }
+        }
+      })
       .catch(() => {})
       .finally(() => { if (!canceled) setLoading(false); });
     return () => { canceled = true; };
   }, [courseId, token]);
 
-  const { byId, roots } = useMemo(() => buildFolderMap(rawFolders), [rawFolders]);
+  const toggleFolderExpand = (folderId, e) => {
+    e.stopPropagation();
+    setExpandedFolderIds(prev => {
+      const next = new Set(prev);
+      if (next.has(folderId)) next.delete(folderId);
+      else next.add(folderId);
+      return next;
+    });
+  };
 
-  // Auto-select root folder
-  useEffect(() => {
-    if (!loading && roots.length > 0 && selectedFolderId === null) {
-      setSelectedFolderId(roots[0].id);
+  // Build folder hierarchy
+  const folderTree = useMemo(() => {
+    const map = new Map((rawFolders || []).map(f => [f.id, { ...f, children: [] }]));
+    const roots = [];
+    for (const f of map.values()) {
+      if (f.parent_folder_id && map.has(f.parent_folder_id)) {
+        map.get(f.parent_folder_id).children.push(f);
+      } else {
+        roots.push(f);
+      }
     }
-  }, [loading, roots, selectedFolderId]);
+    const sortNodes = (nodes) => {
+      nodes.sort((a,b) => a.name.localeCompare(b.name));
+      nodes.forEach(n => sortNodes(n.children));
+    };
+    sortNodes(roots);
+    return roots;
+  }, [rawFolders]);
 
-  const currentFolder = selectedFolderId ? byId.get(selectedFolderId) : null;
-  const subfolders = currentFolder ? currentFolder.children : roots;
-  const breadcrumbs = selectedFolderId ? getAncestors(byId, selectedFolderId) : [];
+  // Current folder and breadcrumb
+  const currentFolder = useMemo(() => {
+    return (rawFolders || []).find(f => f.id === selectedFolderId);
+  }, [rawFolders, selectedFolderId]);
 
-  // Recent files: top 8 by updated_at across all folders
-  const recentFiles = useMemo(() => {
-    if (!allFiles?.length) return [];
-    return [...allFiles]
-      .filter(f => f.updated_at)
-      .sort((a,b) => new Date(b.updated_at) - new Date(a.updated_at))
-      .slice(0, 8);
-  }, [allFiles]);
+  const breadcrumbs = useMemo(() => {
+    if (!selectedFolderId || !rawFolders.length) return [];
+    const map = new Map(rawFolders.map(f => [f.id, f]));
+    const crumbs = [];
+    let cur = map.get(selectedFolderId);
+    while (cur) {
+      crumbs.unshift(cur);
+      cur = cur.parent_folder_id ? map.get(cur.parent_folder_id) : null;
+    }
+    return crumbs;
+  }, [rawFolders, selectedFolderId]);
 
-  // Files in current folder
-  const folderFiles = useMemo(() => {
-    let list = (allFiles || []).filter(f => f.folder_id === selectedFolderId);
+  // Filtered & sorted files
+  const displayedFiles = useMemo(() => {
+    let list = (allFiles || []).filter(f => selectedFolderId === null || f.folder_id === selectedFolderId);
     if (search.trim()) {
       const q = search.toLowerCase();
-      list = list.filter(f => (f.display_name || f.filename || "").toLowerCase().includes(q));
+      // Search across ALL files if user entered a query!
+      list = (allFiles || []).filter(f => (f.display_name || f.filename || "").toLowerCase().includes(q));
+    }
+    if (typeFilter !== "all") {
+      list = list.filter(f => getFileType(f.display_name || f.filename || "") === typeFilter);
     }
     return [...list].sort((a,b) => {
-      if (sort === "date") return new Date(b.updated_at||0) - new Date(a.updated_at||0);
-      if (sort === "size") return (b.size||0) - (a.size||0);
-      return (a.display_name||a.filename||"").localeCompare(b.display_name||b.filename||"");
+      if (sort === "date") return new Date(b.updated_at || 0) - new Date(a.updated_at || 0);
+      if (sort === "size") return (b.size || 0) - (a.size || 0);
+      return (a.display_name || a.filename || "").localeCompare(b.display_name || b.filename || "");
     });
-  }, [allFiles, selectedFolderId, search, sort]);
+  }, [allFiles, selectedFolderId, search, typeFilter, sort]);
 
-  if (loading) return (
-    <div style={{ padding: "40px", display: "flex", alignItems: "center", gap: 10, color: "var(--text-muted)", fontSize: 12 }}>
-      <Loader2 className="retro-icon-spin" size={16} /> Loading files…
-    </div>
-  );
+  // Render tree node
+  const renderFolderNode = (node, depth = 0) => {
+    const isExpanded = expandedFolderIds.has(node.id);
+    const isSelected = selectedFolderId === node.id;
+    const hasChildren = node.children.length > 0;
 
-  if (!allFiles?.length) return <div className="cv-finder-empty">No files found for this course.</div>;
+    return (
+      <div key={node.id} className="cv-ftree-item-wrap">
+        <div
+          className={`cv-ftree-node ${isSelected ? "is-selected" : ""}`}
+          style={{ paddingLeft: `${8 + depth * 14}px` }}
+          onClick={() => {
+            setSelectedFolderId(node.id);
+            setSearch("");
+          }}
+        >
+          <span
+            className={`cv-ftree-arrow ${hasChildren ? "" : "is-empty"}`}
+            onClick={(e) => hasChildren && toggleFolderExpand(node.id, e)}
+          >
+            {hasChildren ? (isExpanded ? <ChevronDown size={11} /> : <ChevronRight size={11} />) : null}
+          </span>
+          <span className="cv-ftree-icon">
+            {isSelected || isExpanded ? <FolderOpen size={13} /> : <Folder size={13} />}
+          </span>
+          <span className="cv-ftree-label">{node.name}</span>
+          {node.files_count > 0 && <span className="cv-ftree-count">{node.files_count}</span>}
+        </div>
+        {hasChildren && isExpanded && (
+          <div className="cv-ftree-children">
+            {node.children.map(child => renderFolderNode(child, depth + 1))}
+          </div>
+        )}
+      </div>
+    );
+  };
 
   const previewType = selectedFile ? getFileType(selectedFile.display_name || selectedFile.filename || "") : null;
 
   return (
-    <div className="cv-finder">
-      {/* Recent files strip */}
-      {recentFiles.length > 0 && (
-        <div className="cv-finder-recents">
-          <div className="cv-finder-recents-label"><Clock size={10} style={{ display:"inline", marginRight:4 }} />Recently modified</div>
-          <div className="cv-finder-recents-list">
-            {recentFiles.map(file => {
-              const name = file.display_name || file.filename || "Untitled";
-              return (
-                <button key={file.id} type="button" className="cv-finder-recent-row"
-                  onClick={() => setSelectedFile(selectedFile?.id === file.id ? null : file)}>
-                  <FileTypeIcon name={name} />
-                  <span className="cv-finder-recent-name">{name}</span>
-                  <span className="cv-finder-recent-meta">{relDate(file.updated_at)}</span>
-                  <span className="cv-finder-recent-actions" onClick={e => e.stopPropagation()}>
-                    <SmallActionBtn href={file.url || file.external_url} download title="Download"><Download size={11}/></SmallActionBtn>
-                    <SmallActionBtn href={file.external_url || file.url} title="Open in Canvas"><ExternalLink size={11}/></SmallActionBtn>
-                  </span>
-                </button>
-              );
-            })}
-          </div>
+    <div className="cv-files-container">
+      {/* Search & Filter Bar */}
+      <div className="cv-files-header-bar">
+        <div className="cv-files-search-box">
+          <Search size={13} style={{ color: "var(--text-muted)", flexShrink: 0 }} />
+          <input
+            type="text"
+            placeholder={selectedFolderId ? `Search in ${currentFolder?.name || 'folder'} or all files...` : "Search all files..."}
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+          {search && (
+            <button type="button" className="cv-btn-icon" onClick={() => setSearch("")} title="Clear search">
+              <X size={12} />
+            </button>
+          )}
         </div>
-      )}
-
-      {/* Breadcrumb */}
-      {breadcrumbs.length > 0 && (
-        <div className="cv-finder-breadcrumb">
-          <button type="button" className="cv-finder-crumb" onClick={() => { setSelectedFolderId(roots[0]?.id || null); setSearch(""); setSelectedFile(null); }}>
-            Files
-          </button>
-          {breadcrumbs.map((crumb, idx) => {
-            const isLast = idx === breadcrumbs.length - 1;
-            return (
-              <React.Fragment key={crumb.id}>
-                <ChevronRight size={10} className="cv-finder-crumb-sep" />
-                <button type="button" className={`cv-finder-crumb${isLast ? " is-current" : ""}`}
-                  onClick={() => { if (!isLast) { setSelectedFolderId(crumb.id); setSearch(""); setSelectedFile(null); } }}>
-                  {crumb.name}
-                </button>
-              </React.Fragment>
-            );
-          })}
-        </div>
-      )}
-
-      {/* Subfolder cards */}
-      {subfolders.length > 0 && (
-        <div className="cv-finder-folders">
-          {subfolders.map(folder => (
-            <button key={folder.id} type="button" className="cv-finder-folder-card"
-              onClick={() => { setSelectedFolderId(folder.id); setSearch(""); setSelectedFile(null); }}>
-              <Folder size={16} className="cv-finder-folder-icon" />
-              <div className="cv-finder-folder-info">
-                <div className="cv-finder-folder-name">{folder.name}</div>
-                <div className="cv-finder-folder-count">
-                  {folder.files_count > 0 ? `${folder.files_count} file${folder.files_count !== 1 ? "s" : ""}` : ""}
-                  {folder.files_count > 0 && folder.folders_count > 0 ? " · " : ""}
-                  {folder.folders_count > 0 ? `${folder.folders_count} folder${folder.folders_count !== 1 ? "s" : ""}` : ""}
-                  {folder.files_count === 0 && folder.folders_count === 0 ? "Empty" : ""}
-                </div>
-              </div>
-              <ChevronRight size={13} style={{ color: "var(--text-muted)", flexShrink: 0 }} />
+        <div className="cv-files-filter-group">
+          {["all", "pdf", "doc", "img", "vid", "zip"].map(t => (
+            <button
+              key={t}
+              type="button"
+              className={`cv-filter-btn ${typeFilter === t ? "is-active" : ""}`}
+              onClick={() => setTypeFilter(t)}
+            >
+              {t === "all" ? "All types" : t.toUpperCase()}
             </button>
           ))}
+          <span className="cv-filter-divider" />
+          <select className="cv-sort-select" value={sort} onChange={e => setSort(e.target.value)}>
+            <option value="name">Name (A–Z)</option>
+            <option value="date">Recently updated</option>
+            <option value="size">File size</option>
+          </select>
         </div>
-      )}
-
-      {/* File list */}
-      <div className="cv-finder-files">
-        <div className="cv-finder-files-toolbar">
-          <Search size={11} style={{ color: "var(--text-muted)", flexShrink: 0 }} />
-          <input className="cv-finder-search" type="text" placeholder="Search files…"
-            value={search} onChange={e => setSearch(e.target.value)} />
-          {search && <SmallActionBtn onClick={() => setSearch("")} title="Clear"><X size={10}/></SmallActionBtn>}
-          <span style={{ width: 1, height: 14, background: "var(--border)" }} />
-          {["name","date","size"].map(s => (
-            <button key={s} type="button" className={`cv-finder-sort-btn${sort === s ? " is-active" : ""}`}
-              onClick={() => setSort(s)}>
-              {s === "name" ? "A–Z" : s === "date" ? "Recent" : "Size"}
-            </button>
-          ))}
-        </div>
-        {folderFiles.length === 0 ? (
-          <div className="cv-finder-empty">{search ? "No files match." : "No files in this folder."}</div>
-        ) : folderFiles.map(file => {
-          const name = file.display_name || file.filename || "Untitled";
-          return (
-            <button key={file.id} type="button"
-              className={`cv-finder-file-row${selectedFile?.id === file.id ? " is-selected" : ""}`}
-              onClick={() => setSelectedFile(selectedFile?.id === file.id ? null : file)}>
-              <FileTypeIcon name={name} />
-              <span className="cv-finder-file-info">
-                <span className="cv-finder-file-name">{name}</span>
-                <span className="cv-finder-file-meta">{formatSize(file.size)}{file.updated_at ? ` · ${relDate(file.updated_at)}` : ""}</span>
-              </span>
-              <span className="cv-finder-file-actions" onClick={e => e.stopPropagation()}>
-                <SmallActionBtn href={file.url || file.external_url} download title="Download"><Download size={12}/></SmallActionBtn>
-                <SmallActionBtn href={file.external_url || file.url} title="Open in Canvas"><ExternalLink size={12}/></SmallActionBtn>
-              </span>
-            </button>
-          );
-        })}
       </div>
 
-      {/* Preview panel (inline below file list) */}
-      {selectedFile && (
-        <div className="cv-finder-preview">
-          <div className="cv-finder-preview-header">
-            <FileTypeIcon name={selectedFile.display_name || selectedFile.filename || ""} />
-            <span className="cv-finder-preview-name">{selectedFile.display_name || selectedFile.filename}</span>
-            <SmallActionBtn href={selectedFile.url || selectedFile.external_url} download title="Download"><Download size={13}/></SmallActionBtn>
-            <SmallActionBtn href={selectedFile.external_url || selectedFile.url} title="Open in Canvas"><ExternalLink size={13}/></SmallActionBtn>
-            <SmallActionBtn onClick={() => setSelectedFile(null)} title="Close"><X size={13}/></SmallActionBtn>
+      {/* Main Files Layout: Folders Tree (Left) + File List (Right) */}
+      <div className="cv-files-split">
+        {/* Left Sidebar: Folder Tree */}
+        <aside className="cv-files-sidebar">
+          <div className="cv-ftree-header">
+            <span>Folders</span>
+            <button
+              type="button"
+              className={`cv-btn-link ${selectedFolderId === null ? "is-active" : ""}`}
+              onClick={() => setSelectedFolderId(null)}
+            >
+              All files ({allFiles?.length || 0})
+            </button>
           </div>
-          <div className="cv-finder-preview-body">
-            {previewType === "img" ? (
-              <img src={selectedFile.url} alt={selectedFile.display_name || selectedFile.filename} />
-            ) : previewType === "pdf" ? (
-              <iframe src={selectedFile.url} title={selectedFile.display_name || selectedFile.filename} />
+          <div className="cv-ftree-list">
+            {loading ? (
+              <div className="cv-loading-state"><Loader2 className="retro-icon-spin" size={13} /> Loading…</div>
+            ) : folderTree.length === 0 ? (
+              <div className="cv-empty-note">No folders</div>
             ) : (
-              <div className="cv-finder-preview-fallback">
-                <FileTypeIcon name={selectedFile.display_name || selectedFile.filename || ""} size={22} />
-                <span>No preview for this file type.</span>
-                <a href={selectedFile.url || selectedFile.external_url} target="_blank" rel="noreferrer"
-                   style={{ color: "var(--accent)", fontSize: 11, textDecoration: "none" }}>
-                  Open in Canvas ↗
-                </a>
-              </div>
+              folderTree.map(root => renderFolderNode(root, 0))
             )}
           </div>
-          <div className="cv-finder-preview-meta">
-            <div className="cv-finder-preview-meta-item"><span>Size</span><span>{formatSize(selectedFile.size)}</span></div>
-            {selectedFile.updated_at && <div className="cv-finder-preview-meta-item"><span>Modified</span><span>{new Date(selectedFile.updated_at).toLocaleDateString([], {month:"short",day:"numeric",year:"numeric"})}</span></div>}
-            <div className="cv-finder-preview-meta-item"><span>Type</span><span>{(selectedFile.display_name||selectedFile.filename||"").split(".").pop().toUpperCase()||"—"}</span></div>
+        </aside>
+
+        {/* Right Pane: Breadcrumb + Files List / Table */}
+        <div className="cv-files-main">
+          {/* Breadcrumb row */}
+          <div className="cv-files-subnav">
+            <div className="cv-breadcrumbs">
+              <button
+                type="button"
+                className={`cv-crumb ${selectedFolderId === null ? "is-current" : ""}`}
+                onClick={() => { setSelectedFolderId(null); setSearch(""); }}
+              >
+                All Files
+              </button>
+              {breadcrumbs.map((crumb, idx) => {
+                const isLast = idx === breadcrumbs.length - 1;
+                return (
+                  <React.Fragment key={crumb.id}>
+                    <ChevronRight size={10} className="cv-crumb-sep" />
+                    <button
+                      type="button"
+                      className={`cv-crumb ${isLast ? "is-current" : ""}`}
+                      onClick={() => { if (!isLast) { setSelectedFolderId(crumb.id); setSearch(""); } }}
+                    >
+                      {crumb.name}
+                    </button>
+                  </React.Fragment>
+                );
+              })}
+            </div>
+            <span className="cv-files-count-badge">
+              {displayedFiles.length} {displayedFiles.length === 1 ? "item" : "items"}
+            </span>
+          </div>
+
+          {/* Table of Files */}
+          <div className="cv-files-scroll">
+            {displayedFiles.length === 0 ? (
+              <div className="cv-empty-pane">
+                {search ? "No files match your search criteria." : "This folder contains no files."}
+              </div>
+            ) : (
+              <table className="cv-files-table">
+                <thead>
+                  <tr>
+                    <th style={{ width: "55%" }}>Name</th>
+                    <th style={{ width: "20%" }}>Date Modified</th>
+                    <th style={{ width: "13%" }}>Size</th>
+                    <th style={{ width: "12%", textAlign: "right" }}>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {displayedFiles.map(file => {
+                    const name = file.display_name || file.filename || "Untitled";
+                    const isSelected = selectedFile?.id === file.id;
+                    return (
+                      <tr
+                        key={file.id}
+                        className={`cv-file-row ${isSelected ? "is-selected" : ""}`}
+                        onClick={() => setSelectedFile(isSelected ? null : file)}
+                      >
+                        <td className="cv-file-col-name">
+                          <FileTypeIcon name={name} />
+                          <span className="cv-file-name-text" title={name}>{name}</span>
+                        </td>
+                        <td className="cv-file-col-date">
+                          {file.updated_at ? relDate(file.updated_at) : "—"}
+                        </td>
+                        <td className="cv-file-col-size">{formatSize(file.size)}</td>
+                        <td className="cv-file-col-actions" onClick={e => e.stopPropagation()}>
+                          <a
+                            href={file.url || file.external_url}
+                            download
+                            className="cv-btn-icon"
+                            title="Download"
+                            target="_blank"
+                            rel="noreferrer"
+                          >
+                            <Download size={13} />
+                          </a>
+                          <a
+                            href={file.external_url || file.url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="cv-btn-icon"
+                            title="Open on Canvas"
+                          >
+                            <ExternalLink size={13} />
+                          </a>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            )}
           </div>
         </div>
-      )}
+
+        {/* Right Preview Drawer (if a file is selected) */}
+        {selectedFile && (
+          <aside className="cv-file-preview-aside">
+            <div className="cv-preview-header">
+              <span className="cv-preview-title" title={selectedFile.display_name || selectedFile.filename}>
+                {selectedFile.display_name || selectedFile.filename}
+              </span>
+              <div className="cv-preview-actions">
+                <a
+                  href={selectedFile.url || selectedFile.external_url}
+                  download
+                  className="cv-btn-icon"
+                  title="Download"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  <Download size={13} />
+                </a>
+                <a
+                  href={selectedFile.external_url || selectedFile.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="cv-btn-icon"
+                  title="Open on Canvas"
+                >
+                  <ExternalLink size={13} />
+                </a>
+                <button type="button" className="cv-btn-icon" onClick={() => setSelectedFile(null)} title="Close Preview">
+                  <X size={13} />
+                </button>
+              </div>
+            </div>
+            <div className="cv-preview-body">
+              {previewType === "img" ? (
+                <img src={selectedFile.url} alt={selectedFile.display_name || selectedFile.filename} />
+              ) : previewType === "pdf" ? (
+                <iframe src={selectedFile.url} title={selectedFile.display_name || selectedFile.filename} />
+              ) : (
+                <div className="cv-preview-fallback">
+                  <FileTypeIcon name={selectedFile.display_name || selectedFile.filename || ""} size={26} />
+                  <span>Preview not available directly.</span>
+                  <a href={selectedFile.url || selectedFile.external_url} target="_blank" rel="noreferrer" className="cv-link-accent">
+                    Open in Canvas ↗
+                  </a>
+                </div>
+              )}
+            </div>
+            <div className="cv-preview-meta">
+              <div><span>Size:</span> <strong>{formatSize(selectedFile.size)}</strong></div>
+              <div><span>Type:</span> <strong>{(selectedFile.display_name || selectedFile.filename || "").split(".").pop().toUpperCase()}</strong></div>
+              {selectedFile.updated_at && <div><span>Modified:</span> <strong>{new Date(selectedFile.updated_at).toLocaleDateString()}</strong></div>}
+            </div>
+          </aside>
+        )}
+      </div>
     </div>
   );
 }
 
-// ─── Course Overview (Home tab) ───────────────────────────────────────────────
+// ─── Course Overview Component ────────────────────────────────────────────────
 
 function CourseOverview({ courseId, courseName, courseCode, assignments, announcements, files, onSelectTab, onOpenItem }) {
   const now = new Date();
@@ -328,98 +446,101 @@ function CourseOverview({ courseId, courseName, courseCode, assignments, announc
       .filter(a => String(a.course_id) === String(courseId) && !a.has_submitted)
       .filter(a => !a.due_at || new Date(a.due_at) >= now)
       .sort((a,b) => (a.due_at ? new Date(a.due_at) : Infinity) - (b.due_at ? new Date(b.due_at) : Infinity))
-      .slice(0, 4),
+      .slice(0, 5),
   [assignments, courseId]);
 
   const recentAnn = useMemo(() =>
     announcements
       .filter(a => String(a.course_id) === String(courseId))
       .sort((a,b) => new Date(b.posted_at||0) - new Date(a.posted_at||0))
-      .slice(0, 3),
+      .slice(0, 4),
   [announcements, courseId]);
 
   const recentFiles = useMemo(() =>
-    [...(files||[])].filter(f=>f.updated_at).sort((a,b)=>new Date(b.updated_at)-new Date(a.updated_at)).slice(0,5),
+    [...(files||[])].filter(f=>f.updated_at).sort((a,b)=>new Date(b.updated_at)-new Date(a.updated_at)).slice(0,6),
   [files]);
 
   return (
-    <div className="cv-overview">
-      {/* Upcoming assignments */}
-      <div className="cv-overview-panel">
-        <div className="cv-overview-panel-header">
-          <span className="cv-overview-panel-title">Upcoming</span>
-          <button type="button" className="cv-overview-panel-link" style={{border:0,background:"transparent",cursor:"pointer"}} onClick={() => onSelectTab("assignments")}>See all →</button>
-        </div>
-        {upcoming.length === 0
-          ? <div className="cv-overview-empty">No upcoming assignments.</div>
-          : upcoming.map(a => {
-            const due = a.due_at ? new Date(a.due_at) : null;
-            const urgentSoon = due && (due - now) < 86400000 * 3;
-            return (
-              <div key={a.id} className="cv-overview-row" onClick={() => onOpenItem({ ...a, itemType: "assignment" })}>
-                <div className="cv-overview-row-body">
-                  <div className="cv-overview-row-title">{a.title}</div>
-                  <div className="cv-overview-row-meta">{dueLabel(a.due_at)}</div>
+    <div className="cv-overview-grid">
+      {/* Upcoming assignments card */}
+      <section className="cv-card">
+        <header className="cv-card-header">
+          <div className="cv-card-title"><Calendar size={13} /> Upcoming Tasks & Assignments</div>
+          <button type="button" className="cv-btn-link" onClick={() => onSelectTab("assignments")}>View all →</button>
+        </header>
+        <div className="cv-card-content">
+          {upcoming.length === 0 ? (
+            <div className="cv-empty-note">No upcoming assignments due.</div>
+          ) : (
+            upcoming.map(a => {
+              const due = a.due_at ? new Date(a.due_at) : null;
+              const urgent = due && (due - now) < 86400000 * 3;
+              return (
+                <div key={a.id} className="cv-list-item" onClick={() => onOpenItem({ ...a, itemType: "assignment" })}>
+                  <span className="cv-list-item-icon"><CheckSquare size={13} /></span>
+                  <div className="cv-list-item-body">
+                    <div className="cv-list-item-title">{a.title}</div>
+                    <div className="cv-list-item-sub">{dueLabel(a.due_at)}</div>
+                  </div>
+                  {urgent && <span className="cv-badge-urgent">Due soon</span>}
                 </div>
-                {urgentSoon && <span className="cv-overview-row-badge">{dueLabel(a.due_at)}</span>}
-                <ExternalLink size={12} style={{ color: "var(--text-muted)", flexShrink: 0 }} />
-              </div>
-            );
-          })
-        }
-      </div>
-
-      {/* Recent announcements */}
-      <div className="cv-overview-panel">
-        <div className="cv-overview-panel-header">
-          <span className="cv-overview-panel-title">Announcements</span>
-          <button type="button" className="cv-overview-panel-link" style={{border:0,background:"transparent",cursor:"pointer"}} onClick={() => onSelectTab("announcements")}>See all →</button>
+              );
+            })
+          )}
         </div>
-        {recentAnn.length === 0
-          ? <div className="cv-overview-empty">No recent announcements.</div>
-          : recentAnn.map(a => (
-            <div key={a.id} className="cv-overview-row" onClick={() => onOpenItem({ ...a, itemType: "announcement" })}>
-              <div className="cv-overview-row-body">
-                <div className="cv-overview-row-title">{a.title}</div>
-                <div className="cv-overview-row-meta">{relDate(a.posted_at)}</div>
-              </div>
-            </div>
-          ))
-        }
-      </div>
+      </section>
 
-      {/* Recent files */}
-      <div className="cv-overview-panel is-full">
-        <div className="cv-overview-panel-header">
-          <span className="cv-overview-panel-title">Recent files</span>
-          <button type="button" className="cv-overview-panel-link" style={{border:0,background:"transparent",cursor:"pointer"}} onClick={() => onSelectTab("files")}>Browse all →</button>
-        </div>
-        {recentFiles.length === 0
-          ? <div className="cv-overview-empty">No files available.</div>
-          : recentFiles.map(f => {
-            const name = f.display_name || f.filename || "Untitled";
-            return (
-              <div key={f.id} className="cv-overview-row" style={{ cursor: "default" }}>
-                <FileTypeIcon name={name} />
-                <div className="cv-overview-row-body">
-                  <div className="cv-overview-row-title">{name}</div>
-                  <div className="cv-overview-row-meta">{formatSize(f.size)}{f.updated_at ? ` · ${relDate(f.updated_at)}` : ""}</div>
+      {/* Announcements card */}
+      <section className="cv-card">
+        <header className="cv-card-header">
+          <div className="cv-card-title"><Bell size={13} /> Recent Announcements</div>
+          <button type="button" className="cv-btn-link" onClick={() => onSelectTab("announcements")}>View all →</button>
+        </header>
+        <div className="cv-card-content">
+          {recentAnn.length === 0 ? (
+            <div className="cv-empty-note">No recent announcements.</div>
+          ) : (
+            recentAnn.map(a => (
+              <div key={a.id} className="cv-list-item" onClick={() => onOpenItem({ ...a, itemType: "announcement" })}>
+                <span className="cv-list-item-icon"><Bell size={13} /></span>
+                <div className="cv-list-item-body">
+                  <div className="cv-list-item-title">{a.title}</div>
+                  <div className="cv-list-item-sub">{relDate(a.posted_at)}</div>
                 </div>
-                <SmallActionBtn href={f.url || f.external_url} download title="Download"><Download size={12}/></SmallActionBtn>
-                <SmallActionBtn href={f.external_url || f.url} title="Open"><ExternalLink size={12}/></SmallActionBtn>
               </div>
-            );
-          })
-        }
-      </div>
+            ))
+          )}
+        </div>
+      </section>
 
-      {/* Open in Canvas link */}
-      <div style={{ gridColumn: "1 / -1", display: "flex", alignItems: "center", gap: 8, paddingTop: 4 }}>
-        <a href={`https://canvas.nus.edu.sg/courses/${courseId}`} target="_blank" rel="noreferrer"
-           style={{ display: "inline-flex", alignItems: "center", gap: 5, color: "var(--text-muted)", fontSize: 11, textDecoration: "none" }}>
-          <ArrowUpRight size={12} /> Open full {courseCode} on Canvas
-        </a>
-      </div>
+      {/* Recent Files card */}
+      <section className="cv-card is-span-2">
+        <header className="cv-card-header">
+          <div className="cv-card-title"><FileText size={13} /> Recently Uploaded Files</div>
+          <button type="button" className="cv-btn-link" onClick={() => onSelectTab("files")}>Browse files →</button>
+        </header>
+        <div className="cv-card-content cv-grid-2col">
+          {recentFiles.length === 0 ? (
+            <div className="cv-empty-note">No files available.</div>
+          ) : (
+            recentFiles.map(f => {
+              const name = f.display_name || f.filename || "Untitled";
+              return (
+                <div key={f.id} className="cv-list-item">
+                  <FileTypeIcon name={name} />
+                  <div className="cv-list-item-body">
+                    <div className="cv-list-item-title" title={name}>{name}</div>
+                    <div className="cv-list-item-sub">{formatSize(f.size)} {f.updated_at ? `· ${relDate(f.updated_at)}` : ""}</div>
+                  </div>
+                  <a href={f.url || f.external_url} download className="cv-btn-icon" title="Download">
+                    <Download size={13} />
+                  </a>
+                </div>
+              );
+            })
+          )}
+        </div>
+      </section>
     </div>
   );
 }
@@ -432,14 +553,13 @@ export default function CanvasView({ token }) {
   const [assignments, setAssignments] = useState([]);
   const [announcements, setAnnouncements] = useState([]);
   const [grades, setGrades] = useState([]);
-  const [files, setFiles] = useState([]);          // current course files
+  const [files, setFiles] = useState([]);
   const [courseModules, setCourseModules] = useState([]);
   const [coursePages, setCoursePages] = useState([]);
   const [courseSyllabus, setCourseSyllabus] = useState(null);
 
-  const [selectedCourseId, setSelectedCourseId] = useState(null); // null = landing
-  const [tab, setTab] = useState("home");
-  const [navigation, setNavigation] = useState([]);
+  const [selectedCourseId, setSelectedCourseId] = useState("all");
+  const [tab, setTab] = useState("overview");
   const [assignmentFilter, setAssignmentFilter] = useState("upcoming");
   const [activeItem, setActiveItem] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -451,103 +571,100 @@ export default function CanvasView({ token }) {
     setLoading(true); setError("");
     try {
       const [c, a, ann, m] = await Promise.all([
-        getCanvasCourses(token, force), getCanvasAssignments(token, force),
-        getCanvasAnnouncements(token, force), getAcademicModules(token),
+        getCanvasCourses(token, force),
+        getCanvasAssignments(token, force),
+        getCanvasAnnouncements(token, force),
+        getAcademicModules(token),
       ]);
-      setCourses(c||[]); setAssignments(a||[]); setAnnouncements(ann||[]); setAcademicModules(m||[]);
-    } catch (e) { setError(e.message || "Could not load Canvas."); }
-    finally { setLoading(false); }
+      setCourses(c || []);
+      setAssignments(a || []);
+      setAnnouncements(ann || []);
+      setAcademicModules(m || []);
+    } catch (e) {
+      setError(e.message || "Could not load Canvas data.");
+    } finally {
+      setLoading(false);
+    }
   }, [token]);
 
   useEffect(() => { load(); }, [load]);
 
-  // When course changes, reset per-course data and load navigation
-  useEffect(() => {
-    if (!selectedCourseId) return;
-    setFiles([]); setCourseModules([]); setCoursePages([]); setCourseSyllabus(null);
-    let canceled = false;
-    setTabLoading(true);
-    getCanvasCourseNavigation(token, selectedCourseId).then(nav => {
-      if (canceled) return;
-      const coreTabs = [
-        { id:"home", label:"Overview" }, { id:"announcements", label:"Announcements" },
-        { id:"modules", label:"Modules" }, { id:"pages", label:"Pages" },
-        { id:"files", label:"Files" }, { id:"assignments", label:"Assignments" },
-        { id:"grades", label:"Grades" }, { id:"syllabus", label:"Syllabus" },
-      ];
-      const finalNav = [...nav];
-      const existing = new Set(nav.map(n=>n.id));
-      coreTabs.forEach(c => { if (!existing.has(c.id)) finalNav.push(c); });
-      // Put home first always
-      const homeIdx = finalNav.findIndex(n => n.id === "home");
-      if (homeIdx > 0) { const [h] = finalNav.splice(homeIdx, 1); finalNav.unshift(h); }
-      setNavigation(finalNav);
-      setTab("home");
-    }).catch(() => {
-      if (!canceled) {
-        setNavigation([
-          { id:"home", label:"Overview" }, { id:"announcements", label:"Announcements" },
-          { id:"modules", label:"Modules" }, { id:"pages", label:"Pages" },
-          { id:"files", label:"Files" }, { id:"assignments", label:"Assignments" },
-          { id:"grades", label:"Grades" }, { id:"syllabus", label:"Syllabus" },
-        ]);
-        setTab("home");
-      }
-    }).finally(() => { if (!canceled) setTabLoading(false); });
-    return () => { canceled = true; };
-  }, [selectedCourseId, token]);
-
-  // Load files when Files or Overview tab is active
-  useEffect(() => {
-    if (!selectedCourseId || !["home","files"].includes(tab) || files.length > 0) return;
-    let canceled = false;
-    getCanvasFiles(token, selectedCourseId)
-      .then(data => { if (!canceled) setFiles(data||[]); })
-      .catch(() => {});
-    return () => { canceled = true; };
-  }, [tab, selectedCourseId, token, files.length]);
-
-  // Load grades
-  useEffect(() => {
-    if (tab !== "grades" || grades.length) return;
-    let canceled = false;
-    getCanvasGrades(token).then(d => { if (!canceled) setGrades(d); }).catch(() => {});
-    return () => { canceled = true; };
-  }, [grades.length, tab, token]);
-
-  // Load per-course tabs
-  useEffect(() => {
-    if (!selectedCourseId) return;
-    let canceled = false;
-    if (tab === "modules" && courseModules.length === 0) {
-      setTabLoading(true);
-      getCanvasCourseModules(token, selectedCourseId).then(d => { if (!canceled) setCourseModules(d||[]); }).catch(()=>{}).finally(() => { if (!canceled) setTabLoading(false); });
-    } else if (tab === "pages" && coursePages.length === 0) {
-      setTabLoading(true);
-      getCanvasPages(token, selectedCourseId).then(d => { if (!canceled) setCoursePages(d||[]); }).catch(()=>{}).finally(() => { if (!canceled) setTabLoading(false); });
-    } else if (tab === "syllabus" && courseSyllabus === null) {
-      setTabLoading(true);
-      getCanvasSyllabus(token, selectedCourseId).then(d => { if (!canceled) setCourseSyllabus(d); }).catch(()=>{}).finally(() => { if (!canceled) setTabLoading(false); });
-    }
-    return () => { canceled = true; };
-  }, [tab, selectedCourseId, token, courseModules.length, coursePages.length, courseSyllabus]);
-
-  // Derived: only courses in the user's academic module list
+  // Derived: courses active for this student
   const displayedCourses = useMemo(() => {
     const codes = academicModules.filter(m => m.is_selected && m.module_code?.trim()).map(m => m.module_code.trim());
-    if (!codes.length) return [];
-    return courses.filter(c => {
+    if (!codes.length) return courses || [];
+    return (courses || []).filter(c => {
       if (!c.course_code) return false;
       return codes.some(mod => new RegExp(`(?:^|[^a-zA-Z0-9])${mod}(?![a-zA-Z0-9])`, "i").test(c.course_code));
     });
   }, [courses, academicModules]);
 
   const validCourseIds = useMemo(() => new Set(displayedCourses.map(c => String(c.id))), [displayedCourses]);
+  const courseColors = useMemo(() => new Map(courses.map(c => [c.course_code, c.color])), [courses]);
 
+  // If a single course is selected, reset per-course tab data and auto-fetch files/modules
+  useEffect(() => {
+    setFiles([]);
+    setCourseModules([]);
+    setCoursePages([]);
+    setCourseSyllabus(null);
+
+    if (selectedCourseId === "all") {
+      if (["files", "modules", "pages", "syllabus"].includes(tab)) {
+        setTab("overview");
+      }
+      return;
+    }
+
+    let canceled = false;
+    setTabLoading(true);
+    getCanvasFiles(token, selectedCourseId)
+      .then(d => { if (!canceled) setFiles(d || []); })
+      .catch(() => {})
+      .finally(() => { if (!canceled) setTabLoading(false); });
+
+    return () => { canceled = true; };
+  }, [selectedCourseId, token]);
+
+  // Fetch modules or pages on tab switch
+  useEffect(() => {
+    if (selectedCourseId === "all") return;
+    let canceled = false;
+
+    if (tab === "modules" && courseModules.length === 0) {
+      setTabLoading(true);
+      getCanvasCourseModules(token, selectedCourseId)
+        .then(d => { if (!canceled) setCourseModules(d || []); })
+        .catch(() => {})
+        .finally(() => { if (!canceled) setTabLoading(false); });
+    } else if (tab === "pages" && coursePages.length === 0) {
+      setTabLoading(true);
+      getCanvasPages(token, selectedCourseId)
+        .then(d => { if (!canceled) setCoursePages(d || []); })
+        .catch(() => {})
+        .finally(() => { if (!canceled) setTabLoading(false); });
+    } else if (tab === "syllabus" && courseSyllabus === null) {
+      setTabLoading(true);
+      getCanvasSyllabus(token, selectedCourseId)
+        .then(d => { if (!canceled) setCourseSyllabus(d); })
+        .catch(() => {})
+        .finally(() => { if (!canceled) setTabLoading(false); });
+    } else if (tab === "grades" && grades.length === 0) {
+      setTabLoading(true);
+      getCanvasGrades(token)
+        .then(d => { if (!canceled) setGrades(d || []); })
+        .catch(() => {})
+        .finally(() => { if (!canceled) setTabLoading(false); });
+    }
+
+    return () => { canceled = true; };
+  }, [tab, selectedCourseId, token, courseModules.length, coursePages.length, courseSyllabus, grades.length]);
+
+  // Filtered lists
   const filteredAssignments = useMemo(() => {
     const list = assignments.filter(item => {
+      if (selectedCourseId !== "all" && String(item.course_id) !== String(selectedCourseId)) return false;
       if (!validCourseIds.has(String(item.course_id))) return false;
-      if (selectedCourseId && String(item.course_id) !== String(selectedCourseId)) return false;
       const due = item.due_at ? new Date(item.due_at) : null;
       if (assignmentFilter === "all") return true;
       return assignmentFilter === "upcoming" ? (!due || due >= new Date()) : Boolean(due && due < new Date());
@@ -558,24 +675,23 @@ export default function CanvasView({ token }) {
       return assignmentFilter === "past" ? db - da : da - db;
     });
     return list;
-  }, [assignmentFilter, assignments, selectedCourseId, validCourseIds]);
+  }, [assignments, selectedCourseId, validCourseIds, assignmentFilter]);
 
   const filteredAnnouncements = useMemo(() => {
     return announcements
       .filter(item => {
-        if (!validCourseIds.has(String(item.course_id))) return false;
-        return !selectedCourseId || String(item.course_id) === String(selectedCourseId);
+        if (selectedCourseId !== "all" && String(item.course_id) !== String(selectedCourseId)) return false;
+        return validCourseIds.has(String(item.course_id));
       })
-      .sort((a,b) => new Date(b.posted_at||0) - new Date(a.posted_at||0));
+      .sort((a,b) => new Date(b.posted_at || 0) - new Date(a.posted_at || 0));
   }, [announcements, selectedCourseId, validCourseIds]);
 
-  const filteredGrades = useMemo(() =>
-    grades.filter(item => {
-      if (!validCourseIds.has(String(item.course_id))) return false;
-      return !selectedCourseId || String(item.course_id) === String(selectedCourseId);
-    }), [grades, selectedCourseId, validCourseIds]);
-
-  const courseColors = useMemo(() => new Map(courses.map(c => [c.course_code, c.color])), [courses]);
+  const filteredGrades = useMemo(() => {
+    return grades.filter(item => {
+      if (selectedCourseId !== "all" && String(item.course_id) !== String(selectedCourseId)) return false;
+      return validCourseIds.has(String(item.course_id));
+    });
+  }, [grades, selectedCourseId, validCourseIds]);
 
   const sync = useCallback(async () => {
     setSyncing(true); setError("");
@@ -583,181 +699,186 @@ export default function CanvasView({ token }) {
       await syncCanvasAssignments(token);
       await load(true);
       setGrades([]); setFiles([]); setCourseModules([]); setCoursePages([]); setCourseSyllabus(null);
-    } catch (e) { setError(e.message || "Sync failed."); }
-    finally { setSyncing(false); }
+    } catch (e) {
+      setError(e.message || "Sync failed.");
+    } finally {
+      setSyncing(false);
+    }
   }, [load, token]);
 
   const selectedCourse = courses.find(c => String(c.id) === String(selectedCourseId));
 
   useWorkspaceToolbar(useMemo(() => ({
     title: "Modules",
-    subtitle: selectedCourse ? selectedCourse.course_code : undefined,
+    subtitle: selectedCourse ? selectedCourse.course_code : "All Modules",
   }), [selectedCourse]));
 
-  // All hooks must be declared before any early returns
-  const landingUpcoming = useMemo(() =>
-    assignments
-      .filter(a => validCourseIds.has(String(a.course_id)) && !a.has_submitted && (!a.due_at || new Date(a.due_at) >= new Date()))
-      .sort((a,b) => (a.due_at ? new Date(a.due_at) : Infinity) - (b.due_at ? new Date(b.due_at) : Infinity))
-      .slice(0, 12),
-  [assignments, validCourseIds]);
-
-  const landingAnnouncements = useMemo(() =>
-    announcements
-      .filter(a => validCourseIds.has(String(a.course_id)))
-      .sort((a,b) => new Date(b.posted_at||0) - new Date(a.posted_at||0))
-      .slice(0, 10),
-  [announcements, validCourseIds]);
-
-  // ── Render ─────────────────────────────────────────────────────────────────
-
-  if (loading) return (
-    <div className="cv-page" style={{ alignItems: "center", justifyContent: "center" }}>
-      <Loader2 className="retro-icon-spin" size={20} style={{ color: "var(--text-muted)" }} />
-    </div>
-  );
-
-  // LANDING — no course selected
-
-
-  if (!selectedCourseId) return (
-    <div className="cv-page">
-      {error && <div style={{ padding: "12px 24px", color: "var(--error)", fontSize: 12 }}>{error}</div>}
-      <div className="cv-landing">
-        {displayedCourses.length === 0 ? (
-          <div style={{ color: "var(--text-muted)", fontSize: 13 }}>
-            No modules configured. Add them in Settings → Academic Modules.
-          </div>
-        ) : (
-          <div className="cv-landing-body">
-            {/* Left: course list */}
-            <div className="cv-landing-courses">
-              <div className="cv-landing-section-label">Modules</div>
-              <div className="cv-landing-course-list">
-                {displayedCourses.map(course => {
-                  const upcoming = assignments.filter(a =>
-                    String(a.course_id) === String(course.id) && !a.has_submitted &&
-                    a.due_at && new Date(a.due_at) >= new Date()
-                  ).length;
-                  return (
-                    <button key={course.id} type="button" className="cv-course-card"
-                      style={{ "--module-color": course.color }}
-                      onClick={() => setSelectedCourseId(String(course.id))}>
-                      <div className="cv-course-card-code">{course.course_code}</div>
-                      <div className="cv-course-card-name">{course.name}</div>
-                      <div className="cv-course-card-meta">
-                        <span className={`cv-course-card-badge${upcoming === 0 ? " is-zero" : ""}`}>
-                          {upcoming > 0 ? `${upcoming} due` : "All clear"}
-                        </span>
-                        <ChevronRight size={13} className="cv-course-card-chevron" />
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Right: upcoming + announcements feed */}
-            <div className="cv-landing-feed">
-              {/* Upcoming assignments */}
-              <div className="cv-landing-section-label">Upcoming</div>
-              <div className="cv-landing-panel">
-                {landingUpcoming.length === 0
-                  ? <div className="cv-finder-empty" style={{ padding: "14px 16px" }}>No upcoming assignments.</div>
-                  : landingUpcoming.map(a => {
-                    const courseColor = courseColors.get(a.course_code);
-                    const due = a.due_at ? new Date(a.due_at) : null;
-                    const urgent = due && (due - new Date()) < 86400000 * 2;
-                    return (
-                      <button key={`${a.course_id}-${a.id}`} type="button"
-                        className="cv-landing-feed-row"
-                        style={{ "--module-color": courseColor }}
-                        onClick={() => { setSelectedCourseId(String(a.course_id)); setActiveItem({ ...a, itemType:"assignment" }); }}>
-                        <span className="cv-landing-feed-dot" />
-                        <span className="cv-landing-feed-body">
-                          <span className="cv-landing-feed-title">{a.title}</span>
-                          <span className="cv-landing-feed-meta">{a.course_code}</span>
-                        </span>
-                        <span className={`cv-landing-feed-due${urgent ? " is-urgent" : ""}`}>
-                          {dueLabel(a.due_at)}
-                        </span>
-                      </button>
-                    );
-                  })
-                }
-              </div>
-
-              {/* Announcements */}
-              <div className="cv-landing-section-label" style={{ marginTop: 20 }}>Announcements</div>
-              <div className="cv-landing-panel">
-                {landingAnnouncements.length === 0
-                  ? <div className="cv-finder-empty" style={{ padding: "14px 16px" }}>No recent announcements.</div>
-                  : landingAnnouncements.map(a => (
-                    <button key={a.id} type="button"
-                      className="cv-landing-feed-row"
-                      style={{ "--module-color": courseColors.get(a.course_code) }}
-                      onClick={() => { setSelectedCourseId(String(a.course_id)); setActiveItem({ ...a, itemType:"announcement" }); }}>
-                      <span className="cv-landing-feed-dot" />
-                      <span className="cv-landing-feed-body">
-                        <span className="cv-landing-feed-title">{a.title}</span>
-                        <span className="cv-landing-feed-meta">{a.course_code}</span>
-                      </span>
-                      <span className="cv-landing-feed-due">{relDate(a.posted_at)}</span>
-                    </button>
-                  ))
-                }
-              </div>
-            </div>
-          </div>
-        )}
+  if (loading) {
+    return (
+      <div className="cv-page-loader">
+        <Loader2 className="retro-icon-spin" size={20} />
+        <span>Syncing Canvas workspace…</span>
       </div>
-    </div>
-  );
+    );
+  }
 
-  // COURSE VIEW — course selected
-  const KNOWN_TABS = ["home","assignments","announcements","grades","files","modules","pages","syllabus"];
+  // Available tabs depending on context
+  const tabs = selectedCourseId === "all" ? [
+    { id: "overview", label: "Overview" },
+    { id: "assignments", label: "Assignments" },
+    { id: "announcements", label: "Announcements" },
+    { id: "grades", label: "Grades" },
+  ] : [
+    { id: "overview", label: "Overview" },
+    { id: "files", label: "Files" },
+    { id: "modules", label: "Modules" },
+    { id: "assignments", label: "Assignments" },
+    { id: "announcements", label: "Announcements" },
+    { id: "grades", label: "Grades" },
+    { id: "pages", label: "Pages" },
+    { id: "syllabus", label: "Syllabus" },
+  ];
 
   return (
-    <div className="cv-page">
-      {/* Course header strip */}
-      <div className="cv-course-header" style={{ "--module-color": selectedCourse?.color }}>
-        <button type="button" className="cv-back-btn" onClick={() => setSelectedCourseId(null)}>
-          <ChevronLeft size={14} /> All Modules
-        </button>
-        <span className="cv-course-header-code">{selectedCourse?.course_code}</span>
-        <span className="cv-course-header-name">{selectedCourse?.name}</span>
-        <div className="cv-course-header-actions">
-          {error && <span style={{ fontSize: 10, color: "var(--error)" }}>{error}</span>}
-          <button type="button" className="canvas-sync" onClick={sync} disabled={syncing} style={{ height: 28, fontSize: 10 }}>
+    <div className="cv-wrapper">
+      {/* ── Top Bar: Course Selector Pills + Sync Action ── */}
+      <header className="cv-top-bar">
+        <div className="cv-course-pills">
+          <button
+            type="button"
+            className={`cv-pill ${selectedCourseId === "all" ? "is-active" : ""}`}
+            onClick={() => setSelectedCourseId("all")}
+          >
+            All Modules
+          </button>
+          {displayedCourses.map(c => {
+            const isSelected = selectedCourseId === String(c.id);
+            const dueCount = assignments.filter(a => String(a.course_id) === String(c.id) && !a.has_submitted && a.due_at && new Date(a.due_at) >= new Date()).length;
+            return (
+              <button
+                key={c.id}
+                type="button"
+                className={`cv-pill ${isSelected ? "is-active" : ""}`}
+                style={{ "--module-color": c.color }}
+                onClick={() => setSelectedCourseId(String(c.id))}
+              >
+                <span className="cv-pill-dot" />
+                <span className="cv-pill-label">{c.course_code}</span>
+                {dueCount > 0 && <span className="cv-pill-badge">{dueCount}</span>}
+              </button>
+            );
+          })}
+        </div>
+        <div className="cv-top-actions">
+          {error && <span className="cv-error-msg">{error}</span>}
+          <button type="button" className="cv-sync-btn" onClick={sync} disabled={syncing}>
             <RefreshCw size={12} className={syncing ? "retro-icon-spin" : ""} />
-            {syncing ? "Syncing" : "Sync"}
+            {syncing ? "Syncing…" : "Sync"}
           </button>
         </div>
-      </div>
+      </header>
 
-      {/* Tab bar */}
-      <div className="cv-tabs-bar">
-        {navigation.map(nav => (
-          <button key={nav.id} type="button"
-            className={`cv-tab-btn${tab === nav.id ? " is-active" : ""}`}
-            onClick={() => setTab(nav.id)}>
-            {nav.label}
-          </button>
-        ))}
-      </div>
+      {/* ── Second Bar: Sub-Navigation Tabs ── */}
+      <nav className="cv-sub-bar">
+        <div className="cv-tab-strip">
+          {tabs.map(t => (
+            <button
+              key={t.id}
+              type="button"
+              className={`cv-tab-item ${tab === t.id ? "is-active" : ""}`}
+              onClick={() => setTab(t.id)}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+        {selectedCourse && (
+          <a
+            href={`https://canvas.nus.edu.sg/courses/${selectedCourse.id}`}
+            target="_blank"
+            rel="noreferrer"
+            className="cv-ext-link"
+          >
+            <span>Open {selectedCourse.course_code} on Canvas</span>
+            <ExternalLink size={11} />
+          </a>
+        )}
+      </nav>
 
-      {/* Content */}
-      <div className="cv-content">
-        {tabLoading && !["files","home"].includes(tab) && (
-          <div style={{ display: "flex", alignItems: "center", gap: 8, color: "var(--text-muted)", fontSize: 12, marginBottom: 16 }}>
-            <Loader2 className="retro-icon-spin" size={14} /> Loading…
+      {/* ── Main View Content Area ── */}
+      <main className="cv-view-content">
+        {tabLoading && !["files", "overview"].includes(tab) && (
+          <div className="cv-view-loading">
+            <Loader2 className="retro-icon-spin" size={14} /> Loading content…
           </div>
         )}
 
-        <section>
+        {/* 1. OVERVIEW TAB */}
+        {tab === "overview" && (
+          selectedCourseId === "all" ? (
+            <div className="cv-all-overview">
+              <div className="cv-overview-grid">
+                {/* Cross-course Assignments */}
+                <section className="cv-card">
+                  <header className="cv-card-header">
+                    <div className="cv-card-title"><Calendar size={13} /> Upcoming Assignments Across All Modules</div>
+                    <button type="button" className="cv-btn-link" onClick={() => setTab("assignments")}>View all →</button>
+                  </header>
+                  <div className="cv-card-content">
+                    {filteredAssignments.slice(0, 7).length === 0 ? (
+                      <div className="cv-empty-note">All clear! No assignments due.</div>
+                    ) : (
+                      filteredAssignments.slice(0, 7).map(a => {
+                        const due = a.due_at ? new Date(a.due_at) : null;
+                        const urgent = due && (due - new Date()) < 86400000 * 3;
+                        return (
+                          <div
+                            key={`${a.course_id}-${a.id}`}
+                            className="cv-list-item"
+                            onClick={() => { setSelectedCourseId(String(a.course_id)); setActiveItem({ ...a, itemType: "assignment" }); }}
+                          >
+                            <span className="cv-pill-dot" style={{ backgroundColor: courseColors.get(a.course_code) }} />
+                            <div className="cv-list-item-body">
+                              <div className="cv-list-item-title">{a.title}</div>
+                              <div className="cv-list-item-sub">{a.course_code} · {dueLabel(a.due_at)}</div>
+                            </div>
+                            {urgent && <span className="cv-badge-urgent">{dueLabel(a.due_at)}</span>}
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                </section>
 
-          {/* HOME / OVERVIEW */}
-          {tab === "home" && (
+                {/* Cross-course Announcements */}
+                <section className="cv-card">
+                  <header className="cv-card-header">
+                    <div className="cv-card-title"><Bell size={13} /> Latest Announcements</div>
+                    <button type="button" className="cv-btn-link" onClick={() => setTab("announcements")}>View all →</button>
+                  </header>
+                  <div className="cv-card-content">
+                    {filteredAnnouncements.slice(0, 7).length === 0 ? (
+                      <div className="cv-empty-note">No recent announcements.</div>
+                    ) : (
+                      filteredAnnouncements.slice(0, 7).map(ann => (
+                        <div
+                          key={ann.id}
+                          className="cv-list-item"
+                          onClick={() => { setSelectedCourseId(String(ann.course_id)); setActiveItem({ ...ann, itemType: "announcement" }); }}
+                        >
+                          <span className="cv-pill-dot" style={{ backgroundColor: courseColors.get(ann.course_code) }} />
+                          <div className="cv-list-item-body">
+                            <div className="cv-list-item-title">{ann.title}</div>
+                            <div className="cv-list-item-sub">{ann.course_code} · {relDate(ann.posted_at)}</div>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </section>
+              </div>
+            </div>
+          ) : (
             <CourseOverview
               courseId={selectedCourseId}
               courseName={selectedCourse?.name}
@@ -768,215 +889,236 @@ export default function CanvasView({ token }) {
               onSelectTab={setTab}
               onOpenItem={setActiveItem}
             />
-          )}
+          )
+        )}
 
-          {/* ASSIGNMENTS */}
-          {tab === "assignments" && (
-            <>
-              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:14 }}>
-                <span className="cv-section-title">Assignments</span>
-                <div style={{ display:"flex", gap:3, border:"1px solid var(--border)", borderRadius:5, padding:3 }}>
-                  {["upcoming","past","all"].map(v => (
-                    <button key={v} type="button"
-                      style={{ padding:"3px 10px", borderRadius:4, border:"none", cursor:"pointer", fontSize:11, textTransform:"capitalize",
-                        background: assignmentFilter===v ? "var(--surface-hover)" : "transparent",
-                        color: assignmentFilter===v ? "var(--text-h)" : "var(--text-muted)" }}
-                      onClick={() => setAssignmentFilter(v)}>{v}</button>
-                  ))}
-                </div>
-              </div>
-              {filteredAssignments.length === 0
-                ? <div className="cv-finder-empty">No assignments in this view.</div>
-                : <div className="canvas-item-list">
-                  {filteredAssignments.map(item => (
-                    <button key={`${item.course_id}-${item.id}`} type="button"
-                      style={{ "--module-color": courseColors.get(item.course_code) }}
-                      className="canvas-item-row"
-                      onClick={() => setActiveItem({ ...item, itemType:"assignment" })}>
-                      <span className="canvas-item-icon"><BookOpen size={15}/></span>
-                      <span className="canvas-item-copy">
-                        <strong>{item.title}</strong>
-                        <small>{item.course_code} · {item.due_at ? new Date(item.due_at).toLocaleString([],{month:"short",day:"numeric",hour:"numeric",minute:"2-digit"}) : "No due date"}</small>
-                      </span>
-                      <span className={`canvas-status ${item.has_submitted ? "is-done" : ""}`}>
-                        {item.has_submitted && <CheckCircle2 size={12}/>}
-                        {item.has_submitted ? "Submitted" : "Not submitted"}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              }
-            </>
-          )}
+        {/* 2. FILES TAB */}
+        {tab === "files" && selectedCourseId !== "all" && (
+          <FileBrowser token={token} courseId={selectedCourseId} allFiles={files} />
+        )}
 
-          {/* ANNOUNCEMENTS */}
-          {tab === "announcements" && (
-            <>
-              <div style={{ marginBottom:14 }}><span className="cv-section-title">Announcements</span></div>
-              {filteredAnnouncements.length === 0
-                ? <div className="cv-finder-empty">No recent announcements.</div>
-                : <div className="canvas-item-list">
-                  {filteredAnnouncements.map(item => (
-                    <button key={item.id} type="button"
-                      style={{ "--module-color": courseColors.get(item.course_code) }}
-                      className="canvas-item-row"
-                      onClick={() => setActiveItem({ ...item, itemType:"announcement" })}>
-                      <span className="canvas-item-icon"><Bell size={15}/></span>
-                      <span className="canvas-item-copy">
-                        <strong>{item.title}</strong>
-                        <small>{item.course_code} · {item.posted_at ? new Date(item.posted_at).toLocaleDateString() : item.author}</small>
-                        <p>{stripHtml(item.body).slice(0,150)}</p>
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              }
-            </>
-          )}
-
-          {/* GRADES */}
-          {tab === "grades" && (
-            <>
-              <div style={{ marginBottom:14 }}><span className="cv-section-title">Grades</span></div>
-              {tabLoading ? <div className="cv-finder-empty">Loading grades…</div>
-                : filteredGrades.length === 0 ? <div className="cv-finder-empty">No grades available.</div>
-                : <div className="grade-course-grid">
-                  {filteredGrades.map(course => (
-                    <article className="grade-course-card" key={course.course_id}>
-                      <header>
-                        <div><small>{course.course_code}</small><strong>{course.course_name}</strong></div>
-                        <div className="grade-total">
-                          <strong>{course.current_score != null ? `${course.current_score}%` : "—"}</strong>
-                          <span>{course.current_grade || "No grade"}</span>
-                        </div>
-                      </header>
-                      <div className="grade-assignment-list">
-                        {course.assignments.filter(i=>i.score!=null||i.grade).slice(0,12).map(i=>(
-                          <div key={i.id}><span>{i.title}</span><strong>{i.grade??`${i.score}/${i.points_possible??"?"}`}</strong></div>
-                        ))}
-                      </div>
-                    </article>
-                  ))}
-                </div>
-              }
-            </>
-          )}
-
-          {/* FILES */}
-          {tab === "files" && (
-            <>
-              <div style={{ marginBottom:14 }}><span className="cv-section-title">Files</span></div>
-              <FileBrowser token={token} courseId={selectedCourseId} allFiles={files} />
-            </>
-          )}
-
-          {/* MODULES */}
-          {tab === "modules" && (
-            <>
-              <div style={{ marginBottom:14 }}><span className="cv-section-title">Modules</span></div>
-              {tabLoading ? <div className="cv-finder-empty">Loading…</div>
-                : courseModules.length === 0 ? <div className="cv-finder-empty">No modules found.</div>
-                : <div style={{ display:"flex", flexDirection:"column", gap:20 }}>
-                  {courseModules.map(mod => (
-                    <div key={mod.id} style={{ border:"1px solid var(--border)", borderRadius:7, overflow:"hidden" }}>
-                      <div style={{ padding:"11px 16px", borderBottom:"1px solid var(--border)", background:"var(--surface-muted)" }}>
-                        <strong style={{ fontSize:13, fontWeight:600, color:"var(--text-h)" }}>{mod.name}</strong>
-                      </div>
-                      <div>
-                        {mod.items.map(item => {
-                          if (item.type === "SubHeader") return (
-                            <div key={item.id} style={{ padding:"12px 16px 6px", fontWeight:600, color:"var(--text-muted)", fontSize:11, letterSpacing:"0.04em", textTransform:"uppercase", borderBottom:"1px solid var(--border)" }}>{item.title}</div>
-                          );
-                          let Icon = LinkIcon;
-                          if (item.type==="File") Icon=File;
-                          else if (item.type==="Page") Icon=BookOpen;
-                          else if (item.type==="Assignment") Icon=CheckCircle2;
-                          else if (item.type==="Discussion") Icon=MessageSquare;
-                          else if (item.type==="Quiz") Icon=HelpCircle;
+        {/* 3. MODULES TAB */}
+        {tab === "modules" && selectedCourseId !== "all" && (
+          <div className="cv-modules-view">
+            {courseModules.length === 0 ? (
+              <div className="cv-empty-note">No Canvas module units found for this course.</div>
+            ) : (
+              <div className="cv-modules-list">
+                {courseModules.map(mod => (
+                  <div key={mod.id} className="cv-module-block">
+                    <div className="cv-module-block-header">
+                      <Layers size={14} />
+                      <span>{mod.name}</span>
+                    </div>
+                    <div className="cv-module-items">
+                      {mod.items.map(item => {
+                        if (item.type === "SubHeader") {
                           return (
-                            <a key={item.id}
-                              href={item.external_url||item.html_url||`https://canvas.nus.edu.sg/courses/${selectedCourseId}/modules/items/${item.id}`}
-                              target="_blank" rel="noreferrer"
-                              onClick={e => {
-                                if (item.type==="Assignment"||item.type==="Page") {
-                                  e.preventDefault();
-                                  setActiveItem({ ...item, id: item.type==="Assignment"?item.content_id:item.id, itemType:item.type.toLowerCase(), course_id:selectedCourseId });
-                                }
-                              }}
-                              style={{ padding:`9px 16px 9px ${16+(item.indent||0)*18}px`, display:"flex", alignItems:"center", justifyContent:"space-between", color:"var(--text)", textDecoration:"none", borderBottom:"1px solid var(--border)" }}
-                              onMouseEnter={e=>e.currentTarget.style.background="var(--surface-hover)"}
-                              onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
-                              <div style={{ display:"flex", alignItems:"center", gap:10 }}>
-                                <span style={{ color:"var(--text-muted)" }}><Icon size={13}/></span>
-                                <span style={{ fontSize:13 }}>{item.title}</span>
-                              </div>
-                              {item.completion_requirement?.completed && <CheckCircle2 size={13} style={{ color:"var(--success)" }}/>}
-                            </a>
+                            <div key={item.id} className="cv-module-subheader">
+                              {item.title}
+                            </div>
                           );
-                        })}
-                        {mod.items.length===0&&<div style={{padding:"10px 16px",fontSize:11,color:"var(--text-muted)"}}>Empty module.</div>}
+                        }
+                        let Icon = LinkIcon;
+                        if (item.type === "File") Icon = File;
+                        else if (item.type === "Page") Icon = BookOpen;
+                        else if (item.type === "Assignment") Icon = CheckCircle2;
+                        else if (item.type === "Discussion") Icon = MessageSquare;
+                        else if (item.type === "Quiz") Icon = HelpCircle;
+
+                        return (
+                          <a
+                            key={item.id}
+                            href={item.external_url || item.html_url || `https://canvas.nus.edu.sg/courses/${selectedCourseId}/modules/items/${item.id}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="cv-module-item-row"
+                            style={{ paddingLeft: `${14 + (item.indent || 0) * 16}px` }}
+                            onClick={e => {
+                              if (item.type === "Assignment" || item.type === "Page") {
+                                e.preventDefault();
+                                setActiveItem({
+                                  ...item,
+                                  id: item.type === "Assignment" ? item.content_id : item.id,
+                                  itemType: item.type.toLowerCase(),
+                                  course_id: selectedCourseId,
+                                });
+                              }
+                            }}
+                          >
+                            <span className="cv-module-item-icon"><Icon size={13} /></span>
+                            <span className="cv-module-item-title">{item.title}</span>
+                            {item.completion_requirement?.completed && (
+                              <CheckCircle2 size={13} style={{ color: "var(--success)", marginLeft: "auto" }} />
+                            )}
+                          </a>
+                        );
+                      })}
+                      {mod.items.length === 0 && (
+                        <div className="cv-empty-note" style={{ padding: "8px 14px" }}>Empty module section</div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* 4. ASSIGNMENTS TAB */}
+        {tab === "assignments" && (
+          <div className="cv-assignments-view">
+            <div className="cv-toolbar-row">
+              <span className="cv-toolbar-title">
+                {selectedCourse ? `${selectedCourse.course_code} Assignments` : "All Assignments"}
+              </span>
+              <div className="cv-filter-segmented">
+                {["upcoming", "past", "all"].map(v => (
+                  <button
+                    key={v}
+                    type="button"
+                    className={`cv-filter-btn ${assignmentFilter === v ? "is-active" : ""}`}
+                    onClick={() => setAssignmentFilter(v)}
+                  >
+                    {v.charAt(0).toUpperCase() + v.slice(1)}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {filteredAssignments.length === 0 ? (
+              <div className="cv-empty-pane">No assignments in this filter view.</div>
+            ) : (
+              <div className="cv-item-rows">
+                {filteredAssignments.map(item => (
+                  <div
+                    key={`${item.course_id}-${item.id}`}
+                    className="cv-assignment-row"
+                    onClick={() => setActiveItem({ ...item, itemType: "assignment" })}
+                  >
+                    <span className="cv-pill-dot" style={{ backgroundColor: courseColors.get(item.course_code) }} />
+                    <div className="cv-row-body">
+                      <div className="cv-row-title">{item.title}</div>
+                      <div className="cv-row-sub">
+                        {item.course_code} · {item.due_at ? new Date(item.due_at).toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : "No due date"}
                       </div>
                     </div>
-                  ))}
-                </div>
-              }
-            </>
-          )}
-
-          {/* PAGES */}
-          {tab === "pages" && (
-            <>
-              <div style={{ marginBottom:14 }}><span className="cv-section-title">Pages</span></div>
-              {tabLoading ? <div className="cv-finder-empty">Loading…</div>
-                : coursePages.length === 0 ? <div className="cv-finder-empty">No pages found.</div>
-                : <div className="canvas-item-list">
-                  {coursePages.map(page => (
-                    <a key={page.url} href={`https://canvas.nus.edu.sg/courses/${selectedCourseId}/pages/${page.url}`}
-                       target="_blank" rel="noreferrer" className="canvas-item-row" style={{ textDecoration:"none", color:"inherit" }}>
-                      <span className="canvas-item-icon"><File size={15}/></span>
-                      <span className="canvas-item-copy">
-                        <strong>{page.title}</strong>
-                        <small>Updated: {new Date(page.updated_at).toLocaleDateString()}</small>
-                      </span>
-                    </a>
-                  ))}
-                </div>
-              }
-            </>
-          )}
-
-          {/* SYLLABUS */}
-          {tab === "syllabus" && (
-            <>
-              <div style={{ marginBottom:14 }}><span className="cv-section-title">Syllabus</span></div>
-              {tabLoading ? <div className="cv-finder-empty">Loading…</div>
-                : !courseSyllabus?.body ? <div className="cv-finder-empty">No syllabus available.</div>
-                : <div className="canvas-syllabus-body" style={{ background:"var(--surface)", padding:"28px 32px", borderRadius:7, border:"1px solid var(--border)" }} dangerouslySetInnerHTML={{ __html:courseSyllabus.body }} />
-              }
-            </>
-          )}
-
-          {/* EXTERNAL TOOL FALLBACK */}
-          {!KNOWN_TABS.includes(tab) && (
-            <>
-              <div style={{ marginBottom:14 }}><span className="cv-section-title">{navigation.find(n=>n.id===tab)?.label||"External Tool"}</span></div>
-              <div className="cv-finder-empty" style={{ display:"flex", flexDirection:"column", gap:12, alignItems:"center" }}>
-                <span>This section is hosted on Canvas.</span>
-                <a href={navigation.find(n=>n.id===tab)?.html_url||`https://canvas.nus.edu.sg/courses/${selectedCourseId}/${tab}`}
-                   target="_blank" rel="noreferrer"
-                   style={{ display:"inline-flex", alignItems:"center", gap:5, color:"var(--accent)", fontSize:12, textDecoration:"none" }}>
-                  <ArrowUpRight size={13} /> Open in Canvas
-                </a>
+                    <span className={`cv-badge-status ${item.has_submitted ? "is-submitted" : ""}`}>
+                      {item.has_submitted ? "Submitted" : "Not submitted"}
+                    </span>
+                  </div>
+                ))}
               </div>
-            </>
-          )}
+            )}
+          </div>
+        )}
 
-        </section>
-      </div>
+        {/* 5. ANNOUNCEMENTS TAB */}
+        {tab === "announcements" && (
+          <div className="cv-announcements-view">
+            {filteredAnnouncements.length === 0 ? (
+              <div className="cv-empty-pane">No announcements.</div>
+            ) : (
+              <div className="cv-item-rows">
+                {filteredAnnouncements.map(item => (
+                  <div
+                    key={item.id}
+                    className="cv-announcement-row"
+                    onClick={() => setActiveItem({ ...item, itemType: "announcement" })}
+                  >
+                    <div className="cv-row-top">
+                      <span className="cv-pill-dot" style={{ backgroundColor: courseColors.get(item.course_code) }} />
+                      <strong className="cv-row-title">{item.title}</strong>
+                      <span className="cv-row-date">{relDate(item.posted_at)}</span>
+                    </div>
+                    <div className="cv-row-sub">{item.course_code} {item.author ? `· by ${item.author}` : ""}</div>
+                    <p className="cv-announcement-snippet">{stripHtml(item.body).slice(0, 160)}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* 6. GRADES TAB */}
+        {tab === "grades" && (
+          <div className="cv-grades-view">
+            {filteredGrades.length === 0 ? (
+              <div className="cv-empty-pane">No grade summaries currently available.</div>
+            ) : (
+              <div className="grade-course-grid">
+                {filteredGrades.map(course => (
+                  <article className="grade-course-card" key={course.course_id}>
+                    <header>
+                      <div>
+                        <small>{course.course_code}</small>
+                        <strong>{course.course_name}</strong>
+                      </div>
+                      <div className="grade-total">
+                        <strong>{course.current_score != null ? `${course.current_score}%` : "—"}</strong>
+                        <span>{course.current_grade || "No grade"}</span>
+                      </div>
+                    </header>
+                    <div className="grade-assignment-list">
+                      {course.assignments.filter(i => i.score != null || i.grade).slice(0, 12).map(i => (
+                        <div key={i.id}>
+                          <span>{i.title}</span>
+                          <strong>{i.grade ?? `${i.score}/${i.points_possible ?? "?"}`}</strong>
+                        </div>
+                      ))}
+                    </div>
+                  </article>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* 7. PAGES TAB */}
+        {tab === "pages" && selectedCourseId !== "all" && (
+          <div className="cv-pages-view">
+            {coursePages.length === 0 ? (
+              <div className="cv-empty-pane">No course pages found.</div>
+            ) : (
+              <div className="cv-item-rows">
+                {coursePages.map(page => (
+                  <a
+                    key={page.url}
+                    href={`https://canvas.nus.edu.sg/courses/${selectedCourseId}/pages/${page.url}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="cv-page-row"
+                  >
+                    <BookMarked size={14} style={{ color: "var(--text-muted)" }} />
+                    <span className="cv-row-title">{page.title}</span>
+                    <span className="cv-row-date">{page.updated_at ? relDate(page.updated_at) : ""}</span>
+                  </a>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* 8. SYLLABUS TAB */}
+        {tab === "syllabus" && selectedCourseId !== "all" && (
+          <div className="cv-syllabus-view">
+            {!courseSyllabus?.body ? (
+              <div className="cv-empty-pane">No syllabus content available.</div>
+            ) : (
+              <div
+                className="cv-syllabus-body"
+                dangerouslySetInnerHTML={{ __html: courseSyllabus.body }}
+              />
+            )}
+          </div>
+        )}
+      </main>
 
       <CanvasDrawer
         key={activeItem ? `${activeItem.itemType}-${activeItem.course_id}-${activeItem.id}` : "empty"}
-        item={activeItem} token={token} onClose={() => setActiveItem(null)}
+        item={activeItem}
+        token={token}
+        onClose={() => setActiveItem(null)}
       />
     </div>
   );
