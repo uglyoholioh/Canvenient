@@ -739,6 +739,36 @@ async def list_canvas_grades(
         return cached_data if cached_data is not None else []
 
 
+# Canvas paginates course files (max 100 per page); collect every page so
+# courses with more files than one page are not silently truncated.
+CANVAS_FILES_PAGE_SIZE = 100
+CANVAS_FILES_MAX_PAGES = 20
+
+
+async def fetch_all_course_files(
+    client: httpx.AsyncClient,
+    headers: dict[str, str],
+    course_id: int,
+    timeout: float,
+) -> list[dict[str, Any]]:
+    collected: list[dict[str, Any]] = []
+    for page in range(1, CANVAS_FILES_MAX_PAGES + 1):
+        response = await client.get(
+            f"https://canvas.nus.edu.sg/api/v1/courses/{course_id}/files"
+            f"?per_page={CANVAS_FILES_PAGE_SIZE}&sort=updated_at&order=desc&page={page}",
+            headers=headers,
+            timeout=timeout,
+        )
+        response.raise_for_status()
+        batch = response.json()
+        if not isinstance(batch, list):
+            break
+        collected.extend(batch)
+        if len(batch) < CANVAS_FILES_PAGE_SIZE:
+            break
+    return collected
+
+
 @router.get("/files", response_model=list[dict[str, Any]])
 async def list_canvas_files(
     course_id: int,
@@ -757,14 +787,7 @@ async def list_canvas_files(
     headers = {"Authorization": f"Bearer {token}"}
     async with httpx.AsyncClient() as client:
         try:
-            response = await client.get(
-                f"https://canvas.nus.edu.sg/api/v1/courses/{course_id}/files"
-                "?per_page=50&sort=updated_at&order=desc",
-                headers=headers,
-                timeout=5.0,
-            )
-            response.raise_for_status()
-            files = response.json()
+            files = await fetch_all_course_files(client, headers, course_id, timeout=5.0)
         except Exception:
             return cached_data if cached_data is not None else []
 
@@ -1093,14 +1116,7 @@ async def fetch_course_files_for_sync(
     course: dict[str, Any],
 ) -> tuple[dict[str, Any], list[dict[str, Any]]] | None:
     try:
-        response = await client.get(
-            f"https://canvas.nus.edu.sg/api/v1/courses/{course['id']}/files"
-            "?per_page=100&sort=updated_at&order=desc",
-            headers=headers,
-            timeout=10.0,
-        )
-        response.raise_for_status()
-        files = response.json()
+        files = await fetch_all_course_files(client, headers, course["id"], timeout=10.0)
     except Exception:
         return None
 

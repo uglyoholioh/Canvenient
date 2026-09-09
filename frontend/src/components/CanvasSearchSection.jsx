@@ -114,8 +114,9 @@ export default function CanvasSearchSection({
 
       const filename = (file.display_name || file.filename || "").toLowerCase();
       const courseCode = (file.courseCode || "").toLowerCase();
+      const courseName = (file.courseName || "").toLowerCase();
       const folderName = (file.folder_name || "").toLowerCase();
-      const searchableText = `${courseCode} ${filename} ${folderName}`;
+      const searchableText = `${courseCode} ${courseName} ${filename} ${folderName}`;
 
       let score = 0;
       let matchedTokens = 0;
@@ -146,9 +147,9 @@ export default function CanvasSearchSection({
       }
     }
 
-    scored.sort((a, b) => b.score - a.score || new Date(b.file.updated_at || 0) - new Date(a.file.updated_at || 0));
-    return scored.slice(0, 15).map(s => s.file);
-  }, [query, allIndexedFiles, selectedCourseId, displayedCourses, activeType]);
+      scored.sort((a, b) => b.score - a.score || new Date(b.file.updated_at || 0) - new Date(a.file.updated_at || 0));
+      return scored.slice(0, 60).map(s => s.file);
+    }, [query, allIndexedFiles, selectedCourseId, displayedCourses, activeType]);
 
   const quickPills = useMemo(() => {
     if (selectedCourseId === "all") {
@@ -268,12 +269,17 @@ export default function CanvasSearchSection({
                           {name}
                         </div>
                         <div className="cv-search-result-meta">
-                          <span
-                            className="cv-search-module-tag"
-                            style={{ "--module-color": file.courseColor }}
-                          >
-                            {file.courseCode}
-                          </span>
+                          {file.courseCode && (
+                            <span
+                              className="cv-search-module-tag"
+                              style={{ "--module-color": file.courseColor }}
+                            >
+                              {file.courseCode}
+                            </span>
+                          )}
+                          {!file.courseCode && file.courseName && (
+                            <span className="cv-search-module-tag">{file.courseName}</span>
+                          )}
                           <span>{formatSize(file.size)}</span>
                           {file.updated_at && <span>{relDate(file.updated_at)}</span>}
                         </div>

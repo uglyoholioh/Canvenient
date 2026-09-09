@@ -91,4 +91,24 @@ describe("FileBrowser PDF preview", () => {
     await waitFor(() => expect(screen.getByTestId("pdf-viewer-stub")).toBeInTheDocument());
     expect(fetchCanvasFileContent).not.toHaveBeenCalled();
   });
+
+  it("matches files by their folder name, not only the filename", async () => {
+    getCanvasFolders.mockResolvedValue([
+      { id: 5, name: "Lectures", full_name: "Lectures", parent_folder_id: null, files_count: 1, folders_count: 0 },
+    ]);
+    render(
+      <FileBrowser
+        token="token"
+        courseId={1}
+        allFiles={[{ ...pdfFile, id: 9, display_name: "data.csv", filename: "data.csv", folder_id: 5 }]}
+      />
+    );
+    // Wait for the folder tree to load first.
+    await waitFor(() => expect(document.querySelector(".cv-ftree-label")).not.toBeNull());
+
+    const input = screen.getByPlaceholderText(/Search in|Search all files/i);
+    fireEvent.change(input, { target: { value: "lectures" } });
+
+    expect(await screen.findByText("data.csv")).toBeInTheDocument();
+  });
 });

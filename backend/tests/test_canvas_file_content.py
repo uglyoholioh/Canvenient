@@ -210,3 +210,36 @@ async def test_files_listing_includes_content_type(client: AsyncClient, auth):
     assert resp.status_code == 200
     files = resp.json()
     assert files and files[0]["content_type"] == "application/pdf"
+
+
+def canvas_file(index: int) -> dict:
+    return {
+        "id": index,
+        "display_name": f"file {index}.pdf",
+        "filename": f"file_{index}.pdf",
+        "url": CANVAS_DOWNLOAD_URL,
+        "size": 1024,
+        "updated_at": "2026-09-01T10:00:00Z",
+        "folder_id": 77,
+        "content-type": "application/pdf",
+    }
+
+
+async def test_files_listing_follows_canvas_pagination(client: AsyncClient, auth):
+    token, _, _ = auth
+    headers = auth_headers(token)
+    await save_canvas_token(client, headers)
+
+    def handler(url, kwargs):
+        # Canvas pages of 100: a full first page plus a short second page.
+        if "page=2" in url:
+            return make_response(200, url, json=[canvas_file(101), canvas_file(102)])
+        return make_response(200, url, json=[canvas_file(i) for i in range(1, 101)])
+
+    with patch_canvas_client(handler):
+        resp = await client.get("/canvas/files", params={"course_id": 321}, headers=headers)
+
+    assert resp.status_code == 200
+    files = resp.json()
+    assert len(files) == 102
+    assert {f["id"] for f in files[-2:]} == {101, 102}

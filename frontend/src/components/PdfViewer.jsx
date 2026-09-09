@@ -25,6 +25,10 @@ function loadPdfjs() {
   return pdfjsPromise;
 }
 
+// WASM image decoders (JPEG2000/JBIG2) and the standard font set are copied
+// into public/pdfjs/ by vite.config.js; pdf.js appends fixed filenames here.
+const PDFJS_ASSET_BASE = `${import.meta.env.BASE_URL || "/"}pdfjs/`;
+
 const ZOOM_STEPS = [0.5, 0.65, 0.8, 1, 1.25, 1.5, 2, 2.5, 3];
 const MIN_SCALE = 0.35;
 const MAX_SCALE = 4;
@@ -109,9 +113,14 @@ export default function PdfViewer({ token, fileId, name = "", externalUrl = "" }
         if (cancelled) return;
         const data = await blobToArrayBuffer(blob);
         if (cancelled) return;
-        const doc = await lib.getDocument({ data: new Uint8Array(data) }).promise;
+        const loadingTask = lib.getDocument({
+          data: new Uint8Array(data),
+          wasmUrl: `${PDFJS_ASSET_BASE}wasm/`,
+          standardFontDataUrl: `${PDFJS_ASSET_BASE}standard_fonts/`,
+        });
+        const doc = await loadingTask.promise;
         if (cancelled) {
-          doc.destroy();
+          loadingTask.destroy?.();
           return;
         }
         docRef.current = doc;
@@ -125,10 +134,10 @@ export default function PdfViewer({ token, fileId, name = "", externalUrl = "" }
         }
         for (let n = dims.length; n < total; n += 1) dims.push(dims[dims.length - 1]);
         if (cancelled) {
-          doc.destroy();
+          loadingTask.destroy?.();
           return;
         }
-        docController.signal.addEventListener("abort", () => doc.destroy());
+        docController.signal.addEventListener("abort", () => loadingTask.destroy?.());
         setNumPages(total);
         setBaseDims(dims);
         setStatus("ready");

@@ -239,13 +239,33 @@ export function FileBrowser({ token, courseId, allFiles }) {
     return crumbs;
   }, [rawFolders, selectedFolderId]);
 
+  // Folder id → "ancestor names" so files are findable by the folder they
+  // live in, not just by their own filename.
+  const folderPaths = useMemo(() => {
+    const byId = new Map((rawFolders || []).map((f) => [f.id, f]));
+    const paths = new Map();
+    const pathFor = (folder) => {
+      if (paths.has(folder.id)) return paths.get(folder.id);
+      const parent = folder.parent_folder_id ? byId.get(folder.parent_folder_id) : null;
+      const path = parent ? `${pathFor(parent)} ${folder.name || ""}` : (folder.name || "");
+      paths.set(folder.id, path);
+      return path;
+    };
+    (rawFolders || []).forEach((f) => pathFor(f));
+    return paths;
+  }, [rawFolders]);
+
   // Filtered & sorted files
   const displayedFiles = useMemo(() => {
     let list = (allFiles || []).filter(f => selectedFolderId === null || f.folder_id === selectedFolderId);
     if (search.trim()) {
       const q = search.toLowerCase();
       // Search across ALL files if user entered a query!
-      list = (allFiles || []).filter(f => (f.display_name || f.filename || "").toLowerCase().includes(q));
+      list = (allFiles || []).filter(f => {
+        if ((f.display_name || f.filename || "").toLowerCase().includes(q)) return true;
+        const folderPath = folderPaths.get(f.folder_id);
+        return Boolean(folderPath && folderPath.toLowerCase().includes(q));
+      });
     }
     if (typeFilter !== "all") {
       list = list.filter(f => getFileType(f.display_name || f.filename || "") === typeFilter);
@@ -255,7 +275,7 @@ export function FileBrowser({ token, courseId, allFiles }) {
       if (sort === "size") return (b.size || 0) - (a.size || 0);
       return (a.display_name || a.filename || "").localeCompare(b.display_name || b.filename || "");
     });
-  }, [allFiles, selectedFolderId, search, typeFilter, sort]);
+  }, [allFiles, selectedFolderId, search, typeFilter, sort, folderPaths]);
 
   // Render tree node
   const renderFolderNode = (node, depth = 0) => {

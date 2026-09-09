@@ -23,6 +23,7 @@ class ErrorBoundary extends React.Component {
           <h1>App Crashed!</h1>
           <pre>{this.state.error?.toString()}</pre>
           <pre>{this.state.info?.componentStack}</pre>
+          <button type="button" onClick={() => window.location.reload()}>Reload Canvenient</button>
         </div>
       );
     }
@@ -30,11 +31,14 @@ class ErrorBoundary extends React.Component {
   }
 }
 
+// A background error (e.g. a PDF decoder failing) must never replace the
+// whole workspace; log it and surface a dismissible toast instead.
 window.addEventListener('error', e => {
-  const root = document.getElementById('root');
-  if (root) {
-    root.innerHTML = `<div style="padding: 40px; background: red; color: white;"><h1>Global Error!</h1><pre>${e.error?.stack || e.message}</pre></div>`;
-  }
+  console.error('Unhandled error:', e.error || e.message);
+});
+
+window.addEventListener('unhandledrejection', e => {
+  console.error('Unhandled rejection:', e.reason);
 });
 
 createRoot(document.getElementById('root')).render(
