@@ -8,6 +8,7 @@ from models.study_session import (
     StudySessionOut,
     StudySummary,
 )
+from sql_dialect import is_sqlite, today_expr, week_start_expr
 
 
 router = APIRouter(prefix="/study-sessions", tags=["study sessions"])
@@ -106,7 +107,7 @@ async def complete_study_session(
         query="""
             UPDATE study_sessions SET status = 'completed',
                 actual_seconds = :actual_seconds, pause_count = :pause_count,
-                ended_at = NOW()
+                ended_at = CURRENT_TIMESTAMP
             WHERE id = :session_id AND user_id = :user_id
         """,
         values={
@@ -126,7 +127,7 @@ async def cancel_study_session(session_id: int, current_user: CurrentUser):
         raise HTTPException(status_code=409, detail="Only an active session can be cancelled.")
     await db.execute(
         query="""
-            UPDATE study_sessions SET status = 'cancelled', ended_at = NOW()
+            UPDATE study_sessions SET status = 'cancelled', ended_at = CURRENT_TIMESTAMP
             WHERE id = :session_id AND user_id = :user_id
         """,
         values={"session_id": session_id, "user_id": current_user.id},
@@ -136,22 +137,29 @@ async def cancel_study_session(session_id: int, current_user: CurrentUser):
 
 @router.get("/summary", response_model=StudySummary)
 async def get_study_summary(current_user: CurrentUser):
+    week_start = week_start_expr()
+    average_expr = (
+        "CAST(COALESCE(AVG(actual_seconds), 0) AS INTEGER)"
+        if is_sqlite()
+        else "COALESCE(AVG(actual_seconds)::INTEGER, 0)"
+    )
     totals = await db.fetch_one(
-        query="""
+        query=f"""
             SELECT
               COALESCE(SUM(actual_seconds) FILTER (WHERE ended_at >= CURRENT_DATE), 0) AS today_seconds,
-              COALESCE(SUM(actual_seconds) FILTER (WHERE ended_at >= date_trunc('week', NOW())), 0) AS week_seconds,
+              COALESCE(SUM(actual_seconds) FILTER (WHERE ended_at >= {week_start}), 0) AS week_seconds,
               COUNT(*) AS completed_sessions,
-              COALESCE(AVG(actual_seconds)::INTEGER, 0) AS average_seconds
+              {average_expr} AS average_seconds
             FROM study_sessions
             WHERE user_id = :user_id AND status = 'completed'
         """,
         values={"user_id": current_user.id},
     )
+    module_total_expr = "CAST(SUM(s.actual_seconds) AS INTEGER)" if is_sqlite() else "SUM(s.actual_seconds)::INTEGER"
     modules = await db.fetch_all(
-        query="""
+        query=f"""
             SELECT COALESCE(m.module_code, 'Unassigned') AS module_code,
-                   SUM(s.actual_seconds)::INTEGER AS total_seconds
+                   {module_total_expr} AS total_seconds
             FROM study_sessions s
             LEFT JOIN academic_modules m ON m.id = s.module_id
             WHERE s.user_id = :user_id AND s.status = 'completed'
@@ -160,9 +168,10 @@ async def get_study_summary(current_user: CurrentUser):
         """,
         values={"user_id": current_user.id},
     )
+    study_day_expr = "date(ended_at)" if is_sqlite() else "ended_at::date"
     days = await db.fetch_all(
-        query="""
-            SELECT DISTINCT ended_at::date AS study_day
+        query=f"""
+            SELECT DISTINCT {study_day_expr} AS study_day
             FROM study_sessions
             WHERE user_id = :user_id AND status = 'completed'
             ORDER BY study_day DESC
@@ -172,11 +181,16 @@ async def get_study_summary(current_user: CurrentUser):
     streak = 0
     if days:
         from datetime import date, timedelta
+
+        def as_date(value):
+            return date.fromisoformat(value) if isinstance(value, str) else value
+
         expected = date.today()
-        if days[0]["study_day"] == expected - timedelta(days=1):
+        first_day = days[0]["study_day"]
+        if first_day is not None and as_date(first_day) == expected - timedelta(days=1):
             expected -= timedelta(days=1)
         for row in days:
-            if row["study_day"] != expected:
+            if row["study_day"] is None or as_date(row["study_day"]) != expected:
                 break
             streak += 1
             expected -= timedelta(days=1)
@@ -187,12 +201,20 @@ async def get_study_summary(current_user: CurrentUser):
 
 @router.get("/leaderboard", response_model=list[LeaderboardEntry])
 async def get_leaderboard(current_user: CurrentUser, period: str = "week"):
-    cutoff = "CURRENT_DATE" if period == "day" else "date_trunc('week', NOW())"
+    sqlite = is_sqlite()
+    cutoff = today_expr() if period == "day" else week_start_expr()
+    name_expr = (
+        "CASE WHEN instr(u.email, '@') > 1 THEN substr(u.email, 1, instr(u.email, '@') - 1) ELSE u.email END"
+        if sqlite
+        else "split_part(u.email, '@', 1)"
+    )
+    total_expr = "CAST(SUM(s.actual_seconds) AS INTEGER)" if sqlite else "SUM(s.actual_seconds)::INTEGER"
+    completed_expr = "CAST(COUNT(*) AS INTEGER)" if sqlite else "COUNT(*)::INTEGER"
     rows = await db.fetch_all(
         query=f"""
-            SELECT s.user_id, COALESCE(NULLIF(us.name, ''), split_part(u.email, '@', 1)) AS name,
-                   SUM(s.actual_seconds)::INTEGER AS total_seconds,
-                   COUNT(*)::INTEGER AS completed_sessions
+            SELECT s.user_id, COALESCE(NULLIF(us.name, ''), {name_expr}) AS name,
+                   {total_expr} AS total_seconds,
+                   {completed_expr} AS completed_sessions
             FROM study_sessions s
             JOIN users u ON u.id = s.user_id
             LEFT JOIN user_settings us ON us.user_id = s.user_id

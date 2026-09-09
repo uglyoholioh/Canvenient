@@ -1357,7 +1357,7 @@ async def sync_canvas_files(current_user: CurrentUser):
         await db.execute(
             query="""
                 INSERT INTO canvas_sync_state (user_id, files_synced_at)
-                VALUES (:user_id, NOW())
+                VALUES (:user_id, CURRENT_TIMESTAMP)
                 ON CONFLICT (user_id)
                 DO UPDATE SET files_synced_at = EXCLUDED.files_synced_at
             """,

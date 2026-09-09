@@ -4,6 +4,7 @@ import os
 import httpx
 
 from database import db
+from sql_dialect import now_plus_expr, today_expr, today_plus_expr
 from telegram_formatting import HELP_TEXT, format_items
 
 
@@ -39,9 +40,9 @@ async def send_message(chat_id: int, text: str, retries: int = 3) -> None:
 async def _tasks(user_id: int, interval: str | None = None) -> list:
     condition = ""
     if interval == "today":
-        condition = "AND COALESCE(due_at_override, source_due_at) < CURRENT_DATE + INTERVAL '1 day'"
+        condition = f"AND COALESCE(due_at_override, source_due_at) < {today_plus_expr('1 day')}"
     elif interval == "week":
-        condition = "AND COALESCE(due_at_override, source_due_at) < NOW() + INTERVAL '7 days'"
+        condition = f"AND COALESCE(due_at_override, source_due_at) < {now_plus_expr('7 days')}"
     return await db.fetch_all(
         query=f"""
             SELECT id, title, COALESCE(due_at_override, source_due_at) AS due_at
@@ -54,7 +55,7 @@ async def _tasks(user_id: int, interval: str | None = None) -> list:
 
 
 async def _events(user_id: int, interval: str) -> list:
-    end = "CURRENT_DATE + INTERVAL '1 day'" if interval == "today" else "NOW() + INTERVAL '7 days'"
+    end = today_plus_expr("1 day") if interval == "today" else now_plus_expr("7 days")
     return await db.fetch_all(
         query=f"""
             SELECT DISTINCT e.id, e.title, e.start_at
@@ -63,7 +64,7 @@ async def _events(user_id: int, interval: str) -> list:
             LEFT JOIN groups g ON g.c_id = e.c_id
             LEFT JOIN g_members cm ON cm.g_id = g.id
             WHERE (e.user_id = :user_id OR gm.user_id = :user_id OR cm.user_id = :user_id)
-              AND e.start_at >= CURRENT_DATE AND e.start_at < {end}
+              AND e.start_at >= {today_expr()} AND e.start_at < {end}
             ORDER BY e.start_at ASC LIMIT 10
         """,
         values={"user_id": user_id},
@@ -92,7 +93,7 @@ async def handle_command(user_id: int, text: str) -> str:
         task_id = int(parts[1].lstrip("#"))
         row = await db.fetch_one(
             query="""
-                UPDATE tasks SET status = 'done', completed_at = NOW(), updated_at = NOW()
+                UPDATE tasks SET status = 'done', completed_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
                 WHERE id = :task_id AND user_id = :user_id AND status <> 'done'
                 RETURNING title
             """,

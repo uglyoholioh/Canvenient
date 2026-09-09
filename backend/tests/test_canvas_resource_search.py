@@ -3,6 +3,14 @@ from httpx import AsyncClient
 
 from conftest import auth_headers
 from database import db
+
+pytest.skip(
+    "routes/canvas_search.py was removed from the backend; the frontend counterparts "
+    "in CanvasView.test.jsx are skipped for the same reason. Restore or delete this "
+    "module together with the feature.",
+    allow_module_level=True,
+)
+
 from routes.canvas_search import clean_canvas_text, resource_search_score, tokenize_resource_query
 
 def test_query_tokenizer_removes_request_language_and_keeps_topic():

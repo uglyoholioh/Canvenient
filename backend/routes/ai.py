@@ -7,6 +7,7 @@ from datetime import date, datetime, timedelta, timezone
 from database import db
 from dependencies import CurrentUser
 from routes.canvas import list_canvas_announcements, list_canvas_assignments
+from sql_dialect import now_expr, now_plus_expr, today_expr, today_plus_expr
 import json
 import traceback
 from pydantic import BaseModel
@@ -136,16 +137,17 @@ async def generate_brief(current_user: CurrentUser, force_refresh: bool = Query(
 
     try:
         interval = "1 day" if timeframe == "today" else "7 days"
-        
+        now_plus = now_plus_expr(interval)
+
         #fetching uncompleted tasks
         tasks_query = f"""
-            SELECT title, description, status, priority_manual, 
+            SELECT title, description, status, priority_manual,
                    COALESCE(due_at_override, source_due_at) AS due_date,
                    source_type
             FROM tasks
             WHERE user_id = :user_id AND status != 'done'
-              AND (COALESCE(due_at_override, source_due_at) IS NULL 
-                   OR COALESCE(due_at_override, source_due_at) <= NOW() + INTERVAL '{interval}')
+              AND (COALESCE(due_at_override, source_due_at) IS NULL
+                   OR COALESCE(due_at_override, source_due_at) <= {now_plus})
             ORDER BY due_date ASC NULLS LAST
         """
 
@@ -153,9 +155,9 @@ async def generate_brief(current_user: CurrentUser, force_refresh: bool = Query(
         classes_query = f"""
             SELECT module_code, module_name, lesson_type, start_time, end_time, venue, class_date
             FROM classes
-            WHERE user_id = :user_id 
-              AND class_date >= CURRENT_DATE 
-              AND class_date <= CURRENT_DATE + INTERVAL '{interval}'
+            WHERE user_id = :user_id
+              AND class_date >= {today_expr()}
+              AND class_date <= {today_plus_expr(interval)}
             ORDER BY class_date ASC, start_time ASC
         """
 
@@ -164,8 +166,8 @@ async def generate_brief(current_user: CurrentUser, force_refresh: bool = Query(
             SELECT module_code, module_name, start_at, end_at
             FROM exams
             WHERE user_id = :user_id
-              AND start_at >= NOW()
-              AND start_at <= NOW() + INTERVAL '{interval}'
+              AND start_at >= {now_expr()}
+              AND start_at <= {now_plus}
             ORDER BY start_at ASC
         """
 
@@ -174,8 +176,8 @@ async def generate_brief(current_user: CurrentUser, force_refresh: bool = Query(
             SELECT title, start_at, end_at, venue
             FROM events
             WHERE user_id = :user_id
-              AND start_at >= NOW()
-              AND start_at <= NOW() + INTERVAL '{interval}'
+              AND start_at >= {now_expr()}
+              AND start_at <= {now_plus}
             ORDER BY start_at ASC
         """
 

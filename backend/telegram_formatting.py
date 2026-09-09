@@ -17,6 +17,9 @@ def generate_connection_code() -> str:
 
 
 def _as_utc(value: datetime) -> datetime:
+    if isinstance(value, str):
+        # SQLite returns timestamps as strings
+        value = datetime.fromisoformat(value)
     return value.replace(tzinfo=timezone.utc) if value.tzinfo is None else value
 
 

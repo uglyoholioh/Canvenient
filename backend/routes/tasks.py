@@ -362,7 +362,7 @@ async def sync_canvas_tasks(current_user: CurrentUser):
             DELETE FROM tasks
             WHERE user_id = :user_id
                 AND source_type = 'canvas'
-                AND COALESCE(due_at_override, source_due_at) <= NOW()
+                AND COALESCE(due_at_override, source_due_at) <= CURRENT_TIMESTAMP
         """,
         values={"user_id": current_user.id},
     )
@@ -494,7 +494,7 @@ async def sync_canvas_tasks(current_user: CurrentUser):
                             description = :description,
                             source_due_at = :source_due_at,
                             external_url = :external_url,
-                            updated_at = NOW()
+                            updated_at = CURRENT_TIMESTAMP
                         WHERE id = :task_id AND user_id = :user_id
                     """,
                     values={
