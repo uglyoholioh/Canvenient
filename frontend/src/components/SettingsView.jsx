@@ -19,7 +19,9 @@ import {
   EyeOff,
   ExternalLink,
   Send,
+  Bell,
 } from "lucide-react";
+import { remindersEnabled, setRemindersEnabled } from "../dueReminders";
 import DashboardCustomizer from "./dashboard/DashboardCustomizer";
 import { readDashboardConfig, readDashboardLayout, saveDashboardConfig, saveDashboardLayout } from "./dashboard/dashboardConfig";
 import {
@@ -117,6 +119,7 @@ export default function SettingsView({ token, user, onUpdateUser, onReplayOnboar
   const [canvasToken, setCanvasToken] = useState("");
   const [canvasTokenDirty, setCanvasTokenDirty] = useState(false);
   const [showCanvasToken, setShowCanvasToken] = useState(false);
+  const [dueRemindersOn, setDueRemindersOn] = useState(remindersEnabled);
   const [canvasTokenTesting, setCanvasTokenTesting] = useState(false);
   const [canvasTestResult, setCanvasTestResult] = useState(null);
   const [canvasTokenSaving, setCanvasTokenSaving] = useState(false);
@@ -611,6 +614,30 @@ export default function SettingsView({ token, user, onUpdateUser, onReplayOnboar
               <input type="range" min="190" max="420" step="10" value={sidebarWidth} onChange={handleSidebarWidthChange} aria-label="Expanded sidebar width" />
               <span style={{ width: '48px', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', fontSize: '11px', textAlign: 'right' }}>{sidebarWidth}px</span>
             </div>
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px', backgroundColor: 'var(--surface)', borderTop: '1px solid var(--border)' }}>
+            <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+              <div style={{ padding: '8px', backgroundColor: 'var(--surface-muted)', borderRadius: '4px', color: 'var(--text-muted)' }}><Bell size={20} /></div>
+              <div>
+                <div style={{ color: 'var(--text-h)', fontWeight: '500' }}>Due date reminders</div>
+                <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Get a system notification when a task is due within 24 hours</div>
+              </div>
+            </div>
+            <select
+              value={dueRemindersOn ? 'on' : 'off'}
+              onChange={(e) => {
+                const enabled = e.target.value === 'on';
+                setRemindersEnabled(enabled);
+                setDueRemindersOn(enabled);
+              }}
+              className="form-input"
+              aria-label="Due date reminders"
+              tabIndex={0}
+            >
+              <option value="on">On</option>
+              <option value="off">Off</option>
+            </select>
           </div>
 
         </div>

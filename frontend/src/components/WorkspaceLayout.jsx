@@ -16,6 +16,7 @@ import VenueFinder from "./VenueFinder";
 import CanvasDrawer from "./drawers/CanvasDrawer";
 import StudyTimerModule from "./dashboard/StudyTimerModule";
 import GroupsView from "./GroupsView";
+import { runDueReminderCycle } from "../dueReminders";
 import SpinWheelView from "./wheel/SpinWheelView";
 import { WorkspaceToolbarContext } from "./WorkspaceToolbarContext";
 import { QuickCaptureContext } from "./QuickCaptureContext";
@@ -108,6 +109,18 @@ export default function WorkspaceLayout({ token, user, onLogout, onUpdateUser })
       setIsOnboardingOpen(true);
     }
   }, [user?.id, user?.name]);
+
+  // Due-date reminders: check shortly after launch and every 15 minutes.
+  useEffect(() => {
+    if (!token) return undefined;
+    const cycle = () => { runDueReminderCycle(token).catch(() => {}); };
+    const initialTimer = window.setTimeout(cycle, 4000);
+    const interval = window.setInterval(cycle, 15 * 60 * 1000);
+    return () => {
+      window.clearTimeout(initialTimer);
+      window.clearInterval(interval);
+    };
+  }, [token]);
 
   const [sidebarWidth, setSidebarWidth] = useState(() => parseInt(localStorage.getItem('canvenient-sidebar-width') || '250', 10));
   const [isDragging, setIsDragging] = useState(false);

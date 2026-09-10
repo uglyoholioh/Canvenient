@@ -15,6 +15,7 @@
       "all": false,
       "window": { "all": true, "startDragging": true },
       "dialog": { "all": true },
+      "notification": { "all": true },
       "shell": {
         "all": false,
         "execute": true,
