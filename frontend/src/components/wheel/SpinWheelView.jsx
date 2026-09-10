@@ -78,15 +78,36 @@ export default function SpinWheelView({ token, onNavigate }) {
     });
   };
 
+  // Every wheel mutation funnels through here so persistence is never missed.
+  const commitWheelData = (updater) => {
+    setWheelData((prev) => {
+      const next = updater(prev);
+      saveWheelData(next);
+      return next;
+    });
+  };
+
+  // Apply a transform to one wheel by id.
+  const updateWheel = (wheelId, mutator) => {
+    commitWheelData((prev) => ({
+      ...prev,
+      wheels: prev.wheels.map((wheel) => (wheel.id === wheelId ? mutator(wheel) : wheel)),
+    }));
+  };
+
+  // Apply a transform to whichever wheel is currently active.
+  const updateActiveWheel = (mutator) => {
+    commitWheelData((prev) => ({
+      ...prev,
+      wheels: prev.wheels.map((wheel) => (wheel.id === prev.activeWheelId ? mutator(wheel) : wheel)),
+    }));
+  };
+
   // Switch active wheel
   const handleSelectWheel = (wheelId) => {
     if (isSpinning) return;
     setWinner(null);
-    setWheelData((prev) => {
-      const next = { ...prev, activeWheelId: wheelId };
-      saveWheelData(next);
-      return next;
-    });
+    commitWheelData((prev) => ({ ...prev, activeWheelId: wheelId }));
   };
 
   // Switch animation style
@@ -126,37 +147,21 @@ export default function SpinWheelView({ token, onNavigate }) {
   // Toggle item enabled/disabled
   const handleToggleItem = (itemId) => {
     if (isSpinning) return;
-    setWheelData((prev) => {
-      const nextWheels = prev.wheels.map((wheel) => {
-        if (wheel.id !== prev.activeWheelId) return wheel;
-        return {
-          ...wheel,
-          items: wheel.items.map((item) =>
-            item.id === itemId ? { ...item, enabled: item.enabled === false ? true : false } : item
-          ),
-        };
-      });
-      const next = { ...prev, wheels: nextWheels };
-      saveWheelData(next);
-      return next;
-    });
+    updateActiveWheel((wheel) => ({
+      ...wheel,
+      items: wheel.items.map((item) =>
+        item.id === itemId ? { ...item, enabled: item.enabled === false ? true : false } : item
+      ),
+    }));
   };
 
   // Select all or deselect all
   const handleSetAll = (enableAll) => {
     if (isSpinning) return;
-    setWheelData((prev) => {
-      const nextWheels = prev.wheels.map((wheel) => {
-        if (wheel.id !== prev.activeWheelId) return wheel;
-        return {
-          ...wheel,
-          items: wheel.items.map((item) => ({ ...item, enabled: enableAll })),
-        };
-      });
-      const next = { ...prev, wheels: nextWheels };
-      saveWheelData(next);
-      return next;
-    });
+    updateActiveWheel((wheel) => ({
+      ...wheel,
+      items: wheel.items.map((item) => ({ ...item, enabled: enableAll })),
+    }));
   };
 
   // Add new option
@@ -173,18 +178,10 @@ export default function SpinWheelView({ token, onNavigate }) {
       color: WHEEL_PALETTE[items.length % WHEEL_PALETTE.length],
     };
 
-    setWheelData((prev) => {
-      const nextWheels = prev.wheels.map((wheel) => {
-        if (wheel.id !== prev.activeWheelId) return wheel;
-        return {
-          ...wheel,
-          items: [newItem, ...wheel.items],
-        };
-      });
-      const next = { ...prev, wheels: nextWheels };
-      saveWheelData(next);
-      return next;
-    });
+    updateActiveWheel((wheel) => ({
+      ...wheel,
+      items: [newItem, ...wheel.items],
+    }));
 
     setNewOptionText("");
     setNewOptionTag("");
@@ -194,18 +191,10 @@ export default function SpinWheelView({ token, onNavigate }) {
   // Delete option
   const handleDeleteOption = (itemId) => {
     if (isSpinning) return;
-    setWheelData((prev) => {
-      const nextWheels = prev.wheels.map((wheel) => {
-        if (wheel.id !== prev.activeWheelId) return wheel;
-        return {
-          ...wheel,
-          items: wheel.items.filter((item) => item.id !== itemId),
-        };
-      });
-      const next = { ...prev, wheels: nextWheels };
-      saveWheelData(next);
-      return next;
-    });
+    updateActiveWheel((wheel) => ({
+      ...wheel,
+      items: wheel.items.filter((item) => item.id !== itemId),
+    }));
     if (winner?.id === itemId) {
       setWinner(null);
     }
@@ -227,18 +216,10 @@ export default function SpinWheelView({ token, onNavigate }) {
       return;
     }
 
-    setWheelData((prev) => {
-      const nextWheels = prev.wheels.map((wheel) => {
-        if (wheel.id !== prev.activeWheelId) return wheel;
-        return {
-          ...wheel,
-          items: wheel.items.map((item) => (item.id === editingItemId ? { ...item, label: trimmed } : item)),
-        };
-      });
-      const next = { ...prev, wheels: nextWheels };
-      saveWheelData(next);
-      return next;
-    });
+    updateActiveWheel((wheel) => ({
+      ...wheel,
+      items: wheel.items.map((item) => (item.id === editingItemId ? { ...item, label: trimmed } : item)),
+    }));
 
     setEditingItemId(null);
     setEditingItemText("");
@@ -248,15 +229,7 @@ export default function SpinWheelView({ token, onNavigate }) {
   const handleShuffle = () => {
     if (isSpinning || items.length <= 1) return;
     const shuffled = [...items].sort(() => Math.random() - 0.5);
-    setWheelData((prev) => {
-      const nextWheels = prev.wheels.map((wheel) => {
-        if (wheel.id !== prev.activeWheelId) return wheel;
-        return { ...wheel, items: shuffled };
-      });
-      const next = { ...prev, wheels: nextWheels };
-      saveWheelData(next);
-      return next;
-    });
+    updateActiveWheel((wheel) => ({ ...wheel, items: shuffled }));
   };
 
   // Reset preset to default
@@ -265,12 +238,7 @@ export default function SpinWheelView({ token, onNavigate }) {
     const defaultWheel = resetWheelPreset(activeWheel.id);
     if (!defaultWheel) return;
 
-    setWheelData((prev) => {
-      const nextWheels = prev.wheels.map((w) => (w.id === activeWheel.id ? defaultWheel : w));
-      const next = { ...prev, wheels: nextWheels };
-      saveWheelData(next);
-      return next;
-    });
+    updateWheel(activeWheel.id, () => defaultWheel);
     setWinner(null);
   };
 
@@ -293,14 +261,10 @@ export default function SpinWheelView({ token, onNavigate }) {
       ],
     };
 
-    setWheelData((prev) => {
-      const next = {
-        activeWheelId: newId,
-        wheels: [...prev.wheels, newWheel],
-      };
-      saveWheelData(next);
-      return next;
-    });
+    commitWheelData((prev) => ({
+      activeWheelId: newId,
+      wheels: [...prev.wheels, newWheel],
+    }));
 
     setNewWheelName("");
     setIsCreatingWheel(false);
@@ -310,15 +274,9 @@ export default function SpinWheelView({ token, onNavigate }) {
   // Delete custom wheel
   const handleDeleteWheel = (wheelId) => {
     if (isSpinning || wheelData.wheels.length <= 1) return;
-    setWheelData((prev) => {
+    commitWheelData((prev) => {
       const nextWheels = prev.wheels.filter((w) => w.id !== wheelId);
-      const nextActive = nextWheels[0]?.id || "eat_nus";
-      const next = {
-        activeWheelId: nextActive,
-        wheels: nextWheels,
-      };
-      saveWheelData(next);
-      return next;
+      return { activeWheelId: nextWheels[0]?.id || "eat_nus", wheels: nextWheels };
     });
     setWinner(null);
   };
@@ -370,18 +328,7 @@ export default function SpinWheelView({ token, onNavigate }) {
       }
 
       if (syncedItems.length > 0) {
-        setWheelData((prev) => {
-          const nextWheels = prev.wheels.map((wheel) => {
-            if (wheel.id !== "study_modules") return wheel;
-            return {
-              ...wheel,
-              items: syncedItems,
-            };
-          });
-          const next = { ...prev, wheels: nextWheels };
-          saveWheelData(next);
-          return next;
-        });
+        updateWheel("study_modules", (wheel) => ({ ...wheel, items: syncedItems }));
         setSyncFeedback(`Synced ${syncedItems.length} enrolled modules!`);
       } else {
         setSyncFeedback("No enrolled modules detected. Default modules retained.");
@@ -401,18 +348,10 @@ export default function SpinWheelView({ token, onNavigate }) {
     if (!winner || isSpinning) return;
     const winnerId = winner.id;
 
-    setWheelData((prev) => {
-      const nextWheels = prev.wheels.map((wheel) => {
-        if (wheel.id !== prev.activeWheelId) return wheel;
-        return {
-          ...wheel,
-          items: wheel.items.map((item) => (item.id === winnerId ? { ...item, enabled: false } : item)),
-        };
-      });
-      const next = { ...prev, wheels: nextWheels };
-      saveWheelData(next);
-      return next;
-    });
+    updateActiveWheel((wheel) => ({
+      ...wheel,
+      items: wheel.items.map((item) => (item.id === winnerId ? { ...item, enabled: false } : item)),
+    }));
 
     setWinner(null);
     clearTimeout(respinTimerRef.current);
