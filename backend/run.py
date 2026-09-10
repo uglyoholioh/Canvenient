@@ -17,6 +17,7 @@ if __name__ == "__main__":
     os.environ["DATABASE_URL"] = f"sqlite:///{database_path}"
 
     import uvicorn
+
     from main import app
 
     uvicorn.run(app, host="127.0.0.1", port=args.port, reload=False)

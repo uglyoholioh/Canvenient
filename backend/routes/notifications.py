@@ -1,4 +1,5 @@
 from fastapi import APIRouter, HTTPException, Response, status
+
 from database import db
 from dependencies import CurrentUser
 from models.notification import NotificationOut

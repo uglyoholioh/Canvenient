@@ -1,7 +1,6 @@
 import secrets
 from datetime import datetime, timezone
 
-
 HELP_TEXT = """Canvenient commands:
 /today - today's schedule and tasks
 /week - the next 7 days

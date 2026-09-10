@@ -3,8 +3,8 @@ Tasks endpoint CRUD tests — Create, Read, Update, Delete, Unauthenticated acce
 """
 
 import pytest
-from httpx import AsyncClient
 from conftest import auth_headers
+from httpx import AsyncClient
 
 pytestmark = pytest.mark.asyncio
 

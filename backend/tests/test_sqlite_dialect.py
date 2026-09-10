@@ -12,9 +12,9 @@ from datetime import datetime, timedelta, timezone
 from unittest.mock import AsyncMock
 
 import pytest
+from conftest import auth_headers
 from httpx import AsyncClient
 
-from conftest import auth_headers
 from database import db
 from telegram_bot import handle_command
 

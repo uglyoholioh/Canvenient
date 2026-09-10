@@ -6,7 +6,6 @@ from collections.abc import Iterable
 
 from database import db
 
-
 LEGACY_BALANCED_COLORS = [
     "#4F7CFF", "#19A974", "#DE7548", "#A66DD4",
     "#E05D7B", "#159CA4", "#C58B2A", "#66768C",
@@ -92,7 +91,7 @@ async def migrate_legacy_balanced_colors(user_id: int, active_palette: str) -> N
     if not rows or any(str(row["color"]).upper() not in legacy for row in rows):
         return
 
-    replacements = dict(zip(LEGACY_BALANCED_COLORS, MODULE_COLOR_PALETTES["balanced"]["colors"]))
+    replacements = dict(zip(LEGACY_BALANCED_COLORS, MODULE_COLOR_PALETTES["balanced"]["colors"], strict=False))
     async with db.transaction():
         for index, row in enumerate(rows, start=1):
             await db.execute(

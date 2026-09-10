@@ -1,9 +1,10 @@
-from fastapi import APIRouter, HTTPException
 from typing import Any, Optional
+
+from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
+
 from database import db
 from dependencies import CurrentUser
-from datetime import datetime
 
 router = APIRouter(prefix="/folders", tags=["Folders"])
 

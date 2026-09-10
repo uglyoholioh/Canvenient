@@ -1,7 +1,8 @@
-import pytest
 from unittest.mock import AsyncMock, patch
-from httpx import AsyncClient, Response
+
+import pytest
 from conftest import auth_headers
+from httpx import AsyncClient, Response
 
 pytestmark = pytest.mark.asyncio
 

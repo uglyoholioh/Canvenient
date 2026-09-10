@@ -1,15 +1,16 @@
-import json
 import asyncio
 import base64
+import json
 from datetime import datetime, timedelta, timezone
 from typing import Any
 from urllib.parse import quote
 
 import httpx
-from database import db
-from dependencies import CurrentUser
 from fastapi import APIRouter, HTTPException, Query, Response
 from pydantic import BaseModel
+
+from database import db
+from dependencies import CurrentUser
 from module_colors import ensure_module_colors, normalize_module_code
 
 router = APIRouter(prefix="/canvas", tags=["canvas"])
@@ -456,8 +457,8 @@ async def dismiss_canvas_announcement(
                 "INSERT INTO dismissed_canvas_announcements (user_id, announcement_id) VALUES (:user_id, :announcement_id) ON CONFLICT DO NOTHING",
                 {"user_id": current_user.id, "announcement_id": req.announcement_id}
             )
-    except Exception as e:
-        raise HTTPException(status_code=500, detail="Failed to dismiss announcement")
+    except Exception:
+        raise HTTPException(status_code=500, detail="Failed to dismiss announcement") from None
     return {"ok": True}
 
 
@@ -838,9 +839,9 @@ async def get_canvas_file_content(file_id: int, current_user: CurrentUser):
                 timeout=5.0,
             )
         except httpx.TimeoutException:
-            raise HTTPException(status_code=504, detail="Canvas took too long to respond. Try again.")
+            raise HTTPException(status_code=504, detail="Canvas took too long to respond. Try again.") from None
         except httpx.HTTPError:
-            raise HTTPException(status_code=502, detail="Could not reach Canvas. Check your connection and try again.")
+            raise HTTPException(status_code=502, detail="Could not reach Canvas. Check your connection and try again.") from None
 
         if meta_response.status_code == 401:
             raise HTTPException(status_code=401, detail="Your Canvas token is invalid or expired. Update it in Settings.")
@@ -852,7 +853,7 @@ async def get_canvas_file_content(file_id: int, current_user: CurrentUser):
             raise HTTPException(
                 status_code=502,
                 detail=canvas_error_detail(meta_response, "Canvas returned an error while locating this file."),
-            )
+            ) from None
 
         meta = meta_response.json()
         if not isinstance(meta, dict) or not meta.get("url"):
@@ -867,9 +868,9 @@ async def get_canvas_file_content(file_id: int, current_user: CurrentUser):
         try:
             file_response = await client.get(meta["url"], timeout=60.0)
         except httpx.TimeoutException:
-            raise HTTPException(status_code=504, detail="The file download timed out. Try again.")
+            raise HTTPException(status_code=504, detail="The file download timed out. Try again.") from None
         except httpx.HTTPError:
-            raise HTTPException(status_code=502, detail="Could not download this file from Canvas.")
+            raise HTTPException(status_code=502, detail="Could not download this file from Canvas.") from None
 
     if file_response.status_code >= 400:
         raise HTTPException(status_code=502, detail="Canvas refused the file download. Try again shortly.")

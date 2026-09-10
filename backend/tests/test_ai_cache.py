@@ -3,9 +3,10 @@ Tests for AI Brief response caching in backend/routes/ai.py.
 """
 
 import pytest
-from httpx import AsyncClient
 from conftest import auth_headers
-from routes.ai import save_ai_brief_cache, get_ai_brief_cache
+from httpx import AsyncClient
+
+from routes.ai import get_ai_brief_cache, save_ai_brief_cache
 
 pytestmark = pytest.mark.asyncio
 

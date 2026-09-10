@@ -1,7 +1,8 @@
 from fastapi import APIRouter, HTTPException, Response, status
+
 from database import db
 from dependencies import CurrentUser
-from models.community import CommunityCreate, CommunityUpdate, CommunityOut
+from models.community import CommunityCreate, CommunityOut, CommunityUpdate
 
 router = APIRouter(prefix="/communities", tags=["communities"])
 

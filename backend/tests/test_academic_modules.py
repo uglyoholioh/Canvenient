@@ -1,6 +1,6 @@
 import pytest
-
 from conftest import auth_headers
+
 from database import db
 
 pytestmark = pytest.mark.asyncio

@@ -4,13 +4,13 @@ import json
 import re
 from datetime import date, datetime, time, timedelta, timezone
 from urllib.parse import parse_qs, quote, urlparse
+from zoneinfo import ZoneInfo
 
 import httpx
 from dateutil.rrule import rruleset, rrulestr
 from fastapi import APIRouter, HTTPException, Response, UploadFile, status
 from icalendar import Calendar
 from pydantic import BaseModel
-from zoneinfo import ZoneInfo
 
 from database import db
 from dependencies import CurrentUser
@@ -533,7 +533,7 @@ async def import_nusmods(payload: NUSModsImportRequest, current_user: CurrentUse
     exams = []
     semester_start = _semester_start(academic_year, semester)
     seen_classes = set()
-    for module_code, module in zip(module_configs, module_data):
+    for module_code, module in zip(module_configs, module_data, strict=False):
         semester_data = next((item for item in module.get("semesterData", []) if item.get("semester") == semester), None)
         if not semester_data:
             continue

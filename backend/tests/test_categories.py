@@ -3,8 +3,8 @@ CATEGORIES test cases — maps to TEST-CASES.md section 2 (CAT-01 … CAT-11).
 """
 
 import pytest
-from httpx import AsyncClient
 from conftest import auth_headers
+from httpx import AsyncClient
 
 pytestmark = pytest.mark.asyncio
 
@@ -82,7 +82,7 @@ async def test_CAT_11_cross_user_isolation(client: AsyncClient, auth):
     token_a, _, _ = auth
 
     # Create a second user (User B)
-    from conftest import unique_email, TEST_PASSWORD
+    from conftest import TEST_PASSWORD, unique_email
     email_b = unique_email()
     reg_b = await client.post("/auth/register", json={"email": email_b, "password": TEST_PASSWORD})
     token_b = reg_b.json()["access_token"]

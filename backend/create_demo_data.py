@@ -1,9 +1,11 @@
 import asyncio
-import bcrypt
 import json
-from database import db
 from datetime import datetime, timedelta
-import random
+
+import bcrypt
+
+from database import db
+
 
 async def create_demo_data():
     await db.connect()
@@ -26,7 +28,7 @@ async def create_demo_data():
         settings_query = "INSERT INTO user_settings (user_id, name, theme) VALUES (:user_id, :name, :theme)"
         try:
             await db.execute(settings_query, {"user_id": user_id, "name": "Demo User", "theme": "dark"})
-        except Exception as e:
+        except Exception:
             pass
         print(f"Created demo user: {email} / {password}")
     else:

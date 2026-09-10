@@ -6,8 +6,8 @@ import os
 import secrets
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from dotenv import load_dotenv
 
+from dotenv import load_dotenv
 from fastapi import HTTPException, status
 
 load_dotenv()

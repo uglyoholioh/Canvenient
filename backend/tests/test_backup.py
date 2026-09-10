@@ -2,7 +2,6 @@
 Tests for launch-time SQLite backups (backend/backup.py).
 """
 
-import os
 import sqlite3
 
 import pytest

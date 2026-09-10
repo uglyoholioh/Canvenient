@@ -1,8 +1,9 @@
 from datetime import date, datetime, timezone
 
+from fastapi import APIRouter, HTTPException, Response, status
+
 from database import db
 from dependencies import CurrentUser
-from fastapi import APIRouter, HTTPException, Response, status
 from models.task import TaskCreate, TaskOut, TaskPriority, TaskUpdate
 from routes.academic_modules import sync_canvas_courses_as_academic_modules
 from routes.canvas import list_canvas_assignments, record_canvas_sync_error

@@ -7,7 +7,6 @@ from database import db
 from models.user import UserSummary
 from security import decode_access_token
 
-
 bearer_scheme = HTTPBearer(auto_error=False)
 
 

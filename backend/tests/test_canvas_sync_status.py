@@ -4,9 +4,9 @@ columns and /canvas/cached-files reports the last sync error to the client.
 """
 
 import pytest
+from conftest import auth_headers
 from httpx import AsyncClient
 
-from conftest import auth_headers
 from database import db
 from migrations import run_migrations
 from routes.canvas import record_canvas_sync_error

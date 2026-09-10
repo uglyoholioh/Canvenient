@@ -3,8 +3,9 @@ NOTIFICATIONS test cases — maps to TEST-CASES.md section 10 (NOT-01 … NOT-04
 """
 
 import pytest
-from httpx import AsyncClient
 from conftest import auth_headers
+from httpx import AsyncClient
+
 from database import db
 
 pytestmark = pytest.mark.asyncio

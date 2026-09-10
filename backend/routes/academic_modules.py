@@ -1,6 +1,7 @@
+from fastapi import APIRouter
+
 from database import db
 from dependencies import CurrentUser
-from fastapi import APIRouter
 from models.academic_module import AcademicModuleOut, AcademicModuleSelectionUpdate
 from module_colors import ensure_discovered_module_colors, normalize_module_code
 from routes.canvas import list_canvas_courses

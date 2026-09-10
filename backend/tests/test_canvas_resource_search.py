@@ -1,7 +1,7 @@
 import pytest
+from conftest import auth_headers
 from httpx import AsyncClient
 
-from conftest import auth_headers
 from database import db
 
 pytest.skip(
@@ -12,6 +12,7 @@ pytest.skip(
 )
 
 from routes.canvas_search import clean_canvas_text, resource_search_score, tokenize_resource_query
+
 
 def test_query_tokenizer_removes_request_language_and_keeps_topic():
     assert tokenize_resource_query("Where can I find the ST2334 page about confidence intervals?") == [

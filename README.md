@@ -44,8 +44,12 @@ source venv/bin/activate
 
 ### 3. Install Dependencies
 ```bash
-pip install -r requirements.txt
+pip install -r requirements-lock.txt -r requirements-test.txt
 ```
+
+`requirements.txt` declares minimum versions; `requirements-lock.txt` pins the
+exact versions the shipped app is built and tested against. Regenerate the
+lock with `pip freeze` after upgrading a dependency on purpose.
 
 ### 4. Configure Environment Variables
 Create a file named `.env` inside the `backend` directory. **Do not commit this file to Git.**

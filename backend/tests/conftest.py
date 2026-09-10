@@ -7,9 +7,8 @@ import os
 import sys
 import uuid
 
-import pytest
 import pytest_asyncio
-from httpx import AsyncClient, ASGITransport
+from httpx import ASGITransport, AsyncClient
 
 # Set test database URL before importing database module
 TEST_DB_URL = os.getenv("TEST_DATABASE_URL", "sqlite+aiosqlite:///./test.db")
@@ -21,8 +20,8 @@ os.environ["TELEGRAM_WEBHOOK_SECRET"] = WEBHOOK_SECRET
 # Ensure backend root is importable
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from main import app
 from database import db
+from main import app
 from schema import initialize_schema
 
 

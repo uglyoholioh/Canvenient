@@ -1,34 +1,33 @@
-from contextlib import asynccontextmanager
 import os
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+
+from backup import backup_database
 from database import db
+from migrations import run_migrations
 from routes.academic_modules import router as academic_modules_router
-from routes.module_colors import router as module_colors_router
-from routes.auth import router as auth_router
-from routes.categories import router as categories_router
-from routes.tasks import router as tasks_router
-from routes.canvas import router as canvas_router
-from routes.schedules import router as schedule_router
-from routes.campus_bus import router as campus_bus_router
-from routes.events import router as events_router
 from routes.ai import router as ai_router
+from routes.auth import router as auth_router
+from routes.campus_bus import router as campus_bus_router
+from routes.canvas import router as canvas_router
+from routes.categories import router as categories_router
 from routes.communities import router as communities_router
+from routes.events import router as events_router
+from routes.folders import router as folders_router
+from routes.forms import router as forms_router
 from routes.groups import router as groups_router
 from routes.invites import router as invites_router
-from routes.forms import router as forms_router
-from routes.notifications import router as notifications_router
-from routes.study_sessions import router as study_sessions_router
-from routes.telegram import router as telegram_router
+from routes.module_colors import router as module_colors_router
 from routes.notes import router as notes_router
-from routes.folders import router as folders_router
+from routes.notifications import router as notifications_router
+from routes.schedules import router as schedule_router
+from routes.study_sessions import router as study_sessions_router
+from routes.tasks import router as tasks_router
+from routes.telegram import router as telegram_router
 from routes.venues import router as venues_router
-
-
 from schema import initialize_schema
-from migrations import run_migrations
-from backup import backup_database
 
 
 @asynccontextmanager

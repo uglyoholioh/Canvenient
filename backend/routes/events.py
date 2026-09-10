@@ -1,9 +1,15 @@
 from fastapi import APIRouter, HTTPException, Response, status
+
 from database import db
 from dependencies import CurrentUser
 from models.event import (
-    EventCreate, EventOut, EventUpdate, EventAttendanceUpdate, EventAttendanceOut,
-    AttendanceSummaryRow, MarkActualAttendancePayload
+    AttendanceSummaryRow,
+    EventAttendanceOut,
+    EventAttendanceUpdate,
+    EventCreate,
+    EventOut,
+    EventUpdate,
+    MarkActualAttendancePayload,
 )
 
 router = APIRouter(prefix="/events", tags=["events"])

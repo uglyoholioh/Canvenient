@@ -1,17 +1,18 @@
 import asyncio
+import json
 import os
-import httpx
-from typing import List, Dict, Any, Optional
-from fastapi import APIRouter, HTTPException, status, Query
+import traceback
 from datetime import date, datetime, timedelta, timezone
+from typing import Any, Dict, List, Optional
+
+import httpx
+from fastapi import APIRouter, HTTPException, Query, status
+from pydantic import BaseModel
+
 from database import db
 from dependencies import CurrentUser
 from routes.canvas import list_canvas_announcements, list_canvas_assignments
 from sql_dialect import now_expr, now_plus_expr, today_expr, today_plus_expr
-import json
-import traceback
-from pydantic import BaseModel
-
 
 MODEL_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent"
 #use Gemini flash 2.0 free tier for now
@@ -113,12 +114,12 @@ async def call_ai(
             raise HTTPException(
                 status_code = status.HTTP_503_SERVICE_UNAVAILABLE,
                 detail = f"Failed to connect to AI service: {e.response.text}"
-            )
+            ) from e
         except Exception as e:
             raise HTTPException(
                 status_code = status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail = f"Failed to communicate with LLM: {str(e)}"
-            )
+            ) from e
 
     
 router = APIRouter(prefix = "/ai", tags = ["ai"])
@@ -317,7 +318,7 @@ async def generate_brief(current_user: CurrentUser, force_refresh: bool = Query(
             raise HTTPException(
                 status_code=status.HTTP_502_BAD_GATEWAY,
                 detail=f"Could not parse structured LLM response: {str(e)}"
-            )
+            ) from e
 
         await save_ai_brief_cache(current_user.id, structured_brief, context)
         return {

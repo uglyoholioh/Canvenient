@@ -2,10 +2,11 @@
 Events endpoint CRUD tests — Create, List, Update, Delete.
 """
 
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta, timezone
+
 import pytest
-from httpx import AsyncClient
 from conftest import auth_headers
+from httpx import AsyncClient
 
 pytestmark = pytest.mark.asyncio
 

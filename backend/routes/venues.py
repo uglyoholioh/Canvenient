@@ -2,15 +2,13 @@ import asyncio
 import json
 import math
 import os
-import re
-from datetime import date, datetime, time, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 
 import httpx
-from database import db
 from fastapi import APIRouter, HTTPException, Query
-from pydantic import BaseModel, Field
 
+from database import db
 from dependencies import CurrentUser
 
 router = APIRouter(prefix="/venues", tags=["venues"])

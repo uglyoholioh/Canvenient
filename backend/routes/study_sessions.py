@@ -1,6 +1,7 @@
+from fastapi import APIRouter, HTTPException, Response, status
+
 from database import db
 from dependencies import CurrentUser
-from fastapi import APIRouter, HTTPException, Response, status
 from models.study_session import (
     LeaderboardEntry,
     StudySessionCreate,
@@ -9,7 +10,6 @@ from models.study_session import (
     StudySummary,
 )
 from sql_dialect import is_sqlite, today_expr, week_start_expr
-
 
 router = APIRouter(prefix="/study-sessions", tags=["study sessions"])
 

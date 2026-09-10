@@ -1,4 +1,3 @@
-import pytest
 from text_utils import strip_html_tags
 
 

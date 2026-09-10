@@ -1,5 +1,7 @@
 import secrets
+
 from fastapi import APIRouter, HTTPException, status
+
 from database import db
 from dependencies import CurrentUser
 from models.invite import InviteCreate, InviteOut

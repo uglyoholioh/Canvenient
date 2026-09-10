@@ -1,8 +1,8 @@
 import pytest
+from conftest import auth_headers
 from httpx import AsyncClient
 
 import routes.schedules as schedule_routes
-from conftest import auth_headers
 from database import db
 
 pytestmark = pytest.mark.asyncio

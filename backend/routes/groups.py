@@ -1,7 +1,8 @@
 from fastapi import APIRouter, HTTPException, Response, status
+
 from database import db
 from dependencies import CurrentUser
-from models.group import GroupCreate, GroupOut, GroupUpdate, GroupMemberOut
+from models.group import GroupCreate, GroupMemberOut, GroupOut, GroupUpdate
 from models.task import TaskOut
 
 router = APIRouter(prefix = "/groups", tags = ["groups"])

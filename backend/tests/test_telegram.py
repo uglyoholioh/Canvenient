@@ -5,9 +5,8 @@ Telegram Webhook tests — Webhook updates, Update Idempotency (deduplication), 
 from unittest.mock import patch
 
 import pytest
-from httpx import AsyncClient
-
 from conftest import WEBHOOK_SECRET
+from httpx import AsyncClient
 
 pytestmark = pytest.mark.asyncio
 

@@ -3,10 +3,11 @@ Tests for Canvas API response caching in backend/routes/canvas.py.
 """
 
 import pytest
-from httpx import AsyncClient
 from conftest import auth_headers
+from httpx import AsyncClient
+
 from database import db
-from routes.canvas import save_canvas_cache, get_canvas_cache
+from routes.canvas import get_canvas_cache, save_canvas_cache
 
 pytestmark = pytest.mark.asyncio
 

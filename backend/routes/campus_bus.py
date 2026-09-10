@@ -6,10 +6,10 @@ import re
 from datetime import datetime, timedelta, timezone
 
 import httpx
-from database import db
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field
 
+from database import db
 from dependencies import CurrentUser
 
 router = APIRouter(prefix="/campus-bus", tags=["campus-bus"])
@@ -237,7 +237,7 @@ def _route_segment(route_stops: list[dict], origin_id: str, destination_id: str)
 def _estimated_travel_minutes(segment: list[dict]) -> int:
     distance = sum(
         _distance_in_metres(stop["latitude"], stop["longitude"], next_stop)
-        for stop, next_stop in zip(segment, segment[1:])
+        for stop, next_stop in zip(segment, segment[1:], strict=False)
     )
     moving_minutes = distance / BUS_SPEED_M_PER_MIN
     dwell_minutes = max(0, len(segment) - 2) * 0.55
@@ -435,7 +435,7 @@ async def plan_campus_trip(payload: CampusTripRequest, _: CurrentUser):
     ])
     routes = {
         service: _normalise_route_stops(route_payload, service)
-        for service, route_payload in zip(services, route_payloads)
+        for service, route_payload in zip(services, route_payloads, strict=False)
     }
 
     all_origins = sorted(
@@ -463,7 +463,7 @@ async def plan_campus_trip(payload: CampusTripRequest, _: CurrentUser):
                     continue
                 route_distance = sum(
                     _distance_in_metres(stop["latitude"], stop["longitude"], next_stop)
-                    for stop, next_stop in zip(segment, segment[1:])
+                    for stop, next_stop in zip(segment, segment[1:], strict=False)
                 )
                 candidates.append({
                     "service": service,
@@ -513,7 +513,7 @@ async def plan_campus_trip(payload: CampusTripRequest, _: CurrentUser):
         )
         for stop_id in arrival_stop_ids
     ])
-    arrivals_by_stop = dict(zip(arrival_stop_ids, arrival_payloads))
+    arrivals_by_stop = dict(zip(arrival_stop_ids, arrival_payloads, strict=False))
 
     now = datetime.now(timezone.utc)
     planned_routes = []

@@ -1,8 +1,8 @@
 import pytest
+from conftest import auth_headers
 from httpx import AsyncClient
 
 import routes.campus_bus as campus_bus_routes
-from conftest import auth_headers
 from database import db
 
 pytestmark = pytest.mark.asyncio

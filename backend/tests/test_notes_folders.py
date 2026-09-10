@@ -3,9 +3,8 @@ Notes and Folders endpoint tests — CRUD, ownership scoping, and cross-user iso
 """
 
 import pytest
+from conftest import TEST_PASSWORD, auth_headers, unique_email
 from httpx import AsyncClient
-
-from conftest import auth_headers, unique_email, TEST_PASSWORD
 
 pytestmark = pytest.mark.asyncio
 

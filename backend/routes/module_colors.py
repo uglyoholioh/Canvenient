@@ -1,6 +1,7 @@
+from fastapi import APIRouter, HTTPException
+
 from database import db
 from dependencies import CurrentUser
-from fastapi import APIRouter, HTTPException
 from models.module_color import ModuleColorUpdate, ModulePaletteUpdate
 from module_colors import (
     MODULE_COLOR_PALETTES,
@@ -66,7 +67,7 @@ async def apply_module_palette(payload: ModulePaletteUpdate, current_user: Curre
                 temporary_colors.append(temporary)
                 reserved.add(temporary)
 
-        for row, temporary in zip(rows, temporary_colors):
+        for row, temporary in zip(rows, temporary_colors, strict=False):
             await db.execute(
                 """
                     UPDATE module_colors
@@ -79,7 +80,7 @@ async def apply_module_palette(payload: ModulePaletteUpdate, current_user: Curre
                     "color": temporary,
                 },
             )
-        for row, color in zip(rows, colors):
+        for row, color in zip(rows, colors, strict=False):
             await db.execute(
                 """
                     UPDATE module_colors
