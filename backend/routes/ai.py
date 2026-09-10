@@ -91,8 +91,7 @@ async def call_ai(
             status_code = status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail = "API key not configured"
         )
-    headers = {"Content-Type": "application/json"}
-    params = {"key": api_key}
+    headers = {"Content-Type": "application/json", "x-goog-api-key": api_key}
     payload = {"contents": contents}
 
     if system_instruction:
@@ -107,7 +106,7 @@ async def call_ai(
 
     async with httpx.AsyncClient(timeout = 30.0) as client:
         try:
-            response = await client.post(MODEL_BASE_URL, headers=headers, params=params, json=payload)
+            response = await client.post(MODEL_BASE_URL, headers=headers, json=payload)
             response.raise_for_status()
             return response.json()
         except httpx.HTTPStatusError as e:

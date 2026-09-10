@@ -1,5 +1,5 @@
 from datetime import datetime
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class EventCreate(BaseModel):
@@ -88,8 +88,7 @@ class AttendanceSummaryRow(BaseModel):
     is_attending: bool
     attended: bool | None = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class MarkActualAttendancePayload(BaseModel):
