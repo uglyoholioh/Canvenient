@@ -215,7 +215,8 @@ export default function WorkspaceLayout({ token, user, onLogout, onUpdateUser })
         });
       }
       if (window.__TAURI_IPC__) return;
-      const viewShortcuts = { "1": "dashboard", "2": "tasks", "3": "schedule", "4": "venues", "5": "canvas", "6": "notes" };
+      // Mirrors the native View menu accelerators (main.rs).
+      const viewShortcuts = { "1": "dashboard", "2": "tasks", "3": "schedule", "4": "venues", "5": "canvas", "6": "notes", "7": "groups", "8": "wheel" };
       if (viewShortcuts[e.key]) { e.preventDefault(); setActiveTab(viewShortcuts[e.key]); }
       if (key === "o") {
         e.preventDefault(); setActiveTab("schedule");
@@ -239,6 +240,7 @@ export default function WorkspaceLayout({ token, user, onLogout, onUpdateUser })
         "view-venues": "venues",
         "view-canvas": "canvas",
         "view-notes": "notes",
+        "view-groups": "groups",
         "view-wheel": "wheel",
         settings: "settings",
       };
@@ -511,7 +513,7 @@ export default function WorkspaceLayout({ token, user, onLogout, onUpdateUser })
               <div><dt>New task</dt><dd>{formatShortcut(shortcuts.quickTask)}</dd></div>
               <div><dt>Quick note</dt><dd>{formatShortcut(shortcuts.quickNote)}</dd></div>
               <div><dt>Import timetable</dt><dd>⌘O</dd></div>
-              <div><dt>Switch views</dt><dd>⌘1–5</dd></div>
+              <div><dt>Switch views</dt><dd>⌘1–8</dd></div>
               <div><dt>Toggle sidebar</dt><dd>⌘\\</dd></div>
             </dl>
           </section>

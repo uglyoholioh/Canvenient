@@ -12,6 +12,7 @@ vi.mock("../CanvasView", () => ({ default: () => <div>Canvas content</div> }));
 vi.mock("../NotesView", () => ({ default: () => <div>Notes content</div> }));
 vi.mock("../MarkdownEditor", () => ({ default: () => <div>Editor content</div> }));
 vi.mock("../Omnibar", () => ({ default: () => <div>Search content</div> }));
+vi.mock("../GroupsView", () => ({ default: () => <div>Groups content</div> }));
 vi.mock("../wheel/SpinWheelView", () => ({ default: () => <div>Wheel content</div> }));
 vi.mock("../../api", () => ({
   createNote: vi.fn(),
@@ -102,5 +103,17 @@ describe("WorkspaceLayout", () => {
     expect(screen.getByRole("heading", { name: "Spin the Wheel" })).toBeInTheDocument();
     expect(screen.getByText("Wheel content")).toBeInTheDocument();
     expect(window.localStorage.setItem).toHaveBeenCalledWith("canvenient-active-view", "wheel");
+  });
+
+  it.each([
+    ["7", "groups", "Groups content"],
+    ["8", "wheel", "Wheel content"],
+  ])("switches to %s:%s via command shortcut", (key, view, content) => {
+    render(<WorkspaceLayout token="token" user={{ id: 1 }} onLogout={() => {}} />);
+
+    fireEvent.keyDown(window, { key, metaKey: true });
+
+    expect(screen.getByText(content)).toBeInTheDocument();
+    expect(window.localStorage.setItem).toHaveBeenCalledWith("canvenient-active-view", view);
   });
 });
