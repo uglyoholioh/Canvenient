@@ -50,3 +50,17 @@ state, a recovery succeeds, or a build/release workflow changes.
 - **Verification:** backend pytest 98/98 (plus 1 skipped), frontend vitest 157 passed / 2 skipped, ESLint 0 errors, Vite production build, packaged desktop rebuild, `/health` OK, installed-app inspection.
 - **Still open:** git history slimming (~474 MB; needs squash/filter-repo + force-push approval), GroupsView/wheel graphite-token redesign, the empty root `canvenient.db` deletion, stale `/Applications/.canvenient-install.d8tMvB` staging dir from Sep 4.
 
+## 2026-09-11 — History slimmed to 2 MB; improvement round (backups, migrations, reminders, code splitting)
+
+- **Git history rewritten** with `git filter-repo` after a verified bundle backup (`~/canvenient-pre-rewrite.bundle`): `backend/build`, `backend/dist`, `backend/venv`, `backend/canvenient.db`, `frontend/src-tauri/bin`, `.audit/`, and `.DS_Store` are gone from all history. `.git`: 476 MB → 2.2 MB; fresh clone 2.4 MB. All commit hashes changed — checkpoint references were remapped (`4fbca5e`→`5e6b9cb`, `cb9c48d`→`85275c4`); the empty root `canvenient.db` was deleted; 19 stale team-era remote branches were pruned; main and `codex/global-quick-capture` were force-pushed. Any other clone of this repo must be re-cloned.
+- **Launch backups:** every startup takes a SQLite online-backup copy into `<data dir>/backups/` (rolling window of 10) before connecting; verified against the live Application Support DB.
+- **Migrations:** `backend/migrations.py` applies once-per-database schema changes transactionally, tracked in `_migrations`; migration `0001` adds Canvas sync error tracking. Append to `MIGRATIONS`; never edit shipped entries.
+- **Canvas sync errors surface:** file-sync and assignment-sync failures are recorded per user and shown as a warning in the Canvas toolbar (full message on hover); successful full syncs clear them.
+- **Due-date reminders:** background cycle (launch + every 15 min) sends system notifications for pending tasks due within 24 h, deduped per task/due-date in localStorage; Settings toggle (default on); Tauri notification allowlist enabled.
+- **Shortcuts unified:** ⌘1–8 now mean the same views in the native menu, the web handler, and the help sheet (Venue Finder ⌘4, Canvas ⌘5, Notes ⌘6, Groups ⌘7, Spin the Wheel ⌘8).
+- **Code splitting:** secondary views + Markdown editor load via React.lazy; eager bundle ~967 kB → ~484 kB; >500 kB chunk warning resolved.
+- **Design system:** GroupsView fully tokenized (zero hardcoded hex) with tab/tablist roles, aria-selected, and accessible names on icon-only buttons; TaskView/StudyTimerModule off the undefined `--color-mac-accent`.
+- **Engineering:** backend ruff enforced in CI (B008 off for FastAPI DI); `requirements-lock.txt` pins the tested dependency set (CI installs it); macOS CI job compiles the Vite bundle + Tauri shell on mainline pushes/PRs; SpinWheelView's eleven duplicated wheel-update blocks collapsed into one persistence path; Omnibar caches its search corpus (30 s TTL + task-change invalidation) instead of refetching per keystroke.
+- **Verification:** backend pytest 106 passed / 1 skipped, frontend vitest 165 passed / 2 skipped, ruff clean, ESLint 0 errors, Vite build clean, `cargo check` clean, packaged rebuild + `/health` + installed-app inspection (View menu, backups on disk).
+- **Open item:** code signing/notarization needs the owner's Apple Developer identity — set `macOS.signingIdentity` in `tauri.conf.json` and add notarization once enrolled; the 63 react-hooks lint warnings remain tracked debt.
+
