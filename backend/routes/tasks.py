@@ -5,7 +5,7 @@ from dependencies import CurrentUser
 from fastapi import APIRouter, HTTPException, Response, status
 from models.task import TaskCreate, TaskOut, TaskPriority, TaskUpdate
 from routes.academic_modules import sync_canvas_courses_as_academic_modules
-from routes.canvas import list_canvas_assignments
+from routes.canvas import list_canvas_assignments, record_canvas_sync_error
 from text_utils import strip_html_tags
 
 router = APIRouter(prefix="/tasks", tags=["tasks"])
@@ -371,9 +371,13 @@ async def sync_canvas_tasks(current_user: CurrentUser):
 
     try:
         assignments = await list_canvas_assignments(current_user)
-    except Exception:
+    except Exception as exc:
+        await record_canvas_sync_error(
+            current_user.id, f"Could not fetch Canvas assignments: {exc}"
+        )
         return await list_tasks(current_user)
 
+    failed_assignments = 0
     for assignment in assignments:
         try:
             course_code = assignment.get("course_code") or "Canvas"
@@ -531,7 +535,14 @@ async def sync_canvas_tasks(current_user: CurrentUser):
                     values=values,
                 )
         except Exception:
+            failed_assignments += 1
             continue
+
+    if failed_assignments:
+        await record_canvas_sync_error(
+            current_user.id,
+            f"{failed_assignments} of {len(assignments)} Canvas assignments failed to sync into tasks.",
+        )
 
     return await list_tasks(current_user)
 

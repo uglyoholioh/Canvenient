@@ -1125,14 +1125,17 @@ async def fetch_course_files_for_sync(
 
 @router.get("/cached-files", response_model=dict[str, Any])
 async def list_cached_canvas_files(current_user: CurrentUser):
-    synced_at = await db.fetch_val(
+    state_row = await db.fetch_one(
         query="""
-            SELECT files_synced_at
+            SELECT files_synced_at, last_sync_error, last_sync_error_at
             FROM canvas_sync_state
             WHERE user_id = :user_id
         """,
         values={"user_id": current_user.id},
     )
+    synced_at = state_row["files_synced_at"] if state_row else None
+    last_sync_error = state_row["last_sync_error"] if state_row else None
+    last_sync_error_at = state_row["last_sync_error_at"] if state_row else None
     course_rows = await db.fetch_all(
         query="""
             SELECT
@@ -1196,7 +1199,58 @@ async def list_cached_canvas_files(current_user: CurrentUser):
         }
         for row in file_rows
     ]
-    return {"courses": courses, "files": files, "synced_at": synced_at}
+    return {
+        "courses": courses,
+        "files": files,
+        "synced_at": synced_at,
+        "last_sync_error": last_sync_error,
+        "last_sync_error_at": last_sync_error_at,
+    }
+
+
+async def record_canvas_sync_error(user_id: int, message: str) -> None:
+    """Persist the latest Canvas sync failure so the UI can surface it."""
+    await db.execute(
+        query="""
+            INSERT INTO canvas_sync_state (user_id, last_sync_error, last_sync_error_at)
+            VALUES (:user_id, :message, CURRENT_TIMESTAMP)
+            ON CONFLICT (user_id)
+            DO UPDATE SET
+                last_sync_error = EXCLUDED.last_sync_error,
+                last_sync_error_at = EXCLUDED.last_sync_error_at
+        """,
+        values={"user_id": user_id, "message": message[:500]},
+    )
+
+
+async def clear_canvas_sync_error(user_id: int) -> None:
+    await db.execute(
+        query="""
+            INSERT INTO canvas_sync_state (user_id, files_synced_at, last_sync_error, last_sync_error_at)
+            VALUES (:user_id, CURRENT_TIMESTAMP, NULL, NULL)
+            ON CONFLICT (user_id)
+            DO UPDATE SET
+                files_synced_at = EXCLUDED.files_synced_at,
+                last_sync_error = NULL,
+                last_sync_error_at = NULL
+        """,
+        values={"user_id": user_id},
+    )
+
+
+@router.get("/sync-status", response_model=dict[str, Any])
+async def get_canvas_sync_status(current_user: CurrentUser):
+    row = await db.fetch_one(
+        query="""
+            SELECT files_synced_at, last_sync_error, last_sync_error_at
+            FROM canvas_sync_state
+            WHERE user_id = :user_id
+        """,
+        values={"user_id": current_user.id},
+    )
+    if not row:
+        return {"files_synced_at": None, "last_sync_error": None, "last_sync_error_at": None}
+    return dict(row)
 
 
 @router.post("/sync-files", response_model=dict[str, Any])
@@ -1205,21 +1259,35 @@ async def sync_canvas_files(current_user: CurrentUser):
     if not token:
         raise HTTPException(status_code=400, detail="Canvas account is not connected.")
 
-    courses = await list_canvas_courses(current_user)
+    try:
+        courses = await list_canvas_courses(current_user)
+    except Exception as exc:
+        await record_canvas_sync_error(current_user.id, f"Could not reach Canvas: {exc}")
+        raise
+
     if not courses:
         return await list_cached_canvas_files(current_user)
 
-    headers = {"Authorization": f"Bearer {token}"}
-    async with httpx.AsyncClient() as client:
-        results = await asyncio.gather(
-            *(
-                fetch_course_files_for_sync(client, headers, course)
-                for course in courses
+    try:
+        headers = {"Authorization": f"Bearer {token}"}
+        async with httpx.AsyncClient() as client:
+            results = await asyncio.gather(
+                *(
+                    fetch_course_files_for_sync(client, headers, course)
+                    for course in courses
+                )
             )
-        )
+    except Exception as exc:
+        await record_canvas_sync_error(current_user.id, f"Could not fetch Canvas files: {exc}")
+        raise
 
     successful_results = [result for result in results if result is not None]
+    failed_courses = len(results) - len(successful_results)
     if not successful_results:
+        await record_canvas_sync_error(
+            current_user.id,
+            f"All {len(courses)} courses failed to fetch files from Canvas.",
+        )
         return await list_cached_canvas_files(current_user)
 
     now = datetime.now(timezone.utc)
@@ -1370,14 +1438,13 @@ async def sync_canvas_files(current_user: CurrentUser):
                 """,
                 values=cached_files,
             )
-        await db.execute(
-            query="""
-                INSERT INTO canvas_sync_state (user_id, files_synced_at)
-                VALUES (:user_id, CURRENT_TIMESTAMP)
-                ON CONFLICT (user_id)
-                DO UPDATE SET files_synced_at = EXCLUDED.files_synced_at
-            """,
-            values={"user_id": current_user.id},
+        await clear_canvas_sync_error(current_user.id)
+
+    if failed_courses:
+        await record_canvas_sync_error(
+            current_user.id,
+            f"{failed_courses} of {len(courses)} courses failed to sync; "
+            "showing cached files for the rest.",
         )
 
     return await list_cached_canvas_files(current_user)

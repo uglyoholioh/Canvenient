@@ -12,6 +12,7 @@ import {
   getCanvasAnnouncements,
   getCanvasAssignments,
   getCanvasCourses,
+  getCanvasSyncStatus,
   getCanvasFiles,
   getCanvasFolders,
   getCanvasGrades,
@@ -718,6 +719,7 @@ export default function CanvasView({ token }) {
   const [activeItem, setActiveItem] = useState(null);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
+  const [syncStatus, setSyncStatus] = useState(null);
   const [tabLoading, setTabLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -944,6 +946,14 @@ export default function CanvasView({ token }) {
     });
   }, [grades, selectedCourseId, validCourseIds]);
 
+  const refreshSyncStatus = useCallback(async () => {
+    try {
+      setSyncStatus(await getCanvasSyncStatus(token));
+    } catch {}
+  }, [token]);
+
+  useEffect(() => { refreshSyncStatus(); }, [refreshSyncStatus]);
+
   const sync = useCallback(async () => {
     setSyncing(true); setError("");
     try {
@@ -953,9 +963,10 @@ export default function CanvasView({ token }) {
     } catch (e) {
       setError(e.message || "Sync failed.");
     } finally {
+      refreshSyncStatus();
       setSyncing(false);
     }
-  }, [load, token]);
+  }, [load, refreshSyncStatus, token]);
 
   const selectedCourse = courses.find(c => String(c.id) === String(selectedCourseId));
 
@@ -1022,6 +1033,14 @@ export default function CanvasView({ token }) {
         </div>
         <div className="cv-top-actions">
           {error && <span className="cv-error-msg">{error}</span>}
+          {syncStatus?.last_sync_error && (
+            <span
+              className="cv-error-msg"
+              title={`${syncStatus.last_sync_error}${syncStatus.last_sync_error_at ? ` — ${new Date(syncStatus.last_sync_error_at).toLocaleString()}` : ""}`}
+            >
+              ⚠ {syncStatus.last_sync_error}
+            </span>
+          )}
           <button type="button" className="cv-sync-btn" onClick={sync} disabled={syncing}>
             <RefreshCw size={12} className={syncing ? "retro-icon-spin" : ""} />
             {syncing ? "Syncing…" : "Sync"}

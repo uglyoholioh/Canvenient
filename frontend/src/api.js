@@ -513,6 +513,10 @@ export function getCachedCanvasFiles(token) {
   return apiRequest("/canvas/cached-files", { token });
 }
 
+export function getCanvasSyncStatus(token) {
+  return apiRequest("/canvas/sync-status", { token });
+}
+
 export function syncCanvasFiles(token) {
   return apiRequest("/canvas/sync-files", {
     method: "POST",

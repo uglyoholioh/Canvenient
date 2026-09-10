@@ -31,8 +31,10 @@ async def test_migrations_apply_once_in_order(client: AsyncClient):
     assert applied == ["0001_test_add_column", "0002_test_backfill"]
     assert await _column_exists("_mig_test", "priority")
 
-    recorded = await db.fetch_all("SELECT name FROM _migrations ORDER BY name")
-    assert [r["name"] for r in recorded] == ["0001_test_add_column", "0002_test_backfill"]
+    recorded = {
+        r["name"] for r in await db.fetch_all("SELECT name FROM _migrations")
+    }
+    assert {"0001_test_add_column", "0002_test_backfill"} <= recorded
 
     # A second run is a no-op.
     applied_again = await run_migrations(plan)

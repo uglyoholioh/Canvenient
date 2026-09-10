@@ -15,7 +15,15 @@ Rules:
 
 from database import db
 
-MIGRATIONS: list[tuple[str, list[str]]] = []
+MIGRATIONS: list[tuple[str, list[str]]] = [
+    (
+        "0001_canvas_sync_error_tracking",
+        [
+            "ALTER TABLE canvas_sync_state ADD COLUMN last_sync_error TEXT",
+            "ALTER TABLE canvas_sync_state ADD COLUMN last_sync_error_at TIMESTAMPTZ",
+        ],
+    ),
+]
 
 
 async def run_migrations(migrations: list[tuple[str, list[str]]] | None = None) -> list[str]:
