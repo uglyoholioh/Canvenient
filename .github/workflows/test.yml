@@ -63,3 +63,46 @@ jobs:
         run: |
           cd frontend
           npm run test
+
+  macos-compile:
+    # The packaged macOS app is the product's only ship path; compile the
+    # frontend bundle and the Tauri/Rust shell so packaging breakage is caught
+    # before a local rebuild. Runs on mainline pushes and PRs only — macOS
+    # runners bill at 10x, so feature-branch pushes use the fast Linux job.
+    name: macOS Compile (Vite + Tauri)
+    runs-on: macos-latest
+    if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo build
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: frontend/src-tauri
+
+      - name: Install frontend dependencies
+        run: |
+          cd frontend
+          npm install
+
+      - name: Build frontend bundle
+        run: |
+          cd frontend
+          npm run build
+
+      - name: Compile Tauri shell
+        run: |
+          cd frontend/src-tauri
+          cargo check
