@@ -315,7 +315,7 @@ export default function TaskView({
               borderRadius: "5px",
               border: "1px solid var(--border, rgba(255,255,255,0.12))",
               background: filterScope === "all" ? "var(--color-mac-control, rgba(255,255,255,0.15))" : "transparent",
-              color: filterScope === "all" ? "var(--text-h, #fff)" : "var(--color-mac-muted, #888)",
+              color: filterScope === "all" ? "var(--text-h)" : "var(--text-muted)",
               cursor: "pointer"
             }}
           >
@@ -330,7 +330,7 @@ export default function TaskView({
               borderRadius: "5px",
               border: "1px solid var(--border, rgba(255,255,255,0.12))",
               background: filterScope === "personal" ? "var(--color-mac-control, rgba(255,255,255,0.15))" : "transparent",
-              color: filterScope === "personal" ? "var(--text-h, #fff)" : "var(--color-mac-muted, #888)",
+              color: filterScope === "personal" ? "var(--text-h)" : "var(--text-muted)",
               cursor: "pointer"
             }}
           >
@@ -348,7 +348,7 @@ export default function TaskView({
               borderRadius: "5px",
               border: "1px solid var(--border, rgba(255,255,255,0.12))",
               background: filterScope === "groups" ? "var(--color-mac-control, rgba(255,255,255,0.15))" : "transparent",
-              color: filterScope === "groups" ? "var(--text-h, #fff)" : "var(--color-mac-muted, #888)",
+              color: filterScope === "groups" ? "var(--text-h)" : "var(--text-muted)",
               cursor: "pointer"
             }}
           >
@@ -442,7 +442,7 @@ export default function TaskView({
                         {task.module_code && <span style={taskModuleColor ? { color: taskModuleColor } : undefined}><BookOpen size={10} />{task.module_code}</span>}
                         {task.class_summary && <span><Calendar size={10} />{task.class_relation === "due_before" ? "Before " : task.class_relation === "bring_to" ? "For " : "After "}{task.class_summary}</span>}
                         {task.group_name && (
-                          <span style={{ display: "inline-flex", alignItems: "center", gap: "3px", color: "var(--color-mac-accent, #5bc0be)", fontWeight: 550 }}>
+                          <span style={{ display: "inline-flex", alignItems: "center", gap: "3px", color: "var(--accent)", fontWeight: 550 }}>
                             <Users size={10} />
                             {task.group_name}
                           </span>

@@ -259,7 +259,7 @@ export default function GroupsView({ token, currentUser }) {
   return (
     <div className="groups-container" style={{ padding: "24px 32px", maxWidth: "1100px", margin: "0 auto" }}>
       {error && (
-        <div style={{ padding: "10px 14px", marginBottom: "16px", borderRadius: "6px", background: "rgba(220, 53, 69, 0.15)", border: "1px solid rgba(220, 53, 69, 0.3)", color: "#ff6b6b", fontSize: "13px" }}>
+        <div style={{ padding: "10px 14px", marginBottom: "16px", borderRadius: "6px", background: "rgba(220, 53, 69, 0.15)", border: "1px solid rgba(220, 53, 69, 0.3)", color: "var(--error)", fontSize: "13px" }}>
           {error}
         </div>
       )}
@@ -271,7 +271,7 @@ export default function GroupsView({ token, currentUser }) {
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "16px", marginBottom: "28px", flexWrap: "wrap" }}>
             <div>
               <h2 style={{ fontSize: "20px", fontWeight: 600, margin: "0 0 6px" }}>Your Teams & Study Groups</h2>
-              <p style={{ margin: 0, fontSize: "13px", color: "var(--color-mac-muted, #888)" }}>
+              <p style={{ margin: 0, fontSize: "13px", color: "var(--text-muted)" }}>
                 Collaborate on module projects, share task lists, and track progress together.
               </p>
             </div>
@@ -312,14 +312,14 @@ export default function GroupsView({ token, currentUser }) {
           </div>
 
           {joinMessage && (
-            <div style={{ marginBottom: "16px", fontSize: "12px", color: joinMessage.startsWith("Error") ? "#ff6b6b" : "#4caf50" }}>
+            <div style={{ marginBottom: "16px", fontSize: "12px", color: joinMessage.startsWith("Error") ? "var(--error)" : "var(--success)" }}>
               {joinMessage}
             </div>
           )}
 
           {/* Groups Grid */}
           {loading ? (
-            <div style={{ padding: "40px 0", textAlign: "center", color: "var(--color-mac-muted, #888)", fontSize: "13px" }}>Loading groups...</div>
+            <div style={{ padding: "40px 0", textAlign: "center", color: "var(--text-muted)", fontSize: "13px" }}>Loading groups...</div>
           ) : groups.length === 0 ? (
             <div style={{
               padding: "48px 24px",
@@ -330,7 +330,7 @@ export default function GroupsView({ token, currentUser }) {
             }}>
               <Users size={36} style={{ opacity: 0.4, marginBottom: "12px" }} />
               <h3 style={{ fontSize: "15px", fontWeight: 600, margin: "0 0 6px" }}>No groups yet</h3>
-              <p style={{ fontSize: "13px", color: "var(--color-mac-muted, #888)", margin: "0 0 16px" }}>
+              <p style={{ fontSize: "13px", color: "var(--text-muted)", margin: "0 0 16px" }}>
                 Create a group for your project team, or enter an invite code from a classmate.
               </p>
               <button
@@ -341,8 +341,8 @@ export default function GroupsView({ token, currentUser }) {
                   fontSize: "12px",
                   fontWeight: 500,
                   borderRadius: "6px",
-                  background: "var(--color-mac-accent, #2f7a72)",
-                  color: "#fff",
+                  background: "var(--accent)",
+                  color: "var(--text-inverse)",
                   border: "none",
                   cursor: "pointer"
                 }}
@@ -381,18 +381,18 @@ export default function GroupsView({ token, currentUser }) {
                         padding: "2px 8px",
                         borderRadius: "4px",
                         background: grp.role === "admin" ? "rgba(47, 122, 114, 0.2)" : "rgba(255,255,255,0.08)",
-                        color: grp.role === "admin" ? "#5bc0be" : "var(--color-mac-muted, #aaa)"
+                        color: grp.role === "admin" ? "var(--accent)" : "var(--text-muted)"
                       }}>
                         {grp.role || "member"}
                       </span>
                     </div>
                     {grp.description && (
-                      <p style={{ margin: "0 0 12px", fontSize: "12px", color: "var(--color-mac-muted, #888)", lineHeight: 1.4 }}>
+                      <p style={{ margin: "0 0 12px", fontSize: "12px", color: "var(--text-muted)", lineHeight: 1.4 }}>
                         {grp.description}
                       </p>
                     )}
                   </div>
-                  <div style={{ display: "flex", gap: "12px", fontSize: "11px", color: "var(--color-mac-muted, #888)", marginTop: "12px", borderTop: "1px solid var(--border, rgba(255,255,255,0.06))", paddingTop: "10px" }}>
+                  <div style={{ display: "flex", gap: "12px", fontSize: "11px", color: "var(--text-muted)", marginTop: "12px", borderTop: "1px solid var(--border, rgba(255,255,255,0.06))", paddingTop: "10px" }}>
                     <span style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
                       <Users size={12} /> Open Workspace
                     </span>
@@ -416,7 +416,7 @@ export default function GroupsView({ token, currentUser }) {
                 gap: "6px",
                 background: "transparent",
                 border: "none",
-                color: "var(--color-mac-muted, #888)",
+                color: "var(--text-muted)",
                 fontSize: "12px",
                 cursor: "pointer",
                 padding: "4px 0"
@@ -428,14 +428,15 @@ export default function GroupsView({ token, currentUser }) {
             <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
               {generatedInvite ? (
                 <div style={{ display: "inline-flex", alignItems: "center", gap: "6px", background: "var(--color-mac-control, rgba(255,255,255,0.08))", padding: "4px 10px", borderRadius: "6px", fontSize: "12px" }}>
-                  <code style={{ fontWeight: 600, color: "var(--color-mac-accent, #5bc0be)" }}>{generatedInvite}</code>
+                  <code style={{ fontWeight: 600, color: "var(--accent)" }}>{generatedInvite}</code>
                   <button
                     type="button"
                     onClick={handleCopyInvite}
+                    aria-label={copied ? "Invite code copied" : "Copy invite code"}
                     style={{ background: "none", border: "none", color: "inherit", cursor: "pointer", padding: "2px" }}
                     title="Copy code"
                   >
-                    {copied ? <Check size={13} color="#4caf50" /> : <Copy size={13} />}
+                    {copied ? <Check size={13} color="var(--success)" /> : <Copy size={13} />}
                   </button>
                 </div>
               ) : (
@@ -474,20 +475,20 @@ export default function GroupsView({ token, currentUser }) {
                 padding: "2px 8px",
                 borderRadius: "4px",
                 background: activeGroup.role === "admin" ? "rgba(47, 122, 114, 0.2)" : "rgba(255,255,255,0.08)",
-                color: activeGroup.role === "admin" ? "#5bc0be" : "var(--color-mac-muted, #aaa)"
+                color: activeGroup.role === "admin" ? "var(--accent)" : "var(--text-muted)"
               }}>
                 {activeGroup.role || "member"}
               </span>
             </div>
             {activeGroup.description && (
-              <p style={{ margin: 0, fontSize: "13px", color: "var(--color-mac-muted, #888)" }}>
+              <p style={{ margin: 0, fontSize: "13px", color: "var(--text-muted)" }}>
                 {activeGroup.description}
               </p>
             )}
           </div>
 
           {/* Navigation Tabs */}
-          <div style={{ display: "flex", gap: "6px", borderBottom: "1px solid var(--border, rgba(255,255,255,0.1))", marginBottom: "20px", paddingBottom: "2px" }}>
+          <div role="tablist" aria-label="Group sections" style={{ display: "flex", gap: "6px", borderBottom: "1px solid var(--border, rgba(255,255,255,0.1))", marginBottom: "20px", paddingBottom: "2px" }}>
             {[
               { key: "tasks", label: `Tasks (${groupTasks.length})`, icon: CheckSquare },
               { key: "members", label: `Members (${groupMembers.length})`, icon: Users },
@@ -500,6 +501,8 @@ export default function GroupsView({ token, currentUser }) {
                 <button
                   key={tab.key}
                   type="button"
+                  role="tab"
+                  aria-selected={isActive}
                   onClick={() => setActiveTab(tab.key)}
                   style={{
                     display: "inline-flex",
@@ -508,9 +511,9 @@ export default function GroupsView({ token, currentUser }) {
                     padding: "7px 14px",
                     fontSize: "12px",
                     fontWeight: isActive ? 600 : 450,
-                    color: isActive ? "var(--text-h, #fff)" : "var(--color-mac-muted, #888)",
+                    color: isActive ? "var(--text-h)" : "var(--text-muted)",
                     border: "none",
-                    borderBottom: isActive ? "2px solid var(--color-mac-accent, #2f7a72)" : "2px solid transparent",
+                    borderBottom: isActive ? "2px solid var(--accent)" : "2px solid transparent",
                     background: "transparent",
                     cursor: "pointer",
                     marginBottom: "-2px"
@@ -546,7 +549,7 @@ export default function GroupsView({ token, currentUser }) {
                         borderRadius: "5px",
                         border: "1px solid var(--border, rgba(255,255,255,0.1))",
                         background: taskFilter === f.key ? "var(--color-mac-control, rgba(255,255,255,0.15))" : "transparent",
-                        color: taskFilter === f.key ? "var(--text-h, #fff)" : "var(--color-mac-muted, #888)",
+                        color: taskFilter === f.key ? "var(--text-h)" : "var(--text-muted)",
                         cursor: "pointer"
                       }}
                     >
@@ -566,8 +569,8 @@ export default function GroupsView({ token, currentUser }) {
                     fontSize: "12px",
                     fontWeight: 500,
                     borderRadius: "6px",
-                    background: "var(--color-mac-accent, #2f7a72)",
-                    color: "#fff",
+                    background: "var(--accent)",
+                    color: "var(--text-inverse)",
                     border: "none",
                     cursor: "pointer"
                   }}
@@ -578,7 +581,7 @@ export default function GroupsView({ token, currentUser }) {
 
               {/* Tasks List */}
               {filteredTasks.length === 0 ? (
-                <div style={{ padding: "32px 0", textAlign: "center", color: "var(--color-mac-muted, #888)", fontSize: "13px" }}>
+                <div style={{ padding: "32px 0", textAlign: "center", color: "var(--text-muted)", fontSize: "13px" }}>
                   No tasks match the selected filter.
                 </div>
               ) : (
@@ -608,9 +611,9 @@ export default function GroupsView({ token, currentUser }) {
                             width: "16px",
                             height: "16px",
                             borderRadius: "4px",
-                            border: `1px solid ${isDone ? "var(--color-mac-accent, #2f7a72)" : "var(--border, rgba(255,255,255,0.3))"}`,
-                            background: isDone ? "var(--color-mac-accent, #2f7a72)" : "transparent",
-                            color: "#fff",
+                            border: `1px solid ${isDone ? "var(--accent)" : "var(--border)"}`,
+                            background: isDone ? "var(--accent)" : "transparent",
+                            color: "var(--text-inverse)",
                             display: "flex",
                             alignItems: "center",
                             justifyContent: "center",
@@ -624,15 +627,15 @@ export default function GroupsView({ token, currentUser }) {
 
                         {/* Content */}
                         <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontSize: "13px", fontWeight: 500, textDecoration: isDone ? "line-through" : "none", color: isDone ? "var(--color-mac-muted, #888)" : "inherit" }}>
+                          <div style={{ fontSize: "13px", fontWeight: 500, textDecoration: isDone ? "line-through" : "none", color: isDone ? "var(--text-muted)" : "inherit" }}>
                             {t.title}
                           </div>
                           {t.description && (
-                            <div style={{ fontSize: "12px", color: "var(--color-mac-muted, #888)", marginTop: "2px", lineHeight: 1.3 }}>
+                            <div style={{ fontSize: "12px", color: "var(--text-muted)", marginTop: "2px", lineHeight: 1.3 }}>
                               {t.description}
                             </div>
                           )}
-                          <div style={{ display: "flex", gap: "10px", alignItems: "center", marginTop: "6px", fontSize: "11px", color: "var(--color-mac-muted, #888)" }}>
+                          <div style={{ display: "flex", gap: "10px", alignItems: "center", marginTop: "6px", fontSize: "11px", color: "var(--text-muted)" }}>
                             {t.priority_manual && (
                               <span style={{
                                 display: "inline-flex",
@@ -641,7 +644,7 @@ export default function GroupsView({ token, currentUser }) {
                                 textTransform: "uppercase",
                                 fontWeight: 600,
                                 fontSize: "10px",
-                                color: t.priority_manual === "urgent" ? "#ff5252" : t.priority_manual === "high" ? "#ff9800" : "#aaa"
+                                color: t.priority_manual === "urgent" ? "var(--error)" : t.priority_manual === "high" ? "var(--warning)" : "var(--text)"
                               }}>
                                 <Flag size={10} /> {t.priority_manual}
                               </span>
@@ -659,7 +662,7 @@ export default function GroupsView({ token, currentUser }) {
                                 padding: "1px 6px",
                                 borderRadius: "4px",
                                 background: "var(--color-mac-control, rgba(255,255,255,0.08))",
-                                color: t.assignee_id === currentUser?.id ? "var(--color-mac-accent, #5bc0be)" : "inherit"
+                                color: t.assignee_id === currentUser?.id ? "var(--accent)" : "inherit"
                               }}>
                                 👤 {t.assignee_id === currentUser?.id ? "Assigned to you" : t.assignee_name}
                               </span>
@@ -676,7 +679,7 @@ export default function GroupsView({ token, currentUser }) {
                           style={{
                             background: "transparent",
                             border: "none",
-                            color: "var(--color-mac-muted, #888)",
+                            color: "var(--text-muted)",
                             cursor: "pointer",
                             padding: "4px",
                             opacity: 0.5,
@@ -729,7 +732,7 @@ export default function GroupsView({ token, currentUser }) {
                         {m.name || m.email}
                         {m.user_id === currentUser?.id && <span style={{ opacity: 0.5, fontSize: "11px", marginLeft: "4px" }}>(you)</span>}
                       </div>
-                      <div style={{ fontSize: "11px", color: "var(--color-mac-muted, #888)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                      <div style={{ fontSize: "11px", color: "var(--text-muted)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                         {m.email}
                       </div>
                     </div>
@@ -741,7 +744,7 @@ export default function GroupsView({ token, currentUser }) {
                       padding: "2px 6px",
                       borderRadius: "4px",
                       background: m.role === "admin" ? "rgba(47, 122, 114, 0.2)" : "rgba(255,255,255,0.06)",
-                      color: m.role === "admin" ? "#5bc0be" : "var(--color-mac-muted, #888)"
+                      color: m.role === "admin" ? "var(--accent)" : "var(--text-muted)"
                     }}>
                       {m.role}
                     </span>
@@ -755,7 +758,7 @@ export default function GroupsView({ token, currentUser }) {
           {activeTab === "events" && (
             <div>
               {groupEvents.length === 0 ? (
-                <div style={{ padding: "32px 0", textAlign: "center", color: "var(--color-mac-muted, #888)", fontSize: "13px" }}>
+                <div style={{ padding: "32px 0", textAlign: "center", color: "var(--text-muted)", fontSize: "13px" }}>
                   No events scheduled for this group.
                 </div>
               ) : (
@@ -771,8 +774,8 @@ export default function GroupsView({ token, currentUser }) {
                       }}
                     >
                       <div style={{ fontSize: "14px", fontWeight: 600 }}>{e.title}</div>
-                      {e.description && <div style={{ fontSize: "12px", color: "var(--color-mac-muted, #888)", marginTop: "2px" }}>{e.description}</div>}
-                      <div style={{ display: "flex", gap: "12px", fontSize: "11px", color: "var(--color-mac-muted, #888)", marginTop: "8px" }}>
+                      {e.description && <div style={{ fontSize: "12px", color: "var(--text-muted)", marginTop: "2px" }}>{e.description}</div>}
+                      <div style={{ display: "flex", gap: "12px", fontSize: "11px", color: "var(--text-muted)", marginTop: "8px" }}>
                         <span style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}><Calendar size={11} /> {fmtDate(e.start_at)}</span>
                         <span style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}><Clock size={11} /> {fmtTime(e.start_at)}</span>
                         {e.venue && <span style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}><MapPin size={11} /> {e.venue}</span>}
@@ -788,7 +791,7 @@ export default function GroupsView({ token, currentUser }) {
           {activeTab === "forms" && (
             <div>
               {groupForms.length === 0 ? (
-                <div style={{ padding: "32px 0", textAlign: "center", color: "var(--color-mac-muted, #888)", fontSize: "13px" }}>
+                <div style={{ padding: "32px 0", textAlign: "center", color: "var(--text-muted)", fontSize: "13px" }}>
                   No active forms or polls for this group.
                 </div>
               ) : (
@@ -804,7 +807,7 @@ export default function GroupsView({ token, currentUser }) {
                       }}
                     >
                       <div style={{ fontSize: "14px", fontWeight: 600 }}>{f.title}</div>
-                      {f.description && <div style={{ fontSize: "12px", color: "var(--color-mac-muted, #888)", marginTop: "2px" }}>{f.description}</div>}
+                      {f.description && <div style={{ fontSize: "12px", color: "var(--text-muted)", marginTop: "2px" }}>{f.description}</div>}
                     </div>
                   ))}
                 </div>
@@ -817,14 +820,14 @@ export default function GroupsView({ token, currentUser }) {
       {/* CREATE GROUP MODAL */}
       {showCreateGroup && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", zIndex: 300, display: "flex", alignItems: "center", justifyContent: "center", padding: "20px" }}>
-          <div style={{ background: "var(--color-mac-card, #1e1e1e)", border: "1px solid var(--border, rgba(255,255,255,0.15))", borderRadius: "10px", width: "100%", maxWidth: "420px", padding: "20px", boxShadow: "0 12px 30px rgba(0,0,0,0.5)" }}>
+          <div style={{ background: "var(--surface)", border: "1px solid var(--border, rgba(255,255,255,0.15))", borderRadius: "10px", width: "100%", maxWidth: "420px", padding: "20px", boxShadow: "0 12px 30px rgba(0,0,0,0.5)" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
               <h3 style={{ margin: 0, fontSize: "15px", fontWeight: 600 }}>Create New Group</h3>
-              <button type="button" onClick={() => setShowCreateGroup(false)} style={{ background: "none", border: "none", color: "inherit", cursor: "pointer" }}><X size={16} /></button>
+              <button type="button" aria-label="Close" onClick={() => setShowCreateGroup(false)} style={{ background: "none", border: "none", color: "inherit", cursor: "pointer" }}><X size={16} /></button>
             </div>
             <form onSubmit={handleCreateGroup} style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
               <div>
-                <label style={{ display: "block", fontSize: "11px", fontWeight: 500, marginBottom: "4px", color: "var(--color-mac-muted, #aaa)" }}>Group Name *</label>
+                <label style={{ display: "block", fontSize: "11px", fontWeight: 500, marginBottom: "4px", color: "var(--text-muted)" }}>Group Name *</label>
                 <input
                   type="text"
                   required
@@ -835,7 +838,7 @@ export default function GroupsView({ token, currentUser }) {
                 />
               </div>
               <div>
-                <label style={{ display: "block", fontSize: "11px", fontWeight: 500, marginBottom: "4px", color: "var(--color-mac-muted, #aaa)" }}>Description</label>
+                <label style={{ display: "block", fontSize: "11px", fontWeight: 500, marginBottom: "4px", color: "var(--text-muted)" }}>Description</label>
                 <textarea
                   placeholder="What is this group for?"
                   rows={3}
@@ -846,7 +849,7 @@ export default function GroupsView({ token, currentUser }) {
               </div>
               <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px", marginTop: "8px" }}>
                 <button type="button" onClick={() => setShowCreateGroup(false)} style={{ padding: "6px 12px", fontSize: "12px", borderRadius: "6px", background: "transparent", border: "1px solid var(--border, rgba(255,255,255,0.15))", color: "inherit", cursor: "pointer" }}>Cancel</button>
-                <button type="submit" style={{ padding: "6px 14px", fontSize: "12px", fontWeight: 500, borderRadius: "6px", background: "var(--color-mac-accent, #2f7a72)", border: "none", color: "#fff", cursor: "pointer" }}>Create</button>
+                <button type="submit" style={{ padding: "6px 14px", fontSize: "12px", fontWeight: 500, borderRadius: "6px", background: "var(--accent)", border: "none", color: "var(--text-inverse)", cursor: "pointer" }}>Create</button>
               </div>
             </form>
           </div>
@@ -856,14 +859,14 @@ export default function GroupsView({ token, currentUser }) {
       {/* CREATE GROUP TASK MODAL */}
       {showNewTaskModal && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", zIndex: 300, display: "flex", alignItems: "center", justifyContent: "center", padding: "20px" }}>
-          <div style={{ background: "var(--color-mac-card, #1e1e1e)", border: "1px solid var(--border, rgba(255,255,255,0.15))", borderRadius: "10px", width: "100%", maxWidth: "460px", padding: "20px", boxShadow: "0 12px 30px rgba(0,0,0,0.5)" }}>
+          <div style={{ background: "var(--surface)", border: "1px solid var(--border, rgba(255,255,255,0.15))", borderRadius: "10px", width: "100%", maxWidth: "460px", padding: "20px", boxShadow: "0 12px 30px rgba(0,0,0,0.5)" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
               <h3 style={{ margin: 0, fontSize: "15px", fontWeight: 600 }}>New Group Task</h3>
-              <button type="button" onClick={() => setShowNewTaskModal(false)} style={{ background: "none", border: "none", color: "inherit", cursor: "pointer" }}><X size={16} /></button>
+              <button type="button" aria-label="Close" onClick={() => setShowNewTaskModal(false)} style={{ background: "none", border: "none", color: "inherit", cursor: "pointer" }}><X size={16} /></button>
             </div>
             <form onSubmit={handleCreateTask} style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
               <div>
-                <label style={{ display: "block", fontSize: "11px", fontWeight: 500, marginBottom: "4px", color: "var(--color-mac-muted, #aaa)" }}>Title *</label>
+                <label style={{ display: "block", fontSize: "11px", fontWeight: 500, marginBottom: "4px", color: "var(--text-muted)" }}>Title *</label>
                 <input
                   type="text"
                   required
@@ -874,7 +877,7 @@ export default function GroupsView({ token, currentUser }) {
                 />
               </div>
               <div>
-                <label style={{ display: "block", fontSize: "11px", fontWeight: 500, marginBottom: "4px", color: "var(--color-mac-muted, #aaa)" }}>Description</label>
+                <label style={{ display: "block", fontSize: "11px", fontWeight: 500, marginBottom: "4px", color: "var(--text-muted)" }}>Description</label>
                 <textarea
                   placeholder="Additional details or notes"
                   rows={2}
@@ -885,7 +888,7 @@ export default function GroupsView({ token, currentUser }) {
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
                 <div>
-                  <label style={{ display: "block", fontSize: "11px", fontWeight: 500, marginBottom: "4px", color: "var(--color-mac-muted, #aaa)" }}>Assignee</label>
+                  <label style={{ display: "block", fontSize: "11px", fontWeight: 500, marginBottom: "4px", color: "var(--text-muted)" }}>Assignee</label>
                   <select
                     value={taskAssignee}
                     onChange={e => setTaskAssignee(e.target.value)}
@@ -900,7 +903,7 @@ export default function GroupsView({ token, currentUser }) {
                   </select>
                 </div>
                 <div>
-                  <label style={{ display: "block", fontSize: "11px", fontWeight: 500, marginBottom: "4px", color: "var(--color-mac-muted, #aaa)" }}>Priority</label>
+                  <label style={{ display: "block", fontSize: "11px", fontWeight: 500, marginBottom: "4px", color: "var(--text-muted)" }}>Priority</label>
                   <select
                     value={taskPriority}
                     onChange={e => setTaskPriority(e.target.value)}
@@ -914,7 +917,7 @@ export default function GroupsView({ token, currentUser }) {
                 </div>
               </div>
               <div>
-                <label style={{ display: "block", fontSize: "11px", fontWeight: 500, marginBottom: "4px", color: "var(--color-mac-muted, #aaa)" }}>Due Date</label>
+                <label style={{ display: "block", fontSize: "11px", fontWeight: 500, marginBottom: "4px", color: "var(--text-muted)" }}>Due Date</label>
                 <input
                   type="date"
                   value={taskDueDate}
@@ -924,7 +927,7 @@ export default function GroupsView({ token, currentUser }) {
               </div>
               <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px", marginTop: "8px" }}>
                 <button type="button" onClick={() => setShowNewTaskModal(false)} style={{ padding: "6px 12px", fontSize: "12px", borderRadius: "6px", background: "transparent", border: "1px solid var(--border, rgba(255,255,255,0.15))", color: "inherit", cursor: "pointer" }}>Cancel</button>
-                <button type="submit" disabled={isSavingTask} style={{ padding: "6px 14px", fontSize: "12px", fontWeight: 500, borderRadius: "6px", background: "var(--color-mac-accent, #2f7a72)", border: "none", color: "#fff", cursor: "pointer" }}>
+                <button type="submit" disabled={isSavingTask} style={{ padding: "6px 14px", fontSize: "12px", fontWeight: 500, borderRadius: "6px", background: "var(--accent)", border: "none", color: "var(--text-inverse)", cursor: "pointer" }}>
                   {isSavingTask ? "Saving..." : "Create Task"}
                 </button>
               </div>

@@ -70,8 +70,8 @@ describe("GroupsView", () => {
     expect(screen.getByText("👤 Bob")).toBeInTheDocument();
     expect(screen.getByText("👤 Assigned to you")).toBeInTheDocument();
 
-    // Switch to Members tab
-    const membersTab = screen.getByRole("button", { name: /Members \(2\)/i });
+    // Switch to Members tab (tabs expose the tab role for accessibility)
+    const membersTab = screen.getByRole("tab", { name: /Members \(2\)/i });
     fireEvent.click(membersTab);
     expect(await screen.findByText("alice@test.com")).toBeInTheDocument();
     expect(screen.getByText("bob@test.com")).toBeInTheDocument();

@@ -88,7 +88,7 @@ const RulerSlider = ({ value, onChange }) => {
         bottom: 0,
         width: '2px',
         marginLeft: '-1px',
-        backgroundColor: 'var(--color-mac-accent, #007aff)',
+        backgroundColor: 'var(--accent)',
         zIndex: 2,
         borderRadius: '2px'
       }} />
