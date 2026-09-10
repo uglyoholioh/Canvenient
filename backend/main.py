@@ -27,10 +27,13 @@ from routes.venues import router as venues_router
 
 
 from schema import initialize_schema
+from backup import backup_database
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # Safety copy of user data before anything touches the database.
+    backup_database()
     await db.connect()
     await initialize_schema()
     yield
