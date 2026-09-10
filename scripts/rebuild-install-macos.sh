@@ -40,6 +40,30 @@ readonly SIDECAR_TARGET="$TAURI_DIR/bin/backend-$TARGET_TRIPLE"
 readonly SIDECAR_DEV_TARGET="$TAURI_DIR/bin/backend"
 readonly BUILT_APP="$TAURI_DIR/target/release/bundle/macos/canvenient.app"
 
+# Clean up staging dirs abandoned by interrupted installs (older than a day;
+# never touch a directory another concurrent install may be using right now).
+for stale in /Applications/.canvenient-install.*; do
+  if [[ -d "$stale" && ! -n "$(find "$stale" -maxdepth 0 -mtime -1 2>/dev/null)" ]]; then
+    rm -rf "$stale"
+    echo "Removed stale install staging dir: $stale"
+  fi
+done
+
+# Signing and notarization activate automatically once an Apple Developer
+# "Developer ID Application" certificate exists in the login keychain.
+# Notarization additionally needs `xcrun notarytool` credentials: either a
+# stored keychain profile named "canvenient-notary" or APPLE_ID,
+# APPLE_PASSWORD, and APPLE_TEAM_ID in the environment. Without a certificate
+# the build behaves exactly as before (ad-hoc signed, local install only).
+readonly NOTARY_PROFILE="canvenient-notary"
+SIGNING_IDENTITY="$(security find-identity -v -p codesigning 2>/dev/null | awk '/Developer ID Application/ { print $2; exit }')"
+if [[ -n "$SIGNING_IDENTITY" ]]; then
+  export APPLE_SIGNING_IDENTITY="$SIGNING_IDENTITY"
+  echo "Code signing enabled: $SIGNING_IDENTITY"
+else
+  echo "No Developer ID Application certificate found; the build stays ad-hoc signed (local install only)."
+fi
+
 echo "[1/5] Building the Python backend sidecar..."
 (
   cd "$BACKEND_DIR"
@@ -119,6 +143,33 @@ cleanup_staging() {
 trap cleanup_staging EXIT
 
 /usr/bin/ditto "$BUILT_APP" "$STAGED_APP"
+
+# Notarize and staple the staged app when signing + notary credentials exist.
+# Failures are reported loudly but never block the local install.
+if [[ -n "${APPLE_SIGNING_IDENTITY:-}" ]]; then
+  notary_args=()
+  if xcrun notarytool history --keychain-profile "$NOTARY_PROFILE" >/dev/null 2>&1; then
+    notary_args=(--keychain-profile "$NOTARY_PROFILE")
+  elif [[ -n "${APPLE_ID:-}" && -n "${APPLE_PASSWORD:-}" && -n "${APPLE_TEAM_ID:-}" ]]; then
+    notary_args=(--apple-id "$APPLE_ID" --password "$APPLE_PASSWORD" --team-id "$APPLE_TEAM_ID")
+  fi
+
+  if [[ ${#notary_args[@]} -eq 0 ]]; then
+    echo "Signed, but not notarized: configure notarytool (keychain profile '$NOTARY_PROFILE' or APPLE_ID/APPLE_PASSWORD/APPLE_TEAM_ID) to enable notarization." >&2
+  else
+    echo "Submitting the app for Apple notarization (usually a few minutes)..."
+    readonly NOTARY_ZIP="$STAGING_DIR/Canvenient-notarize.zip"
+    if /usr/bin/ditto -c -k --keepParent "$STAGED_APP" "$NOTARY_ZIP" \
+      && xcrun notarytool submit "$NOTARY_ZIP" --wait "${notary_args[@]}" \
+      && xcrun stapler staple "$STAGED_APP" \
+      && /usr/sbin/spctl -a -t exec -vv "$STAGED_APP"; then
+      echo "Notarization accepted by Gatekeeper."
+    else
+      echo "Notarization or Gatekeeper assessment failed; installing the signed-but-unnotarized build. Check your notarytool credentials." >&2
+    fi
+    rm -f "$NOTARY_ZIP"
+  fi
+fi
 
 if [[ -e "$INSTALL_APP" ]]; then
   mv "$INSTALL_APP" "$PREVIOUS_APP"
