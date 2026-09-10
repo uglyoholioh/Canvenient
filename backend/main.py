@@ -27,6 +27,7 @@ from routes.venues import router as venues_router
 
 
 from schema import initialize_schema
+from migrations import run_migrations
 from backup import backup_database
 
 
@@ -36,6 +37,9 @@ async def lifespan(app: FastAPI):
     backup_database()
     await db.connect()
     await initialize_schema()
+    applied = await run_migrations()
+    if applied:
+        print(f"[migrations] applied: {', '.join(applied)}")
     yield
     await db.disconnect()
 
