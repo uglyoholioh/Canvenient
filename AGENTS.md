@@ -35,4 +35,4 @@ before changing this repository. These rules apply to every AI-assisted task.
 
 Maintain Git properly at your own discretion. Make logical safepoint commits as work progresses or when a state is known-good. If a commit or operation involves significant risk or requires attention, elevate and ask the user for explicit approval first. Safepoint commits contain source, required assets, tests, and operational scripts; exclude local databases, build output, credentials, logs, and scratch files unless the user explicitly requests them.
 
-The current known-good restored dashboard checkpoint is `4fbca5e`.
+The current known-good restored dashboard checkpoint is `5e6b9cb`.
