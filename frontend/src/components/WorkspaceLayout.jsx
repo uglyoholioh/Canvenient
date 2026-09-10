@@ -1,28 +1,39 @@
 // React is required by the test JSX transform.
  
-import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef, lazy, Suspense } from "react";
 import TaskView from "./TaskView";
 import TaskInputBar from "./TaskInputBar";
 import GlobalTasksPanel from "./GlobalTasksPanel";
 import Omnibar from "./Omnibar";
-import SettingsView from "./SettingsView";
 import OnboardingModal from "./OnboardingModal";
-import CanvasView from "./CanvasView";
 import Dashboard from "./Dashboard";
-import NotesView from "./NotesView";
-import Schedule from "./Schedule";
-import MarkdownEditor from "./MarkdownEditor";
-import VenueFinder from "./VenueFinder";
 import CanvasDrawer from "./drawers/CanvasDrawer";
 import StudyTimerModule from "./dashboard/StudyTimerModule";
-import GroupsView from "./GroupsView";
 import { runDueReminderCycle } from "../dueReminders";
-import SpinWheelView from "./wheel/SpinWheelView";
 import { WorkspaceToolbarContext } from "./WorkspaceToolbarContext";
 import { QuickCaptureContext } from "./QuickCaptureContext";
-import { Folder, Search, Settings, CheckSquare, PanelLeft, BookOpen, Plus, LogOut, LayoutDashboard, FileText, CalendarDays, DoorOpen, ChevronLeft, ChevronRight, Users, Dices } from "lucide-react";
+import { Folder, Search, Settings, CheckSquare, PanelLeft, BookOpen, Plus, LogOut, LayoutDashboard, FileText, CalendarDays, DoorOpen, ChevronLeft, ChevronRight, Users, Dices, Loader2 } from "lucide-react";
 import { createNote } from "../api";
 import { formatShortcut, matchesShortcut, readKeyboardShortcuts } from "../keyboardShortcuts";
+
+// Secondary views load on demand so the dashboard is interactive sooner.
+const SettingsView = lazy(() => import("./SettingsView"));
+const CanvasView = lazy(() => import("./CanvasView"));
+const NotesView = lazy(() => import("./NotesView"));
+const Schedule = lazy(() => import("./Schedule"));
+const VenueFinder = lazy(() => import("./VenueFinder"));
+const GroupsView = lazy(() => import("./GroupsView"));
+const SpinWheelView = lazy(() => import("./wheel/SpinWheelView"));
+const MarkdownEditor = lazy(() => import("./MarkdownEditor"));
+
+function ViewLoader() {
+  return (
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "10px", height: "60vh", color: "var(--text-muted)", fontSize: "13px" }}>
+      <Loader2 className="retro-icon-spin" size={18} />
+      <span>Loading…</span>
+    </div>
+  );
+}
 
 const getSidebarBehavior = () => {
   const stored = localStorage.getItem('canvenient-sidebar-mode');
@@ -459,23 +470,25 @@ export default function WorkspaceLayout({ token, user, onLogout, onUpdateUser })
 
         <main className="mac-workspace-main">
           <div className="mac-workspace-content">
-            {activeTab === 'dashboard' && <Dashboard token={token} user={user} onNavigate={setActiveTab} onOpenSearch={() => setIsOmnibarOpen(true)} searchShortcutLabel={formatShortcut(shortcuts.search)} />}
-            {activeTab === 'tasks' && <TaskView token={token} user={user} />}
-            {activeTab === 'schedule' && <Schedule token={token} />}
-            {activeTab === 'venues' && <VenueFinder token={token} />}
-            {activeTab === 'settings' && (
-              <SettingsView
-                token={token}
-                user={user}
-                onUpdateUser={onUpdateUser}
-                onReplayOnboarding={() => setIsOnboardingOpen(true)}
-              />
-            )}
-            {activeTab === 'canvas' && <CanvasView token={token} />}
-            {activeTab === 'groups' && <GroupsView token={token} currentUser={user} />}
-            {activeTab === 'notes' && <NotesView token={token} />}
-            {activeTab === 'wheel' && <SpinWheelView token={token} onNavigate={setActiveTab} />}
-            {activeTab.startsWith('note-') && <MarkdownEditor key={activeTab} noteId={activeTab.split('-')[1]} token={token} />}
+            <Suspense fallback={<ViewLoader />}>
+              {activeTab === 'dashboard' && <Dashboard token={token} user={user} onNavigate={setActiveTab} onOpenSearch={() => setIsOmnibarOpen(true)} searchShortcutLabel={formatShortcut(shortcuts.search)} />}
+              {activeTab === 'tasks' && <TaskView token={token} user={user} />}
+              {activeTab === 'schedule' && <Schedule token={token} />}
+              {activeTab === 'venues' && <VenueFinder token={token} />}
+              {activeTab === 'settings' && (
+                <SettingsView
+                  token={token}
+                  user={user}
+                  onUpdateUser={onUpdateUser}
+                  onReplayOnboarding={() => setIsOnboardingOpen(true)}
+                />
+              )}
+              {activeTab === 'canvas' && <CanvasView token={token} />}
+              {activeTab === 'groups' && <GroupsView token={token} currentUser={user} />}
+              {activeTab === 'notes' && <NotesView token={token} />}
+              {activeTab === 'wheel' && <SpinWheelView token={token} onNavigate={setActiveTab} />}
+              {activeTab.startsWith('note-') && <MarkdownEditor key={activeTab} noteId={activeTab.split('-')[1]} token={token} />}
+            </Suspense>
           </div>
           <TaskInputBar
             token={token}

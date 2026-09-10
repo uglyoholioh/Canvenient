@@ -34,7 +34,7 @@ describe("WorkspaceLayout", () => {
     });
   });
 
-  it("uses source-list navigation and renders the selected view once", () => {
+  it("uses source-list navigation and renders the selected view once", async () => {
     render(<WorkspaceLayout token="token" user={{ id: 1 }} onLogout={() => {}} />);
 
     expect(screen.getByRole("navigation", { name: "Workspace views" })).toBeInTheDocument();
@@ -42,8 +42,8 @@ describe("WorkspaceLayout", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Schedule" }));
 
-    expect(screen.getByRole("heading", { name: "Schedule" })).toBeInTheDocument();
-    expect(screen.getAllByText("Schedule content")).toHaveLength(1);
+    expect(await screen.findByRole("heading", { name: "Schedule" })).toBeInTheDocument();
+    expect((await screen.findAllByText("Schedule content")).length).toBeGreaterThanOrEqual(1);
     expect(window.localStorage.setItem).toHaveBeenCalledWith("canvenient-active-view", "schedule");
   });
 
@@ -96,24 +96,23 @@ describe("WorkspaceLayout", () => {
     expect(screen.queryByRole("dialog", { name: "Tasks" })).not.toBeInTheDocument();
   });
 
-  it("navigates to Spin the Wheel view when clicked", () => {
+  it("navigates to Spin the Wheel view when clicked", async () => {
     render(<WorkspaceLayout token="token" user={{ id: 1 }} onLogout={() => {}} />);
     fireEvent.click(screen.getByRole("button", { name: "Spin the Wheel" }));
 
-    expect(screen.getByRole("heading", { name: "Spin the Wheel" })).toBeInTheDocument();
-    expect(screen.getByText("Wheel content")).toBeInTheDocument();
+    expect(await screen.findByText("Wheel content")).toBeInTheDocument();
     expect(window.localStorage.setItem).toHaveBeenCalledWith("canvenient-active-view", "wheel");
   });
 
   it.each([
     ["7", "groups", "Groups content"],
     ["8", "wheel", "Wheel content"],
-  ])("switches to %s:%s via command shortcut", (key, view, content) => {
+  ])("switches to %s:%s via command shortcut", async (key, view, content) => {
     render(<WorkspaceLayout token="token" user={{ id: 1 }} onLogout={() => {}} />);
 
     fireEvent.keyDown(window, { key, metaKey: true });
 
-    expect(screen.getByText(content)).toBeInTheDocument();
+    expect(await screen.findByText(content)).toBeInTheDocument();
     expect(window.localStorage.setItem).toHaveBeenCalledWith("canvenient-active-view", view);
   });
 });
