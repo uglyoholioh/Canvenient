@@ -1,11 +1,10 @@
 // React is required by the test JSX transform.
-// eslint-disable-next-line no-unused-vars
-import React from "react";
+ 
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import TasksModule from "../TasksModule";
-import { createTask, deleteTask, getAcademicModules, getTasks, updateTask } from "../../../api";
+import { createTask, getTasks, updateTask } from "../../../api";
 
 vi.mock("../../../api", () => ({
   createTask: vi.fn(),

@@ -1,6 +1,6 @@
 // React is required by the test JSX transform.
-// eslint-disable-next-line no-unused-vars
-import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+ 
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { AlertTriangle, ChevronLeft, ChevronRight, Loader2, Minus, Plus, RotateCw } from "lucide-react";
 import { fetchCanvasFileContent } from "../api";
 

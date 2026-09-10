@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Play, Pause, Square, Check, Timer } from "lucide-react";
 import {
   createStudySession,

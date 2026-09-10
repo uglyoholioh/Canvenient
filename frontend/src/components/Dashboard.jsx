@@ -1,5 +1,5 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Check, Pencil, Search, SlidersHorizontal, X } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Check, Pencil, SlidersHorizontal, X } from "lucide-react";
 import CanvasDrawer from "./drawers/CanvasDrawer";
 import CanvasModule from "./dashboard/CanvasModule";
 import ModuleCard from "./dashboard/ModuleCard";
@@ -19,7 +19,7 @@ import { useContext } from "react";
 
 
 
-export default function Dashboard({ token, user, onNavigate, onOpenSearch, searchShortcutLabel }) {
+export default function Dashboard({ token, user, onNavigate }) {
   const { openQuickCapture } = useQuickCapture();
   const setToolbar = useContext(WorkspaceToolbarContext);
   const [activeCanvasItem, setActiveCanvasItem] = useState(null);

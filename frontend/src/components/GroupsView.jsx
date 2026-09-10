@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import {
   Users, UserPlus, Plus, Calendar, CheckSquare,
   FileText, Copy, Check, ChevronLeft, X, Clock, MapPin, Flag, Trash2
@@ -6,7 +6,7 @@ import {
 import {
   getGroups, createGroup, getGroupMembers, createInvite, joinGroup,
   getTasks, createTask, updateTask, deleteTask,
-  getEvents, createEvent, getForms, createForm, getCommunities
+  getEvents, getForms
 } from "../api";
 import { notifyTasksChanged } from "../taskEvents";
 import { useWorkspaceToolbar } from "./WorkspaceToolbarContext";
@@ -29,6 +29,7 @@ function fmtTime(dt) {
 }
 
 export default function GroupsView({ token, currentUser }) {
+  const copiedTimerRef = useRef(null);
   const [groups, setGroups] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -187,8 +188,11 @@ export default function GroupsView({ token, currentUser }) {
     if (!generatedInvite) return;
     navigator.clipboard.writeText(generatedInvite);
     setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    clearTimeout(copiedTimerRef.current);
+    copiedTimerRef.current = setTimeout(() => setCopied(false), 2000);
   };
+
+  useEffect(() => () => clearTimeout(copiedTimerRef.current), []);
 
   // Create group task
   const handleCreateTask = async (e) => {

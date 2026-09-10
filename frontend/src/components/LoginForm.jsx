@@ -1,4 +1,4 @@
-import React, { useState } from "react"
+import { useState } from "react"
 import { useNavigate, Link } from "react-router-dom"
 import { Sparkles, Loader2 } from "lucide-react"
 import { login } from "../api"

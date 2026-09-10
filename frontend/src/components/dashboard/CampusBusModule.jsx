@@ -1,7 +1,7 @@
 // React is required by the test JSX transform.
-// eslint-disable-next-line no-unused-vars
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ArrowRight, ArrowLeft, ArrowLeftRight, LocateFixed, RotateCw, Star, X, MapPin, Search, Route } from "lucide-react";
+ 
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { ArrowLeft, ArrowLeftRight, LocateFixed, RotateCw, Star, X, MapPin, Search, Route } from "lucide-react";
 import {
   getCampusBusArrivals,
   getCampusBusStops,
@@ -63,12 +63,6 @@ function formatEta(minutes) {
 function formatClock(value) {
   if (!value) return "—";
   return new Date(value).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
-}
-
-function formatTimeAgo(seconds) {
-  if (seconds < 10) return "just now";
-  if (seconds < 60) return `${seconds}s ago`;
-  return `${Math.floor(seconds / 60)}m ago`;
 }
 
 function serviceTone(service) {

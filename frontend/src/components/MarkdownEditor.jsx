@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Placeholder from '@tiptap/extension-placeholder';
@@ -294,7 +294,7 @@ export default function MarkdownEditor({ noteId, token, onDelete, onUpdate, onTi
           setSaveState('saved');
           saveStateRef.current = 'saved';
         }
-      } catch (err) {}
+      } catch {}
     };
     fetchNote();
     return () => { isMounted = false; };
@@ -328,7 +328,7 @@ export default function MarkdownEditor({ noteId, token, onDelete, onUpdate, onTi
           saveState: 'saved'
         }
       }));
-    } catch (err) {
+    } catch {
       setSaveState('unsaved');
       saveStateRef.current = 'unsaved';
       window.dispatchEvent(new CustomEvent('canvenient-note-sync', {
@@ -380,7 +380,7 @@ export default function MarkdownEditor({ noteId, token, onDelete, onUpdate, onTi
     try {
       await createTask(token, { title: text, description: `Created from note: ${title}` });
       alert("Task created successfully!");
-    } catch (e) {
+    } catch {
       alert("Failed to create task.");
     }
   };

@@ -1,10 +1,8 @@
-import React from "react";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import TaskView from "../TaskView";
 import { getTasks, getAcademicModules } from "../../api";
 import { queueTaskDeletion } from "../../taskDeleteBuffer";
-import { WorkspaceToolbarProvider } from "../WorkspaceToolbarContext";
 
 vi.mock("../../api", () => ({
   getTasks: vi.fn(),
@@ -15,7 +13,7 @@ vi.mock("../../taskDeleteBuffer", () => ({
   queueTaskDeletion: vi.fn(),
 }));
 
-global.localStorage = { getItem: () => null, setItem: () => {} };
+globalThis.localStorage = { getItem: () => null, setItem: () => {} };
 
 describe("TaskView Deletion", () => {
   beforeEach(() => {

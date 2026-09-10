@@ -1,4 +1,4 @@
-import React, { forwardRef, useEffect, useImperativeHandle, useState } from 'react';
+import { forwardRef, useEffect, useImperativeHandle, useState } from 'react';
 
 export const SuggestionMenu = forwardRef((props, ref) => {
   const [selectedIndex, setSelectedIndex] = useState(0);

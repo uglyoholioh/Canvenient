@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 
 // Web Audio synthesizer for mechanical split-flap shutter clicks
 class FlapSoundSynthesizer {

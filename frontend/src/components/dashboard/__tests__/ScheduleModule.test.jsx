@@ -1,6 +1,5 @@
 // React is required by the test JSX transform.
-// eslint-disable-next-line no-unused-vars
-import React from "react";
+ 
 import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { getSchedule, getTasks } from "../../../api";

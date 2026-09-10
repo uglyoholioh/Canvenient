@@ -1,5 +1,5 @@
-import React, { useState, useMemo, useEffect } from "react";
-import { Search, X, FileText, Image, FileVideo, File, Download, ExternalLink, Sparkles, Filter, ChevronRight } from "lucide-react";
+import { useState, useMemo } from "react";
+import { Search, X, FileText, Image, FileVideo, File, Download, ExternalLink } from "lucide-react";
 
 function getFileType(name = "") {
   const ext = name.split(".").pop().toLowerCase();
@@ -41,10 +41,8 @@ function relDate(str) {
 export default function CanvasSearchSection({
   filesByCourse,
   displayedCourses,
-  courseColors,
   selectedCourseId,
   onSelectCourse,
-  onOpenItem,
 }) {
   const [query, setQuery] = useState("");
   const [activeType, setActiveType] = useState("all");

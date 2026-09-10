@@ -1,6 +1,4 @@
-// React is required by the test JSX transform.
-// eslint-disable-next-line no-unused-vars
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { BookOpen, Calendar, CheckCircle, Flag, Pencil, Plus, Trash2, Users } from "lucide-react";
 import { getAcademicModules, getTasks, updateTask } from "../api";
 import { notifyTasksChanged } from "../taskEvents";
@@ -41,9 +39,6 @@ function formatAddedAt(value) {
   }).format(date);
 }
 
-const DUE_SEGMENTS = ["day", "month", "year", "hour", "minute"];
-const DUE_SEGMENT_LENGTHS = { day: 2, month: 2, year: 4, hour: 2, minute: 2 };
-
 function duePartsValue(value) {
   const date = normalizeDate(value);
   if (!date) return { day: "", month: "", year: "", hour: "", minute: "" };
@@ -55,106 +50,6 @@ function duePartsValue(value) {
     hour: part(date.getHours()),
     minute: part(date.getMinutes()),
   };
-}
-
-function parseDueParts(parts) {
-  if (DUE_SEGMENTS.every((segment) => !parts[segment])) return null;
-  if (DUE_SEGMENTS.some((segment) => !parts[segment])) throw new Error("Complete each part of the due date and time.");
-  const day = Number(parts.day);
-  const month = Number(parts.month);
-  const year = Number(parts.year);
-  const hour = Number(parts.hour);
-  const minute = Number(parts.minute);
-  const date = new Date(year, month - 1, day, hour, minute, 0, 0);
-  if (month < 1 || month > 12 || minute > 59 || hour > 23 || date.getFullYear() !== year || date.getMonth() !== month - 1 || date.getDate() !== day) {
-    throw new Error("Enter a valid due date and time.");
-  }
-  return date.toISOString();
-}
-
-function DueDateEditor({ value, onChange }) {
-  const [selectedSegment, setSelectedSegment] = useState(null);
-  const [isTyping, setIsTyping] = useState(false);
-  const segment = DUE_SEGMENTS[selectedSegment] || "day";
-
-  const moveSegment = (direction) => {
-    setSelectedSegment((current) => Math.max(0, Math.min(DUE_SEGMENTS.length - 1, (current ?? 0) + direction)));
-    setIsTyping(false);
-  };
-
-  const adjustSegment = (direction) => {
-    const currentDate = new Date();
-    const defaults = { day: 1, month: currentDate.getMonth() + 1, year: currentDate.getFullYear(), hour: 0, minute: 0 };
-    const bounds = {
-      day: [1, new Date(Number(value.year || defaults.year), Number(value.month || defaults.month), 0).getDate()],
-      month: [1, 12],
-      year: [2000, 2099],
-      hour: [0, 23],
-      minute: [0, 59],
-    };
-    const [minimum, maximum] = bounds[segment];
-    const current = Number(value[segment] || defaults[segment]);
-    const next = current + direction > maximum ? minimum : current + direction < minimum ? maximum : current + direction;
-    onChange({ ...value, [segment]: String(next).padStart(DUE_SEGMENT_LENGTHS[segment], "0") });
-    setIsTyping(false);
-  };
-
-  const setSegmentValue = (raw) => {
-    const numeric = raw.replace(/\D/g, "");
-    if (!numeric) return;
-    const valueNum = Number(numeric);
-    const currentDate = new Date();
-    const defaults = { day: 1, month: currentDate.getMonth() + 1, year: currentDate.getFullYear(), hour: 0, minute: 0 };
-    const daysInMonth = new Date(Number(value.year || defaults.year), Number(value.month || defaults.month), 0).getDate();
-    let validated = valueNum;
-    if (segment === "day") validated = Math.max(1, Math.min(daysInMonth, valueNum));
-    if (segment === "month") validated = Math.max(1, Math.min(12, valueNum));
-    if (segment === "year") validated = Math.max(2000, Math.min(2099, valueNum));
-    if (segment === "hour") validated = Math.max(0, Math.min(23, valueNum));
-    if (segment === "minute") validated = Math.max(0, Math.min(59, valueNum));
-    onChange({ ...value, [segment]: String(validated).padStart(DUE_SEGMENT_LENGTHS[segment], "0") });
-  };
-
-  const handleKeyDown = (event) => {
-    if (event.key === "ArrowLeft") {
-      event.preventDefault();
-      moveSegment(-1);
-    } else if (event.key === "ArrowRight") {
-      event.preventDefault();
-      moveSegment(1);
-    } else if (event.key === "ArrowUp") {
-      event.preventDefault();
-      adjustSegment(1);
-    } else if (event.key === "ArrowDown") {
-      event.preventDefault();
-      adjustSegment(-1);
-    } else if (/^\d$/.test(event.key)) {
-      event.preventDefault();
-      const currentText = isTyping ? value[segment] || "" : "";
-      const nextText = `${currentText}${event.key}`.slice(-DUE_SEGMENT_LENGTHS[segment]);
-      setIsTyping(true);
-      setSegmentValue(nextText);
-      if (nextText.length === DUE_SEGMENT_LENGTHS[segment] && selectedSegment < DUE_SEGMENTS.length - 1) {
-        moveSegment(1);
-      }
-    }
-  };
-
-  return (
-    <div className="due-date-editor" tabIndex={0} onFocus={() => selectedSegment === null && setSelectedSegment(0)} onKeyDown={handleKeyDown}>
-      {DUE_SEGMENTS.map((seg, index) => (
-        <React.Fragment key={seg}>
-          <span className={`due-segment ${selectedSegment === index ? "is-selected" : ""}`} onClick={() => { setSelectedSegment(index); setIsTyping(false); }}>
-            {value[seg] || seg.toUpperCase()}
-          </span>
-          {index === 0 && <span className="due-sep">/</span>}
-          {index === 1 && <span className="due-sep">/</span>}
-          {index === 2 && <span className="due-sep">&nbsp;</span>}
-          {index === 3 && <span className="due-sep">:</span>}
-        </React.Fragment>
-      ))}
-    </div>
-  );
 }
 
 function taskDueDate(task) {
@@ -208,9 +103,9 @@ export default function TaskView({
   const [selectedIndex, setSelectedIndex] = useState(null);
   const [interactionMode, setInteractionMode] = useState("keyboard");
   const [editingId, setEditingId] = useState(null);
-  const [editDraft, setEditDraft] = useState(null);
-  const [editError, setEditError] = useState("");
-  const [isSavingEdit, setIsSavingEdit] = useState(false);
+  const [, setEditDraft] = useState(null);
+  const [, setEditError] = useState("");
+  const [, setIsSavingEdit] = useState(false);
   const [isComposerOpen, setIsComposerOpen] = useState(Boolean(composerAutoFocus));
   const [checkboxStyle, setCheckboxStyle] = useState(() => localStorage.getItem("canvenient-checkbox-style") || "brackets");
   const [filterScope, setFilterScope] = useState("all");
@@ -349,36 +244,6 @@ export default function TaskView({
     restoreTaskFocus(taskId);
   };
 
-  const saveEdit = async (task) => {
-    if (!editDraft?.title.trim() || isSavingEdit) return;
-    let dueAtOverride;
-    try {
-      dueAtOverride = parseDueParts(editDraft.dueAt);
-    } catch (error) {
-      setEditError(error.message);
-      return;
-    }
-    setIsSavingEdit(true);
-    setEditError("");
-    try {
-      const updated = await updateTask(token, task.id, {
-        title: editDraft.title.trim(),
-        description: editDraft.description.trim(),
-        due_at_override: dueAtOverride,
-        priority_manual: editDraft.priority,
-        module_id: editDraft.moduleId ? Number(editDraft.moduleId) : null,
-      });
-      setTasks((current) => sortPendingTasks(current.map((item) => item.id === task.id ? updated : item)));
-      setEditingId(null);
-      setEditDraft(null);
-      restoreTaskFocus(task.id);
-      notifyTasksChanged();
-    } catch (error) {
-      setEditError(error.message || "Could not save task changes.");
-    } finally {
-      setIsSavingEdit(false);
-    }
-  };
 
   const toolbarConfig = useMemo(() => ({
     title: groupId ? "Group Tasks" : "Tasks",

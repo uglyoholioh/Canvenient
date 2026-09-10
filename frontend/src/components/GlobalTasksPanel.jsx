@@ -1,6 +1,6 @@
 // React is required by the test JSX transform.
-// eslint-disable-next-line no-unused-vars
-import React, { useEffect, useRef } from "react";
+ 
+import { useEffect, useRef } from "react";
 import { Maximize2, X } from "lucide-react";
 import TaskView from "./TaskView";
 

@@ -4,8 +4,7 @@ import {
   Bell, BookOpen, CheckCircle2, ChevronRight, ChevronDown, Download,
   ExternalLink, File, FileText, FileVideo, Folder, FolderOpen,
   Image, Loader2, RefreshCw, Link as LinkIcon,
-  MessageSquare, HelpCircle, Search, X, Clock, ArrowUpRight,
-  Filter, Eye, Layers, BookMarked, Calendar, CheckSquare, Plus, Check,
+  MessageSquare, HelpCircle, Search, X, Layers, BookMarked, Calendar, CheckSquare, Plus, Check,
   Maximize2, Minimize2
 } from "lucide-react";
 import {
@@ -20,7 +19,6 @@ import {
   getCanvasCourseModules,
   getCanvasPages,
   getCanvasSyllabus,
-  getCanvasCourseNavigation,
   getTasks,
   createTask,
   updateTask,
@@ -556,8 +554,6 @@ export function FileBrowser({ token, courseId, allFiles }) {
 
 function CourseOverview({
   courseId,
-  courseName,
-  courseCode,
   assignments,
   announcements,
   files,

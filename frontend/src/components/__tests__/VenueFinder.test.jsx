@@ -1,6 +1,5 @@
 // React is required by the test JSX transform.
-// eslint-disable-next-line no-unused-vars
-import React from "react";
+ 
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { getVenueInformation, getVenueLocations, searchCampusBusPlaces } from "../../api";
@@ -220,7 +219,7 @@ describe("VenueFinder", () => {
         coords: { latitude: 1.29495, longitude: 103.77372, accuracy: 10 },
       })
     );
-    global.navigator.geolocation = { getCurrentPosition: getCurrentPositionMock };
+    globalThis.navigator.geolocation = { getCurrentPosition: getCurrentPositionMock };
 
     render(<VenueFinder token="mock-token" />);
 

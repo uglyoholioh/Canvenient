@@ -76,12 +76,12 @@ export function getAcademicWeek(date) {
 
   const shortAy = `AY${String(ayStartYear).slice(-2)}/${String(ayStartYear + 1).slice(-2)}`;
 
-  let semester = 1;
-  let semesterLabel = "Semester 1";
-  let shortSemester = "Sem 1";
-  let label = "";
+  let semester;
+  let semesterLabel;
+  let shortSemester;
+  let label;
   let weekNumber = null;
-  let type = "instructional";
+  let type;
 
   const diffWeeks = (a, b) => Math.round((a.getTime() - b.getTime()) / (7 * 86400000));
 

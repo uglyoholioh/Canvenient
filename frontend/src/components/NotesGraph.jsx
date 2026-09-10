@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect, useRef } from 'react';
+import { useMemo, useState, useEffect, useRef } from 'react';
 import ForceGraph2D from 'react-force-graph-2d';
 
 export default function NotesGraph({ notes, onNodeClick }) {

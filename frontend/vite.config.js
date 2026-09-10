@@ -24,6 +24,9 @@ copyPdfjsAssets()
 
 export default defineConfig({
   plugins: [react()],
+  // Force the automatic JSX runtime everywhere (including vitest test files),
+  // so components and tests do not need `import React` in scope.
+  esbuild: { jsx: 'automatic' },
   test: {
     globals: true,
     environment: 'jsdom',

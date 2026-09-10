@@ -1,6 +1,6 @@
 // React is required by the test JSX transform.
-// eslint-disable-next-line no-unused-vars
-import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
+ 
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import TaskView from "./TaskView";
 import TaskInputBar from "./TaskInputBar";
 import GlobalTasksPanel from "./GlobalTasksPanel";

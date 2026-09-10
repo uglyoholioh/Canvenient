@@ -1,6 +1,6 @@
 // React is required by the test JSX transform.
-// eslint-disable-next-line no-unused-vars
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+ 
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CalendarClock, Check, Pencil, Trash2 } from "lucide-react";
 import { createTask, getAcademicModules, getTasks, TASKS_CACHE_KEY, updateTask } from "../../api";
 import { notifyTasksChanged } from "../../taskEvents";

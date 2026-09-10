@@ -113,7 +113,7 @@ export default function AiBriefModule({ token }) {
               fetchBrief(false, e.target.value);
             }}
             className="ai-brief-timeframe-select"
-            style={{ fontSize: '0.85rem', padding: '2px 4px', borderRadius: '4px', border: '1px solid var(--border-color)', background: 'var(--bg-color)' }}
+            style={{ fontSize: '0.85rem', padding: '2px 4px', borderRadius: '4px', border: '1px solid var(--border)', background: 'var(--bg)' }}
           >
             <option value="today">Today</option>
             <option value="this_week">This Week</option>

@@ -1,14 +1,8 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  Check,
-  CheckCircle2,
   ChevronDown,
-  Clock,
-  Compass,
-  Copy,
   DoorOpen,
   ExternalLink,
-  Info,
   Loader2,
   LocateFixed,
   MapPin,
@@ -199,7 +193,7 @@ export default function VenueFinder({ token }) {
   const [locationsData, setLocationsData] = useState({});
   const [buildingCentroids, setBuildingCentroids] = useState({});
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [, setError] = useState(null);
 
   const [selectedDay, setSelectedDay] = useState(getCurrentDayName);
   const [selectedTime, setSelectedTime] = useState(getCurrentTimeSlot);
@@ -222,7 +216,7 @@ export default function VenueFinder({ token }) {
   const [starredVenues, setStarredVenues] = useState(() => {
     try {
       return JSON.parse(window.localStorage.getItem("canvenient.venues.starred") || "[]");
-    } catch(e) { return []; }
+    } catch { return []; }
   });
 
   const toggleStar = (venueCode, e) => {
@@ -234,7 +228,7 @@ export default function VenueFinder({ token }) {
       newStarred = [...starredVenues, venueCode];
     }
     setStarredVenues(newStarred);
-    try { window.localStorage.setItem("canvenient.venues.starred", JSON.stringify(newStarred)); } catch(e) {}
+    try { window.localStorage.setItem("canvenient.venues.starred", JSON.stringify(newStarred)); } catch {}
   };
 
   useEffect(() => {
@@ -313,7 +307,7 @@ export default function VenueFinder({ token }) {
       setVenuesData(infoRes.venues || {});
       setLocationsData(locRes.locations || {});
       setBuildingCentroids(locRes.building_centroids || {});
-    } catch (err) {
+    } catch {
       setError("Could not load venue schedules.");
     } finally {
       setIsLoading(false);

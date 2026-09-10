@@ -1,19 +1,19 @@
-import React, { useState, useEffect, useCallback, useMemo } from "react";
-import { Dices, RotateCcw, ArrowUpRight, Utensils, BookOpen } from "lucide-react";
+import { useState, useEffect, useCallback, useMemo } from "react";
+import { Dices, ArrowUpRight } from "lucide-react";
 import WheelCanvas from "../wheel/WheelCanvas";
 import SplitFlapDecider from "../wheel/SplitFlapDecider";
 import ReelDecider from "../wheel/ReelDecider";
 import CardDeckDecider from "../wheel/CardDeckDecider";
 import { loadWheelData, saveWheelData } from "../wheel/wheelDefaults";
 
-export default function WheelModule({ token, onNavigate }) {
+export default function WheelModule({ onNavigate }) {
   const [wheelData, setWheelData] = useState(() => loadWheelData());
   const [isSpinning, setIsSpinning] = useState(false);
   const [winner, setWinner] = useState(null);
-  const [deciderStyle, setDeciderStyle] = useState(() => {
+  const [deciderStyle] = useState(() => {
     return localStorage.getItem("canvenient-decider-style") || "splitflap";
   });
-  const [soundEnabled, setSoundEnabled] = useState(() => {
+  const [soundEnabled] = useState(() => {
     return localStorage.getItem("canvenient-wheel-sound") === "true";
   });
 
@@ -54,9 +54,6 @@ export default function WheelModule({ token, onNavigate }) {
     setIsSpinning(false);
     setWinner(winningItem);
   }, []);
-
-  const isFood = activeWheel?.id === "eat_nus";
-  const isModule = activeWheel?.id === "study_modules";
 
   return (
     <div

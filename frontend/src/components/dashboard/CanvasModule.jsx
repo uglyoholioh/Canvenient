@@ -1,7 +1,7 @@
 // React is required by the test JSX transform.
-// eslint-disable-next-line no-unused-vars
-import React, { useEffect, useMemo, useState } from "react";
-import { Bell, Check, ClipboardList, ExternalLink, Inbox, Loader2, Plus, RefreshCw } from "lucide-react";
+ 
+import { useEffect, useMemo, useState } from "react";
+import { Check, ClipboardList, Inbox, Loader2, Plus, RefreshCw } from "lucide-react";
 import { createTask, getAcademicModules, getCanvasAnnouncements, getCanvasAssignments, getTasks, updateTask } from "../../api";
 import AnnouncementTriageModal from "../AnnouncementTriageModal";
 import { notifyTasksChanged } from "../../taskEvents";
@@ -118,7 +118,6 @@ export default function CanvasModule({ token, enabled, onOpenItem }) {
     .filter((item) => !item.has_submitted && (!item.due_at || new Date(item.due_at) >= new Date()))
     .sort((left, right) => new Date(left.due_at || "9999-12-31") - new Date(right.due_at || "9999-12-31"))
     .slice(0, 4), [assignments]);
-  const attentionItems = useMemo(() => announcements.filter((item) => item.is_priority && !item.is_dismissed).slice(0, 3), [announcements]);
   const unreadAnnouncementsCount = useMemo(() => announcements.filter((item) => !item.is_dismissed).length, [announcements]);
 
   const activeCanvasTaskSourceIds = useMemo(() => {

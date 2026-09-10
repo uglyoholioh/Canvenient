@@ -1,5 +1,5 @@
 // React is required by the test JSX transform.
-// eslint-disable-next-line no-unused-vars
+ 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { RotateCw, ChevronLeft, ChevronRight } from "lucide-react";
 import { getSchedule, getTasks, SCHEDULE_CACHE_KEY, TASKS_CACHE_KEY } from "../../api";

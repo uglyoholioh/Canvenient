@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import {
   Sparkles,
   Key,
@@ -407,7 +407,7 @@ export default function OnboardingModal({
                   aria-label="Application theme"
                   style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "8px" }}
                 >
-                  {THEMES.map(({ id, label, description, icon: Icon, swatches }) => {
+                  {THEMES.map(({ id, label, description, swatches }) => {
                     const active = selectedTheme === id;
                     return (
                       <button

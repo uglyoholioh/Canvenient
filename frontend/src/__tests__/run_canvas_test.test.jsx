@@ -1,4 +1,3 @@
-import React from 'react';
 import { render } from '@testing-library/react';
 import CanvasModule from '../components/dashboard/CanvasModule.jsx';
 import { it } from 'vitest';

@@ -424,11 +424,11 @@ export function getCanvasGrades(token, courseId) {
 }
 
 export function getCanvasFiles(token, courseId) {
-  return apiRequest(`/canvas/files?course_id=` + courseId, { token });
+  return apiRequest(`/canvas/files?course_id=` + encodeURIComponent(courseId), { token });
 }
 
 export function getCanvasFolders(token, courseId) {
-  return apiRequest(`/canvas/folders?course_id=` + courseId, { token });
+  return apiRequest(`/canvas/folders?course_id=` + encodeURIComponent(courseId), { token });
 }
 
 // Canvas download URLs expire quickly, so file content always goes through
@@ -915,10 +915,10 @@ export async function getVenueInformation(token, { academicYear, semester } = {}
       const { timestamp, data } = JSON.parse(cached);
       if (Date.now() - timestamp < 24 * 60 * 60 * 1000) return data;
     }
-  } catch (e) {}
+  } catch {}
 
   const data = await apiRequest(`/venues/info${q}`, { token });
-  try { window.localStorage.setItem(cacheKey, JSON.stringify({ timestamp: Date.now(), data })); } catch (e) {}
+  try { window.localStorage.setItem(cacheKey, JSON.stringify({ timestamp: Date.now(), data })); } catch {}
   return data;
 }
 
@@ -930,10 +930,10 @@ export async function getVenueLocations(token) {
       const { timestamp, data } = JSON.parse(cached);
       if (Date.now() - timestamp < 24 * 60 * 60 * 1000) return data;
     }
-  } catch (e) {}
+  } catch {}
 
   const data = await apiRequest("/venues/locations", { token });
-  try { window.localStorage.setItem(cacheKey, JSON.stringify({ timestamp: Date.now(), data })); } catch (e) {}
+  try { window.localStorage.setItem(cacheKey, JSON.stringify({ timestamp: Date.now(), data })); } catch {}
   return data;
 }
 

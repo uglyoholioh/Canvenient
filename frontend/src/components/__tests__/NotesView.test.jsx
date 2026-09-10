@@ -1,8 +1,7 @@
-import React from "react";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import NotesView from "../NotesView";
-import { getNotes, getFolders, createNote, deleteNote } from "../../api";
+import { getNotes, getFolders, createNote } from "../../api";
 
 vi.mock("../../api", () => ({
   getNotes: vi.fn(),

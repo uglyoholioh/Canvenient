@@ -1,6 +1,6 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { FilePlus2, FileText, Search, Folder, ChevronDown, ChevronRight, Trash2, Pin, Tag as TagIcon, Plus, Columns2, PanelRightClose, X, PanelLeft } from "lucide-react";
-import { createNote, getNotes, deleteNote, getFolders, createFolder, updateNote } from "../api";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { FilePlus2, FileText, Search, Folder, ChevronDown, ChevronRight, Trash2, Pin, Plus, Columns2, PanelRightClose, X, PanelLeft } from "lucide-react";
+import { createNote, getNotes, deleteNote, getFolders, createFolder } from "../api";
 import MarkdownEditor from "./MarkdownEditor";
 import NotesGraph from "./NotesGraph";
 import { useWorkspaceToolbar } from "./WorkspaceToolbarContext";
@@ -200,17 +200,17 @@ export default function NotesView({ token, initialNoteId = null }) {
     try {
       const folder = await createFolder({ name }, token);
       setFolders(curr => [...curr, folder].sort((a,b) => a.name.localeCompare(b.name)));
-    } catch (e) {
+    } catch {
       alert("Failed to create folder");
     }
   };
 
   const handleDelete = useCallback(async (id) => {
-    let confirmed = false;
+    let confirmed;
     try {
       const { confirm: tauriConfirm } = await import("@tauri-apps/api/dialog");
       confirmed = await tauriConfirm("Are you sure you want to delete this note?", { title: 'Canvenient', type: 'warning' });
-    } catch (e) {
+    } catch {
       confirmed = window.confirm("Are you sure you want to delete this note?");
     }
     if (confirmed) {

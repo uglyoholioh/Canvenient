@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import {
   Dices,
   RotateCcw,
@@ -10,7 +10,6 @@ import {
   Check,
   X,
   Shuffle,
-  Sparkles,
   ExternalLink,
   BookOpen,
   Utensils,
@@ -30,8 +29,6 @@ import {
   saveWheelData,
   resetWheelPreset,
   WHEEL_PALETTE,
-  DEFAULT_FOOD_OPTIONS,
-  DEFAULT_MODULE_OPTIONS,
 } from "./wheelDefaults";
 import { getAcademicModules, getCanvasCourses } from "../../api";
 
@@ -54,6 +51,13 @@ export default function SpinWheelView({ token, onNavigate }) {
   const [isSyncingModules, setIsSyncingModules] = useState(false);
   const [syncFeedback, setSyncFeedback] = useState("");
   const newOptionInputRef = useRef(null);
+  const syncTimerRef = useRef(null);
+  const respinTimerRef = useRef(null);
+
+  useEffect(() => () => {
+    clearTimeout(syncTimerRef.current);
+    clearTimeout(respinTimerRef.current);
+  }, []);
 
   // Active wheel object
   const activeWheel = useMemo(() => {
@@ -387,7 +391,8 @@ export default function SpinWheelView({ token, onNavigate }) {
       setSyncFeedback("Could not sync modules. Check Canvas connection.");
     } finally {
       setIsSyncingModules(false);
-      setTimeout(() => setSyncFeedback(""), 4000);
+      clearTimeout(syncTimerRef.current);
+      syncTimerRef.current = setTimeout(() => setSyncFeedback(""), 4000);
     }
   };
 
@@ -410,7 +415,8 @@ export default function SpinWheelView({ token, onNavigate }) {
     });
 
     setWinner(null);
-    setTimeout(() => {
+    clearTimeout(respinTimerRef.current);
+    respinTimerRef.current = setTimeout(() => {
       handleSpinStart();
     }, 150);
   };
