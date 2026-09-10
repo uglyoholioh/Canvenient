@@ -2,21 +2,52 @@ import { useState, useEffect, useRef } from "react";
 import { Search } from "lucide-react";
 import { getNotes, getTasks } from "../api";
 
+// The omnibar searches the whole notes+tasks corpus client-side, so refetch
+// both on every keystroke would hammer the backend. Cache the corpus for a
+// short window and invalidate when tasks change elsewhere in the app.
+const CORPUS_TTL_MS = 30_000;
+let corpusCache = null;
+
+export function invalidateOmnibarCorpus() {
+  corpusCache = null;
+}
+
+async function loadCorpus(token) {
+  if (corpusCache && corpusCache.token === token && Date.now() - corpusCache.fetchedAt < CORPUS_TTL_MS) {
+    return corpusCache;
+  }
+  const [notes, tasks] = await Promise.all([getNotes(token), getTasks(token)]);
+  corpusCache = { token, notes, tasks, fetchedAt: Date.now() };
+  return corpusCache;
+}
+
 export default function Omnibar({ onClose, token, onNavigate }) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState([]);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const inputRef = useRef(null);
+  const corpusRef = useRef({ notes: [], tasks: [] });
 
   useEffect(() => {
     inputRef.current?.focus();
-    
+
+    // Warm the cache as the omnibar opens, and drop it when tasks change.
+    loadCorpus(token)
+      .then((corpus) => { corpusRef.current = corpus; })
+      .catch(() => {});
+    const invalidate = () => {
+      invalidateOmnibarCorpus();
+    };
+    window.addEventListener("canvenient-tasks-changed", invalidate);
     const handleGlobalKey = (e) => {
       if (e.key === 'Escape') onClose();
     };
     window.addEventListener('keydown', handleGlobalKey);
-    return () => window.removeEventListener('keydown', handleGlobalKey);
-  }, [onClose]);
+    return () => {
+      window.removeEventListener("canvenient-tasks-changed", invalidate);
+      window.removeEventListener('keydown', handleGlobalKey);
+    };
+  }, [onClose, token]);
 
   useEffect(() => {
     const fetchResults = async () => {
@@ -25,7 +56,8 @@ export default function Omnibar({ onClose, token, onNavigate }) {
         return;
       }
       try {
-        const [notes, tasks] = await Promise.all([getNotes(token), getTasks(token)]);
+        const { notes, tasks } = await loadCorpus(token);
+        corpusRef.current = { notes, tasks };
         const q = query.toLowerCase();
         const views = [
           { type: 'view', id: 'wheel', view: 'wheel', title: 'Spin the Wheel (NUS Food, Modules & Custom)', keywords: ['wheel', 'spin', 'eat', 'food', 'decide', 'module'] },
