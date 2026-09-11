@@ -2752,6 +2752,12 @@ button.module-item-main:hover, .module-list-item.task-module-item:hover { backgr
 .cv-pdf-page-input:focus { outline: none; border-color: var(--accent); }
 .cv-pdf-zoom-label { min-width: 40px; text-align: center; background: transparent; border: 1px solid transparent; border-radius: 4px; color: var(--text-muted); cursor: pointer; font-family: var(--font-native-mono); font-size: 11px; padding: 3px 2px; }
 .cv-pdf-zoom-label:hover { border-color: var(--border); color: var(--text-h); background: var(--surface-hover); }
+.cv-pdf-search-box { display: flex; align-items: center; gap: 5px; border: 1px solid var(--border); border-radius: 4px; padding: 2px 6px; background: var(--surface); color: var(--text-muted); }
+.cv-pdf-search-box:focus-within { border-color: var(--accent); }
+.cv-pdf-search-box input { width: 120px; background: transparent; border: none; outline: none; color: var(--text-h); font-size: 11px; font-family: var(--font-sans); }
+.cv-pdf-search-count { font-family: var(--font-native-mono); font-size: 10px; color: var(--text-muted); min-width: 28px; text-align: right; white-space: nowrap; }
+.cv-pdf-highlight { position: absolute; background: color-mix(in srgb, #f5c542 38%, transparent); border-radius: 2px; pointer-events: none; }
+.cv-pdf-highlight.is-active { background: color-mix(in srgb, #f5a623 55%, transparent); outline: 1px solid #f5a623; }
 .cv-pdf-scroll { flex: 1; min-height: 0; overflow: auto; background: var(--bg); }
 .cv-pdf-pages { display: flex; flex-direction: column; align-items: center; gap: 14px; padding: 16px 0 28px; }
 .cv-pdf-page { position: relative; background: var(--surface-muted, #232427); border-radius: 2px; overflow: hidden; box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35); }

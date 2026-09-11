@@ -1,7 +1,7 @@
 // React is required by the test JSX transform.
  
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { AlertTriangle, ChevronLeft, ChevronRight, Loader2, Minus, Plus, RotateCw } from "lucide-react";
+import { AlertTriangle, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Loader2, Minus, Plus, RotateCw, Search, X } from "lucide-react";
 import { fetchCanvasFileContent } from "../api";
 
 // pdf.js and its worker are heavy, so they load on first open only and stay
@@ -58,6 +58,33 @@ function blobToArrayBuffer(blob) {
   });
 }
 
+// Reading position survives reopening the same document (and app restarts).
+const scrollStorageKey = (fileId) => `canvenient-pdf-scroll:${fileId}`;
+
+function loadSavedScroll(fileId) {
+  try {
+    const raw = window.localStorage.getItem(scrollStorageKey(fileId));
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== "object") return null;
+    const ratio = Number(parsed.r);
+    return {
+      ratio: Number.isFinite(ratio) ? Math.min(Math.max(ratio, 0), 1) : null,
+      page: Math.max(1, Math.round(Number(parsed.p) || 1)),
+    };
+  } catch {
+    return null;
+  }
+}
+
+function saveScrollPosition(fileId, page, ratio) {
+  try {
+    window.localStorage.setItem(scrollStorageKey(fileId), JSON.stringify({ p: page, r: ratio }));
+  } catch {
+    // Storage may be unavailable; position memory is best-effort.
+  }
+}
+
 export default function PdfViewer({ token, fileId, name = "", externalUrl = "" }) {
   const [status, setStatus] = useState("loading");
   const [error, setError] = useState("");
@@ -69,6 +96,11 @@ export default function PdfViewer({ token, fileId, name = "", externalUrl = "" }
   const [currentPage, setCurrentPage] = useState(1);
   const [pageInput, setPageInput] = useState("1");
   const [reloadKey, setReloadKey] = useState(0);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchStatus, setSearchStatus] = useState("idle");
+  const [searchMatches, setSearchMatches] = useState([]);
+  const [activeMatch, setActiveMatch] = useState(-1);
 
   const scrollRef = useRef(null);
   const docRef = useRef(null);
@@ -79,6 +111,9 @@ export default function PdfViewer({ token, fileId, name = "", externalUrl = "" }
   const scrollRatioRef = useRef(null);
   const scrollFrameRef = useRef(0);
   const pageInfosRef = useRef(new Map());
+  const textCacheRef = useRef(new Map());
+  const searchInputRef = useRef(null);
+  const scrollSaveAtRef = useRef(0);
 
   const gotoPage = useCallback((page) => {
     const clamped = Math.min(Math.max(1, page), numPages || 1);
@@ -87,6 +122,121 @@ export default function PdfViewer({ token, fileId, name = "", externalUrl = "" }
     setCurrentPage(clamped);
     setPageInput(String(clamped));
   }, [numPages]);
+
+  // The pages are painted onto canvases with no text layer, so searching means
+  // extracting the text items pdf.js exposes per page. Item rectangles come
+  // back in unrotated scale-1 coordinates and are scaled again for overlays.
+  const extractPageText = useCallback(async (doc, pageNumber) => {
+    const page = await doc.getPage(pageNumber);
+    const viewport = page.getViewport({ scale: 1 });
+    const content = await page.getTextContent();
+    let text = "";
+    const items = [];
+    for (const item of content.items) {
+      if (typeof item.str !== "string" || !item.str) continue;
+      const [vx, vy] = viewport.convertToViewportPoint(item.transform[4], item.transform[5]);
+      const fontHeight = Math.hypot(item.transform[2], item.transform[3]) || item.height || 10;
+      items.push({
+        str: item.str,
+        start: text.length + (text ? 1 : 0),
+        rect: { x: vx, y: vy - fontHeight, w: item.width || 0, h: fontHeight },
+      });
+      text += (text ? " " : "") + item.str;
+    }
+    return { text, items };
+  }, []);
+
+  const runSearch = useCallback(async (rawQuery) => {
+    const doc = docRef.current;
+    const query = rawQuery.trim().toLowerCase();
+    if (!doc || !query) {
+      setSearchStatus("idle");
+      setSearchMatches([]);
+      setActiveMatch(-1);
+      return;
+    }
+    setSearchStatus("extracting");
+    try {
+      const cache = textCacheRef.current;
+      for (let n = 1; n <= doc.numPages; n += 1) {
+        if (!cache.has(n)) cache.set(n, await extractPageText(doc, n));
+      }
+      const matches = [];
+      for (let n = 1; n <= doc.numPages; n += 1) {
+        const { text, items } = cache.get(n);
+        const lower = text.toLowerCase();
+        let from = 0;
+        for (;;) {
+          const start = lower.indexOf(query, from);
+          if (start === -1) break;
+          const end = start + query.length;
+          matches.push({
+            page: n,
+            segments: items
+              .filter((item) => item.start < end && item.start + item.str.length > start)
+              .map((item) => item.rect),
+          });
+          from = start + query.length;
+        }
+      }
+      setSearchStatus("done");
+      setSearchMatches(matches);
+      setActiveMatch(matches.length ? 0 : -1);
+      if (matches.length) gotoPage(matches[0].page);
+    } catch {
+      // Extraction can fail on damaged documents; search degrades to no-op.
+      setSearchStatus("idle");
+      setSearchMatches([]);
+      setActiveMatch(-1);
+    }
+  }, [extractPageText, gotoPage]);
+
+  const stepMatch = useCallback((direction) => {
+    if (!searchMatches.length) return;
+    const next = (activeMatch + direction + searchMatches.length) % searchMatches.length;
+    setActiveMatch(next);
+    gotoPage(searchMatches[next].page);
+  }, [activeMatch, gotoPage, searchMatches]);
+
+  const closeSearch = useCallback(() => {
+    setSearchOpen(false);
+    setSearchMatches([]);
+    setActiveMatch(-1);
+  }, []);
+
+  // Debounced auto-search while typing; extraction happens once per document.
+  useEffect(() => {
+    if (!searchOpen) return undefined;
+    const handle = window.setTimeout(() => runSearch(searchQuery), 250);
+    return () => window.clearTimeout(handle);
+  }, [searchOpen, searchQuery, runSearch]);
+
+  // ⌘F / Ctrl+F opens the in-document find bar while a document is open.
+  useEffect(() => {
+    if (status !== "ready") return undefined;
+    const onKey = (event) => {
+      if ((event.metaKey || event.ctrlKey) && !event.altKey && event.key.toLowerCase() === "f") {
+        event.preventDefault();
+        setSearchOpen(true);
+        searchInputRef.current?.focus();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [status]);
+
+  // Match rectangles in scale-1 unrotated coordinates, grouped for overlay
+  // rendering; user rotation invalidates them, so they hide until reset.
+  const highlightsByPage = useMemo(() => {
+    const map = new Map();
+    if (rotation % 360 !== 0) return map;
+    searchMatches.forEach((match, index) => {
+      const list = map.get(match.page) ?? [];
+      for (const rect of match.segments) list.push({ rect, active: index === activeMatch });
+      map.set(match.page, list);
+    });
+    return map;
+  }, [activeMatch, rotation, searchMatches]);
 
   // Fetch the bytes through the backend proxy and parse the document.
   useEffect(() => {
@@ -102,8 +252,14 @@ export default function PdfViewer({ token, fileId, name = "", externalUrl = "" }
     setPageInput("1");
     setZoomMode("fit");
     setRotation(0);
+    setSearchOpen(false);
+    setSearchQuery("");
+    setSearchStatus("idle");
+    setSearchMatches([]);
+    setActiveMatch(-1);
     renderStateRef.current = new Map();
     renderTasksRef.current = new Map();
+    textCacheRef.current = new Map();
 
     (async () => {
       try {
@@ -141,6 +297,14 @@ export default function PdfViewer({ token, fileId, name = "", externalUrl = "" }
         docController.signal.addEventListener("abort", () => loadingTask.destroy?.());
         setNumPages(total);
         setBaseDims(dims);
+        // Reopen at the remembered position; the layout effect consumes the
+        // scroll ratio as soon as the page boxes are laid out.
+        const saved = loadSavedScroll(fileId);
+        if (saved) {
+          if (saved.ratio != null) scrollRatioRef.current = saved.ratio;
+          setCurrentPage(saved.page);
+          setPageInput(String(saved.page));
+        }
         setStatus("ready");
       } catch (err) {
         if (!cancelled) {
@@ -186,7 +350,6 @@ export default function PdfViewer({ token, fileId, name = "", externalUrl = "" }
     pageInfosRef.current = new Map(pageInfos.map((info) => [info.n, info]));
   }, [pageInfos]);
 
-  // eslint-disable-next-line react-hooks/preserve-manual-memoization -- imperative pdf.js render scheduling intentionally lives outside the compiler's model
   const renderPage = useCallback(async (pageNumber) => {
     const doc = docRef.current;
     const div = pageDivsRef.current.get(pageNumber);
@@ -387,8 +550,13 @@ export default function PdfViewer({ token, fileId, name = "", externalUrl = "" }
         if (prev !== best) setPageInput(String(best));
         return best;
       });
+      // Persist the reading position, throttled to one write per 400ms.
+      if (el.scrollHeight > 0 && Date.now() - scrollSaveAtRef.current > 400) {
+        scrollSaveAtRef.current = Date.now();
+        saveScrollPosition(fileId, best, el.scrollTop / el.scrollHeight);
+      }
     });
-  }, [renderVisiblePages]);
+  }, [fileId, renderVisiblePages]);
 
   const commitPageInput = useCallback(() => {
     const parsed = parseInt(pageInput, 10);
@@ -481,6 +649,53 @@ export default function PdfViewer({ token, fileId, name = "", externalUrl = "" }
             <RotateCw size={13} />
           </button>
         </div>
+        <span className="cv-pdf-toolbar-sep" />
+        <div className="cv-pdf-toolbar-group">
+          {searchOpen ? (
+            <>
+              <div className="cv-pdf-search-box">
+                <Search size={12} />
+                <input
+                  ref={searchInputRef}
+                  value={searchQuery}
+                  onChange={(event) => setSearchQuery(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                      event.preventDefault();
+                      stepMatch(event.shiftKey ? -1 : 1);
+                    } else if (event.key === "Escape") {
+                      event.preventDefault();
+                      closeSearch();
+                    }
+                  }}
+                  placeholder="Find in document"
+                  aria-label="Search in document"
+                  autoFocus
+                />
+                <span className="cv-pdf-search-count" aria-live="polite">
+                  {searchStatus === "extracting"
+                    ? "…"
+                    : searchQuery.trim()
+                      ? `${activeMatch + 1}/${searchMatches.length}`
+                      : ""}
+                </span>
+              </div>
+              <button type="button" className="cv-btn-icon" onClick={() => stepMatch(-1)} disabled={!searchMatches.length} title="Previous match" aria-label="Previous match">
+                <ChevronUp size={13} />
+              </button>
+              <button type="button" className="cv-btn-icon" onClick={() => stepMatch(1)} disabled={!searchMatches.length} title="Next match" aria-label="Next match">
+                <ChevronDown size={13} />
+              </button>
+              <button type="button" className="cv-btn-icon" onClick={closeSearch} title="Close search" aria-label="Close search">
+                <X size={13} />
+              </button>
+            </>
+          ) : (
+            <button type="button" className="cv-btn-icon" onClick={() => setSearchOpen(true)} title="Search in document (⌘F)" aria-label="Search in document">
+              <Search size={13} />
+            </button>
+          )}
+        </div>
       </div>
       <div className="cv-pdf-scroll" ref={scrollRef} onScroll={handleScroll}>
         <div className="cv-pdf-pages">
@@ -493,6 +708,18 @@ export default function PdfViewer({ token, fileId, name = "", externalUrl = "" }
               style={{ width: `${info.w}px`, height: `${info.h}px` }}
             >
               <span className="cv-pdf-page-placeholder">Page {info.n}</span>
+              {(highlightsByPage.get(info.n) || []).map((seg, segIndex) => (
+                <span
+                  key={segIndex}
+                  className={`cv-pdf-highlight${seg.active ? " is-active" : ""}`}
+                  style={{
+                    left: `${seg.rect.x * scale}px`,
+                    top: `${seg.rect.y * scale}px`,
+                    width: `${Math.max(seg.rect.w * scale, 3)}px`,
+                    height: `${Math.max(seg.rect.h * scale, 3)}px`,
+                  }}
+                />
+              ))}
             </div>
           ))}
         </div>
