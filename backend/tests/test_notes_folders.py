@@ -93,3 +93,13 @@ async def test_note_ownership_is_isolated(client: AsyncClient, auth):
 
     other_delete = await client.delete(f"/notes/{note['id']}", headers=other_headers)
     assert other_delete.status_code == 404
+
+
+async def test_note_without_title_gets_default(client: AsyncClient, auth):
+    """Creating a note with no title falls back to the 'Untitled' default."""
+    token, _, _ = auth
+    headers = auth_headers(token)
+
+    create = await client.post("/notes", json={"content": "just some thoughts"}, headers=headers)
+    assert create.status_code == 200, create.text
+    assert create.json()["title"] == "Untitled"

@@ -145,3 +145,31 @@ async def test_community_form_created_by_creator_only(client: AsyncClient, auth)
     )
     assert created.status_code == 201, created.text
     assert created.json()["c_id"] == comm_id
+
+
+async def test_submission_rejected_after_form_closes(client: AsyncClient, auth):
+    """A form whose closes_at has passed rejects new responses with 400."""
+    owner_headers, member_token, group_id = await build_group_with_member(client, auth)
+
+    from datetime import datetime, timedelta, timezone
+    closed_at = datetime.now(timezone.utc) - timedelta(hours=1)
+    created = await client.post(
+        "/forms",
+        json={
+            "title": "Old Poll",
+            "g_id": group_id,
+            "fields": [],
+            "closes_at": closed_at.isoformat(),
+        },
+        headers=owner_headers,
+    )
+    assert created.status_code == 201, created.text
+    form = created.json()
+
+    member_submit = await client.post(
+        f"/forms/{form['id']}/responses",
+        json={"response_data": {"answer": "late"}},
+        headers=auth_headers(member_token),
+    )
+    assert member_submit.status_code == 400
+    assert "closed" in member_submit.json()["detail"].lower()
