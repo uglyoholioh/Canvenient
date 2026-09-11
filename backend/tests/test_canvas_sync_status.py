@@ -16,8 +16,7 @@ pytestmark = pytest.mark.asyncio
 
 async def test_shipped_migrations_add_sync_error_columns():
     """The real MIGRATIONS list applies cleanly to a fresh test database."""
-    applied = await run_migrations()
-    assert "0001_canvas_sync_error_tracking" in applied
+    await run_migrations()  # apply if still pending (order-independent)
 
     columns = {
         row["name"]
