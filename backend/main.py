@@ -27,6 +27,7 @@ from routes.study_sessions import router as study_sessions_router
 from routes.tasks import router as tasks_router
 from routes.telegram import router as telegram_router
 from routes.venues import router as venues_router
+from routes.backups import router as backups_router
 from schema import initialize_schema
 from migrations import run_migrations
 from backup import backup_database
@@ -90,6 +91,7 @@ app.include_router(telegram_router)
 app.include_router(notes_router)
 app.include_router(folders_router)
 app.include_router(venues_router)
+app.include_router(backups_router)
 
 
 

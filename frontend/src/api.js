@@ -1,12 +1,41 @@
+import { invoke } from "@tauri-apps/api/tauri";
+
 const AUTH_TOKEN_KEY = "canvenient.auth.token";
 
 const configuredApiBaseUrl = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/+$/, "");
 const isPackagedDesktopApp = window.location.protocol === "tauri:";
 
 // Vite's development server proxies relative API calls to FastAPI. A packaged
-// Tauri app has no Vite proxy, so it must contact its bundled sidecar directly.
-export const API_BASE_URL = configuredApiBaseUrl
+// Tauri app has no Vite proxy, so it contacts its bundled sidecar directly —
+// unless a `use-remote-api` marker file in the app data directory names a
+// remote server, in which case the app is a client of that hosted backend.
+export let API_BASE_URL = configuredApiBaseUrl
   || (isPackagedDesktopApp ? "http://127.0.0.1:8000" : "");
+
+let apiBaseUrlPromise = null;
+
+// Resolves the effective API base URL once per session. In remote-API mode
+// the Rust side reads the marker and returns the server URL; reassigning the
+// export above keeps direct importers (live bindings) in sync.
+export function getApiBaseUrl() {
+  if (!apiBaseUrlPromise) {
+    apiBaseUrlPromise = (async () => {
+      if (!isPackagedDesktopApp || configuredApiBaseUrl) {
+        return API_BASE_URL;
+      }
+      try {
+        const remote = await invoke("remote_api_base_url");
+        if (typeof remote === "string" && remote) {
+          API_BASE_URL = remote.replace(/\/+$/, "");
+        }
+      } catch (error) {
+        // No Tauri IPC available (or command missing): stay on the sidecar.
+      }
+      return API_BASE_URL;
+    })();
+  }
+  return apiBaseUrlPromise;
+}
 
 // The packaged Python sidecar can need several seconds on first launch to
 // initialize its data directory and database. Keep retries bounded, but long
@@ -511,6 +540,18 @@ export function syncCanvasResourceIndex(token) {
 
 export function getCachedCanvasFiles(token) {
   return apiRequest("/canvas/cached-files", { token });
+}
+
+export function getBackups(token) {
+  return apiRequest("/backups", { token });
+}
+
+export function restoreBackup(token, name) {
+  return apiRequest("/backups/restore", {
+    method: "POST",
+    body: { name },
+    token,
+  });
 }
 
 export function getCanvasSyncStatus(token) {

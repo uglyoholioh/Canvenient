@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useCallback, useState, useEffect } from "react";
 import {
   Moon,
   Sun,
@@ -20,6 +20,8 @@ import {
   ExternalLink,
   Send,
   Bell,
+  HardDriveDownload,
+  RotateCcw,
 } from "lucide-react";
 import { remindersEnabled, setRemindersEnabled } from "../dueReminders";
 import DashboardCustomizer from "./dashboard/DashboardCustomizer";
@@ -35,6 +37,8 @@ import {
   updateModuleColor,
   updateProfile,
   validateCanvasToken,
+  getBackups,
+  restoreBackup,
 } from "../api";
 import {
   DEFAULT_KEYBOARD_SHORTCUTS,
@@ -120,6 +124,34 @@ export default function SettingsView({ token, user, onUpdateUser, onReplayOnboar
   const [canvasTokenDirty, setCanvasTokenDirty] = useState(false);
   const [showCanvasToken, setShowCanvasToken] = useState(false);
   const [dueRemindersOn, setDueRemindersOn] = useState(remindersEnabled);
+  const [backups, setBackups] = useState([]);
+  const [backupsMessage, setBackupsMessage] = useState("");
+  const [restoringName, setRestoringName] = useState("");
+
+  const refreshBackups = useCallback(() => {
+    if (!token) return;
+    getBackups(token)
+      .then(setBackups)
+      .catch(() => setBackups([]));
+  }, [token]);
+
+  useEffect(() => { refreshBackups(); }, [refreshBackups]);
+
+  const handleRestoreBackup = async (name) => {
+    if (!window.confirm(`Restore the database from ${name}?\nA safety backup of the current data is taken first.`)) return;
+    setRestoringName(name);
+    setBackupsMessage("");
+    try {
+      const result = await restoreBackup(token, name);
+      refreshBackups();
+      setBackupsMessage(`Database restored from ${result.restored}.`);
+      window.dispatchEvent(new Event("settings-updated"));
+    } catch (error) {
+      setBackupsMessage(error.message || "Could not restore the backup.");
+    } finally {
+      setRestoringName("");
+    }
+  };
   const [canvasTokenTesting, setCanvasTokenTesting] = useState(false);
   const [canvasTestResult, setCanvasTestResult] = useState(null);
   const [canvasTokenSaving, setCanvasTokenSaving] = useState(false);
@@ -641,6 +673,40 @@ export default function SettingsView({ token, user, onUpdateUser, onReplayOnboar
               <option value="on">On</option>
               <option value="off">Off</option>
             </select>
+          </div>
+
+          <div style={{ padding: '16px', backgroundColor: 'var(--surface)', borderTop: '1px solid var(--border)' }}>
+            <div style={{ display: 'flex', gap: '12px', alignItems: 'center', marginBottom: '10px' }}>
+              <div style={{ padding: '8px', backgroundColor: 'var(--surface-muted)', borderRadius: '4px', color: 'var(--text-muted)' }}><HardDriveDownload size={20} /></div>
+              <div>
+                <div style={{ color: 'var(--text-h)', fontWeight: '500' }}>Database backups</div>
+                <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Automatic launch backups; restoring keeps a safety copy of the current data first.</div>
+              </div>
+            </div>
+            {backups.length === 0 ? (
+              <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>No backups yet — one is created each time the app starts.</div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginBottom: '10px' }}>
+                {backups.slice(0, 5).map((backup) => (
+                  <div key={backup.name} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 10px', borderRadius: '6px', backgroundColor: 'var(--surface-muted)' }}>
+                    <span style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'var(--text)' }}>
+                      {backup.name.replace(/\.db$/, '')} · {(backup.size_bytes / 1024 / 1024).toFixed(1)} MB
+                    </span>
+                    <button
+                      type="button"
+                      className="mac-toolbar-button"
+                      disabled={restoringName !== ""}
+                      onClick={() => handleRestoreBackup(backup.name)}
+                      style={{ color: 'var(--text)', fontSize: '11px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                    >
+                      {restoringName === backup.name ? <Loader2 size={12} className="retro-icon-spin" /> : <RotateCcw size={12} />}
+                      Restore
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+            {backupsMessage && <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '8px' }}>{backupsMessage}</div>}
           </div>
 
         </div>

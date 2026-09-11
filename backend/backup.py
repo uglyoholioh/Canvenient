@@ -8,8 +8,9 @@ most recent copies is kept. Backup failures never block startup.
 """
 
 import os
+import shutil
 import sqlite3
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 BACKUP_RETENTION = 10
@@ -36,7 +37,7 @@ def backup_database(database_url: str | None = None, retention: int = BACKUP_RET
     backup_dir = db_path.parent / "backups"
     try:
         backup_dir.mkdir(parents=True, exist_ok=True)
-        stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+        stamp = datetime.now().strftime("%Y%m%d-%H%M%S-%f")
         dest = backup_dir / f"{db_path.stem}-{stamp}.db"
 
         source = sqlite3.connect(f"file:{db_path}?mode=ro", uri=True)
@@ -62,3 +63,47 @@ def backup_database(database_url: str | None = None, retention: int = BACKUP_RET
     except OSError:
         pass
     return dest
+
+
+def list_backups(database_url: str | None = None) -> list[dict]:
+    """Available backup copies for the current database, newest first."""
+    url = database_url if database_url is not None else (os.getenv("DATABASE_URL") or "")
+    db_path = sqlite_path_from_url(url)
+    if db_path is None:
+        return []
+    backup_dir = db_path.parent / "backups"
+    if not backup_dir.is_dir():
+        return []
+    result = []
+    for file in backup_dir.glob(f"{db_path.stem}-*.db"):
+        if not file.is_file():
+            continue
+        result.append({
+            "name": file.name,
+            "size_bytes": file.stat().st_size,
+            "modified_at": datetime.fromtimestamp(file.stat().st_mtime, tz=timezone.utc).isoformat(),
+        })
+    return sorted(result, key=lambda b: b["modified_at"], reverse=True)
+
+
+def backup_dir_for(database_url: str | None = None) -> Path | None:
+    db_path = sqlite_path_from_url(database_url or os.getenv("DATABASE_URL") or "")
+    return db_path.parent / "backups" if db_path else None
+
+
+def restore_database(backup_name: str, database_url: str | None = None) -> bool:
+    """Copy a backup over the live database file.
+
+    The caller MUST have disconnected the database first. Returns False when
+    the name is not a plain filename inside the backups directory.
+    """
+    url = database_url if database_url is not None else (os.getenv("DATABASE_URL") or "")
+    db_path = sqlite_path_from_url(url)
+    backup_dir = backup_dir_for(url)
+    if db_path is None or backup_dir is None:
+        return False
+    candidate = (backup_dir / Path(backup_name).name).resolve()
+    if candidate.parent != backup_dir.resolve() or not candidate.is_file():
+        return False
+    shutil.copyfile(candidate, db_path)
+    return True

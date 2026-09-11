@@ -15,6 +15,8 @@ vi.mock("../../api", () => ({
   updateModuleColor: vi.fn(),
   updateProfile: vi.fn(),
   validateCanvasToken: vi.fn(),
+  getBackups: vi.fn().mockResolvedValue([]),
+  restoreBackup: vi.fn(),
 }));
 
 describe("SettingsView Enhancements", () => {
