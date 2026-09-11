@@ -10,9 +10,8 @@ This project follows a small set of coding conventions to keep the codebase read
 - Update the README and issue tracker as features are completed.
 
 ## Backend Conventions (FastAPI / Python)
-- Use `black` for code formatting.
-- Use `isort` for import ordering.
-- Use `flake8` for linting and style checks.
+- Use `ruff` for linting and import ordering (enforced in CI; see `backend/pyproject.toml`).
+- Install exact dependency versions from `requirements-lock.txt`; bump floors in `requirements.txt` only deliberately.
 - Follow PEP 8 naming conventions.
 - Use `snake_case` for variables, functions, and file names.
 - Keep routes, schemas, and utility functions in separate files when possible.
@@ -20,7 +19,8 @@ This project follows a small set of coding conventions to keep the codebase read
 - Hash passwords with bcrypt and never store plaintext passwords.
 
 ## Frontend Conventions (React / JavaScript)
-- Use `eslint` for linting.
+- Use `eslint` for linting (`npm run lint` runs with zero warnings allowed in CI).
+- Prefer design-system tokens (`--accent`, `--surface`, `--text-muted`, ...) over hardcoded colors.
 - Use `prettier` for formatting.
 - Use `camelCase` for variables and functions.
 - Use clear component names in `PascalCase`.
