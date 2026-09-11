@@ -5,7 +5,7 @@ const isPackagedDesktopApp = window.location.protocol === "tauri:";
 
 // Vite's development server proxies relative API calls to FastAPI. A packaged
 // Tauri app has no Vite proxy, so it must contact its bundled sidecar directly.
-const API_BASE_URL = configuredApiBaseUrl
+export const API_BASE_URL = configuredApiBaseUrl
   || (isPackagedDesktopApp ? "http://127.0.0.1:8000" : "");
 
 // The packaged Python sidecar can need several seconds on first launch to

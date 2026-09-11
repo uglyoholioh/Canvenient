@@ -1,142 +1,193 @@
-/* Auth · sign in / register / session splash
- * Visual language: the app's existing workbench voice — paper grid, mono
- * wordmark, token-only colors so every theme renders correctly.
- * Shared utility kept for legacy components below.
+/* Auth · typographic poster (login / register / session splash)
+ * One sheet: drifting grid canvas, blueprint corner ticks, corner metadata,
+ * and an editorial column anchored by the serif "C." brand mark from the
+ * app icon (ink #121110 · ivory #ece7dd · dot #e2563f). Colors stay on the
+ * theme tokens except the brand dot, which is the icon's own ink.
+ * Motion: one choreographed entrance, expo-out curves, reduced-motion safe.
+ * Shared legacy spinner utility lives at the bottom.
  */
 
-.auth-container {
+:root {
+  --auth-brand-dot: #e2563f;
+  --auth-ease: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.auth-stage {
   min-height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: var(--bg);
-  padding: 24px;
+  /* Soft center lift in theme neutrals — no pattern, just depth. */
+  background: radial-gradient(ellipse 110% 85% at 50% 38%, var(--surface) 0%, var(--bg) 62%);
   position: relative;
   overflow: hidden;
+  padding: 96px 48px;
 }
 
-.auth-container::before {
-  content: "";
+/* --- Blueprint corner ticks --- */
+.auth-tick {
   position: absolute;
-  inset: -24px;
-  background-image:
-    linear-gradient(var(--surface-muted) 1px, transparent 1px),
-    linear-gradient(90deg, var(--surface-muted) 1px, transparent 1px);
-  background-size: 24px 24px;
-  animation: auth-grid-drift 60s linear infinite;
-  -webkit-mask-image: radial-gradient(ellipse 70% 60% at 50% 46%, black 30%, transparent 78%);
-  mask-image: radial-gradient(ellipse 70% 60% at 50% 46%, black 30%, transparent 78%);
+  width: 18px;
+  height: 18px;
+  border: 0 solid var(--border-strong);
+  pointer-events: none;
+  animation: auth-tick-in 350ms var(--auth-ease) both;
+}
+
+.auth-tick--tl { top: 28px; left: 28px; border-top-width: 1px; border-left-width: 1px; transform-origin: top left; animation-delay: 120ms; }
+.auth-tick--tr { top: 28px; right: 28px; border-top-width: 1px; border-right-width: 1px; transform-origin: top right; animation-delay: 160ms; }
+.auth-tick--br { bottom: 28px; right: 28px; border-bottom-width: 1px; border-right-width: 1px; transform-origin: bottom right; animation-delay: 200ms; }
+.auth-tick--bl { bottom: 28px; left: 28px; border-bottom-width: 1px; border-left-width: 1px; transform-origin: bottom left; animation-delay: 240ms; }
+
+/* --- Corner metadata --- */
+.auth-corner {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--text-muted);
   pointer-events: none;
 }
 
-.auth-card {
-  position: relative;
-  width: 100%;
-  max-width: 380px;
-  background: var(--surface);
-  border: 1px solid var(--border-strong);
-  border-radius: 10px;
-  padding: 32px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
-  animation: auth-rise 240ms ease-out both;
-}
-
-.auth-card--shake {
-  animation: auth-shake 300ms ease-in-out;
-}
-
-/* Entrance stagger — each rising element declares --auth-delay inline. */
-.auth-rise {
-  animation: auth-rise 260ms ease-out both;
-  animation-delay: var(--auth-delay, 0ms);
-}
-
-.auth-header {
-  text-align: center;
-  margin-bottom: 24px;
-}
+.auth-corner--tl { top: 26px; left: 56px; }
+.auth-corner--tr { top: 26px; right: 56px; }
+.auth-corner--br { bottom: 26px; right: 56px; }
 
 .auth-wordmark {
-  display: inline-flex;
-  align-items: baseline;
-  font-family: var(--font-mono);
-  font-size: 14px;
   font-weight: 600;
   letter-spacing: 0.04em;
-  color: var(--accent);
-  margin-bottom: 14px;
+  color: var(--text);
+  display: inline-flex;
+  align-items: baseline;
 }
 
 .auth-wordmark::after {
   content: "";
   display: inline-block;
-  width: 7px;
-  height: 14px;
+  width: 6px;
+  height: 12px;
   margin-left: 3px;
-  background: var(--accent);
+  background: var(--auth-brand-dot);
   animation: auth-blink 1.1s steps(1) infinite;
 }
 
+.auth-status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--text-muted);
+}
+
+.auth-status-dot--online {
+  background: var(--success);
+  animation: auth-pulse 2.2s ease-in-out infinite;
+}
+
+.auth-status-dot--connecting {
+  background: var(--text-muted);
+  animation: auth-pulse 2.2s ease-in-out infinite;
+}
+
+.auth-status-dot--offline {
+  background: var(--error);
+}
+
+.auth-version {
+  font-variant-numeric: tabular-nums;
+}
+
+/* --- Poster column --- */
+.auth-poster {
+  position: relative;
+  z-index: 1;
+  width: min(420px, calc(100vw - 96px));
+}
+
+/* Brand mark as SVG: deterministic geometry across engines; Didot italic
+ * echoes the app icon (ivory C, orange-red dot #e2563f). Background cleared
+ * because some global stylesheets tile inline svg elements. */
+.auth-brand-mark {
+  display: block;
+  width: clamp(96px, 18vh, 150px);
+  height: auto;
+  margin-bottom: 14px;
+  background: none;
+  border: 0;
+  border-radius: 0;
+  outline: none;
+  box-shadow: none;
+  animation: auth-mark-reveal 500ms var(--auth-ease) 140ms both;
+}
+
+.auth-brand-mark--compact {
+  width: 84px;
+  animation-delay: 80ms;
+}
+
 .auth-title {
-  font-size: 21px;
+  font-family: var(--font-sans);
+  font-size: clamp(24px, 3.6vh, 30px);
   font-weight: 650;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
   color: var(--text-h);
-  letter-spacing: -0.01em;
-  margin-bottom: 4px;
+  margin-bottom: 34px;
 }
 
-.auth-subtitle {
-  font-size: 13px;
-  color: var(--text-muted);
-}
-
+/* --- Form fields: editorial underlines --- */
 .auth-field {
-  margin-bottom: 16px;
+  position: relative;
+  margin-bottom: 26px;
 }
 
 .auth-label {
   display: block;
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--text);
-  margin-bottom: 6px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-bottom: 2px;
+  transition: color 150ms ease;
 }
 
-.auth-input-wrap {
-  position: relative;
+.auth-field:focus-within .auth-label {
+  color: var(--text);
 }
 
 .auth-input {
   width: 100%;
-  background: var(--bg);
-  border: 1px solid var(--border-strong);
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--border-strong);
+  border-radius: 0;
   color: var(--text-h);
   font-family: var(--font-sans);
-  padding: 10px 14px;
-  font-size: 14px;
-  border-radius: 8px;
+  font-size: 15px;
+  padding: 9px 2px;
   outline: none;
+  caret-color: var(--accent);
   transition: border-color 150ms ease, box-shadow 150ms ease;
 }
 
 .auth-input::placeholder {
   color: var(--text-muted);
+  opacity: 0.7;
 }
 
 .auth-input:focus {
-  border-color: var(--border-focus);
-  box-shadow: 0 0 0 3px var(--accent-glow);
+  border-color: var(--accent);
+  box-shadow: 0 1px 0 0 var(--accent);
 }
 
-.auth-input-wrap .auth-input {
-  padding-right: 42px;
+.auth-field--with-toggle .auth-input {
+  padding-right: 38px;
 }
 
 .auth-toggle {
   position: absolute;
-  right: 6px;
-  top: 50%;
-  transform: translateY(-50%);
+  right: 0;
+  bottom: 5px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -160,42 +211,7 @@
   box-shadow: 0 0 0 3px var(--accent-glow);
 }
 
-.auth-submit {
-  width: 100%;
-  margin-top: 4px;
-  background: var(--text-h);
-  color: var(--bg);
-  border: 1px solid var(--text-h);
-  padding: 11px;
-  font-family: var(--font-mono);
-  font-weight: 600;
-  font-size: 13.5px;
-  letter-spacing: 0.02em;
-  cursor: pointer;
-  border-radius: 8px;
-  transition: background-color 150ms ease, border-color 150ms ease, transform 100ms ease;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-}
-
-.auth-submit:hover:not(:disabled) {
-  background: var(--text);
-  border-color: var(--text);
-}
-
-.auth-submit:active:not(:disabled) {
-  transform: scale(0.99);
-}
-
-.auth-submit:disabled {
-  background: var(--surface-warm);
-  color: var(--text-muted);
-  border-color: var(--border-strong);
-  cursor: default;
-}
-
+/* --- Actions --- */
 .auth-alert {
   display: flex;
   align-items: flex-start;
@@ -207,8 +223,8 @@
   line-height: 1.45;
   border-radius: 8px;
   padding: 10px 12px;
-  margin-bottom: 16px;
-  animation: auth-rise 160ms ease-out both;
+  margin: -6px 0 18px;
+  animation: auth-rise 180ms var(--auth-ease) both;
 }
 
 .auth-alert svg {
@@ -216,48 +232,86 @@
   margin-top: 1px;
 }
 
+.auth-submit {
+  width: 100%;
+  margin-top: 8px;
+  background: var(--text-h);
+  color: var(--bg);
+  border: 1px solid var(--text-h);
+  padding: 13px;
+  font-family: var(--font-mono);
+  font-weight: 600;
+  font-size: 13.5px;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  border-radius: 8px;
+  transition: background-color 150ms ease, border-color 150ms ease, transform 100ms ease, opacity 150ms ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.auth-submit:hover:not(:disabled) {
+  opacity: 0.88;
+}
+
+.auth-submit:active:not(:disabled) {
+  transform: scale(0.99);
+}
+
+.auth-submit:disabled {
+  cursor: default;
+}
+
+.auth-submit:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--accent-glow);
+}
+
+.auth-check-pop {
+  animation: auth-pop 180ms var(--auth-ease) both;
+}
+
 .auth-footer {
-  margin-top: 20px;
-  padding-top: 16px;
-  border-top: 1px solid var(--border);
-  text-align: center;
-  font-size: 12.5px;
+  margin-top: 24px;
+  font-size: 13px;
   color: var(--text-muted);
 }
 
 .auth-link {
-  color: var(--accent);
+  color: var(--text-h);
   text-decoration: none;
   font-weight: 500;
-  transition: color 150ms ease;
+  border-bottom: 1px solid var(--border-strong);
+  transition: border-color 150ms ease;
 }
 
 .auth-link:hover {
-  color: var(--text-h);
-  text-decoration: underline;
+  border-color: var(--text-h);
 }
 
-/* Session splash (App.jsx session restore) */
-.auth-splash {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
+/* --- Error shake on the column --- */
+.auth-poster--shake {
+  animation: auth-shake 300ms ease-in-out;
 }
 
+/* --- Session splash --- */
 .auth-splash-status {
-  margin-top: 10px;
-  font-size: 12.5px;
+  margin-top: 14px;
+  font-family: var(--font-mono);
+  font-size: 12px;
   color: var(--text-muted);
-  animation: auth-rise 260ms ease-out 80ms both;
+  animation: auth-rise 300ms var(--auth-ease) 200ms both;
 }
 
-/* Success check inside the submit button */
-.auth-check-pop {
-  animation: auth-pop 180ms ease-out both;
+/* --- Stagger utility: delay declared inline via --auth-delay --- */
+.auth-rise {
+  animation: auth-rise 300ms var(--auth-ease) both;
+  animation-delay: var(--auth-delay, 0ms);
 }
 
-/* Shared spinner utility — used across the app, keep the legacy name. */
+/* --- Shared spinner utility — used across the app, keep the legacy name. --- */
 .retro-icon-spin {
   animation: spin 1s linear infinite;
 }
@@ -266,15 +320,32 @@
   to { transform: rotate(360deg); }
 }
 
-@keyframes auth-grid-drift {
-  from { background-position: 0 0; }
-  to { background-position: 24px 24px; }
+@keyframes auth-tick-in {
+  from {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes auth-mark-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(18px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }
 
 @keyframes auth-rise {
   from {
     opacity: 0;
-    transform: translateY(6px);
+    transform: translateY(8px);
   }
   to {
     opacity: 1;
@@ -285,6 +356,10 @@
 @keyframes auth-blink {
   0%, 54% { opacity: 1; }
   55%, 100% { opacity: 0; }
+}
+
+@keyframes auth-pulse {
+  50% { opacity: 0.35; }
 }
 
 @keyframes auth-shake {
@@ -307,20 +382,21 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .auth-container::before {
-    animation: none;
-  }
-  .auth-card,
+  .auth-tick,
+  .auth-brand-mark,
   .auth-rise,
   .auth-alert,
   .auth-splash-status {
     animation-duration: 1ms;
     animation-delay: 0ms;
+    animation-iteration-count: 1;
   }
-  .auth-card--shake {
+  .auth-wordmark::after,
+  .auth-status-dot--online,
+  .auth-status-dot--connecting {
     animation: none;
   }
-  .auth-wordmark::after {
+  .auth-poster--shake {
     animation: none;
   }
 }

@@ -1,7 +1,8 @@
 import { useState } from "react"
 import { useNavigate, Link } from "react-router-dom"
-import { Eye, EyeOff, Loader2, AlertCircle } from "lucide-react"
+import { Eye, EyeOff, Loader2, AlertCircle, Check } from "lucide-react"
 import { login } from "../api"
+import AuthShell, { BrandMark } from "./AuthShell"
 import "./auth.css"
 
 function LoginForm({ onLoginSuccess }) {
@@ -12,6 +13,7 @@ function LoginForm({ onLoginSuccess }) {
   const [message, setMessage] = useState("")
   const [isError, setIsError] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [didSucceed, setDidSucceed] = useState(false)
   const [isShaking, setIsShaking] = useState(false)
 
   const handleSubmit = async (event) => {
@@ -22,8 +24,12 @@ function LoginForm({ onLoginSuccess }) {
 
     try {
       const session = await login({ email, password })
-      onLoginSuccess(session)
-      navigate("/workspace", { replace: true })
+      setDidSucceed(true)
+      // Hold one beat on the success check, then land in the workspace.
+      window.setTimeout(() => {
+        onLoginSuccess(session)
+        navigate("/workspace", { replace: true })
+      }, 350)
     } catch (error) {
       setMessage(error.message || "Login failed")
       setIsError(true)
@@ -33,19 +39,20 @@ function LoginForm({ onLoginSuccess }) {
   }
 
   return (
-    <div className="auth-container">
+    <AuthShell>
       <div
-        className={`auth-card ${isShaking ? "auth-card--shake" : ""}`}
-        onAnimationEnd={() => setIsShaking(false)}
+        className={isShaking ? "auth-poster--shake" : ""}
+        onAnimationEnd={(e) => {
+          if (e.target === e.currentTarget) setIsShaking(false)
+        }}
       >
-        <header className="auth-header auth-rise" style={{ "--auth-delay": "40ms" }}>
-          <span className="auth-wordmark">canvenient</span>
-          <h1 className="auth-title">Sign in</h1>
-          <p className="auth-subtitle">Welcome back to your workspace</p>
-        </header>
+        <BrandMark />
+        <h1 className="auth-title auth-rise" style={{ "--auth-delay": "300ms" }}>
+          Sign in to your workspace
+        </h1>
 
         <form onSubmit={handleSubmit}>
-          <div className="auth-field auth-rise" style={{ "--auth-delay": "90ms" }}>
+          <div className="auth-field auth-rise" style={{ "--auth-delay": "380ms" }}>
             <label className="auth-label" htmlFor="email">Email address</label>
             <input
               id="email"
@@ -60,29 +67,27 @@ function LoginForm({ onLoginSuccess }) {
             />
           </div>
 
-          <div className="auth-field auth-rise" style={{ "--auth-delay": "130ms" }}>
+          <div className="auth-field auth-field--with-toggle auth-rise" style={{ "--auth-delay": "440ms" }}>
             <label className="auth-label" htmlFor="password">Password</label>
-            <div className="auth-input-wrap">
-              <input
-                id="password"
-                type={showPassword ? "text" : "password"}
-                className="auth-input"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                autoComplete="current-password"
-                required
-              />
-              <button
-                type="button"
-                className="auth-toggle"
-                onClick={() => setShowPassword((v) => !v)}
-                aria-label={showPassword ? "Hide password" : "Show password"}
-                tabIndex={-1}
-              >
-                {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-              </button>
-            </div>
+            <input
+              id="password"
+              type={showPassword ? "text" : "password"}
+              className="auth-input"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="••••••••"
+              autoComplete="current-password"
+              required
+            />
+            <button
+              type="button"
+              className="auth-toggle"
+              onClick={() => setShowPassword((v) => !v)}
+              aria-label={showPassword ? "Hide password" : "Show password"}
+              tabIndex={-1}
+            >
+              {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+            </button>
           </div>
 
           {message && isError && (
@@ -92,9 +97,11 @@ function LoginForm({ onLoginSuccess }) {
             </div>
           )}
 
-          <div className="auth-rise" style={{ "--auth-delay": "170ms" }}>
+          <div className="auth-rise" style={{ "--auth-delay": "520ms" }}>
             <button type="submit" className="auth-submit" disabled={isSubmitting}>
-              {isSubmitting ? (
+              {didSucceed ? (
+                <Check size={16} className="auth-check-pop" />
+              ) : isSubmitting ? (
                 <><Loader2 size={15} className="retro-icon-spin" /> Signing in…</>
               ) : (
                 "Sign in"
@@ -102,15 +109,15 @@ function LoginForm({ onLoginSuccess }) {
             </button>
           </div>
 
-          <footer className="auth-footer auth-rise" style={{ "--auth-delay": "210ms" }}>
-            Don&apos;t have an account?{" "}
+          <footer className="auth-footer auth-rise" style={{ "--auth-delay": "580ms" }}>
+            New here?{" "}
             <Link to="/register" className="auth-link">
               Create one
             </Link>
           </footer>
         </form>
       </div>
-    </div>
+    </AuthShell>
   )
 }
 

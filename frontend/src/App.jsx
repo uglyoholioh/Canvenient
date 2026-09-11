@@ -2,6 +2,7 @@ import { useEffect, useState } from "react"
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom"
 import RegisterForm from "./components/RegisterForm"
 import LoginForm from "./components/LoginForm"
+import AuthShell, { BrandMark } from "./components/AuthShell"
 import WorkspaceLayout from "./components/WorkspaceLayout"
 import GlobalToast from "./components/GlobalToast"
 import "./components/auth.css"
@@ -79,12 +80,12 @@ function App() {
 
   if (isCheckingSession) {
     return (
-      <main className="auth-container">
+      <AuthShell>
         <div className="auth-splash">
-          <span className="auth-wordmark">canvenient</span>
+          <BrandMark compact />
           <p className="auth-splash-status">Restoring session…</p>
         </div>
-      </main>
+      </AuthShell>
     )
   }
 
