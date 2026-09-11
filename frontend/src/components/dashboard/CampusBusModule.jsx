@@ -1,7 +1,7 @@
 // React is required by the test JSX transform.
  
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ArrowLeft, ArrowLeftRight, LocateFixed, RotateCw, Star, X, MapPin, Search, Route } from "lucide-react";
+import { ArrowLeft, ArrowLeftRight, LocateFixed, RotateCw, Star, X, Search, Route } from "lucide-react";
 import {
   getCampusBusArrivals,
   getCampusBusStops,
@@ -11,266 +11,15 @@ import {
 } from "../../api";
 
 // ── Storage keys ────────────────────────────────────────────────────────────
-const STOP_STORAGE_KEY       = "canvenient-isb-stop";
-const FROM_STORAGE_KEY       = "canvenient-isb-from";
-const TO_STORAGE_KEY         = "canvenient-isb-to";
-const FAVOURITES_STORAGE_KEY = "canvenient-isb-favourites";
-const STOPS_CACHE_KEY        = "canvenient-isb-stops-cache";
-const ARRIVALS_PREFIX        = "canvenient-isb-arrivals-cache:";
-const DEFAULT_STOP_ID        = "COM3";
-const STOPS_TTL_MS           = 24 * 60 * 60 * 1000;
-const ARRIVALS_TTL_MS        = 60 * 1000;
-const REFRESH_INTERVAL_S     = 20;
 
-// Popular campus spots for 1-click route planning shortcuts
-const QUICK_POPULAR_PLACES = [
-  "University Town",
-  "School of Computing",
-  "Central Library",
-  "Faculty of Science",
-  "Business School",
-];
+import { normalise, stopLabel, findStop, resolvePlace, formatEta, formatClock, serviceTone,
+  urgencyFill, readFavourites, readCache, writeCache, venueToStop, distanceInMetres, QUICK_POPULAR_PLACES,
+  STOP_STORAGE_KEY, FROM_STORAGE_KEY, TO_STORAGE_KEY, FAVOURITES_STORAGE_KEY,
+  STOPS_CACHE_KEY, ARRIVALS_PREFIX, DEFAULT_STOP_ID, STOPS_TTL_MS,
+  ARRIVALS_TTL_MS, REFRESH_INTERVAL_S,
+} from "../bus/busHelpers";
+import { PlaceCombobox } from "../bus/PlaceCombobox";
 
-// ── Schedule-aware venue → stop hints ────────────────────────────────────────
-const VENUE_STOP_HINTS = [
-  { pattern: /^(COM\d|AS6|I3)/i,                       stopText: "COM3"      },
-  { pattern: /^AS[1-5]/i,                               stopText: "LT13"      },
-  { pattern: /^(E[1-9]A?|EA\d?|LT[7-9](?!\d)|LT10)/i, stopText: "LT13A"     },
-  { pattern: /^(UTown|ERC|CAPT|RC\d?|Cinnamon)/i,       stopText: "UTown"     },
-  { pattern: /^BIZ/i,                                   stopText: "BIZ 2"     },
-  { pattern: /^(S\d|LT2\d|YIH)/i,                      stopText: "Opp YIH"   },
-  { pattern: /^(MD|NUH|CRC)/i,                          stopText: "MD 1"      },
-  { pattern: /^PGP/i,                                   stopText: "PGP"       },
-  { pattern: /^YST/i,                                   stopText: "YST"       },
-  { pattern: /^(MPSH|SRC|LT19|LT20)/i,                  stopText: "Opp TCOMS" },
-];
-
-function venueToStop(venue) {
-  if (!venue) return null;
-  for (const hint of VENUE_STOP_HINTS) {
-    if (hint.pattern.test(venue.trim())) return hint.stopText;
-  }
-  return null;
-}
-
-// ── Formatting helpers ───────────────────────────────────────────────────────
-function formatEta(minutes) {
-  if (minutes === 0) return "Now";
-  if (minutes < 60) return `${minutes} min`;
-  return `${Math.floor(minutes / 60)} h ${minutes % 60} min`;
-}
-
-function formatClock(value) {
-  if (!value) return "—";
-  return new Date(value).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
-}
-
-function serviceTone(service) {
-  if (service.startsWith("A")) return "is-a";
-  if (service.startsWith("B")) return "is-b";
-  if (service.startsWith("C")) return "is-c";
-  if (service.startsWith("D")) return "is-d";
-  if (service.startsWith("R")) return "is-r";
-  if (service === "K") return "is-k";
-  if (service === "P") return "is-p";
-  return "is-default";
-}
-
-function urgencyFill(minutes) {
-  if (minutes == null || minutes > 20) return 0;
-  return Math.round((1 - minutes / 20) * 100);
-}
-
-// ── Cache helpers ────────────────────────────────────────────────────────────
-function readFavourites() {
-  try {
-    const stored = JSON.parse(localStorage.getItem(FAVOURITES_STORAGE_KEY) || "[]");
-    return Array.isArray(stored) ? stored.filter((s) => typeof s === "string") : [];
-  } catch { return []; }
-}
-
-function readCache(key, maxAgeMs) {
-  try {
-    const cached = JSON.parse(localStorage.getItem(key) || "null");
-    if (!cached || !Number.isFinite(cached.cachedAt) || Date.now() - cached.cachedAt > maxAgeMs) return null;
-    return cached.value ?? null;
-  } catch { return null; }
-}
-
-function writeCache(key, value) {
-  try {
-    localStorage.setItem(key, JSON.stringify({ cachedAt: Date.now(), value }));
-  } catch { /* ignore */ }
-}
-
-// ── Geo helpers ──────────────────────────────────────────────────────────────
-function distanceInMetres(origin, stop) {
-  if (!origin || !Number.isFinite(stop.latitude) || !Number.isFinite(stop.longitude)) return Infinity;
-  const rad = (v) => (v * Math.PI) / 180;
-  const dLat = rad(stop.latitude - origin.latitude);
-  const dLon = rad(stop.longitude - origin.longitude);
-  const lat  = rad(origin.latitude);
-  const sLat = rad(stop.latitude);
-  const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat) * Math.cos(sLat) * Math.sin(dLon / 2) ** 2;
-  return 6371000 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-}
-
-// ── Stop helpers ─────────────────────────────────────────────────────────────
-function stopLabel(stop) { return stop?.name || stop?.short_name || stop?.id || ""; }
-function normalise(value) { return String(value).trim().replace(/\s+/g, " ").toLocaleLowerCase(); }
-
-function findStop(value, stops) {
-  const n = normalise(value);
-  if (!n) return null;
-  return stops.find((s) =>
-    [s.id, s.name, s.short_name].some((c) => normalise(c || "") === n),
-  ) ?? null;
-}
-
-function resolvePlace(value, places) {
-  const exact = places.find((p) => normalise(p.name) === normalise(value));
-  return exact ?? (places.length === 1 ? places[0] : null);
-}
-
-// ── Keyboard-navigable Place Input Combobox (From/To) ───────────────────────
-function PlaceCombobox({
-  label,
-  value,
-  onChange,
-  onSelectPlace,
-  suggestions,
-  placeholder,
-  tabIndex,
-  onEnterSubmit,
-  inputRef,
-}) {
-  const [isOpen, setIsOpen] = useState(false);
-  const [highlightedIndex, setHighlightedIndex] = useState(-1);
-  const blurTimerRef = useRef(null);
-
-  useEffect(() => {
-    if (suggestions.length > 0 && isOpen) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- resets the highlight when the suggestion list changes
-      setHighlightedIndex(0);
-    } else {
-      setHighlightedIndex(-1);
-    }
-  }, [suggestions, isOpen]);
-
-  const handleFocus = () => {
-    if (blurTimerRef.current) clearTimeout(blurTimerRef.current);
-    if (normalise(value).length >= 2) {
-      setIsOpen(true);
-    }
-  };
-
-  const handleBlur = () => {
-    blurTimerRef.current = setTimeout(() => {
-      setIsOpen(false);
-      setHighlightedIndex(-1);
-    }, 150);
-  };
-
-  const handleKeyDown = (e) => {
-    if (e.key === "ArrowDown") {
-      e.preventDefault();
-      if (!isOpen && suggestions.length > 0) {
-        setIsOpen(true);
-        setHighlightedIndex(0);
-        return;
-      }
-      if (suggestions.length > 0) {
-        setHighlightedIndex((prev) => (prev + 1) % suggestions.length);
-      }
-    } else if (e.key === "ArrowUp") {
-      e.preventDefault();
-      if (suggestions.length > 0) {
-        setHighlightedIndex((prev) => (prev <= 0 ? suggestions.length - 1 : prev - 1));
-      }
-    } else if (e.key === "Enter") {
-      if (isOpen && highlightedIndex >= 0 && suggestions[highlightedIndex]) {
-        e.preventDefault();
-        const selected = suggestions[highlightedIndex];
-        onSelectPlace(selected);
-        setIsOpen(false);
-        setHighlightedIndex(-1);
-      } else if (isOpen && suggestions.length === 1) {
-        e.preventDefault();
-        onSelectPlace(suggestions[0]);
-        setIsOpen(false);
-        setHighlightedIndex(-1);
-      } else if (onEnterSubmit) {
-        onEnterSubmit(e);
-      }
-    } else if (e.key === "Escape") {
-      setIsOpen(false);
-      setHighlightedIndex(-1);
-    }
-  };
-
-  const handleItemClick = (place) => {
-    onSelectPlace(place);
-    setIsOpen(false);
-    setHighlightedIndex(-1);
-  };
-
-  return (
-    <div className="cbm-place-combobox">
-      <label className="cbm-place-field">
-        <span>{label}</span>
-        <input
-          ref={inputRef}
-          type="text"
-          value={value}
-          onChange={(e) => {
-            onChange(e.target.value);
-            if (normalise(e.target.value).length >= 2) {
-              setIsOpen(true);
-            } else {
-              setIsOpen(false);
-            }
-          }}
-          onFocus={handleFocus}
-          onBlur={handleBlur}
-          onKeyDown={handleKeyDown}
-          placeholder={placeholder}
-          aria-label={label}
-          aria-autocomplete="list"
-          aria-expanded={isOpen}
-          tabIndex={tabIndex}
-          autoComplete="off"
-        />
-      </label>
-
-      {isOpen && suggestions.length > 0 && (
-        <div className="cbm-suggest-dropdown" role="listbox" aria-label={`${label} suggestions`}>
-          {suggestions.map((place, idx) => (
-            <button
-              type="button"
-              key={place.id}
-              role="option"
-              aria-selected={idx === highlightedIndex}
-              className={`cbm-suggest-item ${idx === highlightedIndex ? "is-highlighted" : ""}`}
-              onMouseDown={(e) => {
-                e.preventDefault();
-                handleItemClick(place);
-              }}
-              onMouseEnter={() => setHighlightedIndex(idx)}
-            >
-              <div className="cbm-suggest-title">
-                <MapPin size={10} className="cbm-suggest-pin" aria-hidden="true" />
-                <span>{place.name}</span>
-              </div>
-              {place.subtitle && <small className="cbm-suggest-subtitle">{place.subtitle}</small>}
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ── Component ────────────────────────────────────────────────────────────────
 export default function CampusBusModule({ token }) {
   // Current view: "departures" (default) or "route"
   const [currentView, setCurrentView] = useState("departures");
@@ -1073,3 +822,4 @@ export default function CampusBusModule({ token }) {
     </div>
   );
 }
+
