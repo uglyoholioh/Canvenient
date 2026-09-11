@@ -3,7 +3,7 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { downloadCanvasFile, fetchCanvasFileContent, getCanvasFolders } from "../../api";
-import { FileBrowser } from "../CanvasView";
+import { FileBrowser } from "../canvas/FileBrowser";
 
 vi.mock("../../api", () => ({
   getCanvasFolders: vi.fn(() => Promise.resolve([])),
