@@ -16,7 +16,7 @@ function resolvePreviewType(file) {
   return getFileType(file.display_name || file.filename || "");
 }
 
-function FileTypeIcon({ name, size = 13 }) {
+export function FileTypeIcon({ name, size = 13 }) {
   const type = getFileType(name);
   const iconMap = {
     pdf: <FileText size={size} />, img: <Image size={size} />,
@@ -465,7 +465,7 @@ export function FileBrowser({ token, courseId, allFiles }) {
                 <div className="cv-preview-fallback">
                   <FileTypeIcon name={selectedFile.display_name || selectedFile.filename || ""} size={26} />
                   <span>Preview not available directly.</span>
-                  <a href={selectedFile.url || selectedFile.external_url} target="_blank" rel="noreferrer" className="cv-link-accent">
+                  <a href={selectedFile.external_url || selectedFile.url} target="_blank" rel="noreferrer" className="cv-link-accent">
                     Open in Canvas ↗
                   </a>
                 </div>

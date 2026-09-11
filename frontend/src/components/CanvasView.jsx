@@ -26,7 +26,7 @@ import CanvasDrawer from "./drawers/CanvasDrawer";
 import CanvasSearchSection from "./CanvasSearchSection";
 import { useWorkspaceToolbar } from "./WorkspaceToolbarContext";
 import { FileBrowser } from "./canvas/FileBrowser";
-import CourseOverview from "./canvas/CourseOverview";
+import { CourseOverview } from "./canvas/CourseOverview";
 import { stripHtml, dueLabel, relDate } from "./canvas/fileUtils";
 
 export default function CanvasView({ token }) {
@@ -429,6 +429,7 @@ export default function CanvasView({ token }) {
               <div className="cv-overview-grid">
                 {/* Global Search across all modules */}
                 <CanvasSearchSection
+                  token={token}
                   filesByCourse={filesByCourse}
                   displayedCourses={displayedCourses}
                   courseColors={courseColors}
@@ -516,6 +517,7 @@ export default function CanvasView({ token }) {
             </div>
           ) : (
             <CourseOverview
+              token={token}
               courseId={selectedCourseId}
               courseName={selectedCourse?.name}
               courseCode={selectedCourse?.course_code}

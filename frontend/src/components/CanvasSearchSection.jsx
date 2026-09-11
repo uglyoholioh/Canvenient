@@ -1,5 +1,6 @@
-import { useState, useMemo } from "react";
-import { Search, X, FileText, Image, FileVideo, File, Download, ExternalLink } from "lucide-react";
+import { useState, useMemo, useCallback } from "react";
+import { Search, X, FileText, Image, FileVideo, File, Download, ExternalLink, Loader2 } from "lucide-react";
+import { downloadCanvasFile } from "../api";
 
 function getFileType(name = "") {
   const ext = name.split(".").pop().toLowerCase();
@@ -39,6 +40,7 @@ function relDate(str) {
 }
 
 export default function CanvasSearchSection({
+  token,
   filesByCourse,
   displayedCourses,
   selectedCourseId,
@@ -46,6 +48,21 @@ export default function CanvasSearchSection({
 }) {
   const [query, setQuery] = useState("");
   const [activeType, setActiveType] = useState("all");
+  const [downloadingId, setDownloadingId] = useState(null);
+
+  // Mirrored Canvas URLs expire within minutes, so downloads go through the
+  // backend content proxy like the Files tab does.
+  const handleDownload = useCallback(async (file) => {
+    if (!file || downloadingId) return;
+    setDownloadingId(file.id);
+    try {
+      await downloadCanvasFile(token, file.id, file.display_name || file.filename || "canvas-file");
+    } catch (error) {
+      window.dispatchEvent(new CustomEvent("canvenient-toast", { detail: { message: error.message || "Download failed." } }));
+    } finally {
+      setDownloadingId(null);
+    }
+  }, [downloadingId, token]);
 
   // Flatten all files with course info
   const allIndexedFiles = useMemo(() => {
@@ -283,16 +300,14 @@ export default function CanvasSearchSection({
                         </div>
                       </div>
                       <div className="cv-search-result-actions" onClick={e => e.stopPropagation()}>
-                        <a
-                          href={file.url || file.external_url}
-                          download
+                        <button
+                          type="button"
                           className="cv-btn-icon"
                           title="Download"
-                          target="_blank"
-                          rel="noreferrer"
+                          onClick={() => handleDownload(file)}
                         >
-                          <Download size={13} />
-                        </a>
+                          {downloadingId === file.id ? <Loader2 size={13} className="retro-icon-spin" /> : <Download size={13} />}
+                        </button>
                         <a
                           href={file.external_url || file.url}
                           target="_blank"

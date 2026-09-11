@@ -1,10 +1,12 @@
-import { useMemo } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { Bell, Calendar, Check, CheckSquare, Download, FileText, Loader2, Plus } from "lucide-react";
 import CanvasSearchSection from "../CanvasSearchSection";
+import { downloadCanvasFile } from "../../api";
 import { dueLabel, formatSize, relDate } from "./fileUtils";
 import { FileTypeIcon } from "./FileBrowser";
 
 export function CourseOverview({
+  token,
   courseId,
   assignments,
   announcements,
@@ -18,6 +20,22 @@ export function CourseOverview({
   addingTaskId,
   isAssignmentAdded,
 }) {
+  const [downloadingId, setDownloadingId] = useState(null);
+
+  // Mirrored Canvas URLs expire quickly; downloads go through the backend
+  // content proxy like the Files tab does.
+  const handleDownload = useCallback(async (file) => {
+    if (!file || downloadingId) return;
+    setDownloadingId(file.id);
+    try {
+      await downloadCanvasFile(token, file.id, file.display_name || file.filename || "canvas-file");
+    } catch (error) {
+      window.dispatchEvent(new CustomEvent("canvenient-toast", { detail: { message: error.message || "Download failed." } }));
+    } finally {
+      setDownloadingId(null);
+    }
+  }, [downloadingId, token]);
+
   const now = new Date();
   const upcoming = useMemo(() => {
     const now = new Date();
@@ -43,6 +61,7 @@ export function CourseOverview({
     <div className="cv-overview-grid">
       {/* Smart Search Bar Scoped to this Module */}
       <CanvasSearchSection
+        token={token}
         filesByCourse={filesByCourse || { [String(courseId)]: files || [] }}
         displayedCourses={displayedCourses}
         courseColors={courseColors}
@@ -136,9 +155,14 @@ export function CourseOverview({
                     <div className="cv-list-item-title" title={name}>{name}</div>
                     <div className="cv-list-item-sub">{formatSize(f.size)} {f.updated_at ? `· ${relDate(f.updated_at)}` : ""}</div>
                   </div>
-                  <a href={f.url || f.external_url} download className="cv-btn-icon" title="Download">
-                    <Download size={13} />
-                  </a>
+                  <button
+                    type="button"
+                    className="cv-btn-icon"
+                    title="Download"
+                    onClick={() => handleDownload(f)}
+                  >
+                    {downloadingId === f.id ? <Loader2 size={13} className="retro-icon-spin" /> : <Download size={13} />}
+                  </button>
                 </div>
               );
             })
