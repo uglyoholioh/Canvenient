@@ -8,8 +8,6 @@ import pytest
 
 from backup import backup_database, sqlite_path_from_url
 
-pytestmark = pytest.mark.asyncio
-
 
 def _make_db(path, rows=1):
     conn = sqlite3.connect(path)
@@ -20,6 +18,7 @@ def _make_db(path, rows=1):
     conn.close()
 
 
+@pytest.mark.asyncio
 async def test_backup_copies_database(tmp_path):
     db_file = tmp_path / "canvenient.db"
     _make_db(db_file, rows=3)
@@ -37,6 +36,7 @@ async def test_backup_copies_database(tmp_path):
         assert check.execute("SELECT COUNT(*) FROM tasks").fetchone()[0] == 3
 
 
+@pytest.mark.asyncio
 async def test_backup_prunes_old_copies(tmp_path):
     db_file = tmp_path / "canvenient.db"
     _make_db(db_file)
@@ -55,6 +55,7 @@ async def test_backup_prunes_old_copies(tmp_path):
     assert not (backup_dir / "canvenient-20260100-000000.db").exists()
 
 
+@pytest.mark.asyncio
 async def test_backup_skips_non_sqlite_and_missing_db(tmp_path):
     assert backup_database("postgresql://localhost:5432/postgres") is None
     assert backup_database(f"sqlite:///{tmp_path / 'missing.db'}") is None
