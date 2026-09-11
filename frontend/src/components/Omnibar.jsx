@@ -37,7 +37,7 @@ export default function Omnibar({ onClose, token, onNavigate }) {
         return;
       }
       try {
-        const { notes, tasks } = await loadCorpus(token);
+        const { notes, tasks, canvas } = await loadCorpus(token);
         corpusRef.current = { notes, tasks };
         const q = query.toLowerCase();
         const views = [
@@ -52,7 +52,26 @@ export default function Omnibar({ onClose, token, onNavigate }) {
         const matchedViews = views.filter(v => v.title.toLowerCase().includes(q) || v.keywords.some(k => k.includes(q)));
         const filteredNotes = notes.filter(n => n.title.toLowerCase().includes(q) || n.content.toLowerCase().includes(q)).map(n => ({ ...n, type: 'note' }));
         const filteredTasks = tasks.filter(t => t.title.toLowerCase().includes(q)).map(t => ({ ...t, type: 'task' }));
-        setResults([...matchedViews, ...filteredNotes, ...filteredTasks]);
+
+        // Canvas corpus: courses, assignments, and files are searched by
+        // title; course results jump to Modules, assignments/files open the
+        // Canvas drawer.
+        const safeCanvas = canvas || { courses: [], assignments: [], files: [] };
+        const courseCodeById = new Map(safeCanvas.courses.map(c => [String(c.id), c.course_code || ""]));
+        const matchedCourses = safeCanvas.courses
+          .filter(c => `${c.course_code} ${c.name}`.toLowerCase().includes(q))
+          .slice(0, 3)
+          .map(c => ({ type: 'view', view: 'canvas', id: `canvas-course-${c.id}`, title: c.course_code ? `${c.course_code} — ${c.name}` : c.name }));
+        const matchedAssignments = safeCanvas.assignments
+          .filter(a => (a.title || "").toLowerCase().includes(q))
+          .slice(0, 4)
+          .map(a => ({ type: 'canvas_resource', itemType: 'assignment', id: a.id, course_id: a.course_id, due_at: a.due_at || null, title: a.title, sub: courseCodeById.get(String(a.course_id)) || "" }));
+        const matchedFiles = safeCanvas.files
+          .filter(f => (f.title || "").toLowerCase().includes(q))
+          .slice(0, 6)
+          .map(f => ({ type: 'canvas_resource', itemType: 'file', id: f.id, course_id: f.course_id, external_url: f.external_url || null, title: f.title, sub: courseCodeById.get(String(f.course_id)) || "" }));
+
+        setResults([...matchedViews, ...matchedCourses, ...matchedAssignments, ...matchedFiles, ...filteredNotes, ...filteredTasks]);
         setSelectedIndex(0);
       } catch (err) {
         console.error(err);
@@ -87,7 +106,7 @@ export default function Omnibar({ onClose, token, onNavigate }) {
           <input 
             ref={inputRef}
             type="text" 
-            placeholder="Type a command or search notes..." 
+            placeholder="Search notes, tasks, and modules..."
             value={query}
             onChange={e => setQuery(e.target.value)}
             onKeyDown={handleKeyDown}
@@ -98,17 +117,18 @@ export default function Omnibar({ onClose, token, onNavigate }) {
         {results.length > 0 && (
           <div style={{ maxHeight: '300px', overflowY: 'auto', padding: '8px 0' }}>
             {results.map((item, idx) => (
-              <div 
-                key={idx} 
+              <div
+                key={idx}
                 style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', cursor: 'pointer', backgroundColor: idx === selectedIndex ? 'var(--surface-hover)' : 'transparent' }}
                 onClick={() => onNavigate(item.type, item)}
                 onMouseEnter={() => setSelectedIndex(idx)}
               >
                 <div style={{ fontSize: '11px', fontWeight: 'bold', padding: '2px 6px', borderRadius: '4px', backgroundColor: 'var(--surface-muted)', color: 'var(--text-muted)', marginRight: '12px', textTransform: 'uppercase' }}>
-                  {item.type}
+                  {item.type === 'canvas_resource' ? item.itemType : item.type}
                 </div>
                 <div style={{ color: idx === selectedIndex ? 'var(--text-h)' : 'var(--text)' }}>
                   {item.title}
+                  {item.sub && <span style={{ color: 'var(--text-muted)', marginLeft: '6px', fontSize: '12px' }}>{item.sub}</span>}
                 </div>
               </div>
             ))}
