@@ -28,17 +28,22 @@ from routes.tasks import router as tasks_router
 from routes.telegram import router as telegram_router
 from routes.venues import router as venues_router
 from schema import initialize_schema
+from migrations import run_migrations
+from backup import backup_database
+from logging_setup import setup_logging, get_logger
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    setup_logging()
+    log = get_logger("canvenient.startup")
     # Safety copy of user data before anything touches the database.
     backup_database()
     await db.connect()
     await initialize_schema()
     applied = await run_migrations()
     if applied:
-        print(f"[migrations] applied: {', '.join(applied)}")
+        log.info("Applied migrations: %s", ", ".join(applied))
     yield
     await db.disconnect()
 

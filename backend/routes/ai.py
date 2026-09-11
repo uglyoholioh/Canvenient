@@ -332,8 +332,7 @@ async def generate_brief(current_user: CurrentUser, force_refresh: bool = Query(
                 "brief": stale_brief,
                 "context_snapshot": stale_context
             }
-        print("DIAGNOSTIC ERROR TRACE:")
-        traceback.print_exc()
+        logger.exception("AI brief generation failed")
         raise e
 
 
@@ -369,6 +368,5 @@ async def chat_with_ai(current_user: CurrentUser, body: ChatRequest):
 
         return {"reply": reply}
     except Exception as e:
-        print("CHAT ERROR TRACE:")
-        traceback.print_exc()
+        logger.exception("AI chat failed")
         raise e

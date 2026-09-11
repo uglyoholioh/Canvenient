@@ -5,9 +5,12 @@ from fastapi import APIRouter, Header, HTTPException, Response, status
 
 from database import db
 from dependencies import CurrentUser
+from logging_setup import get_logger
 from models.telegram import TelegramClaim, TelegramLinkOut, TelegramWebhookUpdate
 from telegram_bot import handle_command, send_message
 from telegram_formatting import generate_connection_code
+
+logger = get_logger("canvenient.telegram")
 
 router = APIRouter(prefix="/telegram", tags=["telegram"])
 
@@ -167,7 +170,7 @@ async def webhook(
 
         await send_message(chat_id, reply)
     except Exception as err:
-        print(f"[Telegram Webhook Error]: {err}")
+        logger.warning("Telegram webhook command failed: %s", err)
         try:
             await send_message(chat_id, f"⚠️ Error processing command: {err}")
         except Exception:

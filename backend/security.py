@@ -2,6 +2,7 @@ import base64
 import hashlib
 import hmac
 import json
+import logging
 import os
 import secrets
 from datetime import datetime, timedelta, timezone
@@ -45,7 +46,9 @@ def _load_or_create_jwt_secret() -> str:
 
     # Server deployments should set JWT_SECRET explicitly; an ephemeral key
     # (which resets sessions on restart) is still safer than a constant.
-    print("[security] JWT_SECRET is not set; using an ephemeral random key (sessions reset on restart).")
+    logging.getLogger("canvenient.security").warning(
+        "JWT_SECRET is not set; using an ephemeral random key (sessions reset on restart)."
+    )
     return secrets.token_hex(32)
 
 
