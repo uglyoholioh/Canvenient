@@ -66,21 +66,23 @@ export default function CardDeckDecider({
   const [flickAngle, setFlickAngle] = useState(0);
   const animationFrameRef = useRef(null);
 
-  // Keep latest refs to prevent cancellation
   const activeItemsRef = useRef(activeItems);
-  activeItemsRef.current = activeItems;
-
   const onSpinEndRef = useRef(onSpinEnd);
-  onSpinEndRef.current = onSpinEnd;
-
   const soundEnabledRef = useRef(soundEnabled);
-  soundEnabledRef.current = soundEnabled;
-
   const targetWinnerIndexRef = useRef(targetWinnerIndex);
-  targetWinnerIndexRef.current = targetWinnerIndex;
+
+  // Mirror the latest props into refs inside an effect so the animation loop
+  // always reads current values without being cancelled by re-renders.
+  useEffect(() => {
+    activeItemsRef.current = activeItems;
+    onSpinEndRef.current = onSpinEnd;
+    soundEnabledRef.current = soundEnabled;
+    targetWinnerIndexRef.current = targetWinnerIndex;
+  });
 
   useEffect(() => {
     if (!isSpinning && !isRevealed && activeItems.length > 0) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- resets the deck position while idle
       setCurrentIndex(0);
     }
   }, [items, isSpinning, isRevealed, activeItems.length]);

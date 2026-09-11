@@ -93,6 +93,7 @@ export default function PdfViewer({ token, fileId, name = "", externalUrl = "" }
     if (!token || !fileId) return undefined;
     let cancelled = false;
     const docController = new AbortController();
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- resets viewer state while the new document loads
     setStatus("loading");
     setError("");
     setNumPages(0);
@@ -185,6 +186,7 @@ export default function PdfViewer({ token, fileId, name = "", externalUrl = "" }
     pageInfosRef.current = new Map(pageInfos.map((info) => [info.n, info]));
   }, [pageInfos]);
 
+  // eslint-disable-next-line react-hooks/preserve-manual-memoization -- imperative pdf.js render scheduling intentionally lives outside the compiler's model
   const renderPage = useCallback(async (pageNumber) => {
     const doc = docRef.current;
     const div = pageDivsRef.current.get(pageNumber);

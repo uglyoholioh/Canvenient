@@ -72,18 +72,19 @@ export default function WheelCanvas({
   const activeItems = items.filter((item) => item.enabled !== false);
   const numItems = activeItems.length;
 
-  // Keep latest props in refs to decouple animation loop from React renders
   const activeItemsRef = useRef(activeItems);
-  activeItemsRef.current = activeItems;
-
   const onSpinEndRef = useRef(onSpinEnd);
-  onSpinEndRef.current = onSpinEnd;
-
   const soundEnabledRef = useRef(soundEnabled);
-  soundEnabledRef.current = soundEnabled;
-
   const targetWinnerIndexRef = useRef(targetWinnerIndex);
-  targetWinnerIndexRef.current = targetWinnerIndex;
+
+  // Mirror the latest props into refs inside an effect so the animation loop
+  // always reads current values without being cancelled by re-renders.
+  useEffect(() => {
+    activeItemsRef.current = activeItems;
+    onSpinEndRef.current = onSpinEnd;
+    soundEnabledRef.current = soundEnabled;
+    targetWinnerIndexRef.current = targetWinnerIndex;
+  });
 
   // Render the wheel onto the canvas
   const drawWheel = useCallback(

@@ -19,10 +19,18 @@ export default function CommandPalette({ isOpen, onClose, onQuickCreateTask, onT
   const inputRef = useRef(null)
   const navigate = useNavigate()
 
+  // Reset the palette contents whenever it opens (adjust-during-render pattern).
+  const [wasOpen, setWasOpen] = useState(isOpen)
+  if (isOpen && !wasOpen) {
+    setWasOpen(true)
+    setQuery("")
+    setSelectedIndex(0)
+  } else if (!isOpen && wasOpen) {
+    setWasOpen(false)
+  }
+
   useEffect(() => {
     if (isOpen) {
-      setQuery("")
-      setSelectedIndex(0)
       setTimeout(() => inputRef.current?.focus(), 50)
     }
   }, [isOpen])
@@ -130,9 +138,12 @@ export default function CommandPalette({ isOpen, onClose, onQuickCreateTask, onT
 
   items = [...items, ...filteredNav, ...filteredActions]
 
-  useEffect(() => {
+  // Reset the selection whenever the query changes (adjust-during-render pattern).
+  const [syncedQuery, setSyncedQuery] = useState(query)
+  if (query !== syncedQuery) {
+    setSyncedQuery(query)
     setSelectedIndex(0)
-  }, [query])
+  }
 
   const handleKeyDown = (e) => {
     if (e.key === "Escape") {

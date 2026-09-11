@@ -315,6 +315,7 @@ export default function VenueFinder({ token }) {
   }, [token]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- kicks off the async venue-data fetch; loading state must apply immediately
     loadVenueData();
   }, [loadVenueData]);
 

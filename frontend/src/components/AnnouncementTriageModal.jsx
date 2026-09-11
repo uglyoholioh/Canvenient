@@ -51,9 +51,13 @@ export default function AnnouncementTriageModal({
   const toastTimeoutRef = useRef(null);
   const readerScrollRef = useRef(null);
 
-  useEffect(() => {
+  // Keep the working list in sync with new announcements (adjust-during-render
+  // pattern; avoids a cascading setState effect).
+  const [syncedAnnouncements, setSyncedAnnouncements] = useState(announcements);
+  if (announcements !== syncedAnnouncements) {
+    setSyncedAnnouncements(announcements);
     setActiveAnnouncements(announcements);
-  }, [announcements]);
+  }
 
   const unreadItems = useMemo(
     () => activeAnnouncements.filter((item) => !item.is_dismissed),
@@ -71,11 +75,14 @@ export default function AnnouncementTriageModal({
     return Math.round((completed / totalInitialCount) * 100);
   }, [unreadItems.length, dismissedStack.length, totalInitialCount]);
 
-  useEffect(() => {
-    if (selectedIndex >= unreadItems.length && unreadItems.length > 0) {
-      setSelectedIndex(unreadItems.length - 1);
-    }
-  }, [selectedIndex, unreadItems.length]);
+  // Clamp the selection to the unread list (adjust-during-render pattern).
+  const [clampedIndex, setClampedIndex] = useState(selectedIndex);
+  if (selectedIndex >= unreadItems.length && unreadItems.length > 0) {
+    setClampedIndex(unreadItems.length - 1);
+    setSelectedIndex(unreadItems.length - 1);
+  } else if (clampedIndex !== selectedIndex) {
+    setClampedIndex(selectedIndex);
+  }
 
   useEffect(() => {
     if (readerScrollRef.current) {

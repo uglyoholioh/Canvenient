@@ -144,7 +144,9 @@ export function FileBrowser({ token, courseId, allFiles }) {
   // Image previews go through the content proxy too: mirrored Canvas URLs go
   // stale, so the plain <img src={file.url}> broke after a while.
   useEffect(() => {
+    // Reset-then-fetch: clearing the stale preview immediately is intentional.
     if (!selectedFile || previewType !== "img") {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- clear stale preview immediately on deselection
       setPreviewImageSrc(null);
       return undefined;
     }
@@ -169,6 +171,7 @@ export function FileBrowser({ token, courseId, allFiles }) {
   useEffect(() => {
     if (!courseId) return;
     let canceled = false;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- resets per-course view state while the folder tree loads
     setLoading(true);
     setRawFolders([]);
     setSelectedFolderId(null);
@@ -568,13 +571,14 @@ function CourseOverview({
   isAssignmentAdded,
 }) {
   const now = new Date();
-  const upcoming = useMemo(() =>
-    assignments
+  const upcoming = useMemo(() => {
+    const now = new Date();
+    return assignments
       .filter(a => String(a.course_id) === String(courseId) && !a.has_submitted)
       .filter(a => !a.due_at || new Date(a.due_at) >= now)
       .sort((a,b) => (a.due_at ? new Date(a.due_at) : Infinity) - (b.due_at ? new Date(b.due_at) : Infinity))
-      .slice(0, 5),
-  [assignments, courseId]);
+      .slice(0, 5);
+  }, [assignments, courseId]);
 
   const recentAnn = useMemo(() =>
     announcements
@@ -753,7 +757,10 @@ export default function CanvasView({ token }) {
     }
   }, [token]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- kicks off the async Canvas load; loading state must apply immediately
+    load();
+  }, [load]);
 
   useEffect(() => {
     const handleTasksChanged = () => { loadTasks(); };
@@ -843,10 +850,12 @@ export default function CanvasView({ token }) {
           .catch(() => {});
       }
     });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- filesByCourse is written by this effect; adding it would refetch every course on each preload
   }, [displayedCourses, token]);
 
   // If a single course is selected, reset per-course tab data and auto-fetch files/modules
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- resets per-course tab data when the course selection changes
     setFiles([]);
     setCourseModules([]);
     setCoursePages([]);
@@ -877,7 +886,7 @@ export default function CanvasView({ token }) {
 
       return () => { canceled = true; };
     }
-  }, [selectedCourseId, token, filesByCourse]);
+  }, [selectedCourseId, tab, token, filesByCourse]);
 
   // Fetch modules or pages on tab switch
   useEffect(() => {
@@ -885,6 +894,7 @@ export default function CanvasView({ token }) {
     let canceled = false;
 
     if (tab === "modules" && courseModules.length === 0) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- tab switch must show the loading state immediately
       setTabLoading(true);
       getCanvasCourseModules(token, selectedCourseId)
         .then(d => { if (!canceled) setCourseModules(d || []); })
@@ -952,7 +962,10 @@ export default function CanvasView({ token }) {
     } catch {}
   }, [token]);
 
-  useEffect(() => { refreshSyncStatus(); }, [refreshSyncStatus]);
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- kicks off the async sync-status fetch
+    refreshSyncStatus();
+  }, [refreshSyncStatus]);
 
   const sync = useCallback(async () => {
     setSyncing(true); setError("");

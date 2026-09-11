@@ -150,6 +150,7 @@ function PlaceCombobox({
 
   useEffect(() => {
     if (suggestions.length > 0 && isOpen) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- resets the highlight when the suggestion list changes
       setHighlightedIndex(0);
     } else {
       setHighlightedIndex(-1);
@@ -305,7 +306,7 @@ export default function CampusBusModule({ token }) {
   const searchBlurTimerRef = useRef(null);
 
   // Refresh tracking
-  const lastRefreshRef        = useRef(null);
+  const [lastRefreshAt, setLastRefreshAt] = useState(null);
 
   // Schedule suggestion
   const [scheduleSuggestion,  setScheduleSuggestion]  = useState(null);
@@ -344,6 +345,7 @@ export default function CampusBusModule({ token }) {
       .map((s) => ({ ...s, dist: distanceInMetres(location, s) }))
       .sort((a, b) => a.dist - b.dist)[0];
     if (nearest) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- one-shot auto-select once stops and location arrive
       setStopId(nearest.id);
       setStopText(stopLabel(nearest));
       localStorage.setItem(STOP_STORAGE_KEY, nearest.id);
@@ -362,7 +364,7 @@ export default function CampusBusModule({ token }) {
       setArrivalData(data);
       writeCache(`${ARRIVALS_PREFIX}${stopId}`, data);
       setStatus("success");
-      lastRefreshRef.current = Date.now();
+      setLastRefreshAt(Date.now());
     } catch {
       setStatus(cached ? "cached" : "error");
     }
@@ -414,6 +416,7 @@ export default function CampusBusModule({ token }) {
   // Place search for route planner inputs (debounced 250 ms)
   useEffect(() => {
     if (normalise(fromText).length < 2) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- clears stale results when the query is too short
       setFromPlaces([]);
       return undefined;
     }
@@ -428,6 +431,7 @@ export default function CampusBusModule({ token }) {
 
   useEffect(() => {
     if (normalise(toText).length < 2) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- clears stale results when the query is too short
       setToPlaces([]);
       return undefined;
     }
@@ -599,6 +603,7 @@ export default function CampusBusModule({ token }) {
 
   useEffect(() => {
     if (searchResults.length > 0 && isSearchOpen) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- resets the highlight when the search results change
       setHighlightedSearchIdx(0);
     } else {
       setHighlightedSearchIdx(-1);
@@ -615,7 +620,7 @@ export default function CampusBusModule({ token }) {
       return arrivalData?.updated_at ? `Live · ${formatClock(arrivalData.updated_at)}` : "Live";
     }
     if (status === "cached") {
-      return lastRefreshRef.current ? `Recent · ${formatClock(lastRefreshRef.current)}` : "Cached data";
+      return lastRefreshAt ? `Recent · ${formatClock(lastRefreshAt)}` : "Cached data";
     }
     if (status === "error") return "Failed to load";
     return "Loading…";

@@ -81,6 +81,7 @@ export default function GroupsView({ token, currentUser }) {
   }, [token]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- kicks off the async groups fetch; loading state must apply immediately
     loadGroups();
   }, [loadGroups]);
 
@@ -105,6 +106,7 @@ export default function GroupsView({ token, currentUser }) {
 
   useEffect(() => {
     if (activeGroup?.id) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- kicks off the async group-details fetches
       loadGroupDetails(activeGroup.id);
     }
   }, [activeGroup?.id, loadGroupDetails]);

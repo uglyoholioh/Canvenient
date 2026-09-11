@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useId, useState, useEffect, useRef } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Placeholder from '@tiptap/extension-placeholder';
@@ -104,14 +104,18 @@ export default function MarkdownEditor({ noteId, token, onDelete, onUpdate, onTi
   const [saveState, setSaveState] = useState('saved');
   const [cachedData, setCachedData] = useState({ notes: [], files: [] });
 
-  const instanceId = useRef(`editor-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`);
+  const instanceId = useId();
   const debounceTimer = useRef(null);
   const titleRef = useRef(title);
-  titleRef.current = title;
   const saveStateRef = useRef(saveState);
-  saveStateRef.current = saveState;
   const noteRef = useRef(note);
-  noteRef.current = note;
+
+  // Mirror the latest values into refs inside an effect (no ref writes during render).
+  useEffect(() => {
+    titleRef.current = title;
+    saveStateRef.current = saveState;
+    noteRef.current = note;
+  });
 
   useEffect(() => {
     // Pre-fetch for mentions
@@ -174,7 +178,7 @@ export default function MarkdownEditor({ noteId, token, onDelete, onUpdate, onTi
       window.dispatchEvent(new CustomEvent('canvenient-note-sync', {
         detail: {
           noteId: parseInt(noteId),
-          sourceId: instanceId.current,
+          sourceId: instanceId,
           type: 'content',
           content: html,
         }
@@ -193,7 +197,7 @@ export default function MarkdownEditor({ noteId, token, onDelete, onUpdate, onTi
       if (!detail) return;
       const { noteId: syncNoteId, sourceId, type, content: syncContent, title: syncTitle, note: syncNote, saveState: syncSaveState } = detail;
 
-      if (parseInt(syncNoteId) !== parseInt(noteId) || sourceId === instanceId.current) {
+      if (parseInt(syncNoteId) !== parseInt(noteId) || sourceId === instanceId) {
         return;
       }
 
@@ -230,7 +234,7 @@ export default function MarkdownEditor({ noteId, token, onDelete, onUpdate, onTi
           window.dispatchEvent(new CustomEvent('canvenient-note-sync', {
             detail: {
               noteId: parseInt(noteId),
-              sourceId: instanceId.current,
+              sourceId: instanceId,
               type: 'sync-response',
               content: editor.getHTML(),
               title: titleRef.current,
@@ -260,7 +264,7 @@ export default function MarkdownEditor({ noteId, token, onDelete, onUpdate, onTi
 
     window.addEventListener('canvenient-note-sync', handleSync);
     return () => window.removeEventListener('canvenient-note-sync', handleSync);
-  }, [noteId, editor]);
+  }, [instanceId, noteId, editor]);
 
   // On mount or editor ready, request active peer state if any
   useEffect(() => {
@@ -268,12 +272,12 @@ export default function MarkdownEditor({ noteId, token, onDelete, onUpdate, onTi
       window.dispatchEvent(new CustomEvent('canvenient-note-sync', {
         detail: {
           noteId: parseInt(noteId),
-          sourceId: instanceId.current,
+          sourceId: instanceId,
           type: 'request-sync'
         }
       }));
     }
-  }, [noteId, editor]);
+  }, [instanceId, noteId, editor]);
 
   useEffect(() => {
     let isMounted = true;
@@ -306,7 +310,7 @@ export default function MarkdownEditor({ noteId, token, onDelete, onUpdate, onTi
     window.dispatchEvent(new CustomEvent('canvenient-note-sync', {
       detail: {
         noteId: parseInt(noteId),
-        sourceId: instanceId.current,
+        sourceId: instanceId,
         type: 'saveState',
         saveState: 'saving'
       }
@@ -322,7 +326,7 @@ export default function MarkdownEditor({ noteId, token, onDelete, onUpdate, onTi
       window.dispatchEvent(new CustomEvent('canvenient-note-sync', {
         detail: {
           noteId: parseInt(noteId),
-          sourceId: instanceId.current,
+          sourceId: instanceId,
           type: 'saved',
           note: updated,
           saveState: 'saved'
@@ -334,7 +338,7 @@ export default function MarkdownEditor({ noteId, token, onDelete, onUpdate, onTi
       window.dispatchEvent(new CustomEvent('canvenient-note-sync', {
         detail: {
           noteId: parseInt(noteId),
-          sourceId: instanceId.current,
+          sourceId: instanceId,
           type: 'saveState',
           saveState: 'unsaved'
         }
@@ -354,7 +358,7 @@ export default function MarkdownEditor({ noteId, token, onDelete, onUpdate, onTi
     window.dispatchEvent(new CustomEvent('canvenient-note-sync', {
       detail: {
         noteId: parseInt(noteId),
-        sourceId: instanceId.current,
+        sourceId: instanceId,
         type: 'title',
         title: val,
       }

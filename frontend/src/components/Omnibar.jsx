@@ -1,25 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { Search } from "lucide-react";
-import { getNotes, getTasks } from "../api";
-
-// The omnibar searches the whole notes+tasks corpus client-side, so refetch
-// both on every keystroke would hammer the backend. Cache the corpus for a
-// short window and invalidate when tasks change elsewhere in the app.
-const CORPUS_TTL_MS = 30_000;
-let corpusCache = null;
-
-export function invalidateOmnibarCorpus() {
-  corpusCache = null;
-}
-
-async function loadCorpus(token) {
-  if (corpusCache && corpusCache.token === token && Date.now() - corpusCache.fetchedAt < CORPUS_TTL_MS) {
-    return corpusCache;
-  }
-  const [notes, tasks] = await Promise.all([getNotes(token), getTasks(token)]);
-  corpusCache = { token, notes, tasks, fetchedAt: Date.now() };
-  return corpusCache;
-}
+import { invalidateOmnibarCorpus, loadCorpus } from "../omnibarCorpus";
 
 export default function Omnibar({ onClose, token, onNavigate }) {
   const [query, setQuery] = useState("");

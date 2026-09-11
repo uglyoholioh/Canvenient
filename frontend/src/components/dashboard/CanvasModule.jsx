@@ -1,6 +1,6 @@
 // React is required by the test JSX transform.
  
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Check, ClipboardList, Inbox, Loader2, Plus, RefreshCw } from "lucide-react";
 import { createTask, getAcademicModules, getCanvasAnnouncements, getCanvasAssignments, getTasks, updateTask } from "../../api";
 import AnnouncementTriageModal from "../AnnouncementTriageModal";
@@ -56,14 +56,14 @@ export default function CanvasModule({ token, enabled, onOpenItem }) {
   const [error, setError] = useState("");
   const [showTriage, setShowTriage] = useState(false);
 
-  const loadTasks = () => {
+  const loadTasks = useCallback(() => {
     if (!token) return;
     getTasks(token)
       .then((data) => setTasks(data || []))
       .catch(() => {});
-  };
+  }, [token]);
 
-  const refreshCanvas = async (force = false) => {
+  const refreshCanvas = useCallback(async (force = false) => {
     if (!enabled || !token) return;
     setRefreshing(true);
     setError("");
@@ -93,15 +93,13 @@ export default function CanvasModule({ token, enabled, onOpenItem }) {
     } finally {
       setRefreshing(false);
     }
-  };
+  }, [token, enabled]);
 
   useEffect(() => {
-    if (!enabled || !token) {
-      setRefreshing(false);
-      return;
-    }
+    if (!enabled || !token) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- kicks off the async Canvas fetch; the refreshing spinner must apply immediately
     refreshCanvas(false);
-  }, [enabled, token]);
+  }, [enabled, token, refreshCanvas]);
 
   useEffect(() => {
     window.addEventListener("canvenient-task-created", loadTasks);
@@ -112,7 +110,7 @@ export default function CanvasModule({ token, enabled, onOpenItem }) {
       window.removeEventListener("canvenient-task-restored", loadTasks);
       window.removeEventListener("canvenient-tasks-changed", loadTasks);
     };
-  }, [token]);
+  }, [token, loadTasks]);
 
   const upcoming = useMemo(() => assignments
     .filter((item) => !item.has_submitted && (!item.due_at || new Date(item.due_at) >= new Date()))

@@ -40,6 +40,7 @@ export default function CanvasDrawer({ item, token, onClose }) {
   }, [token, detail, item]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- kicks off the async task-status check
     checkTaskStatus();
   }, [checkTaskStatus]);
 

@@ -123,6 +123,7 @@ export default function ScheduleModule({ token, onNavigate }) {
         } else if (scrollRef.current) {
           scrollRef.current.scrollTop = 0;
         }
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- bookkeeping for the scroll-sync external system
         setLastScrolledDay(dayOffset);
       }
     }

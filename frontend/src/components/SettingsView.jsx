@@ -142,9 +142,12 @@ export default function SettingsView({ token, user, onUpdateUser, onReplayOnboar
   const [academicModulesError, setAcademicModulesError] = useState("");
   const [academicModulesSaving, setAcademicModulesSaving] = useState(false);
 
-  useEffect(() => {
-    if (user?.name !== undefined) setProfileName(user.name);
-  }, [user?.name]);
+  // Mirror the profile name from the user prop (adjust-during-render pattern).
+  const [syncedName, setSyncedName] = useState(user?.name);
+  if (user?.name !== undefined && user?.name !== syncedName) {
+    setSyncedName(user.name);
+    setProfileName(user.name);
+  }
 
   useEffect(() => {
     if (!token) return;

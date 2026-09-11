@@ -11,7 +11,8 @@ vi.mock("../../api", () => ({
   getTasks: (...args) => getTasks(...args),
 }));
 
-import Omnibar, { invalidateOmnibarCorpus } from "../Omnibar";
+import Omnibar from "../Omnibar";
+import { invalidateOmnibarCorpus } from "../../omnibarCorpus";
 
 describe("Omnibar corpus caching", () => {
   beforeEach(() => {

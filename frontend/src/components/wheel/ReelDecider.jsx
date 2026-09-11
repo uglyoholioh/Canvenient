@@ -69,18 +69,19 @@ export default function ReelDecider({
   const animationFrameRef = useRef(null);
   const lastIndexTickRef = useRef(-1);
 
-  // Keep latest refs
   const activeItemsRef = useRef(activeItems);
-  activeItemsRef.current = activeItems;
-
   const onSpinEndRef = useRef(onSpinEnd);
-  onSpinEndRef.current = onSpinEnd;
-
   const soundEnabledRef = useRef(soundEnabled);
-  soundEnabledRef.current = soundEnabled;
-
   const targetWinnerIndexRef = useRef(targetWinnerIndex);
-  targetWinnerIndexRef.current = targetWinnerIndex;
+
+  // Mirror the latest props into refs inside an effect so the animation loop
+  // always reads current values without being cancelled by re-renders.
+  useEffect(() => {
+    activeItemsRef.current = activeItems;
+    onSpinEndRef.current = onSpinEnd;
+    soundEnabledRef.current = soundEnabled;
+    targetWinnerIndexRef.current = targetWinnerIndex;
+  });
 
   // We repeat items multiple times to create a seamless infinite strip
   const REPEAT_COUNT = 8;
@@ -207,6 +208,7 @@ export default function ReelDecider({
           top: `${centerTargetTop}px`,
           left: 0,
           right: 0,
+          /* eslint-disable-next-line react-hooks/refs -- the reel strip is driven imperatively by the animation loop; this read is its resting position */
           transform: `translateY(-${currentOffsetYRef.current}px)`,
           willChange: "transform",
         }}

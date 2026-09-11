@@ -113,9 +113,12 @@ export default function TaskView({
   const editRef = useRef(null);
   const taskViewRef = useRef(null);
 
-  useEffect(() => {
-    if (composerAutoFocus) setIsComposerOpen(true);
-  }, [composerAutoFocus]);
+  // Open the composer when autoFocus is requested (adjust-during-render pattern).
+  const [syncedComposerAutoFocus, setSyncedComposerAutoFocus] = useState(composerAutoFocus);
+  if (composerAutoFocus && !syncedComposerAutoFocus) {
+    setSyncedComposerAutoFocus(true);
+    setIsComposerOpen(true);
+  }
 
   useEffect(() => {
     if (!composerFocusRequestScope) return undefined;
@@ -219,7 +222,7 @@ export default function TaskView({
     deletingRefs.current.delete(task.id);
   }, [token]);
 
-  const startEditing = (task, title = task.title) => {
+  const startEditing = useCallback((task, title = task.title) => {
     const taskIndex = tasks.findIndex((t) => t.id === task.id);
     if (taskIndex !== -1) setSelectedIndex(taskIndex);
     setEditingId(task.id);
@@ -231,7 +234,7 @@ export default function TaskView({
       priority: task.priority_manual || "medium",
       moduleId: task.module_id == null ? "" : String(task.module_id),
     });
-  };
+  }, [tasks]);
 
   const restoreTaskFocus = (taskId) => {
     requestAnimationFrame(() => taskViewRef.current?.querySelector(`[data-task-id="${taskId}"]`)?.focus());
@@ -300,7 +303,7 @@ export default function TaskView({
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [active, completeTask, editingId, openTask, selectedIndex, displayedTasks]);
+  }, [active, completeTask, editingId, openTask, removeTask, selectedIndex, displayedTasks, startEditing]);
 
   return (
     <div ref={taskViewRef} className={`task-view is-${interactionMode}-mode ${embedded ? "is-embedded" : ""}`} data-interaction-mode={interactionMode}>

@@ -79,11 +79,11 @@ function App() {
 
   if (isCheckingSession) {
     return (
-      <main className="retro-auth-container">
-        <section className="retro-auth-card text-center">
-          <h2 className="font-serif">Canvenient</h2>
-          <p className="text-muted text-sm mt-xs">Loading terminal...</p>
-        </section>
+      <main className="auth-container">
+        <div className="auth-splash">
+          <span className="auth-wordmark">canvenient</span>
+          <p className="auth-splash-status">Restoring session…</p>
+        </div>
       </main>
     )
   }
@@ -92,7 +92,16 @@ function App() {
     <Router>
       <Routes>
         <Route path="/" element={<Navigate to="/login" replace />} />
-        <Route path="/register" element={<RegisterForm />} />
+        <Route
+          path="/register"
+          element={
+            currentUser ? (
+              <Navigate to="/workspace" replace />
+            ) : (
+              <RegisterForm onLoginSuccess={handleLoginSuccess} />
+            )
+          }
+        />
         <Route
           path="/login"
           element={

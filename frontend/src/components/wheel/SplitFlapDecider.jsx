@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 
 // Web Audio synthesizer for mechanical split-flap shutter clicks
 class FlapSoundSynthesizer {
@@ -60,7 +60,7 @@ export default function SplitFlapDecider({
   soundEnabled = false,
   targetWinnerIndex = null,
 }) {
-  const activeItems = items.filter((it) => it.enabled !== false);
+  const activeItems = useMemo(() => items.filter((it) => it.enabled !== false), [items]);
   const numItems = activeItems.length;
 
   const [displayText, setDisplayText] = useState(() => {
@@ -72,26 +72,28 @@ export default function SplitFlapDecider({
   const [isLocked, setIsLocked] = useState(false);
   const animationTimerRef = useRef(null);
 
-  // Keep references to mutable props so animation loop is never cancelled by state updates
   const activeItemsRef = useRef(activeItems);
-  activeItemsRef.current = activeItems;
-
   const onSpinEndRef = useRef(onSpinEnd);
-  onSpinEndRef.current = onSpinEnd;
-
   const soundEnabledRef = useRef(soundEnabled);
-  soundEnabledRef.current = soundEnabled;
-
   const targetWinnerIndexRef = useRef(targetWinnerIndex);
-  targetWinnerIndexRef.current = targetWinnerIndex;
+
+  // Mirror the latest props into refs inside an effect so the animation loop
+  // always reads current values without being cancelled by re-renders.
+  useEffect(() => {
+    activeItemsRef.current = activeItems;
+    onSpinEndRef.current = onSpinEnd;
+    soundEnabledRef.current = soundEnabled;
+    targetWinnerIndexRef.current = targetWinnerIndex;
+  });
 
   // Update initial text if items change when idle
   useEffect(() => {
     if (!isSpinning && !isLocked && activeItems.length > 0) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- refreshes the idle display text when the item list changes
       setDisplayText(activeItems[0].label);
       setActiveTag(activeItems[0].tag || "");
     }
-  }, [items, isSpinning, isLocked, activeItems.length]);
+  }, [activeItems, isSpinning, isLocked]);
 
   // Handle spin execution - depends ONLY on isSpinning
   useEffect(() => {

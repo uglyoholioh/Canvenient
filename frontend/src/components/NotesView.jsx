@@ -74,20 +74,21 @@ export default function NotesView({ token, initialNoteId = null }) {
   }, [token, initialNoteId]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- kicks off the async notes fetch; loading spinner must apply immediately
     loadNotesAndFolders();
   }, [loadNotesAndFolders]);
 
-  // Open note if initialNoteId changes externally
-  useEffect(() => {
-    if (initialNoteId) {
-      setOpenTabs(prev => {
-        const p0 = prev[0] || [];
-        return p0.includes(initialNoteId) ? prev : { ...prev, 0: [...p0, initialNoteId] };
-      });
-      setActiveNoteIds(prev => ({ ...prev, 0: initialNoteId }));
-      setActivePane(0);
-    }
-  }, [initialNoteId]);
+  // Open note if initialNoteId changes externally (adjust-during-render pattern).
+  const [syncedInitialNoteId, setSyncedInitialNoteId] = useState(initialNoteId);
+  if (initialNoteId && initialNoteId !== syncedInitialNoteId) {
+    setSyncedInitialNoteId(initialNoteId);
+    setOpenTabs(prev => {
+      const p0 = prev[0] || [];
+      return p0.includes(initialNoteId) ? prev : { ...prev, 0: [...p0, initialNoteId] };
+    });
+    setActiveNoteIds(prev => ({ ...prev, 0: initialNoteId }));
+    setActivePane(0);
+  }
 
   const openNote = useCallback((noteId, pane = activePane) => {
     setOpenTabs(prev => {

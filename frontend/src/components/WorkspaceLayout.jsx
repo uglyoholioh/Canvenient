@@ -115,11 +115,13 @@ export default function WorkspaceLayout({ token, user, onLogout, onUpdateUser })
     return !user.name || !completed;
   });
 
-  useEffect(() => {
-    if (user?.id && !user?.name) {
-      setIsOnboardingOpen(true);
-    }
-  }, [user?.id, user?.name]);
+  // Open onboarding when the signed-in user has no name yet (adjust-during-render
+  // pattern; avoids a cascading setState effect).
+  const [onboardingUserKey, setOnboardingUserKey] = useState(null);
+  if (user?.id && !user?.name && onboardingUserKey !== user.id) {
+    setOnboardingUserKey(user.id);
+    setIsOnboardingOpen(true);
+  }
 
   // Due-date reminders: check shortly after launch and every 15 minutes.
   useEffect(() => {
@@ -185,7 +187,7 @@ export default function WorkspaceLayout({ token, user, onLogout, onUpdateUser })
   const createAndOpenNote = useCallback(async () => {
     const note = await createNote({ title: "Untitled", content: "" }, token);
     setActiveTab(`note-${note.id}`);
-  }, [token]);
+  }, [token, setActiveTab]);
 
   useEffect(() => {
     const handleStorage = () => {
@@ -250,7 +252,7 @@ export default function WorkspaceLayout({ token, user, onLogout, onUpdateUser })
     };
     window.addEventListener('keydown', handleGlobalKey);
     return () => window.removeEventListener('keydown', handleGlobalKey);
-  }, [closeTasksPanel, openQuickCapture, shortcuts, tasksPanel.isOpen, toggleTasksPanel]);
+  }, [closeTasksPanel, openQuickCapture, setActiveTab, shortcuts, tasksPanel.isOpen, toggleTasksPanel]);
 
   useEffect(() => {
     let disposed = false;
@@ -309,7 +311,7 @@ export default function WorkspaceLayout({ token, user, onLogout, onUpdateUser })
       disposed = true;
       cleanups.forEach((cleanup) => cleanup());
     };
-  }, [openQuickCapture]);
+  }, [openQuickCapture, setActiveTab]);
 
   const handleMouseDown = useCallback((e) => {
     e.preventDefault();
