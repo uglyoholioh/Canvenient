@@ -1,4 +1,8 @@
+import logging
+
 from database import db
+
+logger = logging.getLogger("canvenient.schema")
 
 SCHEMA_STATEMENTS = [
     """
@@ -728,7 +732,11 @@ async def initialize_schema() -> None:
             )
             try:
                 await db.execute(query=stmt)
-            except Exception:
-                pass
+            except Exception as exc:
+                logger.warning(
+                    "Schema statement skipped on SQLite: %s — %s",
+                    stmt.strip().splitlines()[0][:80],
+                    exc,
+                )
         else:
             await db.execute(query=statement)
