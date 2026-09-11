@@ -400,16 +400,8 @@ export function scheduleItemsForDate(schedule, selectedDate) {
       hue: moduleHue(item.module_code),
       color: moduleColor(item, item.module_code),
       ink: moduleCardInk(moduleColor(item, item.module_code)),
-      attendInPerson: (() => {
-        if (schedule.class_attendance_overrides) {
-          const occDate = localDateKey(selectedDate);
-          const override = schedule.class_attendance_overrides.find(
-            (o) => String(o.class_id) === String(item.id) && o.occurrence_date === occDate
-          );
-          if (override) return override.attend_in_person;
-        }
-        return item.attend_in_person !== false;
-      })(),
+      // The backend merges per-date overrides; attend_in_person is effective.
+      attendInPerson: item.attend_in_person !== false,
       linkedTaskCount: Number(item.linked_task_count || 0),
       linkedNoteCount: Number(item.linked_note_count || 0),
       linkedFileCount: Number(item.linked_file_count || 0),

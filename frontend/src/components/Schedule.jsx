@@ -33,25 +33,26 @@ function classTypeBadge(item) {
 function TimelineItem({ item, startHour, hourHeight = HOUR_HEIGHT, now, isToday, compact = false, onOpenClass }) {
   const { top, height } = timelineBlockGeometry(item, startHour, hourHeight);
   const isPast = isToday && item.end <= now;
+  const notAttending = item.attendInPerson === false;
   const linkCount = item.linkedTaskCount + item.linkedNoteCount + item.linkedFileCount;
   const isLinkable = item.kind === "class";
   const openClass = () => { if (isLinkable) onOpenClass?.(item); };
 
   return (
     <article
-      className={`schedule-timeline-item is-${item.kind} ${isPast ? "is-past" : ""} ${isLinkable ? "is-linkable" : ""}`}
+      className={`schedule-timeline-item is-${item.kind} ${isPast ? "is-past" : ""} ${notAttending ? "is-not-attending" : ""} ${isLinkable ? "is-linkable" : ""}`}
       style={{
         top: `${top}px`,
         height: `${height}px`,
         "--module-color": item.color,
         "--module-ink": item.ink,
-        opacity: item.attendInPerson === false ? 0.4 : 1
+        opacity: notAttending ? 0.45 : 1
       }}
       role={isLinkable ? "button" : undefined}
       tabIndex={isLinkable ? 0 : undefined}
       onClick={openClass}
       onKeyDown={(event) => { if (isLinkable && (event.key === "Enter" || event.key === " ")) { event.preventDefault(); openClass(); } }}
-      aria-label={`${item.title}, ${formatScheduleTime(item.start)} to ${formatScheduleTime(item.end)}, ${item.subtitle}${item.classNo ? ` ${item.classNo}` : ""}, ${item.venue}${linkCount ? `, ${linkCount} linked item${linkCount === 1 ? "" : "s"}` : ""}`}
+      aria-label={`${item.title}, ${formatScheduleTime(item.start)} to ${formatScheduleTime(item.end)}, ${item.subtitle}${item.classNo ? ` ${item.classNo}` : ""}, ${item.venue}${linkCount ? `, ${linkCount} linked item${linkCount === 1 ? "" : "s"}` : ""}${notAttending ? ", marked as not attending" : ""}`}
     >
       <div className="schedule-item-copy">
         <div><strong>{item.title}</strong><span className="schedule-class-type">{classTypeBadge(item)}</span></div>
@@ -63,8 +64,8 @@ function TimelineItem({ item, startHour, hourHeight = HOUR_HEIGHT, now, isToday,
         )}
         {isLinkable && linkCount > 0 && <small className="schedule-linked-count">{linkCount} linked</small>}
       </div>
-      {!compact && (isPast || item.kind === "exam") && (
-        <span className="schedule-item-state">{isPast ? "Past" : "Exam"}</span>
+      {!compact && (notAttending || isPast || item.kind === "exam") && (
+        <span className="schedule-item-state">{notAttending ? "Not attending" : isPast ? "Past" : "Exam"}</span>
       )}
     </article>
   );
@@ -77,13 +78,14 @@ function HorizontalScheduleItem({ item, startHour, totalHours, now, isToday, row
   const leftPercent = Math.max(0, (startMins - startHour * 60) / totalMins);
   const widthPercent = Math.max(0.01, (endMins - startMins) / totalMins);
   const isPast = isToday && item.end <= now;
+  const notAttending = item.attendInPerson === false;
   const linkCount = item.linkedTaskCount + item.linkedNoteCount + item.linkedFileCount;
   const isLinkable = item.kind === "class";
   const openClass = () => { if (isLinkable) onOpenClass?.(item); };
 
   return (
     <article
-      className={`schedule-horizontal-item is-${item.kind} ${isPast ? "is-past" : ""} ${isLinkable ? "is-linkable" : ""}`}
+      className={`schedule-horizontal-item is-${item.kind} ${isPast ? "is-past" : ""} ${notAttending ? "is-not-attending" : ""} ${isLinkable ? "is-linkable" : ""}`}
       style={{
         left: `calc(${dayWidth}px + ${leftPercent} * (100% - ${dayWidth}px) + 2px)`,
         width: `calc(${widthPercent} * (100% - ${dayWidth}px) - 4px)`,
@@ -91,14 +93,14 @@ function HorizontalScheduleItem({ item, startHour, totalHours, now, isToday, row
         height: `calc((100% - ${headerHeight}px) / 7 - 4px)`,
         "--module-color": item.color,
         "--module-ink": item.ink,
-        opacity: item.attendInPerson === false ? 0.4 : 1
+        opacity: notAttending ? 0.45 : 1
       }}
       role={isLinkable ? "button" : undefined}
       tabIndex={isLinkable ? 0 : undefined}
       onClick={openClass}
       onKeyDown={(event) => { if (isLinkable && (event.key === "Enter" || event.key === " ")) { event.preventDefault(); openClass(); } }}
-      aria-label={`${item.title}, ${formatScheduleTime(item.start)} to ${formatScheduleTime(item.end)}, ${item.subtitle}${item.classNo ? ` ${item.classNo}` : ""}${item.weeksLabel ? `, ${item.weeksLabel}` : ""}, ${item.venue}${linkCount ? `, ${linkCount} linked item${linkCount === 1 ? "" : "s"}` : ""}`}
-      title={`${item.title} - ${item.subtitle}${item.classNo ? ` [${item.classNo}]` : ""}${item.weeksLabel ? ` (${item.weeksLabel})` : ""}${item.venue ? ` at ${item.venue}` : ""}`}
+      aria-label={`${item.title}, ${formatScheduleTime(item.start)} to ${formatScheduleTime(item.end)}, ${item.subtitle}${item.classNo ? ` ${item.classNo}` : ""}${item.weeksLabel ? `, ${item.weeksLabel}` : ""}, ${item.venue}${linkCount ? `, ${linkCount} linked item${linkCount === 1 ? "" : "s"}` : ""}${notAttending ? ", marked as not attending" : ""}`}
+      title={`${item.title} - ${item.subtitle}${item.classNo ? ` [${item.classNo}]` : ""}${item.weeksLabel ? ` (${item.weeksLabel})` : ""}${item.venue ? ` at ${item.venue}` : ""}${notAttending ? " · marked as not attending" : ""}`}
     >
       <div className="schedule-item-copy">
         <div className="schedule-item-heading">
@@ -375,7 +377,7 @@ export default function Schedule({ token }) {
                     const today = localDateKey(day) === localDateKey(now);
                     return <button type="button" key={localDateKey(day)} className={`${inMonth ? "" : "is-outside"} ${today ? "is-today" : ""}`} onClick={() => { setSelectedDate(startOfLocalDay(day)); setView("day"); }}>
                       <span>{day.getDate()}</span>
-                      {dayItems.slice(0, 3).map((item) => <small key={item.id} style={{ "--module-color": item.color, opacity: item.attendInPerson === false ? 0.4 : 1 }}>{formatScheduleTime(item.start)} {item.title}</small>)}
+                      {dayItems.slice(0, 3).map((item) => <small key={item.id} className={item.attendInPerson === false ? "is-not-attending" : ""} style={{ "--module-color": item.color, opacity: item.attendInPerson === false ? 0.45 : 1 }} title={item.attendInPerson === false ? `${item.title} — marked as not attending` : undefined}>{formatScheduleTime(item.start)} {item.title}</small>)}
                       {dayItems.length > 3 && <em>+{dayItems.length - 3} more</em>}
                     </button>;
                   })}

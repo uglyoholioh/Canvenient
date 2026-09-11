@@ -590,6 +590,14 @@ async def get_class_context(
     class_record = await class_occurrence_for_user(class_id, occurrence_date, current_user.id)
     occurrence_key = class_occurrence_key(class_record, occurrence_date)
     series_key = class_series_key(class_record)
+    attendance_override = await db.fetch_one(
+        query="""
+            SELECT attend_in_person
+            FROM class_attendance_overrides
+            WHERE user_id = :user_id AND class_id = :class_id AND occurrence_date = :occurrence_date
+        """,
+        values={"user_id": current_user.id, "class_id": class_id, "occurrence_date": occurrence_date},
+    )
     tasks = await db.fetch_all(
         query="""
             SELECT t.id, t.title, t.status, t.due_at_override, t.source_due_at, ctl.relation,
@@ -646,7 +654,11 @@ async def get_class_context(
             "venue": class_record["venue"],
             "occurrence_date": occurrence_date,
             "summary": class_summary(class_record),
-            "attend_in_person": dict(class_record).get("attend_in_person", True),
+            # Effective for this occurrence: a per-date override wins over the
+            # class-level setting.
+            "attend_in_person": bool(attendance_override["attend_in_person"])
+            if attendance_override
+            else bool(dict(class_record).get("attend_in_person", True)),
         },
         "tasks": _with_recurring(tasks),
         "notes": _with_recurring(notes),
@@ -657,9 +669,19 @@ class ClassUpdate(BaseModel):
     attend_in_person: bool
     occurrence_date: date | None = None
 
+# Sibling occurrences of the same recurring class (mirrors class_series_key).
+_SERIES_MATCH_SQL = """
+    user_id = :user_id
+    AND UPPER(TRIM(module_code)) = :module_code
+    AND start_time = :start_time
+    AND LOWER(TRIM(lesson_type)) = :lesson_type
+    AND UPPER(TRIM(class_no)) IS NOT DISTINCT FROM :class_no
+"""
+
 @router.patch("/classes/{class_id}")
 async def update_class(class_id: int, payload: ClassUpdate, current_user: CurrentUser):
     if payload.occurrence_date:
+        await class_occurrence_for_user(class_id, payload.occurrence_date, current_user.id)
         await db.execute(
             """
             INSERT INTO class_attendance_overrides (user_id, class_id, occurrence_date, attend_in_person)
@@ -669,14 +691,38 @@ async def update_class(class_id: int, payload: ClassUpdate, current_user: Curren
             {"user_id": current_user.id, "class_id": class_id, "occurrence_date": payload.occurrence_date, "attend_in_person": payload.attend_in_person}
         )
         return {"status": "ok"}
-    else:
-        record = await db.fetch_one(
-            "UPDATE classes SET attend_in_person = :attend_in_person WHERE id = :class_id AND user_id = :user_id RETURNING id",
-            {"attend_in_person": payload.attend_in_person, "class_id": class_id, "user_id": current_user.id}
+
+    record = await db.fetch_one(
+        query="SELECT module_code, lesson_type, class_no, start_time FROM classes WHERE id = :class_id AND user_id = :user_id",
+        values={"class_id": class_id, "user_id": current_user.id},
+    )
+    if not record:
+        raise HTTPException(status_code=404, detail="Class not found.")
+
+    series_values = {
+        "user_id": current_user.id,
+        "module_code": str(record["module_code"] or "").strip().upper(),
+        "start_time": str(record["start_time"]),
+        "lesson_type": str(record["lesson_type"] or "").strip().lower(),
+        "class_no": str(record["class_no"]).strip().upper() if record["class_no"] is not None else None,
+    }
+    # One occurrence is a row of a whole recurring series: setting the class
+    # applies to every occurrence and clears per-date exceptions so the
+    # calendar reflects exactly what was chosen.
+    async with db.transaction():
+        await db.execute(
+            query=f"UPDATE classes SET attend_in_person = :attend_in_person WHERE {_SERIES_MATCH_SQL}",
+            values={**series_values, "attend_in_person": payload.attend_in_person},
         )
-        if not record:
-            raise HTTPException(status_code=404, detail="Class not found.")
-        return {"status": "ok"}
+        await db.execute(
+            query=f"""
+                DELETE FROM class_attendance_overrides
+                WHERE user_id = :user_id
+                  AND class_id IN (SELECT id FROM classes WHERE {_SERIES_MATCH_SQL})
+            """,
+            values=series_values,
+        )
+    return {"status": "ok"}
 
 @router.post("/classes/{class_id}/files", status_code=status.HTTP_201_CREATED)
 async def upload_class_file(
@@ -863,6 +909,10 @@ async def list_schedule(current_user: CurrentUser):
         s_key: _derive_series_weeks(dates)
         for s_key, dates in series_dates.items()
     }
+    attendance_overrides_map = {
+        (o["class_id"], str(o["occurrence_date"])): bool(o["attend_in_person"])
+        for o in attendance_overrides
+    }
 
     class_results = []
     for record in classes:
@@ -885,8 +935,12 @@ async def list_schedule(current_user: CurrentUser):
         item["linked_task_count"] = (task_counts.get(key, 0) if key else 0) + task_counts.get(skey, 0)
         item["linked_note_count"] = (note_counts.get(key, 0) if key else 0) + note_counts.get(skey, 0)
         item["linked_file_count"] = (file_counts.get(key, 0) if key else 0) + file_counts.get(skey, 0)
+        # attend_in_person is the effective value for THIS occurrence: a
+        # per-date override wins over the class-level setting.
+        if record["class_date"] is not None:
+            override = attendance_overrides_map.get((record["id"], str(record["class_date"])))
+            if override is not None:
+                item["attend_in_person"] = override
         class_results.append(item)
-        
-    overrides_list = [dict(o) for o in attendance_overrides]
-    
-    return {"classes": class_results, "exams": exams, "events": events, "class_attendance_overrides": overrides_list}
+
+    return {"classes": class_results, "exams": exams, "events": events}

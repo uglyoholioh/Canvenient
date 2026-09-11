@@ -1409,6 +1409,9 @@ kbd {
 .class-context-header button { width: 32px; height: 32px; flex: none; padding: 0; border: 1px solid var(--border); border-radius: 6px; background: var(--surface-muted); color: var(--text-muted); cursor: pointer; display: grid; place-items: center; transition: var(--transition-fast); }
 .class-context-header button:hover { border-color: var(--border-strong); color: var(--text-h); background: var(--surface-hover); }
 .class-context-actions { padding: 14px 20px; border-bottom: 1px solid var(--border); display: flex; gap: 6px; }
+.class-context-attendance { margin: 14px 20px 0; padding: 14px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); display: flex; flex-direction: column; gap: 12px; }
+.class-context-attendance-status { min-height: 14px; color: var(--text-muted); font-size: 11px; font-weight: 500; }
+.scope-option:disabled { cursor: wait; opacity: .6; }
 .class-context-actions button, .class-context-form button { min-height: 30px; padding: 5px 9px; border: 1px solid var(--border-strong); border-radius: 5px; background: var(--surface-muted); color: var(--text-h); cursor: pointer; display: inline-flex; align-items: center; gap: 5px; font: 600 12px var(--font-sans); }
 .class-context-actions button:hover, .class-context-actions button.is-active { border-color: var(--accent); color: var(--text-h); }
 .class-context-actions button:disabled { cursor: wait; opacity: .55; }
@@ -4003,6 +4006,9 @@ textarea {
   background: var(--module-ink);
   color: var(--module-color);
 }
+.schedule-timeline-item.is-not-attending { border-style: dashed; }
+.schedule-horizontal-item.is-not-attending .schedule-item-heading strong { text-decoration: line-through; text-decoration-thickness: 1px; }
+.schedule-month-grid small.is-not-attending { text-decoration: line-through; }
 .schedule-horizontal-item.is-past { opacity: .66; }
 .schedule-horizontal-item.is-current {
   outline: var(--rule-schedule-focus) solid var(--color-schedule-live);

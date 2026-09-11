@@ -2,7 +2,7 @@
  
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Calendar, CalendarClock, CheckCircle2, Download, FileText, Paperclip, Plus, Repeat, Upload, X } from "lucide-react";
-import { createNote, createTask, downloadClassFile, getClassContext, uploadClassFile } from "../../api";
+import { createNote, createTask, downloadClassFile, getClassContext, updateClass, uploadClassFile } from "../../api";
 
 const RELATIONS = [
   { value: "due_before", label: "Due before class" },
@@ -24,6 +24,9 @@ export default function ClassContextDrawer({ item, token, onClose, onContextChan
   const [mode, setMode] = useState(null);
   const [isRecurring, setIsRecurring] = useState(false);
   const [attendanceScope, setAttendanceScope] = useState("instance");
+  const [attendanceSaving, setAttendanceSaving] = useState(false);
+  const [attendanceSaved, setAttendanceSaved] = useState(false);
+  const savedTimerRef = useRef(0);
   const [taskTitle, setTaskTitle] = useState("");
   const [relation, setRelation] = useState("due_before");
   const [noteTitle, setNoteTitle] = useState("");
@@ -50,12 +53,45 @@ export default function ClassContextDrawer({ item, token, onClose, onContextChan
   useEffect(() => {
     const closeOnEscape = (event) => { if (event.key === "Escape") onClose(); };
     window.addEventListener("keydown", closeOnEscape);
-    return () => window.removeEventListener("keydown", closeOnEscape);
+    return () => {
+      window.removeEventListener("keydown", closeOnEscape);
+      window.clearTimeout(savedTimerRef.current);
+    };
   }, [onClose]);
 
   const refresh = async () => {
     await loadContext();
     onContextChanged?.();
+  };
+
+  // Effective attendance for THIS occurrence, from the backend's merged
+  // context; falls back to the calendar item while the context loads.
+  const classAttendInPerson = context?.class ? context.class.attend_in_person !== false : item.attendInPerson !== false;
+
+  const applyAttendance = async (nextAttending, scope) => {
+    if (attendanceSaving) return;
+    setAttendanceSaving(true);
+    setError("");
+    try {
+      const payload = { attend_in_person: nextAttending };
+      if (scope === "instance") payload.occurrence_date = item.occurrenceDate;
+      await updateClass(token, item.classId, payload);
+      setAttendanceSaved(true);
+      window.clearTimeout(savedTimerRef.current);
+      savedTimerRef.current = window.setTimeout(() => setAttendanceSaved(false), 2200);
+      await refresh();
+    } catch (err) {
+      setError(err.message || "Failed to update attendance.");
+    } finally {
+      setAttendanceSaving(false);
+    }
+  };
+
+  const changeAttendanceScope = (scope) => {
+    if (scope === attendanceScope) return;
+    setAttendanceScope(scope);
+    // Re-apply the current status at the new scope right away.
+    void applyAttendance(classAttendInPerson, scope);
   };
 
   const submitTask = async (event) => {
@@ -155,31 +191,68 @@ export default function ClassContextDrawer({ item, token, onClose, onContextChan
             <span>{item.subtitle}{item.classNo ? ` [${item.classNo}]` : ""}{item.weeksLabel ? ` · ${item.weeksLabel}` : ""} · {classDate}</span>
             <small>{times}{item.venue ? ` · ${item.venue}` : ""}</small>
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'flex-end', marginRight: '8px', fontSize: '0.8em' }}>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
-              <input type="checkbox" checked={item.attendInPerson !== false} onChange={async (e) => {
-                const checked = e.target.checked;
-                try {
-                  const { updateClass } = await import('../../api');
-                  const payload = { attend_in_person: checked };
-                  if (attendanceScope === "instance") {
-                    payload.occurrence_date = item.occurrenceDate;
-                  }
-                  await updateClass(token, item.classId, payload);
-                  await refresh();
-                } catch (err) {
-                  setError(err.message || "Failed to update attendance.");
-                }
-              }} />
-              Attend in person
-            </label>
-            <select style={{ fontSize: '0.9em', padding: '0 2px' }} value={attendanceScope} onChange={(e) => setAttendanceScope(e.target.value)}>
-              <option value="instance">This instance</option>
-              <option value="all">Every instance</option>
-            </select>
-          </div>
           <button type="button" onClick={onClose} aria-label="Close class context"><X size={18} /></button>
         </header>
+
+        <section className="class-context-attendance" aria-label="Attendance">
+          <div className="class-context-scope-group">
+            <span className="class-context-scope-label">Attendance</span>
+            <div className="class-context-scope-toggle" role="radiogroup" aria-label="Attendance status">
+              <button
+                type="button"
+                role="radio"
+                aria-checked={classAttendInPerson}
+                disabled={attendanceSaving}
+                className={`scope-option ${classAttendInPerson ? "is-active" : ""}`}
+                onClick={() => { if (!classAttendInPerson) void applyAttendance(true, attendanceScope); }}
+              >
+                <CheckCircle2 size={13} />
+                In person
+              </button>
+              <button
+                type="button"
+                role="radio"
+                aria-checked={!classAttendInPerson}
+                disabled={attendanceSaving}
+                className={`scope-option ${!classAttendInPerson ? "is-active" : ""}`}
+                onClick={() => { if (classAttendInPerson) void applyAttendance(false, attendanceScope); }}
+              >
+                <X size={13} />
+                Not attending
+              </button>
+            </div>
+          </div>
+          <div className="class-context-scope-group">
+            <span className="class-context-scope-label">Apply to</span>
+            <div className="class-context-scope-toggle" role="radiogroup" aria-label="Attendance scope">
+              <button
+                type="button"
+                role="radio"
+                aria-checked={attendanceScope === "instance"}
+                disabled={attendanceSaving}
+                className={`scope-option ${attendanceScope === "instance" ? "is-active" : ""}`}
+                onClick={() => changeAttendanceScope("instance")}
+              >
+                <Calendar size={13} />
+                This class only ({classDateShort})
+              </button>
+              <button
+                type="button"
+                role="radio"
+                aria-checked={attendanceScope === "all"}
+                disabled={attendanceSaving}
+                className={`scope-option ${attendanceScope === "all" ? "is-active" : ""}`}
+                onClick={() => changeAttendanceScope("all")}
+              >
+                <Repeat size={13} />
+                All recurring classes
+              </button>
+            </div>
+          </div>
+          <small className="class-context-attendance-status" role="status">
+            {attendanceSaving ? "Saving…" : attendanceSaved ? "Saved" : ""}
+          </small>
+        </section>
 
         <div className="class-context-actions" aria-label="Add to this class">
           <button type="button" className={mode === "task" ? "is-active" : ""} onClick={() => setMode(mode === "task" ? null : "task")}><Plus size={15} />Task</button>
