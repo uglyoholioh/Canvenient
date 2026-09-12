@@ -39,3 +39,8 @@ jwt_secret
 .audit/
 old_CanvasView.jsx
 frontend/test-filter.js
+
+# Agent/plugin scratch and accidental installs
+.v2c/
+.video_agent/
+/node_modules/
