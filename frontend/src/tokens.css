@@ -26,9 +26,27 @@
   --space-mac-xs: 8px;
   --space-mac-sm: 12px;
   --space-mac-md: 16px;
-  --height-mac-toolbar: 44px;
+  --height-mac-toolbar: 40px;
   /* Base for the dashboard type ladder (index.css clamps small/strong off this). */
   --dashboard-font-size: 14px;
+
+  /* Apple-quiet scale — the shared design language (2026-09 unification).
+   * Type: display for hero moments, label/caption is the 11px floor. */
+  --text-display: 28px;
+  --text-title: 15px;
+  --text-body: 13px;
+  --text-secondary: 12px;
+  --text-caption: 11px;
+  --leading-tight: 1.2;
+  --leading-normal: 1.45;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --radius-control: 6px;
+  --hairline: color-mix(in srgb, var(--border) 62%, transparent);
   --width-mac-sidebar-compact: 58px;
   --radius-mac-control: 6px;
   --radius-mac-panel: 10px;
