@@ -35,7 +35,7 @@ export function getApiBaseUrl() {
           API_BASE_URL = remote.replace(/\/+$/, "");
           usingRemoteApi = true;
         }
-      } catch (error) {
+      } catch {
         // No Tauri IPC available (or command missing): stay on the sidecar.
       }
       return API_BASE_URL;
@@ -98,7 +98,7 @@ export async function probeHealth() {
       ? await remoteFetch(`${base}/health`)
       : await fetch(`${base}/health`);
     return response.ok;
-  } catch (error) {
+  } catch {
     return false;
   }
 }
@@ -198,7 +198,6 @@ async function executeApiRequest(path, { method = "GET", body, token } = {}) {
       method,
       headers,
       body: body !== undefined ? JSON.stringify(body) : undefined,
-      transport: transportFetch,
     });
   } catch (err) {
     throw new Error(

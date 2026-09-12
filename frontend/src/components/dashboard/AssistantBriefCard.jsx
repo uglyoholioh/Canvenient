@@ -27,11 +27,15 @@ export default function AssistantBriefCard({ token }) {
   const { openAssistant } = useAssistant();
 
   const load = useCallback(
+    // No synchronous setState here: the mount effect calls load, and a sync
+    // update inside an effect body triggers cascading renders (react-hooks/
+    // set-state-in-effect). Refresh spins up loading in its onClick instead.
     (refresh = false) => {
-      setLoading(true);
-      setError("");
       getAssistantBrief(token, refresh)
-        .then((data) => setBrief(data))
+        .then((data) => {
+          setError("");
+          setBrief(data);
+        })
         .catch((err) => setError(err.message || "Could not load your brief."))
         .finally(() => setLoading(false));
     },
@@ -58,7 +62,10 @@ export default function AssistantBriefCard({ token }) {
           <button
             type="button"
             className="brief-card-refresh"
-            onClick={() => load(true)}
+            onClick={() => {
+              setLoading(true);
+              load(true);
+            }}
             aria-label="Refresh brief"
             disabled={loading}
           >

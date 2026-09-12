@@ -20,6 +20,8 @@ import { createNote } from "../api";
 import { formatShortcut, matchesShortcut, readKeyboardShortcuts } from "../keyboardShortcuts";
 
 // Secondary views load on demand so the dashboard is interactive sooner.
+const ASSISTANT_VIEW_MAP = { dashboard: "dashboard", tasks: "tasks", schedule: "schedule", venues: "venues", modules: "canvas", canvas: "canvas", notes: "notes", groups: "groups", wheel: "wheel" };
+
 const SettingsView = lazy(() => import("./SettingsView"));
 const CanvasView = lazy(() => import("./CanvasView"));
 const NotesView = lazy(() => import("./NotesView"));
@@ -113,9 +115,15 @@ export default function WorkspaceLayout({ token, user, onLogout, onUpdateUser })
   const tasksPanelReturnFocus = useRef(null);
   const quickCaptureReturnFocus = useRef(null);
   
-  const hasCompletedOnboarding = (u) =>
-    Boolean(u?.id) && localStorage.getItem(`canvenient_onboarding_completed_${u.id}`) === "true";
-  const needsOnboarding = (u) => Boolean(u) && (!u?.name || !hasCompletedOnboarding(u));
+  const hasCompletedOnboarding = useCallback(
+    (u) =>
+      Boolean(u?.id) && localStorage.getItem(`canvenient_onboarding_completed_${u.id}`) === "true",
+    []
+  );
+  const needsOnboarding = useCallback(
+    (u) => Boolean(u) && (!u?.name || !hasCompletedOnboarding(u)),
+    [hasCompletedOnboarding]
+  );
   const hasSeenIntro = (u) =>
     Boolean(u?.id) && localStorage.getItem(`canvenient_intro_completed_${u.id}`) === "true";
 
@@ -136,7 +144,7 @@ export default function WorkspaceLayout({ token, user, onLogout, onUpdateUser })
   const handleIntroDone = useCallback(() => {
     setIsIntroOpen(false);
     if (needsOnboarding(user)) setIsOnboardingOpen(true);
-  }, [user]);
+  }, [user, needsOnboarding]);
 
   // Due-date reminders: check shortly after launch and every 15 minutes.
   useEffect(() => {
@@ -209,7 +217,7 @@ export default function WorkspaceLayout({ token, user, onLogout, onUpdateUser })
 
   const assistantValue = useMemo(() => ({ openAssistant, closeAssistant }), [closeAssistant, openAssistant]);
 
-  const ASSISTANT_VIEW_MAP = { dashboard: "dashboard", tasks: "tasks", schedule: "schedule", venues: "venues", modules: "canvas", canvas: "canvas", notes: "notes", groups: "groups", wheel: "wheel" };
+
   const openAssistantResource = useCallback((resource) => {
     if (!resource) return;
     if (resource.type === "note") {

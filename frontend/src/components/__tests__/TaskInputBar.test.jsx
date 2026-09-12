@@ -3,7 +3,7 @@
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import TaskInputBar from "../TaskInputBar";
-import { createNote, createTask, getAcademicModules, parseTaskSmart } from "../../api";
+import { createTask, getAcademicModules, parseTaskSmart } from "../../api";
 
 vi.mock("../../api", () => ({
   createNote: vi.fn(),
