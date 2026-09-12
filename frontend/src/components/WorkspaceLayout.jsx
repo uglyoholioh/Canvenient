@@ -15,7 +15,7 @@ import { runDueReminderCycle } from "../dueReminders";
 import { WorkspaceToolbarContext } from "./WorkspaceToolbarContext";
 import { QuickCaptureContext } from "./QuickCaptureContext";
 import { AssistantContext } from "./AssistantContext";
-import { Folder, Search, Settings, CheckSquare, PanelLeft, BookOpen, Plus, LogOut, LayoutDashboard, FileText, CalendarDays, DoorOpen, ChevronLeft, ChevronRight, Users, Dices, Loader2 } from "lucide-react";
+import { Folder, Search, Settings, CheckSquare, PanelLeft, BookOpen, Plus, LogOut, LayoutDashboard, FileText, CalendarDays, DoorOpen, ChevronLeft, ChevronRight, Users, Dices, Loader2, Sparkles } from "lucide-react";
 import { createNote } from "../api";
 import { formatShortcut, matchesShortcut, readKeyboardShortcuts } from "../keyboardShortcuts";
 
@@ -275,7 +275,7 @@ export default function WorkspaceLayout({ token, user, onLogout, onUpdateUser })
         setIsOmnibarOpen(true);
         return;
       }
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "j") {
+      if (matchesShortcut(e, shortcuts.assistant)) {
         e.preventDefault();
         setAssistant((prev) => (prev.isOpen ? { ...prev, isOpen: false } : { isOpen: true, query: "", attachment: null, initialSend: false }));
         return;
@@ -457,6 +457,16 @@ export default function WorkspaceLayout({ token, user, onLogout, onUpdateUser })
         )}
         {toolbar?.hideSearch && <div aria-hidden="true" />}
         <div className="mac-toolbar-actions">
+          <button
+            type="button"
+            className={`mac-toolbar-button ${assistant.isOpen ? "is-active" : ""}`}
+            onClick={() => setAssistant((prev) => (prev.isOpen ? { ...prev, isOpen: false } : { isOpen: true, query: "", attachment: null, initialSend: false }))}
+            title={`Assistant (${formatShortcut(shortcuts.assistant)})`}
+            aria-label="Assistant"
+            aria-pressed={assistant.isOpen}
+          >
+            <Sparkles size={16} />
+          </button>
           <StudyTimerModule token={token} />
           {toolbar?.actions}
         </div>
@@ -602,6 +612,7 @@ export default function WorkspaceLayout({ token, user, onLogout, onUpdateUser })
             <dl>
               <div><dt>Search</dt><dd>{formatShortcut(shortcuts.search)}</dd></div>
               <div><dt>Tasks panel</dt><dd>{formatShortcut(shortcuts.tasksPanel)}</dd></div>
+              <div><dt>Assistant</dt><dd>{formatShortcut(shortcuts.assistant)}</dd></div>
               <div><dt>New task</dt><dd>{formatShortcut(shortcuts.quickTask)}</dd></div>
               <div><dt>Quick note</dt><dd>{formatShortcut(shortcuts.quickNote)}</dd></div>
               <div><dt>Import timetable</dt><dd>⌘O</dd></div>

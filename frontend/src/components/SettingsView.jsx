@@ -423,7 +423,7 @@ export default function SettingsView({ token, user, onUpdateUser, onReplayOnboar
   const updateShortcut = (name, value) => {
     const duplicate = Object.entries(shortcutConfig).find(([key, shortcut]) => key !== name && typeof shortcut === "string" && shortcut === value);
     if (duplicate) {
-      const labels = { tasksPanel: "Tasks panel", quickTask: "New task", quickNote: "Quick note", search: "Search" };
+      const labels = { tasksPanel: "Tasks panel", quickTask: "New task", quickNote: "Quick note", search: "Search", assistant: "Assistant" };
       setShortcutError(`${formatShortcut(value)} is already assigned to ${labels[duplicate[0]]}.`);
       return;
     }
@@ -722,6 +722,7 @@ export default function SettingsView({ token, user, onUpdateUser, onReplayOnboar
           <ShortcutRecorder label="New task" description="Open the Tasks panel and focus its composer" value={shortcutConfig.quickTask} onChange={(value) => updateShortcut("quickTask", value)} onReset={() => updateShortcut("quickTask", DEFAULT_KEYBOARD_SHORTCUTS.quickTask)} />
           <ShortcutRecorder label="Quick note" description="Open the note capture dock" value={shortcutConfig.quickNote} onChange={(value) => updateShortcut("quickNote", value)} onReset={() => updateShortcut("quickNote", DEFAULT_KEYBOARD_SHORTCUTS.quickNote)} />
           <ShortcutRecorder label="Search" description="Open workspace search" value={shortcutConfig.search} onChange={(value) => updateShortcut("search", value)} onReset={() => updateShortcut("search", DEFAULT_KEYBOARD_SHORTCUTS.search)} />
+          <ShortcutRecorder label="Assistant" description="Toggle the AI assistant pane" value={shortcutConfig.assistant} onChange={(value) => updateShortcut("assistant", value)} onReset={() => updateShortcut("assistant", DEFAULT_KEYBOARD_SHORTCUTS.assistant)} />
         </div>
         {shortcutError && <div className="settings-shortcut-error" role="alert">{shortcutError}</div>}
         <p className="settings-shortcut-footnote">The system-wide show/hide shortcut remains ⌘J.</p>
