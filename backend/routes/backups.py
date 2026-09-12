@@ -1,13 +1,13 @@
 """Backup listing and restore endpoints for the local database."""
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
 from backup import backup_database, list_backups, restore_database
 from database import db
 from dependencies import CurrentUser
-from schema import initialize_schema
 from migrations import run_migrations
+from schema import initialize_schema
 
 router = APIRouter(prefix="/backups", tags=["backups"])
 
@@ -29,11 +29,16 @@ async def restore_database_backup(payload: RestoreRequest, current_user: Current
     if safety_copy is None:
         raise HTTPException(status_code=409, detail="No live database to restore from.")
 
-    import hashlib, os
+    import hashlib
+    import os
     await db.disconnect()
     try:
         _db_file = os.environ.get("DATABASE_URL", "").split("///", 1)[-1]
-        _h = lambda f: hashlib.md5(open(f, 'rb').read()).hexdigest()[:8] if os.path.exists(f) else "missing"
+        def _h(f):
+            if not os.path.exists(f):
+                return "missing"
+            with open(f, "rb") as fh:
+                return hashlib.md5(fh.read()).hexdigest()[:8]
         print(f"[restore] target={_db_file} before_md5={_h(_db_file)} backup_md5={_h(os.path.join('backups', payload.name))}")
         ok = restore_database(payload.name)
         print(f"[restore] ok={ok} after_md5={_h(_db_file)}")

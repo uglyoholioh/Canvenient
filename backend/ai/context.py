@@ -9,7 +9,7 @@ resources so replies can cite things worth opening.
 
 import asyncio
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime
 
 from database import db
 from routes.canvas import list_canvas_announcements, list_canvas_assignments
@@ -23,7 +23,7 @@ MAX_ANNOUNCEMENT_AGE_DAYS = 3
 
 async def open_tasks(user_id: int, limit: int = 15) -> list[dict]:
     rows = await db.fetch_all(
-        query=f"""
+        query="""
             SELECT t.id, t.title, COALESCE(t.due_at_override, t.source_due_at) AS due_at,
                    t.priority_manual, t.status, c.name AS category_name, m.module_code
             FROM tasks t

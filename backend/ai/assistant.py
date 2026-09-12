@@ -11,14 +11,14 @@ Design rules (see docs and the September 2026 assistant design discussion):
 import base64
 import json
 import logging
-from datetime import date, datetime, timedelta
+from datetime import datetime, timedelta
 
 import httpx
-from database import db
-from routes.canvas import list_canvas_announcements, list_canvas_assignments
 
 from ai.context import chat_context, day_context
 from ai.provider import AIUnavailable, generate_json
+from database import db
+from routes.canvas import list_canvas_announcements, list_canvas_assignments
 
 logger = logging.getLogger("canvenient.ai")
 

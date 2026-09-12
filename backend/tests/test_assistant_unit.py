@@ -1,6 +1,5 @@
 """Pure-logic tests for the assistant layer (no DB, no asyncio mark)."""
 
-import json
 
 import pytest
 

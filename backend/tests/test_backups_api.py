@@ -5,10 +5,10 @@ Tests for the backup listing/restore API (routes/backups.py).
 import uuid
 
 import pytest
+from conftest import auth_headers
 from httpx import AsyncClient
 
-from backup import backup_database, list_backups
-from conftest import auth_headers
+from backup import backup_database
 
 
 @pytest.mark.asyncio
@@ -33,7 +33,6 @@ async def test_list_and_restore_backup(client: AsyncClient, auth):
     )
     assert task.status_code == 201
 
-    from backup import backup_database
     import os
     safety = backup_database(os.environ["DATABASE_URL"])
     assert safety is not None

@@ -10,10 +10,9 @@ import asyncio
 import logging
 from datetime import datetime
 
+from ai.assistant import build_brief_text
 from database import db
 from telegram_bot import send_message
-
-from ai.assistant import build_brief_text
 
 logger = logging.getLogger("canvenient.ai")
 

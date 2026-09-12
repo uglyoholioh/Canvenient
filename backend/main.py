@@ -8,11 +8,13 @@ from fastapi.middleware.cors import CORSMiddleware
 from ai.digest import digest_scheduler
 from backup import backup_database
 from database import db
+from logging_setup import get_logger, setup_logging
 from migrations import run_migrations
 from routes.academic_modules import router as academic_modules_router
 from routes.ai import router as ai_router
 from routes.assistant import router as assistant_router
 from routes.auth import router as auth_router
+from routes.backups import router as backups_router
 from routes.campus_bus import router as campus_bus_router
 from routes.canvas import router as canvas_router
 from routes.categories import router as categories_router
@@ -30,11 +32,7 @@ from routes.study_sessions import router as study_sessions_router
 from routes.tasks import router as tasks_router
 from routes.telegram import router as telegram_router
 from routes.venues import router as venues_router
-from routes.backups import router as backups_router
 from schema import initialize_schema
-from migrations import run_migrations
-from backup import backup_database
-from logging_setup import setup_logging, get_logger
 
 
 @asynccontextmanager

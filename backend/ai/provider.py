@@ -109,7 +109,7 @@ async def _generate_json_gemini(
 
     async with httpx.AsyncClient(timeout=REQUEST_TIMEOUT_SECONDS) as client:
         last_error: AIUnavailable | None = None
-        for attempt in range(MAX_ATTEMPTS):
+        for _attempt in range(MAX_ATTEMPTS):
             try:
                 response = await client.post(url, headers=headers, json=payload)
             except httpx.RequestError as err:
@@ -181,7 +181,7 @@ async def _generate_json_zai(
 
     async with httpx.AsyncClient(timeout=REQUEST_TIMEOUT_SECONDS) as client:
         last_error: AIUnavailable | None = None
-        for attempt in range(MAX_ATTEMPTS):
+        for _attempt in range(MAX_ATTEMPTS):
             try:
                 response = await client.post(url, headers=headers, json=payload)
             except httpx.RequestError as err:

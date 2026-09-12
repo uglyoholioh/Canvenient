@@ -6,17 +6,15 @@ separate cleanup pass removes them.
 """
 
 import logging
-from datetime import datetime
 from typing import Any, Optional
 
 from fastapi import APIRouter, Query, status
 from fastapi.exceptions import HTTPException
 from pydantic import BaseModel, Field
 
-from dependencies import CurrentUser
-
 from ai.assistant import AI_ATTACHMENT_TYPES, build_brief, chat_turn, parse_task_text
 from ai.provider import AIUnavailable
+from dependencies import CurrentUser
 
 logger = logging.getLogger("canvenient.assistant")
 
