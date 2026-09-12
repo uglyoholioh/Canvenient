@@ -60,21 +60,21 @@ export function BrandMark({ compact = false }) {
   return (
     <svg
       className={`auth-brand-mark ${compact ? "auth-brand-mark--compact" : ""}`}
-      viewBox="0 0 132 104"
+      viewBox="0 -4 132 162"
       aria-hidden="true"
       focusable="false"
     >
       <text
         x="4"
-        y="88"
+        y="118"
         fontFamily='Didot, "Bodoni 72", "Playfair Display", Georgia, serif'
         fontStyle="italic"
-        fontSize="128"
+        fontSize="124"
         fill="var(--text-h)"
       >
         C
       </text>
-      <circle cx="118" cy="84" r="10" fill="var(--auth-brand-dot)" />
+      <circle cx="112" cy="114" r="10" fill="var(--auth-brand-dot)" />
     </svg>
   )
 }
