@@ -92,7 +92,7 @@ struct TasksView: View {
             Text(appState.tasksLoaded ? "No pending tasks" : "Loading tasks…")
                 .foregroundStyle(Theme.textMuted)
             Button("New task") { showingComposer = true }
-                .buttonStyle(.borderedProminent)
+                .buttonStyle(AccentFilledButtonStyle())
             Spacer()
         }
         .frame(maxWidth: .infinity)

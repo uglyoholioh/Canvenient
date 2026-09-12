@@ -73,8 +73,7 @@ struct ScheduleView: View {
                 .foregroundStyle(Theme.textMuted)
             if appState.scheduleLoaded && appState.schedule.classes.isEmpty {
                 Button("Import from NUSMods") { showingImport = true }
-                    .buttonStyle(.borderedProminent)
-                    .tint(Theme.accent)
+                    .buttonStyle(AccentFilledButtonStyle())
             }
             Spacer()
         }
@@ -273,6 +272,7 @@ struct ClassDetailSheet: View {
                 }
             }
             .listStyle(.insetGrouped)
+            .toggleStyle(ThemeSwitchStyle())
             .navigationTitle(item.kind == .exam ? "Exam" : "Class")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

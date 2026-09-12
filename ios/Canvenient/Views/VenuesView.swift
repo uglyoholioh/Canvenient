@@ -41,6 +41,7 @@ struct VenuesView: View {
         .navigationTitle("Venues")
         .navigationBarTitleDisplayMode(.inline)
         .tint(Theme.accent)
+        .toggleStyle(ThemeSwitchStyle())
         .searchable(text: $searchText, prompt: "Room, code or building")
         .onChange(of: searchText) { _, newValue in
             // Live search with a short debounce; submit still jumps instantly.
@@ -165,7 +166,7 @@ struct VenuesView: View {
                 .foregroundStyle(Theme.textMuted)
                 .multilineTextAlignment(.center)
             Button("Try again") { Task { await load() } }
-                .buttonStyle(.borderedProminent)
+                .buttonStyle(AccentFilledButtonStyle())
         }
         .padding(24)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -472,7 +473,7 @@ struct VenueDetailSheet: View {
                     Label("Directions", systemImage: "location.fill")
                         .frame(maxWidth: .infinity)
                 }
-                .buttonStyle(.borderedProminent)
+                .buttonStyle(AccentFilledButtonStyle())
             }
             Button {
                 UIPasteboard.general.string = room.venue_code

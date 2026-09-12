@@ -87,7 +87,7 @@ struct ModulesView: View {
         } actions: {
             if errorMessage != nil {
                 Button("Retry") { Task { await loadModules() } }
-                    .buttonStyle(.borderedProminent)
+                    .buttonStyle(AccentFilledButtonStyle())
             } else if !appState.modulesLoaded && errorMessage == nil {
                 ProgressView()
             }
