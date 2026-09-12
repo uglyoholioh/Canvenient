@@ -17,6 +17,70 @@ use tauri::{
     PhysicalPosition, PhysicalSize, State, Submenu, WindowEvent,
 };
 
+// Remote-API mode performs API calls on the Rust side: macOS 26's WebKit
+// withholds cross-origin fetch responses from Tauri v1's custom-scheme
+// pages ("Could not connect" despite the server answering 200), so the
+// webview cannot be trusted with remote networking.
+#[derive(Serialize)]
+struct RemoteHttpResponse {
+    status: u16,
+    headers: Vec<(String, String)>,
+    body_b64: String,
+}
+
+#[tauri::command]
+async fn remote_http(
+    method: String,
+    url: String,
+    headers: Vec<(String, String)>,
+    body_b64: Option<String>,
+) -> Result<RemoteHttpResponse, String> {
+    use base64::{engine::general_purpose::STANDARD, Engine as _};
+
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(30))
+        .build()
+        .map_err(|e| e.to_string())?;
+
+    let parsed = url
+        .parse::<reqwest::Url>()
+        .map_err(|e| format!("invalid url: {e}"))?;
+    let method_enum = reqwest::Method::from_bytes(method.as_bytes())
+        .map_err(|e| format!("invalid method: {e}"))?;
+
+    let mut request = client.request(method_enum, parsed);
+    for (name, value) in &headers {
+        request = request.header(name, value);
+    }
+    if let Some(b64) = body_b64 {
+        let bytes = STANDARD
+            .decode(b64)
+            .map_err(|e| format!("bad body base64: {e}"))?;
+        request = request.body(bytes);
+    }
+
+    let response = request.send().await.map_err(|e| e.to_string())?;
+    let status = response.status().as_u16();
+    let mut response_headers: Vec<(String, String)> = response
+        .headers()
+        .iter()
+        .map(|(name, value)| {
+            (
+                name.as_str().to_string(),
+                value.to_str().unwrap_or("").to_string(),
+            )
+        })
+        .collect();
+    response_headers.sort();
+
+    let body = response.bytes().await.map_err(|e| e.to_string())?;
+    Ok(RemoteHttpResponse {
+        status,
+        headers: response_headers,
+        body_b64: STANDARD.encode(&body),
+    })
+}
+
 #[cfg(target_os = "macos")]
 use {
     cocoa::{appkit::NSApp, base::id},
@@ -270,7 +334,8 @@ fn main() {
         .invoke_handler(tauri::generate_handler![
             read_calendar_file,
             take_pending_calendar_files,
-            remote_api_base_url
+            remote_api_base_url,
+            remote_http
         ])
         .setup(|app| {
             #[cfg(target_os = "macos")]

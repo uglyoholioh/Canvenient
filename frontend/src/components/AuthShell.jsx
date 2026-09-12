@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react"
-import { getApiBaseUrl } from "../api"
+import { probeHealth } from "../api"
 import "./auth.css"
 
 // Real backend state for the corner status line. Polls gently so a sidecar
@@ -15,9 +15,8 @@ function useBackendStatus() {
       const controller = new AbortController()
       const timeout = window.setTimeout(() => controller.abort(), 2500)
       try {
-        const base = await getApiBaseUrl()
-        const response = await fetch(`${base}/health`, { signal: controller.signal })
-        if (!cancelled) setStatus(response.ok ? "online" : "offline")
+        const response = await probeHealth()
+        if (!cancelled) setStatus(response ? "online" : "offline")
       } catch {
         if (!cancelled) setStatus("offline")
       } finally {

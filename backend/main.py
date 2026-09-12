@@ -64,10 +64,14 @@ _configured_origins = [
     for origin in os.getenv("CANVENIENT_ALLOWED_ORIGINS", "").split(",")
     if origin.strip()
 ]
+# CANVENIENT_ALLOWED_ORIGINS="*" permits any origin (no credentials/cookies;
+# clients auth via Bearer tokens) for private deployments where the webview
+# origin is OS-version dependent.
+_wildcard = "*" in _configured_origins
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=_configured_origins or DEFAULT_ALLOWED_ORIGINS,
-    allow_credentials=True,
+    allow_origins=["*"] if _wildcard else (_configured_origins or DEFAULT_ALLOWED_ORIGINS),
+    allow_credentials=not _wildcard,
     allow_methods=["*"],
     allow_headers=["*"],
 )

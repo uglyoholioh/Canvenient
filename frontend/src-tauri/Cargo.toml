@@ -17,7 +17,9 @@ tauri-build = { version = "1.5.5", features = [] }
 [dependencies]
 serde_json = "1.0"
 serde = { version = "1.0", features = ["derive"] }
-tauri = { version = "1.8.1", features = [ "dialog-all", "window-all", "shell-execute", "shell-sidecar", "global-shortcut"] }
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "json"] }
+base64 = "0.22"
+tauri = { version = "1.8.1", features = [ "notification-all", "dialog-all", "window-all", "shell-execute", "shell-sidecar", "global-shortcut"] }
 
 [target.'cfg(target_os = "macos")'.dependencies]
 cocoa = "0.24"

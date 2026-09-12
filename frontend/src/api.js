@@ -13,6 +13,12 @@ export let API_BASE_URL = configuredApiBaseUrl
   || (isPackagedDesktopApp ? "http://127.0.0.1:8000" : "");
 
 let apiBaseUrlPromise = null;
+let usingRemoteApi = false;
+
+// True once the packaged app resolved a remote server from the marker file.
+export function isRemoteApiActive() {
+  return usingRemoteApi;
+}
 
 // Resolves the effective API base URL once per session. In remote-API mode
 // the Rust side reads the marker and returns the server URL; reassigning the
@@ -27,6 +33,7 @@ export function getApiBaseUrl() {
         const remote = await invoke("remote_api_base_url");
         if (typeof remote === "string" && remote) {
           API_BASE_URL = remote.replace(/\/+$/, "");
+          usingRemoteApi = true;
         }
       } catch (error) {
         // No Tauri IPC available (or command missing): stay on the sidecar.
@@ -35,6 +42,65 @@ export function getApiBaseUrl() {
     })();
   }
   return apiBaseUrlPromise;
+}
+
+// --- Rust-side HTTP transport for remote mode -------------------------------
+// macOS 26's WebKit withholds cross-origin fetch responses from Tauri v1's
+// custom-scheme pages, so remote calls ride through a reqwest command instead.
+
+function bytesToBase64(bytes) {
+  let binary = "";
+  for (const byte of bytes) binary += String.fromCharCode(byte);
+  return btoa(binary);
+}
+
+function base64ToBytes(b64) {
+  const binary = atob(b64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
+  return bytes;
+}
+
+async function remoteFetch(url, { method = "GET", headers = {}, body } = {}) {
+  let bodyB64 = null;
+  if (body instanceof FormData) {
+    throw new Error("File transfers to the remote server aren't supported in this build yet — use the desktop app in local mode for that.");
+  }
+  if (body !== undefined) {
+    bodyB64 = typeof body === "string"
+      ? btoa(body)
+      : bytesToBase64(body instanceof Uint8Array ? body : new Uint8Array(body));
+  }
+  const raw = await invoke("remote_http", {
+    method,
+    url,
+    headers: Object.entries(headers),
+    bodyB64,
+  });
+  return new Response(base64ToBytes(raw.body_b64), {
+    status: raw.status,
+    headers: raw.headers,
+  });
+}
+
+async function transportFetch(url, options = {}) {
+  if (isRemoteApiActive()) {
+    return remoteFetch(url, options);
+  }
+  return fetch(url, options);
+}
+
+// Login-screen connectivity probe.
+export async function probeHealth() {
+  const base = await getApiBaseUrl();
+  try {
+    const response = isRemoteApiActive()
+      ? await remoteFetch(`${base}/health`)
+      : await fetch(`${base}/health`);
+    return response.ok;
+  } catch (error) {
+    return false;
+  }
 }
 
 // The packaged Python sidecar can need several seconds on first launch to
@@ -48,12 +114,13 @@ function wait(ms) {
 }
 
 async function fetchWithDesktopStartupRetry(url, options) {
+  const transport = options.transport || fetch;
   const attempts = isPackagedDesktopApp ? DESKTOP_STARTUP_RETRIES + 1 : 1;
   let lastError;
 
   for (let attempt = 0; attempt < attempts; attempt += 1) {
     try {
-      return await fetch(url, options);
+      return await transport(url, options);
     } catch (error) {
       lastError = error;
       if (attempt === attempts - 1) {
@@ -127,9 +194,11 @@ async function executeApiRequest(path, { method = "GET", body, token } = {}) {
   let response;
   try {
     response = await fetchWithDesktopStartupRetry(url, {
+      transport: transportFetch,
       method,
       headers,
       body: body !== undefined ? JSON.stringify(body) : undefined,
+      transport: transportFetch,
     });
   } catch (err) {
     throw new Error(
@@ -479,7 +548,8 @@ export async function fetchCanvasFileContent(token, fileId) {
   const url = await buildUrl(`/canvas/files/${fileId}/content`);
   let response;
   try {
-    response = await fetchWithDesktopStartupRetry(url, { headers: { Authorization: `Bearer ${token}` } });
+    response = await fetchWithDesktopStartupRetry(url, {
+      transport: transportFetch, headers: { Authorization: `Bearer ${token}` } });
   } catch (error) {
     throw new Error(`Could not connect to server at ${url}. Please check your backend connection.`, { cause: error });
   }
@@ -678,6 +748,7 @@ export async function uploadClassFile(token, classId, occurrenceDate, file, isRe
   let response;
   try {
     response = await fetchWithDesktopStartupRetry(url, {
+      transport: transportFetch,
       method: "POST",
       headers: { Authorization: `Bearer ${token}` },
       body: formData,
@@ -696,7 +767,8 @@ export async function downloadClassFile(token, fileId) {
   const url = await buildUrl(`/schedule/class-files/${fileId}`);
   let response;
   try {
-    response = await fetchWithDesktopStartupRetry(url, { headers: { Authorization: `Bearer ${token}` } });
+    response = await fetchWithDesktopStartupRetry(url, {
+      transport: transportFetch, headers: { Authorization: `Bearer ${token}` } });
   } catch (error) {
     throw new Error(`Could not connect to server at ${url}. Please check your backend connection.`, { cause: error });
   }
