@@ -7,7 +7,12 @@ struct RootView: View {
 
     var body: some View {
         ZStack(alignment: .topLeading) {
-            tabs
+            VStack(spacing: 0) {
+                if appState.offline {
+                    offlineBanner
+                }
+                tabs
+            }
             SidebarDrawer()
         }
         .animation(.easeInOut(duration: 0.2), value: appState.session)
@@ -24,6 +29,24 @@ struct RootView: View {
         }
         // Rebuild on palette change so every Theme.* colour re-evaluates.
         .id(themeMode)
+    }
+
+    private var offlineBanner: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "wifi.slash")
+                .font(.caption)
+            Text("Offline — showing last synced data")
+                .font(.caption)
+                .fontWeight(.medium)
+            Spacer()
+        }
+        .foregroundStyle(Theme.textH)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 8)
+        .background(Theme.surfaceWarm)
+        .overlay(alignment: .bottom) {
+            Rectangle().fill(Theme.borderStrong).frame(height: 1)
+        }
     }
 
     private var tabs: some View {

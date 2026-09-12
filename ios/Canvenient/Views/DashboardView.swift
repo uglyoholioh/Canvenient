@@ -50,7 +50,7 @@ struct DashboardView: View {
     }
 
     private func refreshBus() async {
-        arrivals = try? await appState.api.busArrivals(stop: selectedStop)
+        arrivals = await appState.busArrivals(stop: selectedStop)
     }
 
     // MARK: Up next

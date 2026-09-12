@@ -96,7 +96,11 @@ struct ModulesView: View {
 
     private func loadModules() async {
         errorMessage = nil
-        await appState.refreshModules()
+        if let modules = await appState.academicModulesOfflineAware() {
+            appState.modules = modules
+        } else {
+            errorMessage = "Could not reach the server. Tailscale connected?"
+        }
     }
 }
 

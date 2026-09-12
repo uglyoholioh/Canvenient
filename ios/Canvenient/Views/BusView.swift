@@ -185,10 +185,10 @@ struct BusView: View {
     private func loadArrivals() async {
         loading = true
         errorMessage = nil
-        do {
-            arrivals = try await appState.api.busArrivals(stop: selectedStop)
-        } catch {
-            errorMessage = error.localizedDescription
+        if let data = await appState.busArrivals(stop: selectedStop) {
+            arrivals = data
+        } else {
+            errorMessage = "Could not load arrivals. Check your connection and try again."
         }
         loading = false
     }

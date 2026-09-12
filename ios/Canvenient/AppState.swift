@@ -26,6 +26,9 @@ final class AppState: ObservableObject {
     @Published var selectedTab: Tab = .dashboard
     @Published var sidebarOpen = false
     @Published var overlay: OverlayDestination?
+    /// True when the hosted backend is unreachable and views are showing
+    /// last-synced data from the offline cache.
+    @Published var offline = false
     @Published var user: UserPublic?
     @Published var schedule = ScheduleResponse.empty
     @Published var scheduleLoaded = false
@@ -160,8 +163,15 @@ final class AppState: ObservableObject {
         do {
             schedule = try await api.schedule()
             scheduleLoaded = true
+            offline = false
+            OfflineCache.shared.save(schedule, key: "schedule")
             await LiveActivityController.shared.sync(schedule: schedule, client: api)
         } catch {
+            if schedule.classes.isEmpty,
+               let cached: ScheduleResponse = OfflineCache.shared.load(ScheduleResponse.self, key: "schedule") {
+                schedule = cached
+                offline = true
+            }
             scheduleLoaded = scheduleLoaded
         }
     }
@@ -170,8 +180,51 @@ final class AppState: ObservableObject {
         do {
             tasks = try await api.tasks()
             tasksLoaded = true
+            offline = false
+            OfflineCache.shared.save(tasks, key: "tasks")
         } catch {
+            if tasks.isEmpty,
+               let cached: [TaskOut] = OfflineCache.shared.load([TaskOut].self, key: "tasks") {
+                tasks = cached
+                offline = true
+            }
             tasksLoaded = tasksLoaded
+        }
+    }
+
+    /// Arrivals: hosted backend first, then the public relay straight from
+    /// the device, then the last cached snapshot. Only the first path needs
+    /// Tailscale.
+    func busArrivals(stop: String) async -> BusArrivalsResponse? {
+        func hasEtas(_ response: BusArrivalsResponse) -> Bool {
+            response.arrivals.contains { $0.minutes.contains { $0 != nil } }
+        }
+        if let fresh = try? await api.busArrivals(stop: stop) {
+            offline = false
+            OfflineCache.shared.save(fresh, key: "arrivals:\(stop)")
+            return fresh
+        }
+        offline = true
+        // The public relay needs no Tailscale — just internet.
+        if let direct = try? await DirectBus.arrivals(stop: stop), hasEtas(direct) {
+            return direct
+        }
+        // Relay down or returned empty boards: keep the last known snapshot.
+        return OfflineCache.shared.load(BusArrivalsResponse.self, key: "arrivals:\(stop)")
+    }
+
+    func academicModulesOfflineAware() async -> [AcademicModule]? {
+        do {
+            let modules = try await api.academicModules()
+            offline = false
+            OfflineCache.shared.save(modules, key: "modules")
+            return modules
+        } catch {
+            if let cached: [AcademicModule] = OfflineCache.shared.load([AcademicModule].self, key: "modules") {
+                offline = true
+                return cached
+            }
+            return nil
         }
     }
 
