@@ -1,0 +1,62 @@
+name: Canvenient
+options:
+  bundleIdPrefix: com.oli
+  createIntermediateGroups: true
+  deploymentTarget:
+    iOS: "18.0"
+packages:
+  CanvenientKit:
+    path: Packages/CanvenientKit
+settings:
+  base:
+    SWIFT_VERSION: "5.0"
+    CODE_SIGN_STYLE: Automatic
+    DEVELOPMENT_TEAM: ""
+targets:
+  Canvenient:
+    type: application
+    platform: iOS
+    sources:
+      - Canvenient
+    dependencies:
+      - package: CanvenientKit
+      - target: CanvenientWidgets
+        embed: true
+        codeSign: true
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.oli.canvenient.ios
+        PRODUCT_NAME: Canvenient
+        TARGETED_DEVICE_FAMILY: "1"
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+    info:
+      path: Canvenient/Info.plist
+      properties:
+        CFBundleDisplayName: Canvenient
+        UILaunchScreen: {}
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+        NSSupportsLiveActivities: true
+        UIBackgroundModes:
+          - fetch
+        BGTaskSchedulerPermittedIdentifiers:
+          - com.oli.canvenient.ios.refresh
+        ITSAppUsesNonExemptEncryption: false
+  CanvenientWidgets:
+    type: app-extension
+    platform: iOS
+    sources:
+      - CanvenientWidgets
+    dependencies:
+      - package: CanvenientKit
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.oli.canvenient.ios.widgets
+        PRODUCT_NAME: CanvenientWidgets
+        SKIP_INSTALL: true
+    info:
+      path: CanvenientWidgets/Info.plist
+      properties:
+        CFBundleDisplayName: Canvenient Widgets
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
