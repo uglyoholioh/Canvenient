@@ -1,5 +1,7 @@
-from datetime import datetime, time, date
+from datetime import date, datetime, time
+
 from pydantic import BaseModel
+
 from models.event import EventOut
 
 

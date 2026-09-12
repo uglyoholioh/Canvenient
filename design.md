@@ -30,8 +30,14 @@ Modern-minimal native workbench.
 
 ## Typography
 
-- Body and display: native macOS system sans.
-- Labels: the same sans at small, medium weight; no decorative all-caps demand.
+- Body and display: native macOS system sans (SF Pro). No monospace in
+  interface copy; monospace survives only where text IS data (the terminal).
+- Shared scale, defined in `tokens.css` and applied app-wide:
+  display 28px/700 (hero dates, empty states), title 15px/700, body 13px,
+  secondary 12px, caption 11px. 11px is the absolute floor — nothing smaller.
+- Section labels: 11px/600, muted, uppercase with 0.06-0.08em tracking
+  (the macOS System Settings pattern) — used sparingly, never as decoration.
+- Timestamps use tabular numerals.
 - Information hierarchy comes from contrast and spacing, not font novelty.
 
 ## Spacing and shape
@@ -48,6 +54,9 @@ Modern-minimal native workbench.
 
 ## What to avoid
 
-- A dashboard made from equally prominent boxed cards.
+- A dashboard made from equally prominent boxed cards. The Focus layout is
+  deliberately chrome-less: content sits on the window material, structured
+  by whitespace, hairlines, and the type scale — this was re-affirmed in the
+  September 2026 unification after a carded experiment was rejected.
 - Saturated accent colour as general decoration.
 - Thick borders, multiple nested panels, or over-rounded containers.

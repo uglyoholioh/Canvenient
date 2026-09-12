@@ -1,7 +1,9 @@
 # pyrefly: ignore [missing-import]
 
+from typing import Any, Dict, List, Optional
+
 from pydantic import BaseModel, Field
-from typing import List, Optional, Dict, Any
+
 
 class SuggestedItem(BaseModel):
     type: str = Field(description="Must be either 'task' or 'schedule'")

@@ -5,8 +5,8 @@ Uses pytest.mark.asyncio, test fixtures, assertions, and runs cleanly in CI.
 """
 
 import pytest
-from httpx import AsyncClient
 from conftest import auth_headers
+from httpx import AsyncClient
 
 pytestmark = pytest.mark.asyncio
 
