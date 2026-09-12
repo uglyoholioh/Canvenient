@@ -1103,7 +1103,9 @@ button, input, textarea { font: inherit; }
 .dashboard-customizer-popover > header { height: 28px; padding: 0 3px 7px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }.dashboard-customizer-popover > header strong { color: var(--text-h); font-size: 11px; }.dashboard-customizer-popover > header button { border: 0; border-radius: 3px; background: transparent; color: var(--text-muted); padding: 4px; cursor: pointer; display: flex; }
 .dashboard-grid { width: 100%; margin: 0; }
 .dashboard-grid.is-focus, .dashboard-grid.is-bento, .dashboard-grid.is-custom { display: grid; grid-template-columns: var(--dashboard-column-tracks, repeat(4, minmax(0, 1fr))); grid-template-rows: var(--dashboard-row-tracks, repeat(4, 150px)); grid-auto-flow: dense; grid-auto-rows: 150px; gap: 8px; width: min(1440px, calc(100% - clamp(36px, 6vw, 112px))); margin: 18px auto; border: 0; overflow: visible; }
-.dashboard-grid:is(.is-focus, .is-bento, .is-custom) .dashboard-module { height: 100%; min-height: 0; margin: 0; border: 1px solid var(--border-strong); border-radius: 10px; display: flex; flex-direction: column; overflow: hidden; grid-column: span var(--dashboard-card-columns, 1); grid-row: span var(--dashboard-card-rows, 1); }
+.dashboard-grid:is(.is-focus, .is-bento, .is-custom) .dashboard-module { height: 100%; min-height: 0; margin: 0; display: flex; flex-direction: column; overflow: hidden; grid-column: span var(--dashboard-card-columns, 1); grid-row: span var(--dashboard-card-rows, 1); }
+.dashboard-grid:is(.is-bento, .is-custom) .dashboard-module { border: 1px solid var(--border-strong); border-radius: 10px; background: var(--surface-muted); }
+.dashboard-grid.is-focus .dashboard-module { border: 0; border-radius: 0; background: transparent; box-shadow: none; }
 .dashboard-grid:is(.is-focus, .is-bento, .is-custom) .dashboard-module-body { flex: 1; min-height: 0; max-height: none; }
 .dashboard-grid.is-layout-editing { overflow: visible; }
 .dashboard-grid.is-layout-editing .dashboard-module { position: relative; transition: opacity .16s ease, box-shadow .2s ease; }
@@ -1368,15 +1370,16 @@ button.module-item-main:hover, .module-list-item.task-module-item:hover { backgr
 .cbm-row.is-p, .cbm-route-row.is-p { --bus-svc: #8f9fc5; }
 
 /* Arrival row */
-.cbm-row { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 10px; min-height: 40px; padding: 5px 4px; border-bottom: 1px solid var(--border); }
+.cbm-row { display: grid; grid-template-columns: 30px 1fr auto; align-items: center; gap: 8px; min-height: 34px; padding: 5px 4px 5px 9px; border-bottom: 1px solid var(--border); border-inline-start: 3px solid var(--bus-svc); }
 .cbm-row:last-child { border-bottom: 0; }
-.cbm-svc { justify-self: start; color: var(--bus-svc); background: color-mix(in srgb, var(--bus-svc) 14%, transparent); border: 1px solid color-mix(in srgb, var(--bus-svc) 38%, transparent); border-radius: 999px; padding: 3px 10px; font: 600 12px/1.2 var(--font-sans); }
+.cbm-svc { color: var(--text-h); font: 600 12px var(--font-mono); }
 
-/* Urgency bar */
-.cbm-urgency-track, .cbm-urgency-fill { display: none; }
+/* Urgency bar — deliberately small: a quiet hint, not a chart */
+.cbm-urgency-track { height: 2px; max-width: 132px; margin-inline-end: 10px; border-radius: 2px; background: color-mix(in srgb, var(--bus-svc) 12%, var(--surface-muted)); overflow: hidden; }
+.cbm-urgency-fill  { height: 100%; border-radius: 2px; background: color-mix(in srgb, var(--bus-svc) 55%, transparent); transition: width 1.5s linear; }
 
 /* Arrival times */
-.cbm-times { min-width: 0; justify-self: end; display: flex; flex-direction: column; align-items: flex-end; gap: 1px; }
+.cbm-times { min-width: 0; display: flex; flex-direction: column; align-items: flex-end; gap: 1px; }
 .cbm-times > span { color: var(--text-h); font-weight: 600; font-size: 12px; white-space: nowrap; }
 .cbm-times > span.is-imminent { color: var(--success); }
 .cbm-times > small { color: var(--text-muted); font-size: 9px; white-space: nowrap; }
@@ -3301,7 +3304,7 @@ textarea {
 .dashboard-page, .task-view, .canvas-page { background: var(--color-mac-window); }
 .dashboard-toolbar { height: 32px; border-bottom-color: color-mix(in srgb, var(--border) 68%, transparent); background: color-mix(in srgb, var(--color-mac-window) 94%, transparent); }
 .dashboard-grid.is-focus, .dashboard-grid.is-bento, .dashboard-grid.is-custom { gap: 6px; width: min(1360px, calc(100% - clamp(28px, 5vw, 88px))); margin-block: 14px; }
-.dashboard-grid:is(.is-focus, .is-bento, .is-custom) .dashboard-module { border: 1px solid var(--border-strong); border-radius: 10px; background: var(--surface-muted); }
+.dashboard-grid:is(.is-bento, .is-custom) .dashboard-module { border: 1px solid var(--border-strong); border-radius: 10px; background: var(--surface-muted); }
 .dashboard-module-header { height: 34px; padding-inline: 7px; border-bottom-color: color-mix(in srgb, var(--border) 66%, transparent); }
 .dashboard-module-body { padding: 7px; }
 .dashboard-grid.is-layout-editing .dashboard-module:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
@@ -3418,11 +3421,11 @@ textarea {
 .dashboard-new-task:focus-visible { outline: 2px solid var(--border-focus); outline-offset: 2px; }
 
 .dashboard-grid.is-focus, .dashboard-grid.is-bento, .dashboard-grid.is-custom { margin-top: 12px; }
-.dashboard-grid:is(.is-focus, .is-bento, .is-custom) .dashboard-module[data-module="tasks"] {
+.dashboard-grid:is(.is-bento, .is-custom) .dashboard-module[data-module="tasks"] {
   border-color: color-mix(in srgb, var(--border-strong) 68%, transparent);
   background: color-mix(in srgb, var(--color-mac-panel) 74%, var(--color-mac-window));
 }
-.dashboard-grid:is(.is-focus, .is-bento, .is-custom) .dashboard-module:not([data-module="tasks"]) {
+.dashboard-grid:is(.is-bento, .is-custom) .dashboard-module:not([data-module="tasks"]) {
   border-color: color-mix(in srgb, var(--border) 55%, transparent);
   background: color-mix(in srgb, var(--color-mac-panel) 44%, var(--color-mac-window));
 }
@@ -3569,17 +3572,10 @@ textarea {
 .dashboard-grid .dashboard-module .module-filter-tabs button { font-size: clamp(11px, calc(var(--dashboard-font-size, 11px) - 1px), 13px) !important; }
 .dashboard-grid .dashboard-module .schedule-timeline-hour time { font-size: clamp(10px, calc(var(--dashboard-font-size, 11px) - 2.5px), 12px) !important; }
 
-/* Dashboard hero: the date is the anchor, next-up is the focal action. */
-.dashboard-hero { width: min(1720px, calc(100% - clamp(24px, 2.5vw, 56px))); margin: 22px auto 14px; display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; flex-wrap: wrap; }
+/* Dashboard hero: the date anchors the page — pure typography, no box. */
+.dashboard-hero { width: min(1720px, calc(100% - clamp(24px, 2.5vw, 56px))); margin: 20px auto 10px; }
 .dashboard-hero-date h1 { margin: 0; color: var(--text-h); font-size: clamp(26px, 2.4vw, 38px); font-weight: 700; letter-spacing: -0.03em; line-height: 1.05; }
-.dashboard-hero-date p { margin: 7px 0 0; color: var(--text-muted); font-size: 13px; }
-.dashboard-hero-next { flex: none; max-width: 420px; display: flex; align-items: center; gap: 12px; padding: 12px 16px; border: 1px solid var(--border-strong); border-radius: 10px; background: var(--surface-muted); cursor: pointer; text-align: left; transition: background .15s ease, border-color .15s ease; }
-.dashboard-hero-next:hover { background: var(--surface-hover); }
-.dashboard-hero-next-dot { flex: none; width: 10px; height: 10px; border-radius: 3px; background: var(--accent); }
-.dashboard-hero-next-copy { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
-.dashboard-hero-next-copy small { color: var(--accent); font-size: 11px; font-weight: 600; }
-.dashboard-hero-next-copy strong { overflow: hidden; color: var(--text-h); font-size: 14px; font-weight: 600; white-space: nowrap; text-overflow: ellipsis; }
-.dashboard-hero-next-copy span { overflow: hidden; color: var(--text-muted); font-size: 12px; white-space: nowrap; text-overflow: ellipsis; }
+.dashboard-hero-date p { margin: 7px 0 0; color: var(--text-muted); font-size: var(--text-secondary); }
 
 /* Canvas module empty state: invite action instead of apologising. */
 .canvas-module-unconfigured { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; padding: 16px 14px; text-align: left; }
@@ -3621,7 +3617,8 @@ textarea {
   min-height: 100%;
 }
 /* Focus keeps its pane arrangement (tasks tall-left, schedule+bus centre,
- * canvas right) but renders the shared card chrome like the other layouts. */
+ * canvas right) but is deliberately chrome-less: content sits directly on
+ * the window material, separated by whitespace and hairlines — no cards. */
 .dashboard-grid.is-focus .dashboard-module[data-module="tasks"] {
   grid-column: 1 !important;
   grid-row: 1 / 3 !important;
@@ -3633,6 +3630,8 @@ textarea {
 .dashboard-grid.is-focus .dashboard-module[data-module="isb"] {
   grid-column: 2 !important;
   grid-row: 2 !important;
+  border-top: 1px solid var(--hairline);
+  padding-top: 12px;
 }
 .dashboard-grid.is-focus .dashboard-module[data-module="canvas"] {
   grid-column: 3 !important;
@@ -3652,8 +3651,9 @@ textarea {
   border-bottom: 0;
   background: transparent;
 }
-.dashboard-grid.is-focus .dashboard-module-body { padding: 12px 14px; }
-.dashboard-grid.is-focus .dashboard-module[data-module="tasks"] .dashboard-module-body { padding: 10px 8px; }
+.dashboard-grid.is-focus .dashboard-module-body { padding: 2px 0 0; }
+.dashboard-grid.is-focus .dashboard-module[data-module="tasks"] .dashboard-module-body { padding: 2px 0 0; }
+.dashboard-grid.is-focus .dashboard-module[data-module="isb"] .dashboard-module-body { padding-top: 2px; }
 .dashboard-grid.is-focus .dashboard-module[data-module="tasks"] .task-module-item { border-radius: 0; }
 .dashboard-grid.is-focus .dashboard-module[data-module="tasks"] .task-module-item.is-expanded,
 .dashboard-grid.is-focus .dashboard-module[data-module="tasks"] .task-module-item:hover { border-color: transparent; }

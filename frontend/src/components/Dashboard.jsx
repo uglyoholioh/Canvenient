@@ -76,7 +76,6 @@ export default function Dashboard({ token, user, onNavigate }) {
     return {
       dateLabel,
       meta: metaParts.join(" · ") || "Nothing scheduled — enjoy the calm",
-      next: remaining[0] || null,
     };
   }, [schedule, tasks, now]);
 
@@ -330,14 +329,6 @@ export default function Dashboard({ token, user, onNavigate }) {
   const availableGridHeight = Math.max(balancedRows.length * 96, Math.min(balancedRows.length * 400, viewportHeight - 120));
   const rowScale = availableGridHeight / totalRequestedRowHeight;
 
-  const formatNextTime = (date) => {
-    const sameDay = date.toDateString() === now.toDateString();
-    const time = date.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
-    if (sameDay) return time;
-    const day = date.toLocaleDateString([], { weekday: "short", day: "numeric", month: "short" });
-    return `${day} · ${time}`;
-  };
-
   return (
     <div className="dashboard-page">
       <div className="dashboard-scroll">
@@ -346,25 +337,6 @@ export default function Dashboard({ token, user, onNavigate }) {
             <h1>{hero.dateLabel}</h1>
             <p>{hero.meta}</p>
           </div>
-          {hero.next && (
-            <button
-              type="button"
-              className="dashboard-hero-next"
-              onClick={() => onNavigate(hero.next.destination || "schedule")}
-              title="Open the schedule"
-            >
-              <span
-                className="dashboard-hero-next-dot"
-                style={hero.next.color ? { background: hero.next.color } : undefined}
-                aria-hidden="true"
-              />
-              <span className="dashboard-hero-next-copy">
-                <small>Up next</small>
-                <strong>{hero.next.title}</strong>
-                <span>{formatNextTime(new Date(hero.next.start))}{hero.next.venue ? ` · ${hero.next.venue}` : ""}</span>
-              </span>
-            </button>
-          )}
         </header>
         <div
           className={`dashboard-grid is-${layout} ${isEditingLayout ? "is-layout-editing" : ""}`}
