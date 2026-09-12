@@ -15,7 +15,12 @@ struct CanvenientApp: App {
         WindowGroup {
             RootView()
                 .environmentObject(appState)
-                .task { await appState.bootstrap() }
+                .task {
+                    if ProcessInfo.processInfo.arguments.contains("-previewLiveActivity") {
+                        await LiveActivityController.shared.startPreview()
+                    }
+                    await appState.bootstrap()
+                }
                 .onChange(of: scenePhase) { _, phase in
                     switch phase {
                     case .active:

@@ -50,7 +50,9 @@ struct SettingsView: View {
                     LabeledContent("Academic week", value: appState.academicWeek?.label ?? "—")
                 }
             }
+            .themedForm()
             .navigationTitle("Settings")
+            .tint(Theme.accent)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {

@@ -143,6 +143,7 @@ struct WheelView: View {
             }
             .navigationTitle("Wheel")
             .navigationBarTitleDisplayMode(.inline)
+            .tint(Theme.accent)
         }
     }
 
@@ -163,13 +164,13 @@ struct WheelView: View {
             ZStack {
                 Circle()
                     .stroke(lineWidth: 6)
-                    .foregroundStyle(Color(.systemFill))
+                    .foregroundStyle(Theme.surfaceHover)
                     .frame(width: 180, height: 180)
                 // Simple conic reveal: rotating dot wheel with winner card.
                 ForEach(Array(store.enabledItems.enumerated()), id: \.element.id) { index, item in
                     let count = max(store.enabledItems.count, 1)
                     Circle()
-                        .fill(Color(moduleColorHex: item.color) ?? Color(stableHueFor: item.label))
+                        .fill(ModulePalette.color(moduleColor: item.color, fallback: item.label))
                         .frame(width: 18, height: 18)
                         .offset(y: -78)
                         .rotationEffect(.degrees(rotationAngle(index: index, count: count) + store.rotation))
@@ -220,7 +221,7 @@ struct WheelView: View {
                 ForEach(store.activeWheel.items) { item in
                     HStack {
                         Circle()
-                            .fill(Color(moduleColorHex: item.color) ?? Color(stableHueFor: item.label))
+                            .fill(ModulePalette.color(moduleColor: item.color, fallback: item.label))
                             .frame(width: 10, height: 10)
                         Text(item.label)
                             .strikethrough(!item.enabled)
@@ -247,7 +248,7 @@ struct WheelView: View {
                 Text(store.activeWheel.name)
             }
         }
-        .listStyle(.insetGrouped)
+        .themedForm()
     }
 
     private func addOption() {

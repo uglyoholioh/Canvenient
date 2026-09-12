@@ -16,6 +16,10 @@ final class LiveActivityController: ObservableObject {
 
     func sync(schedule: ScheduleResponse, client: APIClient) async {
         lastSyncDate = Date()
+        // The debug preview owns the activity lifecycle while enabled.
+        if ProcessInfo.processInfo.arguments.contains("-previewLiveActivity") {
+            return
+        }
         guard ActivityAuthorizationInfo().areActivitiesEnabled else { return }
 
         let nowNext = ScheduleEngine.nowAndNext(for: schedule)
@@ -91,6 +95,37 @@ final class LiveActivityController: ObservableObject {
         guard let client = BackgroundRefresh.client else { return }
         guard let schedule = try? await client.schedule() else { return }
         await sync(schedule: schedule, client: client)
+    }
+
+    /// Debug/demo hook (`-previewLiveActivity` launch argument): fabricates a
+    /// class starting in a few minutes so the activity can be inspected at
+    /// any time of day. Never called in normal use.
+    func startPreview() async {
+        guard ActivityAuthorizationInfo().areActivitiesEnabled else { return }
+        await endAll()
+        let start = Date().addingTimeInterval(8 * 60)
+        let end = start.addingTimeInterval(60 * 60)
+        let state = ClassActivityAttributes.ContentState(
+            classStart: start,
+            classEnd: end,
+            occurrenceDateKey: SGTime.dateKey(Date()),
+            busService: nil,
+            busArrival: nil,
+            updatedAt: Date()
+        )
+        let attributes = ClassActivityAttributes(
+            moduleCode: "CS2103T",
+            moduleName: "Software Engineering",
+            lessonType: "Lecture",
+            venue: "COM1-0210",
+            colorHex: nil
+        )
+        _ = try? Activity.request(
+            attributes: attributes,
+            content: ActivityContent(state: state, staleDate: end),
+            pushType: nil
+        )
+        active = true
     }
 
     func endAll() async {

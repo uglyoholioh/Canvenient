@@ -16,6 +16,7 @@ struct TasksView: View {
                 }
             }
             .navigationTitle("Tasks")
+            .tint(Theme.accent)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button { showingComposer = true } label: {
@@ -59,7 +60,7 @@ struct TasksView: View {
                 }
             }
         }
-        .listStyle(.insetGrouped)
+        .themedForm()
     }
 
     private var taskSections: [(title: String, tasks: [TaskOut])] {
@@ -81,9 +82,9 @@ struct TasksView: View {
             Spacer()
             Image(systemName: "checklist")
                 .font(.system(size: 44))
-                .foregroundStyle(.secondary)
+                .foregroundStyle(Theme.textMuted)
             Text(appState.tasksLoaded ? "No pending tasks" : "Loading tasks…")
-                .foregroundStyle(.secondary)
+                .foregroundStyle(Theme.textMuted)
             Button("New task") { showingComposer = true }
                 .buttonStyle(.borderedProminent)
             Spacer()
@@ -101,7 +102,7 @@ struct TaskRow: View {
             Button(action: onComplete) {
                 Image(systemName: "circle")
                     .font(.title3)
-                    .foregroundStyle(Color.accentColor)
+                    .foregroundStyle(Theme.accent)
             }
             .buttonStyle(.plain)
             VStack(alignment: .leading, spacing: 3) {
@@ -111,7 +112,7 @@ struct TaskRow: View {
                     if let due = task.effectiveDueAt {
                         Label(relativeDue(due), systemImage: dueOverdueIcon(due))
                             .font(.caption)
-                            .foregroundStyle(due < Date() ? Color.red : Color.secondary)
+                            .foregroundStyle(due < Date() ? Theme.error : Theme.textMuted)
                     }
                     if let moduleCode = task.module_code {
                         Text(moduleCode)
@@ -119,7 +120,7 @@ struct TaskRow: View {
                             .padding(.horizontal, 5)
                             .padding(.vertical, 1)
                             .background(moduleColor, in: Capsule())
-                            .foregroundStyle(.white)
+                            .foregroundStyle(ModulePalette.ink(for: task.module_color))
                     }
                     if task.group_id != nil {
                         Image(systemName: "person.2")
@@ -152,15 +153,15 @@ struct TaskRow: View {
 
     private func priorityColor(_ priority: String) -> Color {
         switch priority {
-        case "urgent": return .red
-        case "high": return .orange
-        case "low": return .gray
-        default: return .blue
+        case "urgent": return Theme.error
+        case "high": return Theme.warning
+        case "low": return Theme.textMuted
+        default: return Theme.info
         }
     }
 
     private var moduleColor: Color {
-        Color(moduleColorHex: task.module_color) ?? Color(stableHueFor: task.module_code)
+        ModulePalette.color(moduleColor: task.module_color, fallback: task.module_code)
     }
 
     private func dueOverdueIcon(_ due: Date) -> String {

@@ -60,8 +60,9 @@ struct BusView: View {
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text(stop.short_name ?? stop.id)
                                         .fontWeight(stop.id == selectedStop ? .semibold : .regular)
-                                    if let name = stop.name, name != stop.id {
-                                        Text(name).font(.caption).foregroundStyle(.secondary)
+                                    if let name = stop.name,
+                                       name != stop.short_name, name != stop.id {
+                                        Text(name).font(.caption).foregroundStyle(Theme.textMuted)
                                     }
                                 }
                                 Spacer()
@@ -73,9 +74,10 @@ struct BusView: View {
                     }
                 }
             }
-            .listStyle(.insetGrouped)
+            .themedForm()
             .searchable(text: $searchText, prompt: "Search stops")
             .navigationTitle("Bus")
+            .tint(Theme.accent)
             .navigationBarTitleDisplayMode(.inline)
             .refreshable { await loadArrivals() }
             .task {
@@ -91,11 +93,11 @@ struct BusView: View {
             selectedStop = stopId
         } label: {
             HStack {
-                Image(systemName: "star.fill").foregroundStyle(.yellow)
+                Image(systemName: "star.fill").foregroundStyle(Theme.accentGold)
                 Text(stopId)
                 Spacer()
                 if stopId == selectedStop {
-                    Image(systemName: "checkmark").foregroundStyle(Color.accentColor)
+                    Image(systemName: "checkmark").foregroundStyle(Theme.accent)
                 }
             }
         }
@@ -111,15 +113,15 @@ struct BusView: View {
     @ViewBuilder
     private var arrivalsSection: some View {
         if loading && arrivals == nil {
-            HStack { ProgressView(); Text("Loading arrivals…").foregroundStyle(.secondary) }
+            HStack { ProgressView(); Text("Loading arrivals…").foregroundStyle(Theme.textMuted) }
         } else if let errorMessage {
             VStack(alignment: .leading, spacing: 6) {
-                Text(errorMessage).foregroundStyle(.red)
+                Text(errorMessage).foregroundStyle(Theme.error)
                 Button("Try again") { Task { await loadArrivals() } }
             }
         } else if let arrivals {
             if arrivals.arrivals.isEmpty {
-                Text("No upcoming departures published for this stop.").foregroundStyle(.secondary)
+                Text("No upcoming departures published for this stop.").foregroundStyle(Theme.textMuted)
             } else {
                 ForEach(arrivals.arrivals, id: \.service) { service in
                     serviceRow(service)
@@ -128,11 +130,11 @@ struct BusView: View {
                     Spacer()
                     Text("Auto-refreshes every 20 s")
                         .font(.caption2)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Theme.textMuted)
                 }
             }
         } else {
-            Text("Select a stop to see arrivals.").foregroundStyle(.secondary)
+            Text("Select a stop to see arrivals.").foregroundStyle(Theme.textMuted)
         }
     }
 

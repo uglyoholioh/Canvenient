@@ -22,39 +22,51 @@ struct ScheduleView: View {
             VStack(spacing: 0) {
                 WeekStrip(selectedDay: $selectedDay)
                     .padding(.top, 4)
+                    .padding(.bottom, 10)
                 if dayItems.isEmpty {
                     emptyState
                 } else {
-                    List {
-                        Section(appState.academicWeek?.formatted ?? "") {
+                    ScrollView {
+                        VStack(alignment: .leading, spacing: 10) {
+                            if let week = appState.academicWeek {
+                                SectionLabel(text: week.formatted)
+                                    .padding(.horizontal, 16)
+                            }
                             ForEach(dayItems) { item in
-                                ScheduleRow(item: item, now: clock)
-                                    .contentShape(Rectangle())
+                                ScheduleCard(item: item, now: clock)
                                     .onTapGesture { detailItem = item }
                             }
                         }
+                        .padding(.horizontal, 16)
+                        .padding(.bottom, 24)
                     }
-                    .listStyle(.insetGrouped)
                 }
             }
+            .background(Theme.bg)
             .navigationTitle("Schedule")
             .navigationBarTitleDisplayMode(.inline)
+            .toolbarBackground(Theme.bg, for: .navigationBar)
+            .toolbarBackground(.visible, for: .navigationBar)
+            .toolbarColorScheme(.dark, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button { showingImport = true } label: {
                         Label("Import", systemImage: "square.and.arrow.down")
                     }
+                    .tint(Theme.accent)
                 }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button { showingSettings = true } label: {
                         Label("Settings", systemImage: "gearshape")
                     }
+                    .tint(Theme.accent)
                 }
             }
             .sheet(isPresented: $showingImport) { ImportSheet() }
             .sheet(isPresented: $showingSettings) { SettingsView() }
             .sheet(item: $detailItem) { item in
                 ClassDetailSheet(item: item)
+                    .preferredColorScheme(.dark)
             }
             .task { await appState.refreshSchedule() }
             .onReceive(timer) { clock = $0 }
@@ -67,12 +79,13 @@ struct ScheduleView: View {
             Spacer()
             Image(systemName: "calendar.badge.plus")
                 .font(.system(size: 44))
-                .foregroundStyle(.secondary)
+                .foregroundStyle(Theme.textMuted)
             Text(appState.scheduleLoaded ? "Nothing scheduled for this day" : "Loading your timetable…")
-                .foregroundStyle(.secondary)
+                .foregroundStyle(Theme.textMuted)
             if appState.scheduleLoaded && appState.schedule.classes.isEmpty {
                 Button("Import from NUSMods") { showingImport = true }
                     .buttonStyle(.borderedProminent)
+                    .tint(Theme.accent)
             }
             Spacer()
         }
@@ -87,7 +100,7 @@ struct WeekStrip: View {
 
     var body: some View {
         let days = (0..<7).map { SGTime.addDays(Date(), $0) }
-        HStack(spacing: 8) {
+        HStack(spacing: 6) {
             ForEach(days, id: \.self) { day in
                 let isSelected = SGTime.dateKey(day) == SGTime.dateKey(selectedDay)
                 Button {
@@ -96,103 +109,120 @@ struct WeekStrip: View {
                     VStack(spacing: 2) {
                         Text(dayOfWeekLabel(day))
                             .font(.caption2)
-                            .foregroundStyle(isSelected ? Color.white.opacity(0.8) : .secondary)
+                            .fontWeight(.medium)
+                            .foregroundStyle(isSelected ? Theme.textH : Theme.textMuted)
                         Text("\(SGTime.calendar.component(.day, from: day))")
                             .font(.headline)
-                            .foregroundStyle(isSelected ? .white : .primary)
+                            .foregroundStyle(isSelected ? Theme.textH : Theme.text)
                     }
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 8)
-                    .background(isSelected ? Color.accentColor : Color(.secondarySystemFill),
-                                in: RoundedRectangle(cornerRadius: 10))
+                    .background(
+                        isSelected ? Theme.accent.opacity(0.22) : Theme.surface,
+                        in: RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 8, style: .continuous)
+                            .strokeBorder(isSelected ? Theme.accent : Theme.border, lineWidth: 1)
+                    )
                 }
                 .buttonStyle(.plain)
             }
         }
-        .padding(.horizontal, 12)
+        .padding(.horizontal, 16)
     }
 
     private func dayOfWeekLabel(_ day: Date) -> String {
-        let jsDow = SGTime.jsWeekday(day)
         let symbols = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
-        return symbols[jsDow]
+        return symbols[SGTime.jsWeekday(day)]
     }
 }
 
-// MARK: - Agenda row
+// MARK: - Schedule card (desktop module-card language)
 
-struct ScheduleRow: View {
+struct ScheduleCard: View {
     let item: ScheduleEngine.Item
     let now: Date
 
-    var body: some View {
-        HStack(spacing: 12) {
-            RoundedRectangle(cornerRadius: 2)
-                .fill(itemColor)
-                .frame(width: 4, height: 44)
-            VStack(alignment: .leading, spacing: 3) {
-                HStack(spacing: 6) {
-                    Text(item.title)
-                        .fontWeight(.semibold)
-                    if let classNo = item.classNo {
-                        Text(classNo)
-                            .font(.caption2)
-                            .padding(.horizontal, 5)
-                            .padding(.vertical, 1)
-                            .background(Color(.tertiarySystemFill), in: Capsule())
-                    }
-                    statusBadge
-                }
-                Text(item.subtitle)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                Label(item.venue, systemImage: "mappin")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-            Spacer()
-            VStack(alignment: .trailing, spacing: 3) {
-                Text(timeString(item.start))
-                    .font(.subheadline)
-                    .fontWeight(.medium)
-                Text(timeString(item.end))
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                if !item.attendInPerson {
-                    Text("Online")
-                        .font(.caption2)
-                        .foregroundStyle(.blue)
-                }
-            }
-        }
-        .padding(.vertical, 2)
-        .opacity(item.end < now ? 0.5 : 1)
+    private var isCurrent: Bool { item.start <= now && item.end > now }
+    private var isPast: Bool { item.end <= now }
+    private var moduleColor: Color {
+        ModulePalette.color(moduleColor: item.colorHex, fallback: item.moduleCode ?? item.title)
     }
 
-    private var itemColor: Color {
-        Color(moduleColorHex: item.colorHex) ?? Color(stableHueFor: item.moduleCode ?? item.title)
+    var body: some View {
+        HStack(spacing: 0) {
+            RoundedRectangle(cornerRadius: 1.5)
+                .fill(isCurrent ? Theme.accentGold : moduleColor)
+                .frame(width: 3, height: 54)
+            VStack(alignment: .leading, spacing: 4) {
+                HStack(spacing: 6) {
+                    Text(item.title)
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(Theme.textH)
+                    if let classNo = item.classNo {
+                        Text(classNo)
+                            .font(.system(size: 10, weight: .semibold))
+                            .kerning(0.04)
+                            .padding(.horizontal, 5)
+                            .padding(.vertical, 2)
+                            .background(Theme.surfaceHover, in: RoundedRectangle(cornerRadius: 4))
+                            .foregroundStyle(Theme.text)
+                    }
+                    statusBadge
+                    Spacer(minLength: 0)
+                    Text(timeString(item.start))
+                        .font(.system(size: 13, weight: .medium).monospacedDigit())
+                        .foregroundStyle(Theme.text)
+                    Text("–")
+                        .font(.caption)
+                        .foregroundStyle(Theme.textMuted)
+                    Text(timeString(item.end))
+                        .font(.system(size: 13).monospacedDigit())
+                        .foregroundStyle(Theme.textMuted)
+                }
+                HStack(spacing: 8) {
+                    Text(item.subtitle.uppercased())
+                        .font(.system(size: 10, weight: .semibold))
+                        .kerning(0.08)
+                        .foregroundStyle(Theme.textMuted)
+                    Label(item.venue, systemImage: "mappin")
+                        .font(.system(size: 11))
+                        .foregroundStyle(Theme.textMuted)
+                        .lineLimit(1)
+                    if !item.attendInPerson {
+                        Text("ONLINE")
+                            .font(.system(size: 9, weight: .bold))
+                            .kerning(0.08)
+                            .foregroundStyle(Theme.info)
+                    }
+                    Spacer(minLength: 0)
+                }
+            }
+            .padding(.leading, 12)
+            .padding(.vertical, 12)
+            .padding(.trailing, 12)
+        }
+        .themeCard(fill: isCurrent ? Theme.surfaceWarm : Theme.surface)
+        .opacity(isPast ? 0.55 : 1)
     }
 
     @ViewBuilder
     private var statusBadge: some View {
-        if item.start <= now && item.end > now {
-            Text("Now")
-                .font(.caption2)
-                .fontWeight(.semibold)
-                .foregroundStyle(.white)
-                .padding(.horizontal, 6)
-                .padding(.vertical, 1)
-                .background(Color.green, in: Capsule())
-        } else if let minutes = minutesUntil, minutes > 0, minutes <= 90 {
-            Text("In \(minutes) min")
-                .font(.caption2)
-                .foregroundStyle(.orange)
+        if isCurrent {
+            HStack(spacing: 4) {
+                Circle().fill(Theme.accentGold).frame(width: 5, height: 5)
+                Text("NOW")
+                    .font(.system(size: 9, weight: .bold))
+                    .kerning(0.08)
+            }
+            .foregroundStyle(Theme.accentGold)
+        } else if !isPast, item.start.timeIntervalSince(now) <= 90 * 60 {
+            Text("SOON")
+                .font(.system(size: 9, weight: .bold))
+                .kerning(0.08)
+                .foregroundStyle(Theme.warning)
         }
-    }
-
-    private var minutesUntil: Int? {
-        let minutes = Int(item.start.timeIntervalSince(now) / 60)
-        return minutes >= 0 ? minutes : nil
     }
 
     private func timeString(_ date: Date) -> String {
@@ -220,7 +250,7 @@ struct ClassDetailSheet: View {
 
     var body: some View {
         NavigationStack {
-            List {
+            Form {
                 Section {
                     LabeledContent("Module", value: item.title)
                     LabeledContent("Lesson", value: item.subtitle + (item.classNo.map { " · \($0)" } ?? ""))
@@ -240,10 +270,10 @@ struct ClassDetailSheet: View {
                         }
                         .pickerStyle(.segmented)
                         if applying {
-                            HStack { ProgressView(); Text("Saving…").foregroundStyle(.secondary) }
+                            HStack { ProgressView(); Text("Saving…").foregroundStyle(Theme.textMuted) }
                         }
                         if let errorMessage {
-                            Text(errorMessage).foregroundStyle(.red).font(.caption)
+                            Text(errorMessage).foregroundStyle(Theme.error).font(.caption)
                         }
                     }
                     Section {
@@ -251,6 +281,7 @@ struct ClassDetailSheet: View {
                             Link(destination: url) {
                                 Label("Get Directions to \(item.venue)", systemImage: "location.fill")
                             }
+                            .tint(Theme.accent)
                         }
                         if let stop = VenueDirectory.stop(for: item.venue) {
                             LabeledContent("Suggested ISB stop", value: stop)
@@ -265,11 +296,12 @@ struct ClassDetailSheet: View {
                     }
                 }
             }
+            .themedForm()
             .navigationTitle(item.kind == .exam ? "Exam" : "Class")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { dismiss() }
+                    Button("Done") { dismiss() }.tint(Theme.accent)
                 }
             }
             .onChange(of: attendInPerson) { _, newValue in
@@ -326,6 +358,7 @@ struct ImportSheet: View {
                             shareURL = text
                         }
                     }
+                    .tint(Theme.accent)
                     Button {
                         importTimetable()
                     } label: {
@@ -336,6 +369,7 @@ struct ImportSheet: View {
                         }
                     }
                     .disabled(busy || !shareURL.lowercased().contains("nusmods"))
+                    .tint(Theme.accent)
                 } header: {
                     Text("NUSMods share link")
                 } footer: {
@@ -344,15 +378,16 @@ struct ImportSheet: View {
                 if let resultMessage {
                     Section {
                         Text(resultMessage)
-                            .foregroundStyle(succeeded ? Color.green : Color.red)
+                            .foregroundStyle(succeeded ? Theme.success : Theme.error)
                     }
                 }
             }
+            .themedForm()
             .navigationTitle("Import timetable")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Close") { dismiss() }
+                    Button("Close") { dismiss() }.tint(Theme.accent)
                 }
             }
         }

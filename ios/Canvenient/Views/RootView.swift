@@ -16,6 +16,7 @@ struct RootView: View {
             }
         }
         .animation(.easeInOut(duration: 0.2), value: appState.session)
+        .preferredColorScheme(.dark)
     }
 
     private var tabs: some View {

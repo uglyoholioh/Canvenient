@@ -18,6 +18,7 @@ struct ModulesView: View {
                 }
             }
             .navigationTitle("Modules")
+            .tint(Theme.accent)
             .navigationBarTitleDisplayMode(.inline)
             .task { await loadModules() }
             .refreshable { await loadModules() }
@@ -27,7 +28,7 @@ struct ModulesView: View {
     private var moduleList: some View {
         List {
             if let errorMessage {
-                Section { Text(errorMessage).foregroundStyle(.red).font(.callout) }
+                Section { Text(errorMessage).foregroundStyle(Theme.error).font(.callout) }
             }
             Section {
                 ForEach(appState.modules) { module in
@@ -38,8 +39,8 @@ struct ModulesView: View {
                     } label: {
                         HStack(spacing: 12) {
                             Circle()
-                                .fill(Color(moduleColorHex: module.color)
-                                      ?? Color(stableHueFor: module.module_code))
+                                .fill(ModulePalette.color(moduleColor: module.color,
+                                                          fallback: module.module_code))
                                 .frame(width: 12, height: 12)
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(module.module_code).fontWeight(.semibold)
@@ -64,7 +65,7 @@ struct ModulesView: View {
                 Text("Sourced from Canvas through your Canvenient backend. Tap a course for its upcoming assignments.")
             }
         }
-        .listStyle(.insetGrouped)
+        .themedForm()
     }
 
     private var emptyState: some View {
@@ -73,8 +74,8 @@ struct ModulesView: View {
             Image(systemName: "book.closed")
                 .font(.system(size: 44))
                 .foregroundStyle(.secondary)
-            Text(appState.modules.isEmpty && errorMessage == nil ? "Loading modules…" : "No modules found")
-                .foregroundStyle(.secondary)
+            Text(appState.modules.isEmpty && errorMessage == nil ? "Loading modules…" : "No modules yet — Canvas courses sync from the desktop app (Settings › Canvas token).")
+                .foregroundStyle(Theme.textMuted)
             if errorMessage != nil {
                 Button("Retry") { Task { await loadModules() } }
                     .buttonStyle(.borderedProminent)

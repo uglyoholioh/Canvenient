@@ -15,8 +15,8 @@ struct ClassLiveActivity: Widget {
         ActivityConfiguration(for: ClassActivityAttributes.self) { context in
             // Lock Screen presentation.
             LockScreenClassCard(context: context)
-                .activityBackgroundTint(Color(.systemBackground).opacity(0.001))
-                .activitySystemActionForegroundColor(.primary)
+                .activityBackgroundTint(Theme.surfaceWarm)
+                .activitySystemActionForegroundColor(Theme.text)
         } dynamicIsland: { context in
             DynamicIsland {
                 DynamicIslandExpandedRegion(.leading) {
@@ -24,21 +24,25 @@ struct ClassLiveActivity: Widget {
                         Text(context.attributes.moduleCode)
                             .font(.headline)
                             .bold()
+                            .foregroundStyle(Theme.textH)
                         Text(context.attributes.lessonType)
                             .font(.caption2)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(Theme.text)
                     }
                 }
                 DynamicIslandExpandedRegion(.trailing) {
                     PhaseCountdown(context: context)
                         .font(.title3)
                         .bold()
+                        .monospacedDigit()
+                        .foregroundStyle(Theme.textH)
                         .frame(maxWidth: .infinity, alignment: .trailing)
                 }
                 DynamicIslandExpandedRegion(.bottom) {
                     HStack {
                         Label(context.attributes.venue, systemImage: "mappin.and.ellipse")
                             .font(.caption)
+                            .foregroundStyle(Theme.text)
                             .lineLimit(1)
                         Spacer()
                         BusLine(context: context)
@@ -52,6 +56,7 @@ struct ClassLiveActivity: Widget {
                 PhaseCountdown(context: context)
                     .font(.caption2)
                     .monospacedDigit()
+                    .foregroundStyle(Theme.text)
                     .frame(maxWidth: 44)
             } minimal: {
                 Image(systemName: "calendar")
@@ -95,7 +100,7 @@ struct BusLine: View {
                     .monospacedDigit()
             }
             .font(.caption2)
-            .foregroundStyle(.orange)
+            .foregroundStyle(Theme.warning)
         }
     }
 }
@@ -112,6 +117,7 @@ struct DirectionsButton: View {
         }
         .buttonStyle(.borderedProminent)
         .controlSize(.mini)
+        .tint(Theme.accent)
     }
 }
 
@@ -122,16 +128,18 @@ struct LockScreenClassCard: View {
         VStack(spacing: 10) {
             HStack(alignment: .top) {
                 HStack(spacing: 8) {
-                    RoundedRectangle(cornerRadius: 2)
+                    RoundedRectangle(cornerRadius: 1.5)
                         .fill(classColor(context.attributes.colorHex))
-                        .frame(width: 4, height: 30)
+                        .frame(width: 3, height: 34)
                     VStack(alignment: .leading, spacing: 2) {
                         Text(context.attributes.moduleCode)
                             .font(.headline)
                             .bold()
-                        Text(context.attributes.lessonType)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(Theme.textH)
+                        Text(context.attributes.lessonType.uppercased())
+                            .font(.system(size: 10, weight: .semibold))
+                            .kerning(0.08)
+                            .foregroundStyle(Theme.textMuted)
                     }
                 }
                 Spacer()
@@ -140,14 +148,16 @@ struct LockScreenClassCard: View {
                         .font(.title3)
                         .bold()
                         .monospacedDigit()
-                    Text(context.state.classStart.formatted(date: .omitted, time: .shortened))
+                        .foregroundStyle(Theme.textH)
+                    Text("starts \(context.state.classStart.formatted(date: .omitted, time: .shortened))")
                         .font(.caption2)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Theme.textMuted)
                 }
             }
             HStack {
                 Label(context.attributes.venue, systemImage: "mappin.and.ellipse")
                     .font(.caption)
+                    .foregroundStyle(Theme.text)
                     .lineLimit(1)
                 Spacer()
                 BusLine(context: context)
