@@ -4,7 +4,7 @@ export const DASHBOARD_MODULES = [
   { id: "isb", label: "NUS ISB" },
   { id: "canvas", label: "Canvas" },
   { id: "notes", label: "Notes" },
-  { id: "aibrief", label: "AI Brief" },
+  { id: "aibrief", label: "My Day" },
   { id: "studytimer", label: "Study Timer" },
   { id: "wheel", label: "Wheel" },
 ];

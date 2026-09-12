@@ -24,6 +24,13 @@ Transport Security is satisfied with no exceptions.
 | `C:\Users\oli\canvenient-server\start-backend.cmd` | Launcher: sets `JWT_SECRET`, runs `run.py --data-dir ...\data --port 8000`, logs to `backend.log` |
 | Scheduled task `CanvenientBackend` | Starts the launcher at system boot as SYSTEM |
 
+Optional launcher env (assistant features, added 2026-09-13): `set
+MODEL_API_KEY=<Gemini API key>` enables `/assistant/*` AI replies (without it
+they answer 503 or degrade to deterministic facts); `set AI_MODEL=` overrides
+the default `gemini-2.5-flash`; `set TELEGRAM_BOT_TOKEN=<bot token>` lets the
+in-process digest scheduler push the daily Telegram digest at each linked
+user's `digest_time`. Add to `start-backend.cmd`, then restart the task.
+
 SSH access is key-only (`oli`, OpenSSH Server, key installed in
 `administrators_authorized_keys`). The backend binds `127.0.0.1` inside the
 box; `tailscale serve --bg 8000` (persistent) is the only door — nothing is
