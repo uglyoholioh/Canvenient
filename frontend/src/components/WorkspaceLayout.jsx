@@ -5,6 +5,7 @@ import TaskView from "./TaskView";
 import TaskInputBar from "./TaskInputBar";
 import GlobalTasksPanel from "./GlobalTasksPanel";
 import Omnibar from "./Omnibar";
+import AssistantPane from "./AssistantPane";
 import OnboardingModal from "./OnboardingModal";
 import Dashboard from "./Dashboard";
 import CanvasDrawer from "./drawers/CanvasDrawer";
@@ -12,6 +13,7 @@ import StudyTimerModule from "./dashboard/StudyTimerModule";
 import { runDueReminderCycle } from "../dueReminders";
 import { WorkspaceToolbarContext } from "./WorkspaceToolbarContext";
 import { QuickCaptureContext } from "./QuickCaptureContext";
+import { AssistantContext } from "./AssistantContext";
 import { Folder, Search, Settings, CheckSquare, PanelLeft, BookOpen, Plus, LogOut, LayoutDashboard, FileText, CalendarDays, DoorOpen, ChevronLeft, ChevronRight, Users, Dices, Loader2 } from "lucide-react";
 import { createNote } from "../api";
 import { formatShortcut, matchesShortcut, readKeyboardShortcuts } from "../keyboardShortcuts";
@@ -106,6 +108,7 @@ export default function WorkspaceLayout({ token, user, onLogout, onUpdateUser })
   const [globalCanvasItem, setGlobalCanvasItem] = useState(null);
   const [tasksPanel, setTasksPanel] = useState({ isOpen: false, focusComposer: false });
   const [quickCapture, setQuickCapture] = useState({ isOpen: false });
+  const [assistant, setAssistant] = useState({ isOpen: false, query: "", attachment: null, initialSend: false });
   const tasksPanelReturnFocus = useRef(null);
   const quickCaptureReturnFocus = useRef(null);
   
@@ -180,6 +183,35 @@ export default function WorkspaceLayout({ token, user, onLogout, onUpdateUser })
     closeQuickCapture,
   }), [closeQuickCapture, openQuickCapture, quickCapture.isOpen]);
 
+  const openAssistant = useCallback((options = {}) => {
+    setAssistant({
+      isOpen: true,
+      query: options.query || "",
+      attachment: options.attachment || null,
+      // Pre-filled queries (omnibar escalation, "ask about this") send at once.
+      initialSend: Boolean(options.query),
+    });
+  }, []);
+
+  const closeAssistant = useCallback(() => setAssistant((prev) => ({ ...prev, isOpen: false })), []);
+
+  const assistantValue = useMemo(() => ({ openAssistant, closeAssistant }), [closeAssistant, openAssistant]);
+
+  const ASSISTANT_VIEW_MAP = { dashboard: "dashboard", tasks: "tasks", schedule: "schedule", venues: "venues", modules: "canvas", canvas: "canvas", notes: "notes", groups: "groups", wheel: "wheel" };
+  const openAssistantResource = useCallback((resource) => {
+    if (!resource) return;
+    if (resource.type === "note") {
+      setActiveTab(`note-${resource.id}`);
+    } else if (resource.type === "view") {
+      setActiveTab(ASSISTANT_VIEW_MAP[String(resource.label || "").toLowerCase()] || "dashboard");
+    } else if (resource.type === "assignment") {
+      setGlobalCanvasItem({ type: "canvas_resource", itemType: "assignment", id: resource.id, title: resource.label });
+    } else {
+      // Announcements and files live in the Modules (Canvas) view.
+      setActiveTab("canvas");
+    }
+  }, [setActiveTab]);
+
   useEffect(() => {
     localStorage.setItem("canvenient-active-view", activeTab);
   }, [activeTab]);
@@ -228,6 +260,11 @@ export default function WorkspaceLayout({ token, user, onLogout, onUpdateUser })
       if (matchesShortcut(e, shortcuts.search)) {
         e.preventDefault();
         setIsOmnibarOpen(true);
+        return;
+      }
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "j") {
+        e.preventDefault();
+        setAssistant((prev) => (prev.isOpen ? { ...prev, isOpen: false } : { isOpen: true, query: "", attachment: null, initialSend: false }));
         return;
       }
       if (!(e.metaKey || e.ctrlKey)) return;
@@ -372,6 +409,7 @@ export default function WorkspaceLayout({ token, user, onLogout, onUpdateUser })
 
   return (
     <QuickCaptureContext.Provider value={quickCaptureValue}>
+    <AssistantContext.Provider value={assistantValue}>
     <WorkspaceToolbarContext.Provider value={setToolbar}>
     <div className="mac-workspace-shell">
       <header className="mac-workspace-toolbar" data-tauri-drag-region>
@@ -561,6 +599,7 @@ export default function WorkspaceLayout({ token, user, onLogout, onUpdateUser })
       />
     </div>
     </WorkspaceToolbarContext.Provider>
+    </AssistantContext.Provider>
     </QuickCaptureContext.Provider>
   );
 }

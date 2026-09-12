@@ -3,12 +3,13 @@
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import TaskInputBar from "../TaskInputBar";
-import { createTask, getAcademicModules } from "../../api";
+import { createNote, createTask, getAcademicModules, parseTaskSmart } from "../../api";
 
 vi.mock("../../api", () => ({
   createNote: vi.fn(),
   createTask: vi.fn(),
   getAcademicModules: vi.fn(),
+  parseTaskSmart: vi.fn(),
 }));
 
 describe("TaskInputBar quick capture", () => {
@@ -85,6 +86,54 @@ describe("TaskInputBar quick capture", () => {
     expect(onEmptyArrowKey).toHaveBeenCalledTimes(2);
     expect(onEmptyArrowKey).toHaveBeenNthCalledWith(1, "ArrowDown");
     expect(onEmptyArrowKey).toHaveBeenNthCalledWith(2, "ArrowUp");
+  });
+
+  it("smart-parses natural language into the form on Shift+Enter, leaving Enter as plain submit", async () => {
+    parseTaskSmart.mockResolvedValue({
+      title: "MA2002 Problem Set 4",
+      due_at: "2026-09-18T17:00:00",
+      priority: "high",
+      category_id: null,
+      category_name: null,
+      estimated_minutes: null,
+    });
+    render(<TaskInputBar token="token" isOpen initialMode="task" allowedModes={["task"]} />);
+
+    const title = screen.getByPlaceholderText("Short task title...");
+    fireEvent.change(title, { target: { value: "finish ma2002 ps4 before next friday 5pm urgent" } });
+    fireEvent.keyDown(title, { key: "Enter", shiftKey: true });
+
+    await waitFor(() => expect(parseTaskSmart).toHaveBeenCalledWith("token", "finish ma2002 ps4 before next friday 5pm urgent"));
+    await waitFor(() => expect(title).toHaveValue("MA2002 Problem Set 4"));
+    expect(screen.getByLabelText("Task time (24-hour HH:MM)")).toHaveValue("17:00");
+    expect(screen.getByRole("button", { name: /High Priority/i })).toBeInTheDocument();
+    expect(screen.getByText(/Fields filled from your text/i)).toBeInTheDocument();
+    expect(createTask).not.toHaveBeenCalled();
+
+    // The parsed fields are editable in place: submitting afterwards uses them.
+    fireEvent.keyDown(title, { key: "Enter" });
+    await waitFor(() => expect(createTask).toHaveBeenCalledWith("token", expect.objectContaining({
+      title: "MA2002 Problem Set 4",
+      priority_manual: "high",
+    })));
+    const payload = createTask.mock.calls[0][1];
+    expect(new Date(payload.due_at_override).getHours()).toBe(17);
+  });
+
+  it("falls back with a hint when smart parse is unavailable", async () => {
+    parseTaskSmart.mockRejectedValue(new Error("AI unavailable"));
+    render(<TaskInputBar token="token" isOpen initialMode="task" allowedModes={["task"]} />);
+
+    const title = screen.getByPlaceholderText("Short task title...");
+    fireEvent.change(title, { target: { value: "some complicated sentence with a friday deadline" } });
+    fireEvent.keyDown(title, { key: "Enter", shiftKey: true });
+
+    await waitFor(() => expect(screen.getByText(/Smart parse unavailable/i)).toBeInTheDocument());
+    expect(title).toHaveValue("some complicated sentence with a friday deadline");
+    fireEvent.keyDown(title, { key: "Enter" });
+    await waitFor(() => expect(createTask).toHaveBeenCalledWith("token", expect.objectContaining({
+      title: "some complicated sentence with a friday deadline",
+    })));
   });
 
   it("labels task time entry as a 24-hour clock", async () => {

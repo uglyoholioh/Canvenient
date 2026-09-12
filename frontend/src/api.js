@@ -966,6 +966,28 @@ export function sendAiChat(token, payload) {
   });
 }
 
+// Fresh assistant layer (/assistant/*)
+
+export function parseTaskSmart(token, text) {
+  return apiRequest("/assistant/parse", {
+    method: "POST",
+    body: { text },
+    token,
+  });
+}
+
+export function assistantChat(token, payload) {
+  return apiRequest("/assistant/chat", {
+    method: "POST",
+    body: payload,
+    token,
+  });
+}
+
+export function getAssistantBrief(token, refresh = false) {
+  return apiRequest(`/assistant/brief${refresh ? "?refresh=true" : ""}`, { token });
+}
+
 // Study timer
 export function getStudySessions(token) {
   return apiRequest("/study-sessions", { token });

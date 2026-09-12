@@ -17,6 +17,7 @@ import { createTask, dismissCanvasAnnouncement, getAcademicModules } from "../ap
 import { extractCanvasLinks } from "../canvasLinks";
 import { isEditableShortcutTarget } from "../keyboardShortcuts";
 import { notifyTasksChanged } from "../taskEvents";
+import { useAssistant } from "./AssistantContext";
 
 function getAuthorInitials(name = "") {
   if (!name || typeof name !== "string") return "CA";
@@ -50,6 +51,7 @@ export default function AnnouncementTriageModal({
   const [toastMessage, setToastMessage] = useState("");
   const toastTimeoutRef = useRef(null);
   const readerScrollRef = useRef(null);
+  const { openAssistant } = useAssistant();
 
   // Keep the working list in sync with new announcements (adjust-during-render
   // pattern; avoids a cascading setState effect).
@@ -472,6 +474,21 @@ export default function AnnouncementTriageModal({
                           {taskAddedIds.has(currentItem.id) ? "Added to Tasks" : "Add Task"}
                         </span>
                         <span className="triage-key-glyph">T</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        className="triage-btn"
+                        onClick={() => {
+                          openAssistant({
+                            attachment: { type: "announcement", id: currentItem.id, label: currentItem.title },
+                          });
+                          onClose?.();
+                        }}
+                        title="Ask the assistant about this announcement"
+                      >
+                        <Sparkles size={12} />
+                        <span>Ask AI</span>
                       </button>
 
                       {currentItem.external_url && (

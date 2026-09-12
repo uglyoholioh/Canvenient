@@ -1,8 +1,9 @@
 // React is required by the test JSX transform.
  
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { AlertTriangle, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Loader2, Minus, Plus, RotateCw, Search, X } from "lucide-react";
+import { AlertTriangle, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Loader2, Minus, Plus, RotateCw, Search, Sparkles, X } from "lucide-react";
 import { fetchCanvasFileContent } from "../api";
+import { useAssistant } from "./AssistantContext";
 
 // pdf.js and its worker are heavy, so they load on first open only and stay
 // out of the app's startup bundle.
@@ -86,6 +87,7 @@ function saveScrollPosition(fileId, page, ratio) {
 }
 
 export default function PdfViewer({ token, fileId, name = "", externalUrl = "" }) {
+  const { openAssistant } = useAssistant();
   const [status, setStatus] = useState("loading");
   const [error, setError] = useState("");
   const [numPages, setNumPages] = useState(0);
@@ -647,6 +649,15 @@ export default function PdfViewer({ token, fileId, name = "", externalUrl = "" }
           </button>
           <button type="button" className="cv-btn-icon" onClick={rotate} title="Rotate clockwise" aria-label="Rotate clockwise">
             <RotateCw size={13} />
+          </button>
+          <button
+            type="button"
+            className="cv-btn-icon"
+            onClick={() => openAssistant({ attachment: { type: "file", id: Number(fileId), label: name } })}
+            title="Ask the assistant about this PDF"
+            aria-label="Ask the assistant about this PDF"
+          >
+            <Sparkles size={13} />
           </button>
         </div>
         <span className="cv-pdf-toolbar-sep" />

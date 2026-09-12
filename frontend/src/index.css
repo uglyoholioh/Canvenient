@@ -2548,6 +2548,7 @@ button.module-item-main:hover, .module-list-item.task-module-item:hover { backgr
 .task-mode-switcher button { min-width: 54px; padding: 4px 7px; border: 0; border-radius: 4px; background: transparent; color: var(--text-muted); cursor: pointer; font-size: 10px; }
 .task-mode-switcher button.is-active { background: var(--surface-muted); color: var(--text-h); }
 .task-input-error { padding: 5px 8px; margin-bottom: 8px; border-radius: 4px; background: var(--error-bg); color: var(--danger); font-size: 11px; }
+.task-input-hint { display: flex; align-items: center; gap: 5px; padding: 5px 8px; margin-bottom: 8px; border-radius: 4px; background: var(--surface-muted); color: var(--text-muted); font-size: 11px; flex-shrink: 0; }
 .task-input-main { display: flex; align-items: flex-start; gap: 10px; }
 .task-mode-badge { flex: none; margin-top: 3px; padding: 4px 6px; border-radius: 4px; color: var(--accent); background: var(--accent-glow); font: 600 9px var(--font-mono); }.task-mode-badge.is-note { color: var(--success); background: var(--success-bg); }.task-mode-badge.is-command { color: var(--warning); background: var(--warning-bg); }
 .task-input-main textarea { flex: 1; max-height: 120px; min-height: 27px; padding: 3px 0; border: 0; outline: 0; resize: none; overflow-y: auto; background: transparent; color: var(--text-h); font: 13px/1.5 var(--font-mono); }

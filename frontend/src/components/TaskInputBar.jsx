@@ -1,8 +1,8 @@
 // React is required by the test JSX transform.
  
 import { useEffect, useRef, useState } from "react";
-import { BookOpen, Calendar, ChevronDown, Clock, Flag, Plus, X } from "lucide-react";
-import { createNote, createTask, getAcademicModules } from "../api";
+import { BookOpen, Calendar, ChevronDown, Clock, Flag, Plus, Sparkles, X } from "lucide-react";
+import { createNote, createTask, getAcademicModules, parseTaskSmart } from "../api";
 
 function focusProperty(index, scope) {
   scope?.current?.querySelector(`[data-property-index="${index}"]`)?.focus();
@@ -243,6 +243,8 @@ export default function TaskInputBar({
   const [moduleId, setModuleId] = useState(initialTask?.module_id ? String(initialTask.module_id) : "");
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [parseHint, setParseHint] = useState("");
+  const [isParsing, setIsParsing] = useState(false);
   const textareaRef = useRef(null);
   const noteRef = useRef(null);
   const cardRef = useRef(null);
@@ -287,6 +289,7 @@ export default function TaskInputBar({
     setPriority("medium");
     setModuleId("");
     setError("");
+    setParseHint("");
     if (shouldFocus) {
       requestAnimationFrame(() => textareaRef.current?.focus());
     }
@@ -322,6 +325,32 @@ export default function TaskInputBar({
     }
   };
 
+  const smartParse = async () => {
+    const text = inputValue.trim();
+    if (!text || isParsing || inputMode !== "task") return;
+    setIsParsing(true);
+    setParseHint("");
+    try {
+      const parsed = await parseTaskSmart(token, text);
+      setInputValue(parsed.title || text);
+      if (parsed.due_at) {
+        const due = new Date(parsed.due_at);
+        if (!isNaN(due.getTime())) {
+          setDateType("custom");
+          setCustomDate(`${String(due.getDate()).padStart(2, "0")}/${String(due.getMonth() + 1).padStart(2, "0")}`);
+          setTime(`${String(due.getHours()).padStart(2, "0")}:${String(due.getMinutes()).padStart(2, "0")}`);
+        }
+      }
+      if (parsed.priority) setPriority(parsed.priority);
+      setParseHint("Fields filled from your text — check them, then press Enter to add.");
+    } catch {
+      setParseHint("Smart parse unavailable — press Enter to add as a plain task.");
+    } finally {
+      setIsParsing(false);
+      requestAnimationFrame(() => textareaRef.current?.focus());
+    }
+  };
+
   const handleInputKeyDown = (event) => {
     if (event.key === "Escape" && onClose) {
       event.preventDefault();
@@ -329,6 +358,11 @@ export default function TaskInputBar({
     } else if (event.key === "Escape") {
       event.preventDefault();
       event.currentTarget.blur();
+    } else if (event.key === "Enter" && event.shiftKey && !(event.metaKey || event.ctrlKey) && inputMode === "task" && inputValue.trim()) {
+      // Smart parse: fill the form from the natural-language input. Plain
+      // Enter still submits exactly as before.
+      event.preventDefault();
+      smartParse();
     } else if ((event.key === "Enter" && !event.shiftKey) || ((event.metaKey || event.ctrlKey) && event.key === "Enter")) {
       event.preventDefault();
       submit();
@@ -394,6 +428,7 @@ export default function TaskInputBar({
           ))}
         </div>}
         {error && <div className="task-input-error">{error}</div>}
+        {parseHint && <div className="task-input-hint"><Sparkles size={11} /> {parseHint}</div>}
         <div className="task-input-main">
           {availableModes.length > 1 && <span className={`task-mode-badge is-${inputMode}`}>{inputMode.toUpperCase()}</span>}
           <textarea
@@ -401,7 +436,7 @@ export default function TaskInputBar({
             value={inputValue}
             rows={1}
             maxLength={160}
-            onChange={(event) => { setInputValue(event.target.value); if (error) setError(""); }}
+            onChange={(event) => { setInputValue(event.target.value); if (error) setError(""); if (parseHint) setParseHint(""); }}
             onKeyDown={handleInputKeyDown}
             placeholder={inputMode === "task" ? "Short task title..." : "Capture a note title..."}
           />

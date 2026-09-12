@@ -1,0 +1,132 @@
+/* "My Day" assistant brief card on the dashboard. */
+
+.brief-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  font-size: 12.5px;
+  line-height: 1.45;
+  width: 100%;
+}
+
+.brief-card-topline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.brief-card-day {
+  font-weight: 600;
+  color: var(--text-h);
+}
+
+.brief-card-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.brief-card-actions button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: var(--surface-muted);
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 999px;
+  font-size: 11.5px;
+  padding: 4px 10px;
+  cursor: pointer;
+}
+
+.brief-card-actions button:hover {
+  border-color: var(--border-strong);
+  color: var(--text-h);
+}
+
+.brief-card-actions button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.brief-card-summary {
+  margin: 0;
+  color: var(--text);
+}
+
+.brief-card-muted {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.brief-card-attention {
+  margin: 0;
+  padding-left: 16px;
+  color: var(--text);
+}
+
+.brief-card-attention li + li {
+  margin-top: 3px;
+}
+
+.brief-card-section h4 {
+  margin: 0 0 5px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+}
+
+.brief-card-section ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.brief-card-section li {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+}
+
+.brief-card-time {
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+  font-size: 11.5px;
+  color: var(--text-muted);
+  min-width: 74px;
+}
+
+.brief-card-time.is-overdue {
+  color: var(--text-h);
+  font-weight: 700;
+}
+
+.brief-card-main {
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.brief-card-sub {
+  color: var(--text-muted);
+  font-size: 11.5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.is-spinning {
+  animation: brief-card-spin 0.9s linear infinite;
+}
+
+@keyframes brief-card-spin {
+  to { transform: rotate(360deg); }
+}

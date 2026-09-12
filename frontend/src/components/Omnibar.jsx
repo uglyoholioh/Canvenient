@@ -71,7 +71,10 @@ export default function Omnibar({ onClose, token, onNavigate }) {
           .slice(0, 6)
           .map(f => ({ type: 'canvas_resource', itemType: 'file', id: f.id, course_id: f.course_id, external_url: f.external_url || null, title: f.title, sub: courseCodeById.get(String(f.course_id)) || "" }));
 
-        setResults([...matchedViews, ...matchedCourses, ...matchedAssignments, ...matchedFiles, ...filteredNotes, ...filteredTasks]);
+        // The omnibar stays the single input surface: anything that matches
+        // nothing here can still be escalated to the assistant as a query.
+        const askAiRow = query.trim() ? [{ type: 'ai', title: query.trim() }] : [];
+        setResults([...matchedViews, ...matchedCourses, ...matchedAssignments, ...matchedFiles, ...filteredNotes, ...filteredTasks, ...askAiRow]);
         setSelectedIndex(0);
       } catch (err) {
         console.error(err);
@@ -117,6 +120,21 @@ export default function Omnibar({ onClose, token, onNavigate }) {
         {results.length > 0 && (
           <div style={{ maxHeight: '300px', overflowY: 'auto', padding: '8px 0' }}>
             {results.map((item, idx) => (
+              item.type === 'ai' ? (
+                <div
+                  key={idx}
+                  style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', cursor: 'pointer', backgroundColor: idx === selectedIndex ? 'var(--surface-hover)' : 'transparent', borderTop: '1px solid var(--border-subtle)', marginTop: '4px' }}
+                  onClick={() => onNavigate(item.type, item)}
+                  onMouseEnter={() => setSelectedIndex(idx)}
+                >
+                  <div style={{ fontSize: '11px', fontWeight: 'bold', padding: '2px 6px', borderRadius: '4px', backgroundColor: 'var(--accent)', color: 'var(--text-inverse, #fff)', marginRight: '12px', textTransform: 'uppercase' }}>
+                    Ask AI
+                  </div>
+                  <div style={{ color: idx === selectedIndex ? 'var(--text-h)' : 'var(--text)' }}>
+                    {item.title}
+                  </div>
+                </div>
+              ) : (
               <div
                 key={idx}
                 style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', cursor: 'pointer', backgroundColor: idx === selectedIndex ? 'var(--surface-hover)' : 'transparent' }}
@@ -131,6 +149,7 @@ export default function Omnibar({ onClose, token, onNavigate }) {
                   {item.sub && <span style={{ color: 'var(--text-muted)', marginLeft: '6px', fontSize: '12px' }}>{item.sub}</span>}
                 </div>
               </div>
+              )
             ))}
           </div>
         )}

@@ -8,7 +8,7 @@ import CampusBusModule from "./dashboard/CampusBusModule";
 import TasksModule from "./dashboard/TasksModule";
 import DashboardCustomizer from "./dashboard/DashboardCustomizer";
 import NotesModule from "./dashboard/NotesModule";
-import AiBriefModule from "./dashboard/AiBriefModule";
+import AssistantBriefCard from "./dashboard/AssistantBriefCard";
 import StudyTimerModule from "./dashboard/StudyTimerModule";
 import WheelModule from "./dashboard/WheelModule";
 import { DEFAULT_DASHBOARD_CONFIG, readDashboardConfig, readDashboardLayout, saveDashboardConfig, saveDashboardLayout, threeColumnDashboardConfig } from "./dashboard/dashboardConfig";
@@ -120,8 +120,8 @@ export default function Dashboard({ token, user, onNavigate }) {
       body: <NotesModule token={token} onOpenNote={(note) => onNavigate("notes", { openNoteId: note.id })} />,
     },
     aibrief: {
-      title: "AI Briefing",
-      body: <AiBriefModule token={token} />,
+      title: "My Day",
+      body: <AssistantBriefCard token={token} />,
     },
     studytimer: {
       title: "Study Timer",

@@ -4,7 +4,8 @@ import StarterKit from '@tiptap/starter-kit';
 import Placeholder from '@tiptap/extension-placeholder';
 import Mention from '@tiptap/extension-mention';
 import { getNotes, updateNote, getCachedCanvasFiles, createTask } from '../api';
-import { Save, Trash2, Bold, Italic, List, ListOrdered, Heading1, Heading2, Quote, Code, Download, CheckSquare, Pin } from 'lucide-react';
+import { Save, Trash2, Bold, Italic, List, ListOrdered, Heading1, Heading2, Quote, Code, Download, CheckSquare, Pin, Sparkles } from 'lucide-react';
+import { useAssistant } from './AssistantContext';
 import createSuggestionOptions from './editor/suggestions';
 import TurndownService from 'turndown';
 import './markdown.css';
@@ -99,6 +100,7 @@ const CanvasMention = Mention.extend({
 });
 
 export default function MarkdownEditor({ noteId, token, onDelete, onUpdate, onTitleChange, initialNote, folders = [] }) {
+  const { openAssistant } = useAssistant();
   const [note, setNote] = useState(initialNote || null);
   const [title, setTitle] = useState(initialNote?.title || '');
   const [saveState, setSaveState] = useState('saved');
@@ -442,7 +444,12 @@ export default function MarkdownEditor({ noteId, token, onDelete, onUpdate, onTi
             <option value="">No Folder</option>
             {folders.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
           </select>
-          <button 
+          <button
+            onClick={() => openAssistant({ attachment: { type: "note", id: Number(noteId), label: title || "Untitled" } })}
+            style={{ padding: '6px', background: 'transparent', border: '1px solid var(--border-subtle)', borderRadius: '4px', color: 'var(--text-muted)', cursor: 'pointer' }}
+            title="Ask the assistant about this note"
+          ><Sparkles size={14} /></button>
+          <button
             onClick={() => handleSave(title, editor.getHTML(), { is_pinned: !note.is_pinned })}
             style={{ padding: '6px', background: note.is_pinned ? 'var(--surface-active)' : 'transparent', border: '1px solid var(--border-subtle)', borderRadius: '4px', color: note.is_pinned ? 'var(--blue)' : 'var(--text-muted)', cursor: 'pointer' }}
             title={note.is_pinned ? "Unpin Note" : "Pin Note"}
