@@ -34,6 +34,16 @@ current source if authorised. Prefer Git reflogs, local editor history, and
 known snapshots over speculative reconstruction. Never report recovery as
 complete until the requested state is visibly verified.
 
+## Work concurrently without clashes
+
+Multiple assistants may work at once. The default is isolation: one git
+worktree per task (see `AGENTS.md`, "Concurrent agents"). In the shared-tree
+exception, an assistant stages only paths it touched, re-checks
+`git status` immediately before every commit, and treats all pre-existing
+dirty or untracked files as the user's property. Destructive git commands
+remain prohibited under the section above regardless of which worktree they
+run in.
+
 ## Desktop acceptance standard
 
 For changes that affect the packaged macOS app:

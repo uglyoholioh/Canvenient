@@ -31,6 +31,26 @@ before changing this repository. These rules apply to every AI-assisted task.
 6. Update the relevant documentation when behaviour, operations, architecture,
    or a recovery decision changes.
 
+## Concurrent agents — worktree-default protocol
+
+Integration happens on `main`. `main` must always stay releasable: CI runs
+backend tests, frontend lint+tests, and the macOS compile gate on every push.
+
+- Any task expected to modify backend code, shared files (`index.css`,
+  `backend/main.py`, Tauri config), run tests or dev servers, or take more
+  than a few minutes runs in its own worktree:
+  `git worktree add ../canvenient-<agent>-<slug> -b <agent>/<slug>`.
+- Tiny, disjoint changes (docs, single-file tweaks) may use the main checkout
+  only when no other agent's dirty files overlap.
+- In a shared tree: re-check `git status` before every add/commit; stage
+  explicit paths only (never `git add -A` or `git add .`); commit with a
+  pathspec limited to files your task touched; never touch another agent's
+  dirty or untracked files; on `.git/index.lock` contention wait and retry,
+  never delete the lock.
+- Share the Rust build cache across worktrees with
+  `CARGO_TARGET_DIR="$HOME/.cache/canvenient-cargo-target"`.
+- Task branches integrate by fast-forward into `main` and are deleted after.
+
 ## Safepoints
 
 Maintain Git properly at your own discretion. Make logical safepoint commits as work progresses or when a state is known-good. If a commit or operation involves significant risk or requires attention, elevate and ask the user for explicit approval first. Safepoint commits contain source, required assets, tests, and operational scripts; exclude local databases, build output, credentials, logs, and scratch files unless the user explicitly requests them.
