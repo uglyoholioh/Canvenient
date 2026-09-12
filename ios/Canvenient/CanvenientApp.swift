@@ -15,6 +15,18 @@ struct CanvenientApp: App {
         WindowGroup {
             RootView()
                 .environmentObject(appState)
+                .onOpenURL { url in
+                    // canvenient://<tab> from Live Activity taps and widgets.
+                    switch url.host?.lowercased() {
+                    case "schedule": appState.selectedTab = .schedule
+                    case "tasks": appState.selectedTab = .tasks
+                    case "bus": appState.selectedTab = .bus
+                    case "venues": appState.selectedTab = .venues
+                    case "modules": appState.selectedTab = .modules
+                    default: break
+                    }
+                    appState.refreshLiveActivity()
+                }
                 .task {
                     if ProcessInfo.processInfo.arguments.contains("-previewLiveActivity") {
                         await LiveActivityController.shared.startPreview()

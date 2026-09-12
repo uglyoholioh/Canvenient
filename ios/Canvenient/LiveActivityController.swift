@@ -32,6 +32,8 @@ final class LiveActivityController: ObservableObject {
             return
         }
 
+        let upcoming = nowNext.next
+
         // Live bus estimate for the venue's suggested stop; failures never
         // block the activity.
         var busService: String?
@@ -48,6 +50,8 @@ final class LiveActivityController: ObservableObject {
             classStart: focus.start,
             classEnd: focus.end,
             occurrenceDateKey: focus.occurrenceDateKey,
+            nextModuleCode: upcoming?.moduleCode,
+            nextStartTime: upcoming?.start,
             busService: busService,
             busArrival: busArrival,
             updatedAt: Date()
@@ -109,6 +113,8 @@ final class LiveActivityController: ObservableObject {
             classStart: start,
             classEnd: end,
             occurrenceDateKey: SGTime.dateKey(Date()),
+            nextModuleCode: "CS2103T",
+            nextStartTime: end.addingTimeInterval(2 * 3600),
             busService: nil,
             busArrival: nil,
             updatedAt: Date()

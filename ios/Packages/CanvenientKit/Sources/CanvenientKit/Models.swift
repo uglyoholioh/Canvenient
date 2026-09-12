@@ -189,6 +189,33 @@ public struct BusServiceArrivals: Codable, Equatable {
     public var minutes: [Int?]
 }
 
+// MARK: - Venue finder
+
+public struct VenueAvailabilityResponse: Codable {
+    public var day: String?
+    public var time: String?
+    public var total_matches: Int?
+    public var results: [VenueFreeRoom]
+}
+
+public struct VenueFreeRoom: Codable, Equatable, Identifiable {
+    public var venue_code: String
+    public var room_name: String?
+    public var floor: Int?
+    public var building_prefix: String?
+    public var building_name: String?
+    public var faculty: String?
+    public var latitude: Double?
+    public var longitude: Double?
+    public var distance_metres: Int?
+    public var walking_minutes: Int?
+    public var is_free: Bool?
+    public var free_until: String?
+    public var free_minutes: Int?
+
+    public var id: String { venue_code }
+}
+
 // MARK: - Canvas (Modules tab)
 
 public struct CanvasAssignment: Codable, Identifiable {

@@ -9,15 +9,21 @@ public struct ClassActivityAttributes: ActivityAttributes {
         public var classStart: Date
         public var classEnd: Date
         public var occurrenceDateKey: String
+        /// The class that follows, for an at-a-glance timetable peek.
+        public var nextModuleCode: String?
+        public var nextStartTime: Date?
         public var busService: String?
         public var busArrival: Date?
         public var updatedAt: Date
 
         public init(classStart: Date, classEnd: Date, occurrenceDateKey: String,
+                    nextModuleCode: String?, nextStartTime: Date?,
                     busService: String?, busArrival: Date?, updatedAt: Date) {
             self.classStart = classStart
             self.classEnd = classEnd
             self.occurrenceDateKey = occurrenceDateKey
+            self.nextModuleCode = nextModuleCode
+            self.nextStartTime = nextStartTime
             self.busService = busService
             self.busArrival = busArrival
             self.updatedAt = updatedAt
@@ -61,9 +67,35 @@ public struct DirectionsIntent: AppIntent {
     }
 
     public func perform() async throws -> some IntentResult {
-        if let url = VenueDirectory.directionsURL(for: venue) {
-            openURL(url)
+        if let coordinate = VenueDirectory.coordinates(for: venue) {
+            var components = URLComponents(string: "https://maps.apple.com/")
+            components?.queryItems = [
+                URLQueryItem(name: "daddr", value: "\(coordinate.latitude),\(coordinate.longitude)"),
+                URLQueryItem(name: "dirflg", value: "w"),
+            ]
+            if let url = components?.url { openURL(url) }
+        } else if !venue.isEmpty {
+            // Unknown building code: fall back to a Maps search on the name.
+            var components = URLComponents(string: "https://maps.apple.com/")
+            components?.queryItems = [URLQueryItem(name: "q", value: venue)]
+            if let url = components?.url { openURL(url) }
         }
+        return .result()
+    }
+}
+
+/// Opens the app on the Schedule tab (used by Live Activity buttons).
+public struct OpenScheduleIntent: AppIntent {
+    public static var title: LocalizedStringResource = "Open Schedule"
+    public static var description: IntentDescription? =
+        IntentDescription("Open your timetable in Canvenient.")
+
+    @Environment(\.openURL) private var openURL
+
+    public init() {}
+
+    public func perform() async throws -> some IntentResult {
+        openURL(URL(string: "canvenient://schedule")!)
         return .result()
     }
 }

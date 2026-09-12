@@ -168,6 +168,18 @@ public final class APIClient {
         try await request("/campus-bus/arrivals", query: ["stop": stop])
     }
 
+    // MARK: Venue finder
+
+    public func freeVenues(query: String? = nil, minFreeMinutes: Int? = nil) async throws -> VenueAvailabilityResponse {
+        var queryItems: [String: String] = [
+            "only_free": "true",
+            "sort": "duration",
+        ]
+        if let query, !query.isEmpty { queryItems["query"] = query }
+        if let minFreeMinutes { queryItems["min_free_minutes"] = String(minFreeMinutes) }
+        return try await request("/venues/availability", query: queryItems)
+    }
+
     // MARK: Modules
 
     public func academicModules() async throws -> [AcademicModule] {

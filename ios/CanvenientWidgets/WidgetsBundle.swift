@@ -13,8 +13,10 @@ struct CanvenientWidgetsBundle: WidgetBundle {
 struct ClassLiveActivity: Widget {
     var body: some WidgetConfiguration {
         ActivityConfiguration(for: ClassActivityAttributes.self) { context in
-            // Lock Screen presentation.
+            // Lock Screen presentation. Tapping anywhere outside the buttons
+            // opens the app on the schedule tab.
             LockScreenClassCard(context: context)
+                .widgetURL(URL(string: "canvenient://schedule")!)
                 .activityBackgroundTint(Theme.surfaceWarm)
                 .activitySystemActionForegroundColor(Theme.text)
         } dynamicIsland: { context in
@@ -31,7 +33,7 @@ struct ClassLiveActivity: Widget {
                     }
                 }
                 DynamicIslandExpandedRegion(.trailing) {
-                    PhaseCountdown(context: context)
+                    Text(context.state.classStart.formatted(date: .omitted, time: .shortened))
                         .font(.title3)
                         .bold()
                         .monospacedDigit()
@@ -39,30 +41,41 @@ struct ClassLiveActivity: Widget {
                         .frame(maxWidth: .infinity, alignment: .trailing)
                 }
                 DynamicIslandExpandedRegion(.bottom) {
-                    HStack {
-                        Label(context.attributes.venue, systemImage: "mappin.and.ellipse")
-                            .font(.caption)
-                            .foregroundStyle(Theme.text)
-                            .lineLimit(1)
-                        Spacer()
-                        BusLine(context: context)
-                        DirectionsButton(venue: context.attributes.venue)
+                    VStack(alignment: .leading, spacing: 6) {
+                        HStack {
+                            Label(context.attributes.venue, systemImage: "mappin.and.ellipse")
+                                .font(.caption)
+                                .foregroundStyle(Theme.text)
+                                .lineLimit(1)
+                            Spacer()
+                            BusLine(context: context)
+                            OpenScheduleButton()
+                            DirectionsButton(venue: context.attributes.venue)
+                        }
+                        if let next = context.state.nextModuleCode,
+                           let nextStart = context.state.nextStartTime {
+                            Label("Then \(next) · \(nextStart.formatted(date: .omitted, time: .shortened))",
+                                  systemImage: "arrow.turn.down.right")
+                                .font(.caption2)
+                                .foregroundStyle(Theme.textMuted)
+                        }
                     }
                 }
             } compactLeading: {
                 Image(systemName: "calendar")
                     .foregroundStyle(classColor(context.attributes.colorHex))
             } compactTrailing: {
-                PhaseCountdown(context: context)
+                Text(context.state.classStart.formatted(date: .omitted, time: .shortened))
                     .font(.caption2)
                     .monospacedDigit()
                     .foregroundStyle(Theme.text)
-                    .frame(maxWidth: 44)
+                    .frame(maxWidth: 48)
             } minimal: {
                 Image(systemName: "calendar")
                     .foregroundStyle(classColor(context.attributes.colorHex))
             }
             .keylineTint(classColor(context.attributes.colorHex))
+            .widgetURL(URL(string: "canvenient://schedule")!)
         }
     }
 }
@@ -70,21 +83,7 @@ struct ClassLiveActivity: Widget {
 // MARK: - Shared pieces
 
 private func classColor(_ hex: String?) -> Color {
-    Color(moduleColorHex: hex) ?? .accentColor
-}
-
-/// Countdown that ticks on-device: "Starts in mm:ss" before class,
-/// "Ends in" once it has begun. No network needed for the timer itself.
-struct PhaseCountdown: View {
-    let context: ActivityViewContext<ClassActivityAttributes>
-
-    var body: some View {
-        if Date() < context.state.classStart {
-            Text(timerInterval: Date()...max(context.state.classStart, Date().addingTimeInterval(1)), countsDown: true)
-        } else {
-            Text(timerInterval: Date()...max(context.state.classEnd, Date().addingTimeInterval(1)), countsDown: true)
-        }
-    }
+    Color(moduleColorHex: hex) ?? Color.white.opacity(0.85)
 }
 
 struct BusLine: View {
@@ -96,8 +95,7 @@ struct BusLine: View {
             HStack(spacing: 3) {
                 Image(systemName: "bus.fill")
                 Text(service)
-                Text(timerInterval: Date()...arrival, countsDown: true)
-                    .monospacedDigit()
+                Text(arrival.formatted(date: .omitted, time: .shortened))
             }
             .font(.caption2)
             .foregroundStyle(Theme.warning)
@@ -118,6 +116,21 @@ struct DirectionsButton: View {
         .buttonStyle(.borderedProminent)
         .controlSize(.mini)
         .tint(Theme.accent)
+        .foregroundStyle(Theme.accentInk)
+    }
+}
+
+struct OpenScheduleButton: View {
+    var body: some View {
+        Button(intent: OpenScheduleIntent()) {
+            Label("Schedule", systemImage: "calendar")
+                .font(.caption2)
+                .fontWeight(.semibold)
+                .labelStyle(.titleAndIcon)
+        }
+        .buttonStyle(.bordered)
+        .controlSize(.mini)
+        .tint(Theme.text)
     }
 }
 
@@ -144,23 +157,29 @@ struct LockScreenClassCard: View {
                 }
                 Spacer()
                 VStack(alignment: .trailing, spacing: 2) {
-                    PhaseCountdown(context: context)
-                        .font(.title3)
-                        .bold()
+                    Text("\(context.state.classStart.formatted(date: .omitted, time: .shortened)) – \(context.state.classEnd.formatted(date: .omitted, time: .shortened))")
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
                         .monospacedDigit()
                         .foregroundStyle(Theme.textH)
-                    Text("starts \(context.state.classStart.formatted(date: .omitted, time: .shortened))")
+                    Text(context.attributes.venue)
                         .font(.caption2)
                         .foregroundStyle(Theme.textMuted)
+                        .lineLimit(1)
                 }
             }
             HStack {
-                Label(context.attributes.venue, systemImage: "mappin.and.ellipse")
-                    .font(.caption)
-                    .foregroundStyle(Theme.text)
-                    .lineLimit(1)
+                if let next = context.state.nextModuleCode,
+                   let nextStart = context.state.nextStartTime {
+                    Label("Then \(next) · \(nextStart.formatted(date: .omitted, time: .shortened))",
+                          systemImage: "arrow.turn.down.right")
+                        .font(.caption)
+                        .foregroundStyle(Theme.textMuted)
+                        .lineLimit(1)
+                }
                 Spacer()
                 BusLine(context: context)
+                OpenScheduleButton()
                 DirectionsButton(venue: context.attributes.venue)
             }
         }

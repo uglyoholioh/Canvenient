@@ -20,17 +20,23 @@ struct RootView: View {
     }
 
     private var tabs: some View {
-        TabView {
+        TabView(selection: $appState.selectedTab) {
             ScheduleView()
                 .tabItem { Label("Schedule", systemImage: "calendar") }
+                .tag(AppState.Tab.schedule)
             TasksView()
                 .tabItem { Label("Tasks", systemImage: "checklist") }
+                .tag(AppState.Tab.tasks)
             BusView()
                 .tabItem { Label("Bus", systemImage: "bus") }
-            WheelView()
-                .tabItem { Label("Wheel", systemImage: "disk") }
+                .tag(AppState.Tab.bus)
+            VenuesView()
+                .tabItem { Label("Venues", systemImage: "building.2") }
+                .tag(AppState.Tab.venues)
             ModulesView()
                 .tabItem { Label("Modules", systemImage: "book") }
+                .tag(AppState.Tab.modules)
         }
+        .tint(Theme.accent)
     }
 }

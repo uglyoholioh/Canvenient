@@ -29,10 +29,13 @@ struct SettingsView: View {
                     Button("Refresh next-class activity") {
                         Task { await LiveActivityController.shared.refreshNow() }
                     }
+                    Button("Start demo activity") {
+                        Task { await LiveActivityController.shared.startPreview() }
+                    }
                 } header: {
                     Text("Live Activity")
                 } footer: {
-                    Text("Shows your current or next class with a live countdown, the venue, the next ISB bus and a Get Directions shortcut. Updates when you open the app (countdowns tick on their own).")
+                    Text("Shows your current or next class with the venue, the next ISB bus, a timetable peek and Get Directions / Open Schedule shortcuts. Updates when you open the app.")
                 }
                 Section("Server") {
                     TextField("Server URL", text: $serverURL)

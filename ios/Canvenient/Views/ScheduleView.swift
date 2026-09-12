@@ -8,6 +8,7 @@ struct ScheduleView: View {
     @State private var selectedDay = SGTime.startOfDay(Date())
     @State private var showingImport = false
     @State private var showingSettings = false
+    @State private var showingWheel = false
     @State private var detailItem: ScheduleEngine.Item?
     @State private var clock = Date()
 
@@ -49,7 +50,11 @@ struct ScheduleView: View {
             .toolbarBackground(.visible, for: .navigationBar)
             .toolbarColorScheme(.dark, for: .navigationBar)
             .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
+                ToolbarItemGroup(placement: .topBarLeading) {
+                    Button { showingWheel = true } label: {
+                        Label("Spin the wheel", systemImage: "smallcircle.filled.circle")
+                    }
+                    .tint(Theme.accent)
                     Button { showingImport = true } label: {
                         Label("Import", systemImage: "square.and.arrow.down")
                     }
@@ -63,6 +68,10 @@ struct ScheduleView: View {
                 }
             }
             .sheet(isPresented: $showingImport) { ImportSheet() }
+            .sheet(isPresented: $showingWheel) {
+                WheelView()
+                    .preferredColorScheme(.dark)
+            }
             .sheet(isPresented: $showingSettings) { SettingsView() }
             .sheet(item: $detailItem) { item in
                 ClassDetailSheet(item: item)

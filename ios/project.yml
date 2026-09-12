@@ -41,6 +41,10 @@ targets:
           - fetch
         BGTaskSchedulerPermittedIdentifiers:
           - com.oli.canvenient.ios.refresh
+        CFBundleURLTypes:
+          - CFBundleURLName: com.oli.canvenient.ios
+            CFBundleURLSchemes:
+              - canvenient
         ITSAppUsesNonExemptEncryption: false
   CanvenientWidgets:
     type: app-extension

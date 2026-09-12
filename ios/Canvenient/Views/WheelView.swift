@@ -131,6 +131,7 @@ final class WheelStore: ObservableObject {
 }
 
 struct WheelView: View {
+    @Environment(\.dismiss) private var dismiss
     @StateObject private var store = WheelStore()
     @State private var newOption = ""
 
@@ -141,10 +142,17 @@ struct WheelView: View {
                 spinDisplay
                 optionList
             }
+            .background(Theme.bg)
             .navigationTitle("Wheel")
             .navigationBarTitleDisplayMode(.inline)
-            .tint(Theme.accent)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") { dismiss() }.tint(Theme.accent)
+                }
+            }
         }
+        .tint(Theme.accent)
+        .presentationDetents([.large])
     }
 
     private var picker: some View {
