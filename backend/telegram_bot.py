@@ -3,6 +3,7 @@ import os
 
 import httpx
 
+from ai.assistant import build_brief_text
 from database import db
 from sql_dialect import now_plus_expr, today_expr, today_plus_expr
 from telegram_formatting import HELP_TEXT, format_items
@@ -76,6 +77,8 @@ async def handle_command(user_id: int, text: str) -> str:
     command = parts[0].split("@", 1)[0].lower() if parts else "/help"
     if command in {"/start", "/help"}:
         return HELP_TEXT
+    if command == "/digest":
+        return await build_brief_text(user_id)
     if command == "/tasks":
         return format_items("Pending tasks", await _tasks(user_id), [])
     if command == "/deadlines":

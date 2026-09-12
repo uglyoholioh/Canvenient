@@ -1,14 +1,17 @@
+import asyncio
 import os
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from ai.digest import digest_scheduler
 from backup import backup_database
 from database import db
 from migrations import run_migrations
 from routes.academic_modules import router as academic_modules_router
 from routes.ai import router as ai_router
+from routes.assistant import router as assistant_router
 from routes.auth import router as auth_router
 from routes.campus_bus import router as campus_bus_router
 from routes.canvas import router as canvas_router
@@ -45,7 +48,13 @@ async def lifespan(app: FastAPI):
     applied = await run_migrations()
     if applied:
         log.info("Applied migrations: %s", ", ".join(applied))
+    digest_task = asyncio.create_task(digest_scheduler(), name="telegram-digest")
     yield
+    digest_task.cancel()
+    try:
+        await digest_task
+    except asyncio.CancelledError:
+        pass
     await db.disconnect()
 
 
@@ -85,6 +94,7 @@ app.include_router(schedule_router)
 app.include_router(campus_bus_router)
 app.include_router(events_router)
 app.include_router(ai_router)
+app.include_router(assistant_router)
 app.include_router(communities_router)
 app.include_router(groups_router)
 app.include_router(invites_router)

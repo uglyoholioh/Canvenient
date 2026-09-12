@@ -23,6 +23,14 @@ MIGRATIONS: list[tuple[str, list[str]]] = [
             "ALTER TABLE canvas_sync_state ADD COLUMN last_sync_error_at TIMESTAMPTZ",
         ],
     ),
+    (
+        "0002_telegram_daily_digest",
+        [
+            "ALTER TABLE telegram_links ADD COLUMN digest_time TEXT NOT NULL DEFAULT '08:00'",
+            "ALTER TABLE telegram_links ADD COLUMN digest_enabled BOOLEAN NOT NULL DEFAULT TRUE",
+            "ALTER TABLE telegram_links ADD COLUMN last_digest_date DATE",
+        ],
+    ),
 ]
 
 

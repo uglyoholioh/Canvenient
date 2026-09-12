@@ -423,6 +423,15 @@ SCHEMA_STATEMENTS = [
     )
     """,
     """
+    CREATE TABLE IF NOT EXISTS assistant_cache (
+        user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        key TEXT NOT NULL,
+        payload JSONB NOT NULL,
+        synced_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        PRIMARY KEY (user_id, key)
+    )
+    """,
+    """
     CREATE TABLE IF NOT EXISTS native_api_cache (
         cache_key TEXT PRIMARY KEY,
         data JSONB NOT NULL,

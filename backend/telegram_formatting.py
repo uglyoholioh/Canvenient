@@ -5,6 +5,7 @@ HELP_TEXT = """Canvenient commands:
 /today - today's schedule and tasks
 /week - the next 7 days
 /deadlines - upcoming deadlines
+/digest - your daily briefing
 /tasks - pending tasks
 /done <task id> - complete a task
 /help - show this message"""
