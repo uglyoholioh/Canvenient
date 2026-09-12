@@ -162,6 +162,14 @@ public struct AcademicModule: Codable, Equatable, Identifiable {
     public var name: String?
     public var color: String?
     public var is_selected: Bool?
+
+    public init(id: Int, module_code: String, name: String?, color: String?, is_selected: Bool?) {
+        self.id = id
+        self.module_code = module_code
+        self.name = name
+        self.color = color
+        self.is_selected = is_selected
+    }
 }
 
 // MARK: - Campus bus
@@ -220,8 +228,11 @@ public struct VenueFreeRoom: Codable, Equatable, Identifiable {
 
 public struct CanvasAssignment: Codable, Identifiable {
     public var id: Int
-    public var name: String?
+    public var title: String?
     public var due_at: String?
-    public var html_url: String?
+    public var external_url: String?
     public var course_id: Int?
+    public var course_code: String?
+    public var is_priority: Bool?
+    public var has_submitted: Bool?
 }

@@ -47,8 +47,10 @@ public struct ClassActivityAttributes: ActivityAttributes {
 
 /// Interactive "Get Directions" button inside the Live Activity. Runs in the
 /// widget extension process and resolves the venue from the bundled centroid
-/// table, so it needs no network and no app launch.
-public struct DirectionsIntent: AppIntent {
+/// table, so it needs no network and no app launch. ForegroundContinuable
+/// lets iOS prompt for unlock and continue when the phone is locked —
+/// without it, taps from the Lock Screen are silently dropped.
+public struct DirectionsIntent: AppIntent, ForegroundContinuableIntent {
     public static var title: LocalizedStringResource = "Get Directions"
     public static var description: IntentDescription? =
         IntentDescription("Open Apple Maps directions to the class venue area.")
@@ -85,7 +87,7 @@ public struct DirectionsIntent: AppIntent {
 }
 
 /// Opens the app on the Schedule tab (used by Live Activity buttons).
-public struct OpenScheduleIntent: AppIntent {
+public struct OpenScheduleIntent: AppIntent, ForegroundContinuableIntent {
     public static var title: LocalizedStringResource = "Open Schedule"
     public static var description: IntentDescription? =
         IntentDescription("Open your timetable in Canvenient.")

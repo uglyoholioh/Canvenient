@@ -11,7 +11,7 @@ settings:
   base:
     SWIFT_VERSION: "5.0"
     CODE_SIGN_STYLE: Automatic
-    DEVELOPMENT_TEAM: ""
+    DEVELOPMENT_TEAM: 7AL4TS8C25
 targets:
   Canvenient:
     type: application

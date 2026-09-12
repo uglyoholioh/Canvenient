@@ -51,10 +51,6 @@ struct ScheduleView: View {
             .toolbarColorScheme(.dark, for: .navigationBar)
             .toolbar {
                 ToolbarItemGroup(placement: .topBarLeading) {
-                    Button { showingWheel = true } label: {
-                        Label("Spin the wheel", systemImage: "smallcircle.filled.circle")
-                    }
-                    .tint(Theme.accent)
                     Button { showingImport = true } label: {
                         Label("Import", systemImage: "square.and.arrow.down")
                     }
@@ -161,11 +157,11 @@ struct ScheduleCard: View {
 
     var body: some View {
         HStack(spacing: 0) {
-            RoundedRectangle(cornerRadius: 1.5)
-                .fill(isCurrent ? Theme.accentGold : moduleColor)
-                .frame(width: 3, height: 54)
             VStack(alignment: .leading, spacing: 4) {
                 HStack(spacing: 6) {
+                    Circle()
+                        .fill(isCurrent ? Theme.accentGold : moduleColor)
+                        .frame(width: 8, height: 8)
                     Text(item.title)
                         .font(.system(size: 15, weight: .semibold))
                         .foregroundStyle(Theme.textH)
@@ -235,8 +231,7 @@ struct ScheduleCard: View {
     }
 
     private func timeString(_ date: Date) -> String {
-        let components = SGTime.calendar.dateComponents([.hour, .minute], from: date)
-        return String(format: "%02d:%02d", components.hour ?? 0, components.minute ?? 0)
+        date.formatted(date: .omitted, time: .shortened)
     }
 }
 
@@ -338,8 +333,7 @@ struct ClassDetailSheet: View {
     }
 
     private func timeString(_ date: Date) -> String {
-        let components = SGTime.calendar.dateComponents([.hour, .minute], from: date)
-        return String(format: "%02d:%02d", components.hour ?? 0, components.minute ?? 0)
+        date.formatted(date: .omitted, time: .shortened)
     }
 }
 

@@ -4,14 +4,14 @@ import CanvenientKit
 struct ModulesView: View {
     @EnvironmentObject private var appState: AppState
 
-    @State private var assignments: [Int: [CanvasAssignment]] = [:]
-    @State private var loadingModule: Int?
     @State private var errorMessage: String?
 
     var body: some View {
         NavigationStack {
             Group {
-                if appState.modules.isEmpty {
+                if !appState.modulesLoaded {
+                    emptyState
+                } else if appState.modules.isEmpty {
                     emptyState
                 } else {
                     moduleList
@@ -21,7 +21,7 @@ struct ModulesView: View {
             .tint(Theme.accent)
             .navigationBarTitleDisplayMode(.inline)
             .task { await loadModules() }
-            .refreshable { await loadModules() }
+            .refreshable { await appState.refreshModules(force: true) }
         }
     }
 
@@ -34,8 +34,8 @@ struct ModulesView: View {
                 ForEach(appState.modules) { module in
                     NavigationLink {
                         ModuleAssignmentsView(module: module,
-                                              assignments: assignments[module.id] ?? [],
-                                              loading: loadingModule == module.id)
+                                              assignments: appState.assignments[module.module_code] ?? [],
+                                              loading: !appState.modulesLoaded)
                     } label: {
                         HStack(spacing: 12) {
                             Circle()
@@ -49,9 +49,9 @@ struct ModulesView: View {
                                 }
                             }
                             Spacer()
-                            if loadingModule == module.id {
+                            if !appState.modulesLoaded {
                                 ProgressView()
-                            } else if let count = assignments[module.id]?.count {
+                            } else if let count = appState.assignments[module.module_code]?.count {
                                 Text("\(count)")
                                     .font(.caption)
                                     .foregroundStyle(.secondary)
@@ -62,36 +62,34 @@ struct ModulesView: View {
             } header: {
                 Text("Courses")
             } footer: {
-                Text("Sourced from Canvas through your Canvenient backend. Tap a course for its upcoming assignments.")
+                Text(appState.modulesFromCanvas
+                     ? "Sourced from Canvas through your Canvenient backend. Tap a course for its upcoming assignments."
+                     : "Taken from your timetable. Add your Canvas token in Settings to pull in assignments, announcements and grades.")
             }
         }
         .themedForm()
     }
 
     private var emptyState: some View {
-        VStack(spacing: 12) {
-            Spacer()
-            Image(systemName: "book.closed")
-                .font(.system(size: 44))
-                .foregroundStyle(.secondary)
-            Text(appState.modules.isEmpty && errorMessage == nil ? "Loading modules…" : "No modules yet — Canvas courses sync from the desktop app (Settings › Canvas token).")
-                .foregroundStyle(Theme.textMuted)
+        ContentUnavailableView {
+            Label(!appState.modulesLoaded && errorMessage == nil ? "Loading modules…" : "No modules yet", systemImage: "book.closed")
+        } description: {
+            if !(!appState.modulesLoaded && errorMessage == nil) {
+                Text("Canvas courses sync from the desktop app (Settings › Canvas token).")
+            }
+        } actions: {
             if errorMessage != nil {
                 Button("Retry") { Task { await loadModules() } }
                     .buttonStyle(.borderedProminent)
+            } else if !appState.modulesLoaded && errorMessage == nil {
+                ProgressView()
             }
-            Spacer()
         }
-        .frame(maxWidth: .infinity)
     }
 
     private func loadModules() async {
         errorMessage = nil
-        do {
-            appState.modules = try await appState.api.academicModules()
-        } catch {
-            errorMessage = error.localizedDescription
-        }
+        await appState.refreshModules()
     }
 }
 
@@ -109,7 +107,7 @@ struct ModuleAssignmentsView: View {
             } else {
                 ForEach(assignments) { assignment in
                     VStack(alignment: .leading, spacing: 4) {
-                        Text(assignment.name ?? "Assignment")
+                        Text(assignment.title ?? "Assignment")
                             .fontWeight(.medium)
                         if let due = SGTime.parseDateTime(assignment.due_at) {
                             Label(due < Date() ? "Closed" : due.formatted(date: .abbreviated, time: .shortened),

@@ -12,17 +12,20 @@ final class AppState: ObservableObject {
     }
 
     enum Tab: Hashable {
-        case dashboard, schedule, tasks, bus, venues, modules, wheel
+        case home, schedule, tasks, modules, campus
     }
 
     @Published var session: Session = .unknown
-    @Published var selectedTab: Tab = .dashboard
+    @Published var selectedTab: Tab = .home
     @Published var user: UserPublic?
     @Published var schedule = ScheduleResponse.empty
     @Published var scheduleLoaded = false
     @Published var tasks: [TaskOut] = []
     @Published var tasksLoaded = false
     @Published var modules: [AcademicModule] = []
+    @Published var modulesLoaded = false
+    @Published var modulesFromCanvas = false
+    @Published var assignments: [String: [CanvasAssignment]] = [:]
     @Published var academicWeek: AcademicCalendar.WeekInfo?
 
     @AppStorage("serverURL") var serverURL: String = "https://olisdesktop.tail7ecaad.ts.net"
@@ -102,6 +105,9 @@ final class AppState: ObservableObject {
         scheduleLoaded = false
         tasks = []
         tasksLoaded = false
+        modules = []
+        modulesLoaded = false
+        assignments = [:]
         session = .loggedOut
         Task { await LiveActivityController.shared.endAll() }
     }
@@ -110,9 +116,56 @@ final class AppState: ObservableObject {
 
     func refreshAll() async {
         academicWeek = AcademicCalendar.week(for: Date())
-        async let scheduleTask: Void = refreshSchedule()
+        // Modules fall back to timetable courses, so load those first.
+        await refreshSchedule()
         async let tasksRefresh: Void = refreshTasks()
-        _ = await (scheduleTask, tasksRefresh)
+        async let modulesRefresh: Void = refreshModules(force: true)
+        _ = await (tasksRefresh, modulesRefresh)
+    }
+
+    func refreshModules(force: Bool = false) async {
+        if modulesLoaded && !force { return }
+        do {
+            let canvasModules = try await api.academicModules()
+            if canvasModules.isEmpty {
+                // No Canvas courses (no token, or none selected): still show
+                // the courses the timetable knows about.
+                modules = Self.timetableModules(from: schedule)
+                modulesFromCanvas = false
+            } else {
+                modules = canvasModules
+                modulesFromCanvas = true
+            }
+            if let allAssignments = try? await api.canvasAssignments() {
+                assignments = Dictionary(grouping: allAssignments, by: { $0.course_code ?? "" })
+            }
+            modulesLoaded = true
+        } catch {
+            modulesLoaded = modulesLoaded // Keep state trigger
+        }
+    }
+
+    /// Derive courses from timetable rows when Canvas offers nothing.
+    static func timetableModules(from schedule: ScheduleResponse) -> [AcademicModule] {
+        var seen: [String: AcademicModule] = [:]
+        for klass in schedule.classes {
+            guard seen[klass.module_code] == nil else { continue }
+            seen[klass.module_code] = AcademicModule(
+                id: -1 - seen.count,
+                module_code: klass.module_code,
+                name: klass.module_name,
+                color: klass.module_color,
+                is_selected: true
+            )
+        }
+        return Array(seen.values)
+    }
+
+    func updateCanvasToken(_ token: String) async throws {
+        _ = try await api.updateProfile(canvasToken: token.isEmpty ? nil : token)
+        modulesLoaded = false
+        assignments = [:]
+        await refreshModules(force: true)
     }
 
     func refreshSchedule() async {

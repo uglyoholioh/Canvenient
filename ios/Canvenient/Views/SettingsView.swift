@@ -13,6 +13,9 @@ struct SettingsView: View {
     @AppStorage("canvenient.isb.stop") private var defaultStop = "COM3"
 
     @State private var serverURL = ""
+    @State private var canvasToken = ""
+    @State private var savingCanvasToken = false
+    @State private var canvasTokenSaved = false
     @State private var activitiesAllowed = ActivityAuthorizationInfo().areActivitiesEnabled
     @State private var activityCount = 0
 
@@ -54,6 +57,30 @@ struct SettingsView: View {
                     Text("Shows your current or next class with the venue, the next ISB bus, a timetable peek and Get Directions / Open Schedule shortcuts. It updates when you open the app.")
                 }
 
+                Section {
+                    SecureField("Paste Canvas API token", text: $canvasToken)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                    Button {
+                        saveCanvasToken()
+                    } label: {
+                        HStack {
+                            Spacer()
+                            if savingCanvasToken {
+                                ProgressView()
+                            } else {
+                                Text(canvasTokenSaved ? "Saved ✓" : "Connect Canvas")
+                            }
+                            Spacer()
+                        }
+                    }
+                    .disabled(savingCanvasToken || canvasToken.trimmingCharacters(in: .whitespaces).isEmpty)
+                } header: {
+                    Text("Canvas")
+                } footer: {
+                    Text("Links the Modules tab to Canvas LMS for assignments and announcements. Create a token in Canvas → Account → Settings → Approved Integrations → New Access Token.")
+                }
+
                 Section("Account") {
                     LabeledContent("Signed in", value: appState.user?.email ?? "—")
                     Button("Refresh data") {
@@ -93,6 +120,7 @@ struct SettingsView: View {
             .onAppear {
                 serverURL = appState.serverURL
                 activityCount = Activity<ClassActivityAttributes>.activities.count
+                canvasTokenSaved = appState.user?.canvas_token_set ?? false
             }
         }
     }
@@ -114,6 +142,20 @@ struct SettingsView: View {
     private func swatches(_ mode: ThemeMode) -> [Color] {
         guard let palette = Theme.palettes[mode] else { return [] }
         return [palette.bg, palette.surfaceWarm, palette.accent, palette.textH]
+    }
+
+    private func saveCanvasToken() {
+        savingCanvasToken = true
+        Task {
+            defer { savingCanvasToken = false }
+            do {
+                try await appState.updateCanvasToken(canvasToken.trimmingCharacters(in: .whitespaces))
+                canvasTokenSaved = true
+                canvasToken = ""
+            } catch {
+                canvasTokenSaved = false
+            }
+        }
     }
 
     private var appVersion: String {

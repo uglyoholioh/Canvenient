@@ -20,8 +20,7 @@ struct CanvenientApp: App {
                     switch url.host?.lowercased() {
                     case "schedule": appState.selectedTab = .schedule
                     case "tasks": appState.selectedTab = .tasks
-                    case "bus": appState.selectedTab = .bus
-                    case "venues": appState.selectedTab = .venues
+                    case "bus", "venues", "campus": appState.selectedTab = .campus
                     case "modules": appState.selectedTab = .modules
                     default: break
                     }

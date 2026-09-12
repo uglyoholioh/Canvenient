@@ -117,10 +117,7 @@ struct TaskRow: View {
                     if let moduleCode = task.module_code {
                         Text(moduleCode)
                             .font(.caption2)
-                            .padding(.horizontal, 5)
-                            .padding(.vertical, 1)
-                            .background(moduleColor, in: Capsule())
-                            .foregroundStyle(ModulePalette.ink(for: task.module_color))
+                            .foregroundStyle(.secondary)
                     }
                     if task.group_id != nil {
                         Image(systemName: "person.2")

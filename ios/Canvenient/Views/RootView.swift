@@ -24,7 +24,7 @@ struct RootView: View {
 
     private var tabs: some View {
         TabView(selection: $appState.selectedTab) {
-            Tab("Dashboard", systemImage: "square.grid.2x2", value: .dashboard) {
+            Tab("Home", systemImage: "square.grid.2x2", value: .home) {
                 DashboardView()
             }
             Tab("Schedule", systemImage: "calendar", value: .schedule) {
@@ -33,19 +33,12 @@ struct RootView: View {
             Tab("Tasks", systemImage: "checklist", value: .tasks) {
                 TasksView()
             }
-            Tab("Bus", systemImage: "bus", value: .bus) {
-                BusView()
-            }
-            Tab("Venues", systemImage: "building.2", value: .venues) {
-                VenuesView()
-            }
             Tab("Modules", systemImage: "book", value: .modules) {
                 ModulesView()
             }
-            Tab("Wheel", systemImage: "smallcircle.filled.circle", value: .wheel) {
-                WheelView()
+            Tab("Campus", systemImage: "building.2", value: .campus) {
+                CampusView()
             }
-            .tabPlacement(.sidebarOnly)
         }
         .tabViewStyle(.sidebarAdaptable)
         .tint(Theme.accent)

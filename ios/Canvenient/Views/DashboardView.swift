@@ -35,6 +35,7 @@ struct DashboardView: View {
             .task { await refresh() }
             .onReceive(timer) { clock = $0; Task { await refreshBus() } }
             .refreshable { await refresh() }
+            .onChange(of: selectedStop) { _, _ in Task { await refreshBus() } }
         }
     }
 
@@ -61,20 +62,13 @@ struct DashboardView: View {
                         Text(focus.title)
                             .font(.system(size: 17, weight: .semibold))
                             .foregroundStyle(Theme.textH)
-                        if let classNo = focus.classNo {
-                            Text(classNo)
-                                .font(.system(size: 10, weight: .semibold))
-                                .padding(.horizontal, 5)
-                                .padding(.vertical, 2)
-                                .background(Theme.surfaceHover, in: RoundedRectangle(cornerRadius: 4))
-                                .foregroundStyle(Theme.text)
-                        }
                         Spacer()
                         Text("\(timeString(focus.start))–\(timeString(focus.end))")
                             .font(.system(size: 13, weight: .medium).monospacedDigit())
                             .foregroundStyle(Theme.text)
                     }
-                    Label("\(focus.subtitle) · \(focus.venue)", systemImage: "mappin")
+                    let classPart = focus.classNo.map { " · \($0)" } ?? ""
+                    Label("\(focus.subtitle)\(classPart) · \(focus.venue)", systemImage: "mappin")
                         .font(.caption)
                         .foregroundStyle(Theme.textMuted)
                     if focus.start > clock {
@@ -163,23 +157,26 @@ struct DashboardView: View {
                         }
                     }
                     ForEach(Array(pendingTasks.prefix(3))) { task in
-                        HStack(spacing: 8) {
+                        HStack(alignment: .top, spacing: 8) {
                             Circle()
                                 .fill(task.priority_manual == "urgent" ? Theme.error
                                       : task.priority_manual == "high" ? Theme.warning
                                       : Theme.textMuted)
                                 .frame(width: 7, height: 7)
-                            Text(task.title)
-                                .font(.callout)
-                                .foregroundStyle(Theme.text)
-                                .lineLimit(1)
-                            Spacer()
-                            if let due = task.effectiveDueAt {
-                                Text(due < Date() ? "Overdue"
-                                     : due.formatted(date: .omitted, time: .shortened))
-                                    .font(.caption.monospacedDigit())
-                                    .foregroundStyle(due < Date() ? Theme.error : Theme.textMuted)
+                                .padding(.top, 7)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(task.title)
+                                    .font(.callout)
+                                    .foregroundStyle(Theme.text)
+                                    .lineLimit(1)
+                                if let due = task.effectiveDueAt {
+                                    Text(due < Date() ? "Overdue"
+                                         : due.formatted(date: .omitted, time: .shortened))
+                                        .font(.caption.monospacedDigit())
+                                        .foregroundStyle(due < Date() ? Theme.error : Theme.textMuted)
+                                }
                             }
+                            Spacer()
                         }
                     }
                 }
@@ -224,7 +221,7 @@ struct DashboardView: View {
                 }
             }
         } footer: {
-            Button("Open bus times") { appState.selectedTab = .bus }
+            Button("Open bus times") { appState.selectedTab = .campus }
                 .font(.caption)
         }
     }
@@ -237,7 +234,7 @@ struct DashboardView: View {
                 .font(.callout)
                 .foregroundStyle(Theme.textMuted)
         } footer: {
-            Button("Open venue finder") { appState.selectedTab = .venues }
+            Button("Open venue finder") { appState.selectedTab = .campus }
                 .font(.caption)
         }
     }

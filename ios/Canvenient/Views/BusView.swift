@@ -30,62 +30,63 @@ struct BusView: View {
     }
 
     var body: some View {
-        NavigationStack {
-            List {
-                if !favourites.isEmpty {
-                    Section("Favourites") {
-                        ForEach(favourites, id: \.self) { stopId in
-                            favouriteRow(stopId)
-                        }
+        List {
+            if !favourites.isEmpty {
+                Section("Favourites") {
+                    ForEach(favourites, id: \.self) { stopId in
+                        favouriteRow(stopId)
                     }
                 }
-                Section("Arrivals — \(selectedStop)") {
-                    arrivalsSection
-                }
-                if !favourites.isEmpty {
-                    Section {
-                        Button(role: .destructive) {
-                            favouritesRaw = ""
-                        } label: {
-                            Text("Clear favourites")
-                        }
+            }
+            Section("Arrivals — \(selectedStop)") {
+                arrivalsSection
+            }
+            if !favourites.isEmpty {
+                Section {
+                    Button(role: .destructive) {
+                        favouritesRaw = ""
+                    } label: {
+                        Text("Clear favourites")
                     }
                 }
-                Section("All stops") {
-                    ForEach(filteredStops) { stop in
-                        Button {
-                            selectedStop = stop.id
-                        } label: {
-                            HStack {
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text(stop.short_name ?? stop.id)
-                                        .fontWeight(stop.id == selectedStop ? .semibold : .regular)
-                                    if let name = stop.name,
-                                       name != stop.short_name, name != stop.id {
-                                        Text(name).font(.caption).foregroundStyle(Theme.textMuted)
-                                    }
+            }
+            Section("All stops") {
+                ForEach(filteredStops) { stop in
+                    Button {
+                        selectedStop = stop.id
+                    } label: {
+                        HStack {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(stop.short_name ?? stop.id)
+                                    .fontWeight(stop.id == selectedStop ? .semibold : .regular)
+                                if let name = stop.name,
+                                   name != stop.short_name, name != stop.id {
+                                    Text(name).font(.caption).foregroundStyle(Theme.textMuted)
                                 }
-                                Spacer()
-                                if stop.id == selectedStop {
-                                    Image(systemName: "checkmark").foregroundStyle(Color.accentColor)
-                                }
+                            }
+                            Spacer()
+                            if stop.id == selectedStop {
+                                Image(systemName: "checkmark").foregroundStyle(Color.accentColor)
                             }
                         }
                     }
                 }
             }
-            .themedForm()
-            .searchable(text: $searchText, prompt: "Search stops")
-            .navigationTitle("Bus")
-            .tint(Theme.accent)
-            .navigationBarTitleDisplayMode(.inline)
-            .refreshable { await loadArrivals() }
-            .task {
-                await loadStops()
-                startAutoRefresh()
-            }
-            .onDisappear { refreshTimer?.invalidate() }
         }
+        .themedForm()
+        .searchable(text: $searchText, prompt: "Search stops")
+        .navigationTitle("Bus")
+        .tint(Theme.accent)
+        .navigationBarTitleDisplayMode(.inline)
+        .refreshable { await loadArrivals() }
+        .task {
+            await loadStops()
+            startAutoRefresh()
+        }
+        .onChange(of: selectedStop) { _, _ in
+            Task { await loadArrivals() }
+        }
+        .onDisappear { refreshTimer?.invalidate() }
     }
 
     private func favouriteRow(_ stopId: String) -> some View {

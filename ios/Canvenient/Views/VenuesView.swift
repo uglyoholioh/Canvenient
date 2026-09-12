@@ -15,26 +15,24 @@ struct VenuesView: View {
     @State private var minFreeMinutes = 0
 
     var body: some View {
-        NavigationStack {
-            Group {
-                if loading && rooms.isEmpty {
-                    ProgressView("Scanning venues…")
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                } else if let errorMessage {
-                    errorView(errorMessage)
-                } else {
-                    venueList
-                }
+        Group {
+            if loading && rooms.isEmpty {
+                ProgressView("Scanning venues…")
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else if let errorMessage {
+                errorView(errorMessage)
+            } else {
+                venueList
             }
-            .background(Theme.bg)
-            .navigationTitle("Venues")
-            .navigationBarTitleDisplayMode(.inline)
-            .tint(Theme.accent)
-            .searchable(text: $searchText, prompt: "Room, code or building")
-            .onSubmit(of: .search) { Task { await load() } }
-            .refreshable { await load() }
-            .task { await load() }
         }
+        .background(Theme.bg)
+        .navigationTitle("Venues")
+        .navigationBarTitleDisplayMode(.inline)
+        .tint(Theme.accent)
+        .searchable(text: $searchText, prompt: "Room, code or building")
+        .onSubmit(of: .search) { Task { await load() } }
+        .refreshable { await load() }
+        .task { await load() }
     }
 
     private var venueList: some View {

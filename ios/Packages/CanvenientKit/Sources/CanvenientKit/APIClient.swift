@@ -117,6 +117,12 @@ public final class APIClient {
         try await request("/auth/me")
     }
 
+    public func updateProfile(canvasToken: String?) async throws -> UserPublic {
+        var body: [String: Any] = [:]
+        if let canvasToken { body["canvas_token"] = canvasToken }
+        return try await request("/auth/profile", method: "PATCH", body: body)
+    }
+
     /// Request whose response body is ignored (PATCH/DELETE acknowledgements).
     public func discardResponse(_ path: String, method: String, body: [String: Any]? = nil) async throws {
         _ = try await raw(path, method: method, body: body)
@@ -186,9 +192,7 @@ public final class APIClient {
         try await request("/academic-modules")
     }
 
-    public func canvasAssignments(courseId: Int?) async throws -> [CanvasAssignment] {
-        var query: [String: String] = [:]
-        if let courseId { query["course_id"] = String(courseId) }
-        return try await request("/canvas/assignments", query: query)
+    public func canvasAssignments() async throws -> [CanvasAssignment] {
+        return try await request("/canvas/assignments")
     }
 }
