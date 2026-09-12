@@ -1,7 +1,17 @@
 """Pure-logic tests for the assistant layer (no DB, no asyncio mark)."""
 
+import json
+
+import pytest
+
 from ai.assistant import _normalize_parse, _sanitize_chat
-from ai.provider import _extract_json, _strip_code_fences
+from ai.provider import (
+    AIUnavailable,
+    _extract_json,
+    _extract_zai_json,
+    _strip_code_fences,
+    _zai_payload,
+)
 
 # --- provider helpers -------------------------------------------------------
 
@@ -17,6 +27,37 @@ def test_extract_json_parses_gemini_shape():
             return {"candidates": [{"content": {"parts": [{"text": '{"reply": "hi"}'}]}}]}
 
     assert _extract_json(FakeResponse()) == {"reply": "hi"}
+
+
+def test_zai_payload_disables_thinking_and_requests_json():
+    payload = _zai_payload("system prompt", "user prompt", {"type": "OBJECT", "properties": {}})
+    assert payload["model"] and payload["messages"][0]["role"] == "system"
+    assert payload["thinking"] == {"type": "disabled"}
+    assert payload["response_format"] == {"type": "json_object"}
+    assert '"type": "OBJECT"' in payload["messages"][1]["content"]
+
+
+def test_extract_zai_json_parses_chat_completions_shape():
+    class FakeResponse:
+        def json(self):
+            return {"choices": [{"message": {"content": '{"reply": "hi"}'}}]}
+
+    assert _extract_zai_json(FakeResponse()) == {"reply": "hi"}
+
+
+def test_extract_zai_json_rejects_empty_and_non_object():
+    class EmptyResponse:
+        def json(self):
+            return {"choices": [{"message": {"content": ""}}]}
+
+    class ArrayResponse:
+        def json(self):
+            return {"choices": [{"message": {"content": "[1, 2]"}}]}
+
+    with pytest.raises(AIUnavailable):
+        _extract_zai_json(EmptyResponse())
+    with pytest.raises(AIUnavailable):
+        _extract_zai_json(ArrayResponse())
 
 
 # --- parse normalisation (pure) ---------------------------------------------

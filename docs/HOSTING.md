@@ -25,11 +25,18 @@ Transport Security is satisfied with no exceptions.
 | Scheduled task `CanvenientBackend` | Starts the launcher at system boot as SYSTEM |
 
 Optional launcher env (assistant features, added 2026-09-13): `set
-MODEL_API_KEY=<Gemini API key>` enables `/assistant/*` AI replies (without it
-they answer 503 or degrade to deterministic facts); `set AI_MODEL=` overrides
-the default `gemini-2.5-flash`; `set TELEGRAM_BOT_TOKEN=<bot token>` lets the
-in-process digest scheduler push the daily Telegram digest at each linked
-user's `digest_time`. Add to `start-backend.cmd`, then restart the task.
+MODEL_API_KEY=<key>` enables `/assistant/*` AI replies (without it they
+answer 503 or degrade to deterministic facts); `set AI_PROVIDER=` selects the
+provider shape — `gemini` (default, generativelanguage.googleapis.com) or
+`zai` (OpenAI-compatible chat completions, base URL `AI_BASE_URL` defaults to
+`https://api.z.ai/api/paas/v4`, model default `glm-4.5-flash` with thinking
+disabled and `response_format: json_object`). `set AI_MODEL=` overrides the
+per-provider default model. PDF attachments ("Ask about this" on files) are
+Gemini-only; on `zai` they answer 503 with a clear message.
+`set TELEGRAM_BOT_TOKEN=<bot token>` lets the in-process digest scheduler push
+the daily Telegram digest at each linked user's `digest_time`. Add to
+`start-backend.cmd`, then restart the task. Never commit key values; they
+live only in the server launcher.
 
 SSH access is key-only (`oli`, OpenSSH Server, key installed in
 `administrators_authorized_keys`). The backend binds `127.0.0.1` inside the
