@@ -66,12 +66,13 @@ async function fetchWithDesktopStartupRetry(url, options) {
   throw lastError;
 }
 
-function buildUrl(path) {
+async function buildUrl(path) {
   if (path.startsWith("http://") || path.startsWith("https://")) {
     return path;
   }
   const cleanPath = path.startsWith("/") ? path : `/${path}`;
-  return API_BASE_URL ? `${API_BASE_URL}${cleanPath}` : cleanPath;
+  const base = await getApiBaseUrl();
+  return base ? `${base}${cleanPath}` : cleanPath;
 }
 
 // In-flight request deduplication for concurrent GET requests
@@ -122,7 +123,7 @@ async function executeApiRequest(path, { method = "GET", body, token } = {}) {
     headers.Authorization = `Bearer ${token}`;
   }
 
-  const url = buildUrl(path);
+  const url = await buildUrl(path);
   let response;
   try {
     response = await fetchWithDesktopStartupRetry(url, {
@@ -475,7 +476,7 @@ function filenameFromDisposition(header) {
 }
 
 export async function fetchCanvasFileContent(token, fileId) {
-  const url = buildUrl(`/canvas/files/${fileId}/content`);
+  const url = await buildUrl(`/canvas/files/${fileId}/content`);
   let response;
   try {
     response = await fetchWithDesktopStartupRetry(url, { headers: { Authorization: `Bearer ${token}` } });
@@ -593,7 +594,7 @@ export async function importIcs(token, file, fileName = "timetable.ics") {
   const formData = new FormData();
   const upload = file instanceof Blob ? file : new Blob([file], { type: "text/calendar" });
   formData.append("file", upload, file.name || fileName);
-  const url = buildUrl("/schedule/import/ics");
+  const url = await buildUrl("/schedule/import/ics");
   let response;
   try {
     response = await fetch(url, {
@@ -673,7 +674,7 @@ export async function uploadClassFile(token, classId, occurrenceDate, file, isRe
   const formData = new FormData();
   formData.append("file", file, file.name || "attachment");
   const path = `/schedule/classes/${classId}/files?occurrence_date=${encodeURIComponent(occurrenceDate)}${isRecurring ? "&is_recurring=true" : ""}`;
-  const url = buildUrl(path);
+  const url = await buildUrl(path);
   let response;
   try {
     response = await fetchWithDesktopStartupRetry(url, {
@@ -692,7 +693,7 @@ export async function uploadClassFile(token, classId, occurrenceDate, file, isRe
 }
 
 export async function downloadClassFile(token, fileId) {
-  const url = buildUrl(`/schedule/class-files/${fileId}`);
+  const url = await buildUrl(`/schedule/class-files/${fileId}`);
   let response;
   try {
     response = await fetchWithDesktopStartupRetry(url, { headers: { Authorization: `Bearer ${token}` } });

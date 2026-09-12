@@ -240,6 +240,25 @@ fn persist_window_state(state: &SavedWindowState, window: &tauri::Window) {
     }
 }
 
+// Remote-API mode: when <app data dir>/use-remote-api exists and its first
+// non-empty line is an HTTP(S) URL, the frontend talks to that hosted server
+// instead of the bundled localhost sidecar, and the sidecar is not started.
+fn read_remote_api_base(app: &tauri::AppHandle) -> Option<String> {
+    let data_dir = app.path_resolver().app_data_dir()?;
+    let marker = fs::read_to_string(data_dir.join("use-remote-api")).ok()?;
+    let url = marker.lines().map(str::trim).find(|line| !line.is_empty())?;
+    if url.starts_with("http://") || url.starts_with("https://") {
+        Some(url.trim_end_matches('/').to_string())
+    } else {
+        None
+    }
+}
+
+#[tauri::command]
+fn remote_api_base_url(app: tauri::AppHandle) -> Option<String> {
+    read_remote_api_base(&app)
+}
+
 fn main() {
     let startup_calendar_files = calendar_paths(std::env::args_os().skip(1).map(PathBuf::from));
 
@@ -248,7 +267,11 @@ fn main() {
         .enable_macos_default_menu(false)
         .manage(BackendProcess(Mutex::new(None)))
         .manage(PendingCalendarFiles(Mutex::new(startup_calendar_files)))
-        .invoke_handler(tauri::generate_handler![read_calendar_file, take_pending_calendar_files])
+        .invoke_handler(tauri::generate_handler![
+            read_calendar_file,
+            take_pending_calendar_files,
+            remote_api_base_url
+        ])
         .setup(|app| {
             #[cfg(target_os = "macos")]
             install_open_file_handler(&app.handle());
@@ -283,32 +306,36 @@ fn main() {
                 .ok_or_else(|| "Could not resolve the app data directory".to_string())?;
             fs::create_dir_all(&data_dir)?;
 
-            match Command::new_sidecar("backend") {
-                Ok(cmd) => {
-                    let command = cmd
-                        .args(["--data-dir", &data_dir.to_string_lossy()])
-                        .current_dir(data_dir.clone());
-                    match command.spawn() {
-                        Ok((mut receiver, child)) => {
-                            app.state::<BackendProcess>()
-                                .0
-                                .lock()
-                                .expect("backend process lock poisoned")
-                                .replace(child);
-                            tauri::async_runtime::spawn(async move {
-                                while let Some(event) = receiver.recv().await {
-                                    match event {
-                                        CommandEvent::Stdout(line) => println!("backend: {}", line),
-                                        CommandEvent::Stderr(line) => eprintln!("backend: {}", line),
-                                        _ => {}
+            if read_remote_api_base(&app.handle()).is_some() {
+                println!("Remote API mode: use-remote-api marker found; bundled sidecar not started");
+            } else {
+                match Command::new_sidecar("backend") {
+                    Ok(cmd) => {
+                        let command = cmd
+                            .args(["--data-dir", &data_dir.to_string_lossy()])
+                            .current_dir(data_dir.clone());
+                        match command.spawn() {
+                            Ok((mut receiver, child)) => {
+                                app.state::<BackendProcess>()
+                                    .0
+                                    .lock()
+                                    .expect("backend process lock poisoned")
+                                    .replace(child);
+                                tauri::async_runtime::spawn(async move {
+                                    while let Some(event) = receiver.recv().await {
+                                        match event {
+                                            CommandEvent::Stdout(line) => println!("backend: {}", line),
+                                            CommandEvent::Stderr(line) => eprintln!("backend: {}", line),
+                                            _ => {}
+                                        }
                                     }
-                                }
-                            });
+                                });
+                            }
+                            Err(error) => eprintln!("Failed to spawn sidecar: {}", error),
                         }
-                        Err(error) => eprintln!("Failed to spawn sidecar: {}", error),
                     }
+                    Err(error) => eprintln!("Failed to create sidecar command: {}", error),
                 }
-                Err(error) => eprintln!("Failed to create sidecar command: {}", error),
             }
 
             let app_handle = app.handle();
