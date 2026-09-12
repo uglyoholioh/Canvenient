@@ -1943,7 +1943,7 @@ button, input, textarea { font: inherit; }
 .dashboard-customizer-popover > header { height: 28px; padding: 0 3px 7px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }.dashboard-customizer-popover > header strong { color: var(--text-h); font-size: 11px; }.dashboard-customizer-popover > header button { border: 0; border-radius: 3px; background: transparent; color: var(--text-muted); padding: 4px; cursor: pointer; display: flex; }
 .dashboard-grid { width: 100%; margin: 0; }
 .dashboard-grid.is-focus, .dashboard-grid.is-bento, .dashboard-grid.is-custom { display: grid; grid-template-columns: var(--dashboard-column-tracks, repeat(4, minmax(0, 1fr))); grid-template-rows: var(--dashboard-row-tracks, repeat(4, 150px)); grid-auto-flow: dense; grid-auto-rows: 150px; gap: 8px; width: min(1440px, calc(100% - clamp(36px, 6vw, 112px))); margin: 18px auto; border: 0; overflow: visible; }
-.dashboard-grid:is(.is-focus, .is-bento, .is-custom) .dashboard-module { height: 100%; min-height: 0; margin: 0; border: 1px solid var(--border); border-radius: 10px; display: flex; flex-direction: column; overflow: hidden; grid-column: span var(--dashboard-card-columns, 1); grid-row: span var(--dashboard-card-rows, 1); }
+.dashboard-grid:is(.is-focus, .is-bento, .is-custom) .dashboard-module { height: 100%; min-height: 0; margin: 0; border: 1px solid var(--border-strong); border-radius: 10px; display: flex; flex-direction: column; overflow: hidden; grid-column: span var(--dashboard-card-columns, 1); grid-row: span var(--dashboard-card-rows, 1); }
 .dashboard-grid:is(.is-focus, .is-bento, .is-custom) .dashboard-module-body { flex: 1; min-height: 0; max-height: none; }
 .dashboard-grid.is-layout-editing { overflow: visible; }
 .dashboard-grid.is-layout-editing .dashboard-module { position: relative; transition: opacity .16s ease, box-shadow .2s ease; }
@@ -1951,7 +1951,7 @@ button, input, textarea { font: inherit; }
 .dashboard-grid.is-layout-editing .dashboard-module.is-dragging { opacity: .35; }
 .dashboard-grid.is-layout-editing .dashboard-module.is-drop-target { z-index: 2; box-shadow: inset 0 0 0 1px var(--border-strong), 0 2px 8px rgba(0, 0, 0, 0.1); }
 .dashboard-grid.is-layout-editing .dashboard-module.is-resizing { z-index: 3; box-shadow: 0 2px 8px rgba(0,0,0,0.1); transition: box-shadow .15s ease; }
-.dashboard-module { position: relative; min-width: 0; border: 0; border-radius: 0; background: color-mix(in srgb, var(--surface) 88%, var(--bg)); overflow: visible; box-shadow: none; }
+.dashboard-module { position: relative; min-width: 0; border: 0; border-radius: 0; background: color-mix(in srgb, var(--surface-muted) 90%, var(--bg)); overflow: visible; box-shadow: none; }
 .dashboard-module:focus-visible { position: relative; z-index: 4; outline: 0; box-shadow: inset 0 0 0 2px var(--accent); }
 .dashboard-card-drag-handle { position: absolute; top: 12px; right: 30px; z-index: 7; width: 34px; height: 12px; padding: 0; border: 0; border-radius: 6px; background: transparent; cursor: grab; display: grid; place-items: center; opacity: .46; transition: opacity .16s ease, background .16s ease; }
 .dashboard-card-drag-handle span { width: 22px; height: 3px; border-radius: 6px; background: var(--text-muted); display: block; }
@@ -2127,7 +2127,7 @@ button.module-item-main:hover, .module-list-item.task-module-item:hover { backgr
 /* Header */
 .cbm-header { flex: none; display: flex; align-items: center; justify-content: space-between; gap: 6px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
 .cbm-stop-title-wrap { display: flex; align-items: center; gap: 6px; min-width: 0; flex: none; max-width: 120px; }
-.cbm-stop-heading { font-size: 13px; font-weight: 600; color: var(--text-h); margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cbm-stop-heading { font-size: 15px; font-weight: 600; color: var(--text-h); margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 /* Status dot in header */
 .cbm-status-dot { flex: none; width: 6px; height: 6px; border-radius: 50%; background: color-mix(in srgb, var(--text-muted) 40%, transparent); }
@@ -2189,7 +2189,7 @@ button.module-item-main:hover, .module-list-item.task-module-item:hover { backgr
 
 /* Arrivals section */
 .cbm-arrivals { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow-y: auto; }
-.cbm-arrivals-status { flex: none; display: flex; align-items: center; gap: 4px; padding: 4px 1px 5px; font-size: 9px; color: var(--text-muted); border-bottom: 1px solid var(--border); }
+.cbm-arrivals-status { flex: none; display: flex; align-items: center; gap: 4px; padding: 4px 1px 5px; font-size: 11px; color: var(--text-muted); border-bottom: 1px solid var(--border); }
 .cbm-stale-dot { display: inline-block; width: 5px; height: 5px; border-radius: 50%; background: var(--warning); flex: none; }
 .cbm-arrivals-list { flex: 1; }
 
@@ -4270,7 +4270,7 @@ textarea {
 .dashboard-module[data-module="tasks"] .module-list { gap: 1px; }
 .dashboard-module[data-module="tasks"] .task-module-item { min-height: 43px; border-radius: 5px; }
 .dashboard-module[data-module="tasks"] .task-module-item .module-item-main { min-height: 42px; padding: 8px 7px 8px 4px; }
-.dashboard-module[data-module="tasks"] .module-item-copy strong { font-size: calc(var(--dashboard-font-size, 11px) * 1.16) !important; font-weight: 540; }
+.dashboard-module[data-module="tasks"] .module-item-copy strong { font-weight: 600; }
 .dashboard-module[data-module="tasks"] .module-item-copy small { font-size: calc(var(--dashboard-font-size, 11px) * .9) !important; }
 .dashboard-module[data-module="tasks"] .module-task-check { margin-top: 10px; font-size: 13px; }
 .dashboard-module[data-module="tasks"] .task-input-shell.is-dashboard { padding-top: 6px; border-top-color: color-mix(in srgb, var(--border) 65%, transparent); }
@@ -4402,6 +4402,9 @@ textarea {
 .dashboard-module[data-module="tasks"] .task-module-item .module-item-main { min-height: 49px; padding-block: 10px; }
 .dashboard-module[data-module="tasks"] .module-task-check { margin-top: 12px; }
 .dashboard-module[data-module="tasks"] .module-filter-tabs button { padding: 5px 8px; }
+/* Chrome text stays a step below body: filter tabs and timeline hour rulers. */
+.dashboard-grid .dashboard-module .module-filter-tabs button { font-size: clamp(11px, calc(var(--dashboard-font-size, 11px) - 1px), 13px) !important; }
+.dashboard-grid .dashboard-module .schedule-timeline-hour time { font-size: clamp(10px, calc(var(--dashboard-font-size, 11px) - 2.5px), 12px) !important; }
 .dashboard-module-header .module-heading > svg:first-child { width: 17px; height: 17px; }
 .dashboard-module-header .module-view-full svg { width: 11px; height: 11px; }
 

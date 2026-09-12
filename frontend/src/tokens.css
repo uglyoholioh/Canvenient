@@ -27,6 +27,8 @@
   --space-mac-sm: 12px;
   --space-mac-md: 16px;
   --height-mac-toolbar: 44px;
+  /* Base for the dashboard type ladder (index.css clamps small/strong off this). */
+  --dashboard-font-size: 14px;
   --width-mac-sidebar-compact: 58px;
   --radius-mac-control: 6px;
   --radius-mac-panel: 10px;
