@@ -195,6 +195,7 @@ struct BusView: View {
     private func startAutoRefresh() {
         refreshTimer?.invalidate()
         Task { await loadArrivals() }
+        guard UserDefaults.standard.object(forKey: Preferences.isbAutoRefresh) as? Bool ?? true else { return }
         refreshTimer = Timer.scheduledTimer(withTimeInterval: refreshInterval, repeats: true) { _ in
             Task { @MainActor in await loadArrivals() }
         }

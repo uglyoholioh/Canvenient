@@ -52,23 +52,30 @@ class CampusTripRequest(BaseModel):
 
 
 async def _fetch_payload(path: str, params: dict[str, str] | None = None) -> dict:
-    try:
-        async with httpx.AsyncClient(timeout=8.0) as client:
-            response = await client.get(
-                f"{NUS_BUS_API_BASE_URL}{path}",
-                params=params,
-                headers={"Accept": "application/json"},
-            )
-            response.raise_for_status()
-            data = response.json()
-            if isinstance(data, dict) and (data.get("result") is False or data.get("error") is not None):
-                raise ValueError(f"API Error: {data.get('message', 'Unknown error')}")
-            return data
-    except (httpx.HTTPError, ValueError) as error:
-        raise HTTPException(
-            status_code=502,
-            detail="NUS bus timings are temporarily unavailable. Please try again shortly.",
-        ) from error
+    # The public relay intermittently serves 502s (roughly one call in four),
+    # so retry briefly before surfacing an error to clients.
+    last_error: Exception | None = None
+    for attempt in range(3):
+        if attempt:
+            await asyncio.sleep(0.5 * attempt)
+        try:
+            async with httpx.AsyncClient(timeout=8.0) as client:
+                response = await client.get(
+                    f"{NUS_BUS_API_BASE_URL}{path}",
+                    params=params,
+                    headers={"Accept": "application/json"},
+                )
+                response.raise_for_status()
+                data = response.json()
+                if isinstance(data, dict) and (data.get("result") is False or data.get("error") is not None):
+                    raise ValueError(f"API Error: {data.get('message', 'Unknown error')}")
+                return data
+        except (httpx.HTTPError, ValueError) as error:
+            last_error = error
+    raise HTTPException(
+        status_code=502,
+        detail="NUS bus timings are temporarily unavailable. Please try again shortly.",
+    ) from last_error
 
 
 def _cache_ttl(key: str) -> timedelta:

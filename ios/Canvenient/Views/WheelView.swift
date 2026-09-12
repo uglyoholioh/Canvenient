@@ -125,7 +125,9 @@ final class WheelStore: ObservableObject {
             try? await Task.sleep(nanoseconds: 2_250_000_000)
             winner = candidates[targetIndex]
             spinning = false
-            UINotificationFeedbackGenerator().notificationOccurred(.success)
+            if UserDefaults.standard.object(forKey: Preferences.hapticsEnabled) as? Bool ?? true {
+                UINotificationFeedbackGenerator().notificationOccurred(.success)
+            }
         }
     }
 }

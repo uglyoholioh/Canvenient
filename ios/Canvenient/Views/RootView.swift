@@ -3,6 +3,7 @@ import CanvenientKit
 
 struct RootView: View {
     @EnvironmentObject private var appState: AppState
+    @AppStorage(Theme.modeKey) private var themeMode = ThemeMode.graphite.rawValue
 
     var body: some View {
         Group {
@@ -17,26 +18,36 @@ struct RootView: View {
         }
         .animation(.easeInOut(duration: 0.2), value: appState.session)
         .preferredColorScheme(.dark)
+        // Rebuild on palette change so every Theme.* colour re-evaluates.
+        .id(themeMode)
     }
 
     private var tabs: some View {
         TabView(selection: $appState.selectedTab) {
-            ScheduleView()
-                .tabItem { Label("Schedule", systemImage: "calendar") }
-                .tag(AppState.Tab.schedule)
-            TasksView()
-                .tabItem { Label("Tasks", systemImage: "checklist") }
-                .tag(AppState.Tab.tasks)
-            BusView()
-                .tabItem { Label("Bus", systemImage: "bus") }
-                .tag(AppState.Tab.bus)
-            VenuesView()
-                .tabItem { Label("Venues", systemImage: "building.2") }
-                .tag(AppState.Tab.venues)
-            ModulesView()
-                .tabItem { Label("Modules", systemImage: "book") }
-                .tag(AppState.Tab.modules)
+            Tab("Dashboard", systemImage: "square.grid.2x2", value: .dashboard) {
+                DashboardView()
+            }
+            Tab("Schedule", systemImage: "calendar", value: .schedule) {
+                ScheduleView()
+            }
+            Tab("Tasks", systemImage: "checklist", value: .tasks) {
+                TasksView()
+            }
+            Tab("Bus", systemImage: "bus", value: .bus) {
+                BusView()
+            }
+            Tab("Venues", systemImage: "building.2", value: .venues) {
+                VenuesView()
+            }
+            Tab("Modules", systemImage: "book", value: .modules) {
+                ModulesView()
+            }
+            Tab("Wheel", systemImage: "smallcircle.filled.circle", value: .wheel) {
+                WheelView()
+            }
+            .tabPlacement(.sidebarOnly)
         }
+        .tabViewStyle(.sidebarAdaptable)
         .tint(Theme.accent)
     }
 }

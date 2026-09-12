@@ -20,6 +20,7 @@ final class LiveActivityController: ObservableObject {
         if ProcessInfo.processInfo.arguments.contains("-previewLiveActivity") {
             return
         }
+        guard Preferences.bool(Preferences.liveActivityEnabled, default: true) else { return }
         guard ActivityAuthorizationInfo().areActivitiesEnabled else { return }
 
         let nowNext = ScheduleEngine.nowAndNext(for: schedule)
