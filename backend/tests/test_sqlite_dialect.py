@@ -7,7 +7,6 @@ the endpoints that previously regressed to Postgres-only syntax and silently
 failed on the shipped app.
 """
 
-import json
 from datetime import datetime, timedelta, timezone
 from unittest.mock import AsyncMock
 
@@ -21,23 +20,20 @@ from telegram_bot import handle_command
 pytestmark = pytest.mark.asyncio
 
 
-async def test_ai_brief_builds_context_on_sqlite(client: AsyncClient, auth, monkeypatch):
-    """force_refresh skips the cache, so the four timeframe queries must execute."""
+async def test_assistant_brief_builds_context_on_sqlite(client: AsyncClient, auth, monkeypatch):
+    """A forced refresh skips the cache, so the day-context queries must execute."""
     token, user_id, _ = auth
-    monkeypatch.setattr("routes.ai.list_canvas_announcements", AsyncMock(return_value=[]))
-    monkeypatch.setattr("routes.ai.list_canvas_assignments", AsyncMock(return_value=[]))
 
-    async def fake_call_ai(contents, system_instruction=None, response_mime_type=None):
-        brief = json.dumps({"summary": "All clear.", "suggestions": []})
-        return {"candidates": [{"content": {"parts": [{"text": brief}]}}]}
+    async def fake_generate_json(system, prompt, schema, extra_parts=None):
+        return {"summary": "All clear.", "attention": []}
 
-    monkeypatch.setattr("routes.ai.call_ai", fake_call_ai)
+    monkeypatch.setattr("ai.assistant.generate_json", fake_generate_json)
 
-    resp = await client.post("/ai/brief?force_refresh=true", headers=auth_headers(token))
+    resp = await client.get("/assistant/brief?refresh=true", headers=auth_headers(token))
     assert resp.status_code == 200, resp.text
     body = resp.json()
-    assert body["brief"] == {"summary": "All clear.", "suggestions": []}
-    assert body["context_snapshot"]["timeframe"] == "this_week"
+    assert body["summary"] == "All clear."
+    assert body["ai_ok"] is True
 
 
 async def test_sync_canvas_tasks_on_sqlite(client: AsyncClient, auth, monkeypatch):

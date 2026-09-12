@@ -11,7 +11,6 @@ from database import db
 from logging_setup import get_logger, setup_logging
 from migrations import run_migrations
 from routes.academic_modules import router as academic_modules_router
-from routes.ai import router as ai_router
 from routes.assistant import router as assistant_router
 from routes.auth import router as auth_router
 from routes.backups import router as backups_router
@@ -91,7 +90,6 @@ app.include_router(canvas_router)
 app.include_router(schedule_router)
 app.include_router(campus_bus_router)
 app.include_router(events_router)
-app.include_router(ai_router)
 app.include_router(assistant_router)
 app.include_router(communities_router)
 app.include_router(groups_router)

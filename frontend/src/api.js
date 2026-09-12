@@ -946,25 +946,6 @@ export function markAllNotificationsAsRead(token) {
   });
 }
 
-export function getAiBrief(token, forceRefresh = false, timeframe = "this_week") {
-  const params = new URLSearchParams();
-  if (forceRefresh) params.append("force_refresh", "true");
-  if (timeframe) params.append("timeframe", timeframe);
-  const query = params.toString() ? `?${params.toString()}` : "";
-  return apiRequest(`/ai/brief${query}`, {
-    method: "POST",
-    token,
-  });
-}
-
-export function sendAiChat(token, payload) {
-  return apiRequest("/ai/chat", {
-    method: "POST",
-    body: payload,
-    token,
-  });
-}
-
 // Fresh assistant layer (/assistant/*)
 
 export function parseTaskSmart(token, text) {
