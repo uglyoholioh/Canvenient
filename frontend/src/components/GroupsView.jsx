@@ -272,7 +272,7 @@ export default function GroupsView({ token, currentUser }) {
           {/* Join Code & Header */}
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "16px", marginBottom: "28px", flexWrap: "wrap" }}>
             <div>
-              <h2 style={{ fontSize: "20px", fontWeight: 600, margin: "0 0 6px" }}>Your Teams & Study Groups</h2>
+              <h2 className="groups-title" style={{ marginBottom: "6px" }}>Your Teams & Study Groups</h2>
               <p style={{ margin: 0, fontSize: "13px", color: "var(--text-muted)" }}>
                 Collaborate on module projects, share task lists, and track progress together.
               </p>
@@ -468,7 +468,7 @@ export default function GroupsView({ token, currentUser }) {
           {/* Group Header */}
           <div style={{ marginBottom: "20px" }}>
             <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "4px" }}>
-              <h1 style={{ margin: 0, fontSize: "22px", fontWeight: 600 }}>{activeGroup.name}</h1>
+              <h1 className="groups-title">{activeGroup.name}</h1>
               <span style={{
                 fontSize: "10px",
                 fontWeight: 600,

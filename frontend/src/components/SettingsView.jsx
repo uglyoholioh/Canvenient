@@ -433,7 +433,7 @@ export default function SettingsView({ token, user, onUpdateUser, onReplayOnboar
 
   return (
     <div style={{ padding: '32px', paddingBottom: '120px', maxWidth: '800px', margin: '0 auto', width: '100%', overflowY: 'auto', height: '100%' }} tabIndex={-1}>
-      <h1 style={{ fontSize: '24px', fontWeight: '600', marginBottom: '24px', fontFamily: 'var(--font-mono)' }}>Settings</h1>
+      <h1 className="settings-page-title">Settings</h1>
 
       <section style={{ marginBottom: '40px' }}>
         <div className="settings-section-heading">
@@ -589,14 +589,14 @@ export default function SettingsView({ token, user, onUpdateUser, onReplayOnboar
       </section>
 
       <section style={{ marginBottom: '40px' }}>
-        <h2 style={{ fontSize: '14px', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '16px', letterSpacing: '1px' }}>Dashboard</h2>
+        <h2 className="settings-section-title" style={{ marginBottom: '16px' }}>Dashboard</h2>
         <div style={{ padding: '16px', backgroundColor: 'var(--surface)', border: '1px solid var(--border-strong)', borderRadius: '8px' }}>
           <DashboardCustomizer layout={dashboardLayout} config={dashboardConfig} onLayoutChange={handleDashboardLayoutChange} onConfigChange={handleDashboardConfigChange} />
         </div>
       </section>
 
       <section style={{ marginBottom: '40px' }}>
-        <h2 style={{ fontSize: '14px', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '16px', letterSpacing: '1px' }}>Preferences</h2>
+        <h2 className="settings-section-title" style={{ marginBottom: '16px' }}>Preferences</h2>
         
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1px', backgroundColor: 'var(--border-strong)', border: '1px solid var(--border-strong)', borderRadius: '8px', overflow: 'hidden' }}>
           
@@ -729,7 +729,7 @@ export default function SettingsView({ token, user, onUpdateUser, onReplayOnboar
       </section>
 
       <section style={{ marginBottom: '40px' }}>
-        <h2 style={{ fontSize: '14px', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '16px', letterSpacing: '1px' }}>Integrations</h2>
+        <h2 className="settings-section-title" style={{ marginBottom: '16px' }}>Integrations</h2>
         
         {/* Canvas LMS */}
         <div style={{ backgroundColor: 'var(--surface)', padding: '20px', borderRadius: '8px', border: '1px solid var(--border-strong)', marginBottom: '20px' }}>
@@ -972,7 +972,7 @@ export default function SettingsView({ token, user, onUpdateUser, onReplayOnboar
 
       {/* Setup Walkthrough */}
       <section style={{ marginBottom: '40px' }}>
-        <h2 style={{ fontSize: '14px', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '16px', letterSpacing: '1px' }}>Workspace Setup</h2>
+        <h2 className="settings-section-title" style={{ marginBottom: '16px' }}>Workspace Setup</h2>
         <div style={{ backgroundColor: 'var(--surface)', padding: '20px', borderRadius: '8px', border: '1px solid var(--border-strong)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
             <div style={{ fontWeight: '600', color: 'var(--text-h)', display: 'flex', alignItems: 'center', gap: '8px' }}>

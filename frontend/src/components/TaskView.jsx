@@ -107,7 +107,7 @@ export default function TaskView({
   const [, setEditError] = useState("");
   const [, setIsSavingEdit] = useState(false);
   const [isComposerOpen, setIsComposerOpen] = useState(Boolean(composerAutoFocus));
-  const [checkboxStyle, setCheckboxStyle] = useState(() => localStorage.getItem("canvenient-checkbox-style") || "brackets");
+  const [checkboxStyle, setCheckboxStyle] = useState(() => localStorage.getItem("canvenient-checkbox-style") || "icon");
   const [filterScope, setFilterScope] = useState("all");
   const itemRefs = useRef({});
   const editRef = useRef(null);
@@ -164,7 +164,7 @@ export default function TaskView({
     return () => window.removeEventListener("academic-modules-updated", loadModules);
   }, [token]);
   useEffect(() => {
-    const updateSettings = () => setCheckboxStyle(localStorage.getItem("canvenient-checkbox-style") || "brackets");
+    const updateSettings = () => setCheckboxStyle(localStorage.getItem("canvenient-checkbox-style") || "icon");
     window.addEventListener("settings-updated", updateSettings);
     return () => window.removeEventListener("settings-updated", updateSettings);
   }, []);
