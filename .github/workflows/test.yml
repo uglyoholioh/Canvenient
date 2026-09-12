@@ -113,6 +113,11 @@ jobs:
           cd frontend
           npm run build
 
+      - name: Stub the sidecar binary (gitignored build artifact)
+        run: |
+          mkdir -p frontend/src-tauri/bin
+          touch frontend/src-tauri/bin/backend-aarch64-apple-darwin
+
       - name: Compile Tauri shell
         run: |
           cd frontend/src-tauri
