@@ -17,6 +17,7 @@ struct SettingsView: View {
     @State private var canvasToken = ""
     @State private var savingCanvasToken = false
     @State private var canvasTokenSaved = false
+    @State private var confirmingSignOut = false
     @State private var activitiesAllowed = ActivityAuthorizationInfo().areActivitiesEnabled
     @State private var activityCount = 0
 
@@ -88,8 +89,15 @@ struct SettingsView: View {
                         Task { await appState.refreshAll() }
                     }
                     Button("Sign out", role: .destructive) {
-                        appState.signOut()
-                        dismiss()
+                        confirmingSignOut = true
+                    }
+                    .confirmationDialog("Sign out?", isPresented: $confirmingSignOut, titleVisibility: .visible) {
+                        Button("Sign out", role: .destructive) {
+                            appState.signOut()
+                            dismiss()
+                        }
+                    } message: {
+                        Text("Cached data on this device is cleared. You can sign back in anytime.")
                     }
                 }
 

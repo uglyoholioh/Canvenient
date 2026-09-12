@@ -13,7 +13,7 @@ settings:
     CODE_SIGN_STYLE: Automatic
     DEVELOPMENT_TEAM: 7AL4TS8C25
     MARKETING_VERSION: "0.2.0"
-    CURRENT_PROJECT_VERSION: "7972265"
+    CURRENT_PROJECT_VERSION: "10eaac8"
 
 targets:
   Canvenient:
@@ -36,10 +36,12 @@ targets:
       path: Canvenient/Info.plist
       properties:
         CFBundleDisplayName: Canvenient
-        UILaunchScreen: {}
+        UILaunchScreen:
+          UIColorName: LaunchBackground
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait
         NSSupportsLiveActivities: true
+        NSLocationWhenInUseUsageDescription: Canvenient uses your location to sort free campus rooms by walking distance.
         UIBackgroundModes:
           - fetch
         BGTaskSchedulerPermittedIdentifiers:

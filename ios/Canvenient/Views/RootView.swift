@@ -6,6 +6,31 @@ struct RootView: View {
     @AppStorage(Theme.modeKey) private var themeMode = ThemeMode.graphite.rawValue
 
     var body: some View {
+        Group {
+            switch appState.session {
+            case .unknown:
+                splash
+            case .loggedOut:
+                LoggedOutRoot()
+            case .loggedIn:
+                mainChrome
+            }
+        }
+        .animation(.easeInOut(duration: 0.2), value: appState.session)
+        .preferredColorScheme(.dark)
+        // Rebuild on palette change so every Theme.* colour re-evaluates.
+        .id(themeMode)
+    }
+
+    /// Brief branded hold while the saved session is being validated.
+    private var splash: some View {
+        ZStack {
+            Theme.bg.ignoresSafeArea()
+            BrandMark()
+        }
+    }
+
+    private var mainChrome: some View {
         ZStack(alignment: .topLeading) {
             VStack(spacing: 0) {
                 if appState.offline {
@@ -15,8 +40,6 @@ struct RootView: View {
             }
             SidebarDrawer()
         }
-        .animation(.easeInOut(duration: 0.2), value: appState.session)
-        .preferredColorScheme(.dark)
         .fullScreenCover(item: $appState.overlay) { destination in
             Group {
                 switch destination {
@@ -27,8 +50,6 @@ struct RootView: View {
             }
             .preferredColorScheme(.dark)
         }
-        // Rebuild on palette change so every Theme.* colour re-evaluates.
-        .id(themeMode)
     }
 
     private var offlineBanner: some View {
@@ -65,5 +86,20 @@ struct RootView: View {
             }
         }
         .tint(Theme.accent)
+    }
+}
+
+/// Signed-out shell: first launch shows the onboarding walk-through, after
+/// that the login screen — with a link back to the walk-through.
+struct LoggedOutRoot: View {
+    @EnvironmentObject private var appState: AppState
+    @AppStorage("canvenient.onboardingDone") private var onboardingDone = false
+
+    var body: some View {
+        if onboardingDone {
+            LoginView(showOnboarding: { onboardingDone = false })
+        } else {
+            OnboardingView { onboardingDone = true }
+        }
     }
 }

@@ -7,6 +7,10 @@ import CanvenientKit
 struct LoginView: View {
     @EnvironmentObject private var appState: AppState
 
+    /// Present when the login screen should offer a link back to the
+    /// first-run walk-through.
+    var showOnboarding: (() -> Void)?
+
     @State private var mode: Mode = .signIn
     @State private var email = ""
     @State private var password = ""
@@ -14,6 +18,9 @@ struct LoginView: View {
     @State private var busy = false
     @State private var errorMessage: String?
     @State private var showingServerSheet = false
+    @FocusState private var focusedField: Field?
+
+    enum Field { case email, password, name }
 
     enum Mode: String, CaseIterable, Identifiable {
         case signIn = "Sign in"
@@ -33,92 +40,121 @@ struct LoginView: View {
 
             CornerTicks()
 
-            VStack(alignment: .leading, spacing: 0) {
-                Spacer(minLength: 24)
-                BrandMark()
-                Spacer(minLength: 12)
-
-                VStack(alignment: .leading, spacing: 18) {
-                    Picker("", selection: $mode) {
-                        ForEach(Mode.allCases) { mode in
-                            Text(mode.rawValue).tag(mode)
-                        }
-                    }
-                    .pickerStyle(.segmented)
-
-                    VStack(alignment: .leading, spacing: 14) {
-                        authField("Email", text: $email)
-                        authField("Password", text: $password, secure: true)
-                        if mode == .register {
-                            authField("Display name (optional)", text: $name)
-                        }
-                    }
-
-                    Button {
-                        submit()
-                    } label: {
-                        HStack {
-                            Spacer()
-                            if busy {
-                                ProgressView().tint(Theme.textH)
-                            } else {
-                                Text(mode == .signIn ? "Sign in" : "Create account")
-                                    .fontWeight(.semibold)
-                            }
-                            Spacer()
-                        }
-                        .padding(.vertical, 12)
-                        .background(Theme.accent.opacity(0.16),
-                                    in: RoundedRectangle(cornerRadius: 8, style: .continuous))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 8, style: .continuous)
-                                .strokeBorder(Theme.accent, lineWidth: 1)
-                        )
-                        .foregroundStyle(Theme.accent)
-                    }
-                    .disabled(busy || email.isEmpty || password.isEmpty)
-
-                    if let errorMessage {
-                        Text(errorMessage)
-                            .font(.callout)
-                            .foregroundStyle(Theme.error)
-                    }
-
-                    Button {
-                        showingServerSheet = true
-                    } label: {
-                        HStack {
-                            Text("Server")
-                                .font(.caption)
-                                .foregroundStyle(Theme.textMuted)
-                            Spacer()
-                            Text(appState.serverURL.replacingOccurrences(of: "https://", with: ""))
-                                .font(.system(size: 11).monospaced())
-                                .foregroundStyle(Theme.text)
-                                .lineLimit(1)
-                                .truncationMode(.middle)
-                        }
-                        .padding(.vertical, 10)
-                        .padding(.horizontal, 12)
-                        .themeCard(fill: Theme.surface, radius: 8)
-                    }
-                    .buttonStyle(.plain)
+            GeometryReader { geo in
+                ScrollView {
+                    formContent
+                        .frame(minHeight: geo.size.height)
+                        .padding(.horizontal, 28)
                 }
-
-                Spacer()
-                Text("Canvenient for iPhone · Companion to the macOS workbench")
-                    .font(.caption)
-                    .foregroundStyle(Theme.textMuted)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.bottom, 6)
+                .scrollDismissesKeyboard(.interactively)
             }
-            .padding(.horizontal, 28)
         }
         .sheet(isPresented: $showingServerSheet) {
             ServerSheet(serverURL: appState.serverURL) { newURL in
                 appState.updateServerURL(newURL)
             }
             .preferredColorScheme(.dark)
+        }
+    }
+
+    private var formContent: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Spacer(minLength: 24)
+            BrandMark()
+            Spacer(minLength: 12)
+
+            VStack(alignment: .leading, spacing: 18) {
+                Picker("", selection: $mode) {
+                    ForEach(Mode.allCases) { mode in
+                        Text(mode.rawValue).tag(mode)
+                    }
+                }
+                .pickerStyle(.segmented)
+
+                VStack(alignment: .leading, spacing: 14) {
+                    authField("Email", text: $email)
+                        .textContentType(.username)
+                        .submitLabel(.next)
+                        .focused($focusedField, equals: .email)
+                        .onSubmit { focusedField = .password }
+                    authField("Password", text: $password, secure: true)
+                        .textContentType(mode == .register ? .newPassword : .password)
+                        .submitLabel(mode == .register ? .next : .go)
+                        .focused($focusedField, equals: .password)
+                        .onSubmit { mode == .register ? (focusedField = .name) : submit() }
+                    if mode == .register {
+                        authField("Display name (optional)", text: $name)
+                            .textContentType(.name)
+                            .submitLabel(.done)
+                            .focused($focusedField, equals: .name)
+                            .onSubmit { submit() }
+                    }
+                }
+
+                Button {
+                    submit()
+                } label: {
+                    HStack {
+                        Spacer()
+                        if busy {
+                            ProgressView().tint(Theme.textH)
+                        } else {
+                            Text(mode == .signIn ? "Sign in" : "Create account")
+                                .fontWeight(.semibold)
+                        }
+                        Spacer()
+                    }
+                    .padding(.vertical, 12)
+                    .background(Theme.accent.opacity(0.16),
+                                in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 8, style: .continuous)
+                            .strokeBorder(Theme.accent, lineWidth: 1)
+                    )
+                    .foregroundStyle(Theme.accent)
+                }
+                .disabled(busy || email.isEmpty || password.isEmpty)
+
+                if let errorMessage {
+                    Text(errorMessage)
+                        .font(.callout)
+                        .foregroundStyle(Theme.error)
+                }
+
+                Button {
+                    showingServerSheet = true
+                } label: {
+                    HStack {
+                        Text("Server")
+                            .font(.caption)
+                            .foregroundStyle(Theme.textMuted)
+                        Spacer()
+                        Text(appState.serverURL.replacingOccurrences(of: "https://", with: ""))
+                            .font(.system(size: 11).monospaced())
+                            .foregroundStyle(Theme.text)
+                            .lineLimit(1)
+                            .truncationMode(.middle)
+                    }
+                    .padding(.vertical, 10)
+                    .padding(.horizontal, 12)
+                    .themeCard(fill: Theme.surface, radius: 8)
+                }
+                .buttonStyle(.plain)
+            }
+
+            Spacer()
+            VStack(alignment: .leading, spacing: 8) {
+                if let showOnboarding {
+                    Button("What is Canvenient?", action: showOnboarding)
+                        .font(.caption)
+                        .foregroundStyle(Theme.textMuted)
+                }
+                Text("Canvenient for iPhone · Companion to the macOS workbench")
+                    .font(.caption)
+                    .foregroundStyle(Theme.textMuted)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.bottom, 6)
         }
     }
 
@@ -141,6 +177,8 @@ struct LoginView: View {
     }
 
     private func submit() {
+        guard !busy else { return }
+        focusedField = nil
         busy = true
         errorMessage = nil
         Task {

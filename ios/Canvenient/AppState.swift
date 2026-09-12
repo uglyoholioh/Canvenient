@@ -62,6 +62,9 @@ final class AppState: ObservableObject {
         token = newToken
         if let newToken {
             tokenStore.save(newToken)
+            // Any successful auth retires the walk-through — signing out
+            // should land on login, not replay onboarding.
+            UserDefaults.standard.set(true, forKey: "canvenient.onboardingDone")
         } else {
             tokenStore.delete()
         }
@@ -120,8 +123,29 @@ final class AppState: ObservableObject {
         modules = []
         modulesLoaded = false
         assignments = [:]
+        offline = false
+        sidebarOpen = false
+        OfflineCache.shared.clear()
         session = .loggedOut
         Task { await LiveActivityController.shared.endAll() }
+    }
+
+    /// GET /health on the configured backend with a short timeout. Used by
+    /// the onboarding connection test to separate "server down" from
+    /// "Tailscale off".
+    func checkConnection() async -> Bool {
+        let base = serverURL.trimmingCharacters(in: .whitespaces)
+        guard let url = URL(string: base.hasSuffix("/") ? base + "health" : base + "/health") else {
+            return false
+        }
+        var request = URLRequest(url: url)
+        request.timeoutInterval = 6
+        do {
+            let (_, response) = try await URLSession.shared.data(for: request)
+            return (response as? HTTPURLResponse)?.statusCode == 200
+        } catch {
+            return false
+        }
     }
 
     // MARK: Data

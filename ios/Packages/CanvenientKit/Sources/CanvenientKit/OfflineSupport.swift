@@ -30,6 +30,13 @@ public final class OfflineCache {
         guard let url = url(forKey: key), let data = try? Data(contentsOf: url) else { return nil }
         return try? decoder.decode(type, from: data)
     }
+
+    /// Drops every cached snapshot. Called on sign-out so one account's
+    /// schedule and tasks never outlive its session on disk.
+    public func clear() {
+        guard let directory else { return }
+        try? FileManager.default.removeItem(at: directory)
+    }
 }
 
 /// Talks to the public NUS bus relay straight from the device, bypassing the

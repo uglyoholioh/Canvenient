@@ -48,7 +48,12 @@ struct TasksView: View {
                     Section(section.title) {
                         ForEach(section.tasks) { task in
                             TaskRow(task: task) {
-                                Task { await appState.setTaskDone(task, done: true) }
+                                Task {
+                                    if UserDefaults.standard.object(forKey: Preferences.hapticsEnabled) as? Bool ?? true {
+                                        UINotificationFeedbackGenerator().notificationOccurred(.success)
+                                    }
+                                    await appState.setTaskDone(task, done: true)
+                                }
                             }
                         }
                         .onDelete { offsets in

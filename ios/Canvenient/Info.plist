@@ -39,12 +39,17 @@
 	<false/>
 	<key>NSSupportsLiveActivities</key>
 	<true/>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Canvenient uses your location to sort free campus rooms by walking distance.</string>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>fetch</string>
 	</array>
 	<key>UILaunchScreen</key>
-	<dict/>
+	<dict>
+		<key>UIColorName</key>
+		<string>LaunchBackground</string>
+	</dict>
 	<key>UISupportedInterfaceOrientations</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>
