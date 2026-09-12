@@ -16,7 +16,9 @@ from routes.canvas_search import clean_canvas_text, resource_search_score, token
 
 def test_query_tokenizer_removes_request_language_and_keeps_topic():
     assert tokenize_resource_query("Where can I find the ST2334 page about confidence intervals?") == [
-        "st2334", "confidence", "interval"
+        "st2334",
+        "confidence",
+        "interval",
     ]
 
 
@@ -81,9 +83,7 @@ async def test_resource_search_returns_content_match(client: AsyncClient, auth):
 
 
 @pytest.mark.asyncio
-async def test_resource_index_sync_collects_canvas_pages_and_metadata(
-    client: AsyncClient, auth, monkeypatch
-):
+async def test_resource_index_sync_collects_canvas_pages_and_metadata(client: AsyncClient, auth, monkeypatch):
     token, user_id, _ = auth
     await db.execute(
         query="""
@@ -94,7 +94,9 @@ async def test_resource_index_sync_collects_canvas_pages_and_metadata(
         values={"user_id": user_id},
     )
     course = {
-        "id": 101, "course_code": "ST2334", "name": "Statistics",
+        "id": 101,
+        "course_code": "ST2334",
+        "name": "Statistics",
         "external_url": "https://canvas.test/courses/101",
     }
 
@@ -117,7 +119,15 @@ async def test_resource_index_sync_collects_canvas_pages_and_metadata(
         return {"title": "Week 5", "body": "The sample mean converges to a normal distribution."}
 
     async def modules(*args, **kwargs):
-        return [{"id": 4, "name": "Week 5", "items": [{"id": 5, "title": "Practice quiz", "type": "Quiz", "html_url": "https://canvas.test/quizzes/5"}]}]
+        return [
+            {
+                "id": 4,
+                "name": "Week 5",
+                "items": [
+                    {"id": 5, "title": "Practice quiz", "type": "Quiz", "html_url": "https://canvas.test/quizzes/5"}
+                ],
+            }
+        ]
 
     async def syllabus(*args, **kwargs):
         return {"body": "Assessment and office-hour information"}

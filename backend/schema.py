@@ -729,7 +729,7 @@ async def initialize_schema() -> None:
                 or "information_schema" in stmt_stripped
             ):
                 continue
-            
+
             # Format SQLite compatible SQL
             stmt = (
                 statement.replace("BIGSERIAL PRIMARY KEY", "INTEGER PRIMARY KEY AUTOINCREMENT")

@@ -1,11 +1,22 @@
 import { describe, expect, it } from "vitest";
-import { dashboardAgendaItems, dashboardAgendaView, getTaskModuleColor, moduleCardInk, scheduleItemsForDate, timelineBlockGeometry } from "../scheduleUtils";
+import {
+  dashboardAgendaItems,
+  dashboardAgendaView,
+  getTaskModuleColor,
+  moduleCardInk,
+  scheduleItemsForDate,
+  timelineBlockGeometry,
+} from "../scheduleUtils";
 
 describe("schedule module cards", () => {
   it("extracts task module color from module_color, academic modules, or fallback", () => {
     expect(getTaskModuleColor({ module_color: "#246BFD" })).toBe("#246BFD");
     expect(getTaskModuleColor({ module_id: 5 }, [{ id: 5, color: "#19A974" }])).toBe("#19A974");
-    expect(getTaskModuleColor({ module_code: "CS2040S" }, [{ module_code: "CS2040S", color: "#DE7548" }])).toBe("#DE7548");
+    expect(
+      getTaskModuleColor({ module_code: "CS2040S" }, [
+        { module_code: "CS2040S", color: "#DE7548" },
+      ]),
+    ).toBe("#DE7548");
     expect(getTaskModuleColor({ module_code: "CS2040S" })).toMatch(/hsl\(\d+ 64% 58%\)/);
     expect(getTaskModuleColor({ title: "Personal task" })).toBeNull();
   });
@@ -17,26 +28,31 @@ describe("schedule module cards", () => {
 
   it("keeps the essential class details on each timeline item", () => {
     const date = new Date(2026, 8, 7);
-    const [item] = scheduleItemsForDate({
-      classes: [{
-        id: 1,
-        module_code: "CS2040S",
-        module_name: "Data Structures and Algorithms",
-        lesson_type: "Lecture",
-        class_no: "1",
-        day_of_week: 1,
-        class_date: "2026-09-07",
-        start_time: "10:00:00",
-        end_time: "12:00:00",
-        venue: "LT19",
-        module_color: "#246BFD",
-        linked_task_count: 1,
-        linked_note_count: 2,
-        linked_file_count: 1,
-      }],
-      exams: [],
-      events: [],
-    }, date);
+    const [item] = scheduleItemsForDate(
+      {
+        classes: [
+          {
+            id: 1,
+            module_code: "CS2040S",
+            module_name: "Data Structures and Algorithms",
+            lesson_type: "Lecture",
+            class_no: "1",
+            day_of_week: 1,
+            class_date: "2026-09-07",
+            start_time: "10:00:00",
+            end_time: "12:00:00",
+            venue: "LT19",
+            module_color: "#246BFD",
+            linked_task_count: 1,
+            linked_note_count: 2,
+            linked_file_count: 1,
+          },
+        ],
+        exams: [],
+        events: [],
+      },
+      date,
+    );
 
     expect(item).toMatchObject({
       title: "CS2040S",
@@ -55,14 +71,46 @@ describe("schedule module cards", () => {
 
   it("falls forward to the next classes and dated tasks when today is finished", () => {
     const now = new Date(2026, 8, 7, 18, 0);
-    const agenda = dashboardAgendaItems({
-      classes: [
-        { id: 1, module_code: "CS2040S", lesson_type: "Lecture", class_no: "1", class_date: "2026-09-07", start_time: "09:00", end_time: "10:00", venue: "LT19", module_color: "#246BFD" },
-        { id: 2, module_code: "ST2334", lesson_type: "Tutorial", class_no: "8", class_date: "2026-09-08", start_time: "10:00", end_time: "11:00", venue: "S16-06118", module_color: "#C58B2A" },
+    const agenda = dashboardAgendaItems(
+      {
+        classes: [
+          {
+            id: 1,
+            module_code: "CS2040S",
+            lesson_type: "Lecture",
+            class_no: "1",
+            class_date: "2026-09-07",
+            start_time: "09:00",
+            end_time: "10:00",
+            venue: "LT19",
+            module_color: "#246BFD",
+          },
+          {
+            id: 2,
+            module_code: "ST2334",
+            lesson_type: "Tutorial",
+            class_no: "8",
+            class_date: "2026-09-08",
+            start_time: "10:00",
+            end_time: "11:00",
+            venue: "S16-06118",
+            module_color: "#C58B2A",
+          },
+        ],
+        exams: [],
+        events: [],
+      },
+      [
+        {
+          id: 3,
+          title: "Tutorial 4",
+          module_code: "CS2040S",
+          status: "open",
+          effective_due_at: "2026-09-08T09:00:00+08:00",
+        },
       ],
-      exams: [],
-      events: [],
-    }, [{ id: 3, title: "Tutorial 4", module_code: "CS2040S", status: "open", effective_due_at: "2026-09-08T09:00:00+08:00" }], now);
+      now,
+    );
 
     const result = dashboardAgendaView(agenda, now, "now");
     expect(result.fallback).toBe(true);
@@ -72,17 +120,35 @@ describe("schedule module cards", () => {
   it("keeps today and upcoming as distinct selectable agenda views", () => {
     const now = new Date(2026, 8, 7, 12, 0);
     const items = [
-      { id: "past", title: "Past class", start: new Date(2026, 8, 7, 9), end: new Date(2026, 8, 7, 10) },
-      { id: "future", title: "Future class", start: new Date(2026, 8, 8, 9), end: new Date(2026, 8, 8, 10) },
+      {
+        id: "past",
+        title: "Past class",
+        start: new Date(2026, 8, 7, 9),
+        end: new Date(2026, 8, 7, 10),
+      },
+      {
+        id: "future",
+        title: "Future class",
+        start: new Date(2026, 8, 8, 9),
+        end: new Date(2026, 8, 8, 10),
+      },
     ];
 
     expect(dashboardAgendaView(items, now, "today").items.map((item) => item.id)).toEqual(["past"]);
-    expect(dashboardAgendaView(items, now, "upcoming").items.map((item) => item.id)).toEqual(["future"]);
+    expect(dashboardAgendaView(items, now, "upcoming").items.map((item) => item.id)).toEqual([
+      "future",
+    ]);
   });
 
   it("leaves a visible gutter between consecutive timetable blocks", () => {
-    const first = timelineBlockGeometry({ start: new Date(2026, 8, 7, 10), end: new Date(2026, 8, 7, 12) }, 8);
-    const second = timelineBlockGeometry({ start: new Date(2026, 8, 7, 12), end: new Date(2026, 8, 7, 14) }, 8);
+    const first = timelineBlockGeometry(
+      { start: new Date(2026, 8, 7, 10), end: new Date(2026, 8, 7, 12) },
+      8,
+    );
+    const second = timelineBlockGeometry(
+      { start: new Date(2026, 8, 7, 12), end: new Date(2026, 8, 7, 14) },
+      8,
+    );
 
     expect(second.top - (first.top + first.height)).toBe(2);
   });

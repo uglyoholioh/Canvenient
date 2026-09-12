@@ -1,6 +1,6 @@
-const fs = require('fs');
+const fs = require("fs");
 
-let content = fs.readFileSync('src/components/VenueFinder.jsx', 'utf8');
+let content = fs.readFileSync("src/components/VenueFinder.jsx", "utf8");
 
 // Insert formatWeeks function
 const formatWeeksFunc = `
@@ -29,7 +29,7 @@ function formatWeeks(weeks) {
 }
 
 export default function VenueFinder({ token }) {`;
-content = content.replace('export default function VenueFinder({ token }) {', formatWeeksFunc);
+content = content.replace("export default function VenueFinder({ token }) {", formatWeeksFunc);
 
 // Replace timeline bars rendering
 const oldTimelineBars = `<div className="vf-timeline-bars" title="08:00 - 22:00">
@@ -114,10 +114,10 @@ const newScheduleItem = `<div key={i} className="vf-schedule-item">
 
 content = content.replace(oldScheduleItem, newScheduleItem);
 
-fs.writeFileSync('src/components/VenueFinder.jsx', content);
+fs.writeFileSync("src/components/VenueFinder.jsx", content);
 
 // Now update CSS
-let css = fs.readFileSync('src/index.css', 'utf8');
+let css = fs.readFileSync("src/index.css", "utf8");
 
 const oldCss = `/* Timeline Visual Strip */
 .vf-timeline-bars {
@@ -207,5 +207,4 @@ const newCss = `/* Timeline Visual Strip */
 `;
 
 css = css.replace(oldCss, newCss);
-fs.writeFileSync('src/index.css', css);
-
+fs.writeFileSync("src/index.css", css);

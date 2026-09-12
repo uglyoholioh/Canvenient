@@ -18,10 +18,7 @@ async def test_shipped_migrations_add_sync_error_columns():
     """The real MIGRATIONS list applies cleanly to a fresh test database."""
     await run_migrations()  # apply if still pending (order-independent)
 
-    columns = {
-        row["name"]
-        for row in await db.fetch_all("SELECT name FROM pragma_table_info('canvas_sync_state')")
-    }
+    columns = {row["name"] for row in await db.fetch_all("SELECT name FROM pragma_table_info('canvas_sync_state')")}
     assert "last_sync_error" in columns
     assert "last_sync_error_at" in columns
 

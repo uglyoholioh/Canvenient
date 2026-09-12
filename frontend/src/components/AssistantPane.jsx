@@ -9,16 +9,34 @@ const EXAMPLE_PROMPTS = [
   "Summarise the attached page",
 ];
 
-const RESOURCE_ICONS = { note: FileText, announcement: FileText, assignment: FileText, file: FileText };
+const RESOURCE_ICONS = {
+  note: FileText,
+  announcement: FileText,
+  assignment: FileText,
+  file: FileText,
+};
 
 function formatDueHint(iso) {
   if (!iso) return "";
   const date = new Date(iso);
   if (isNaN(date.getTime())) return "";
-  return date.toLocaleString(undefined, { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+  return date.toLocaleString(undefined, {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 }
 
-export default function AssistantPane({ token, onClose, onOpenResource, initialQuery = "", attachment = null, initialSend = false }) {
+export default function AssistantPane({
+  token,
+  onClose,
+  onOpenResource,
+  initialQuery = "",
+  attachment = null,
+  initialSend = false,
+}) {
   const [messages, setMessages] = useState([]); // {role, content, resources?, actions?, error?}
   const [input, setInput] = useState(initialQuery);
   const [busy, setBusy] = useState(false);
@@ -48,12 +66,21 @@ export default function AssistantPane({ token, onClose, onOpenResource, initialQ
       });
       setMessages((prev) => [
         ...prev.slice(0, -1),
-        { role: "assistant", content: reply.reply || "(no reply)", resources: reply.resources || [], actions: reply.actions || [] },
+        {
+          role: "assistant",
+          content: reply.reply || "(no reply)",
+          resources: reply.resources || [],
+          actions: reply.actions || [],
+        },
       ]);
     } catch (err) {
       setMessages((prev) => [
         ...prev.slice(0, -1),
-        { role: "assistant", content: "", error: err.message || "The assistant is unavailable right now." },
+        {
+          role: "assistant",
+          content: "",
+          error: err.message || "The assistant is unavailable right now.",
+        },
       ]);
     } finally {
       setBusy(false);
@@ -85,11 +112,13 @@ export default function AssistantPane({ token, onClose, onOpenResource, initialQ
   };
 
   const setActionState = (messageIndex, actionIndex, state) => {
-    setMessages((prev) => prev.map((msg, mi) => {
-      if (mi !== messageIndex || !msg.actions) return msg;
-      const actions = msg.actions.map((a, ai) => (ai === actionIndex ? { ...a, state } : a));
-      return { ...msg, actions };
-    }));
+    setMessages((prev) =>
+      prev.map((msg, mi) => {
+        if (mi !== messageIndex || !msg.actions) return msg;
+        const actions = msg.actions.map((a, ai) => (ai === actionIndex ? { ...a, state } : a));
+        return { ...msg, actions };
+      }),
+    );
   };
 
   return (
@@ -99,13 +128,17 @@ export default function AssistantPane({ token, onClose, onOpenResource, initialQ
           <Sparkles size={15} />
           <strong>Assistant</strong>
         </div>
-        <button type="button" onClick={onClose} aria-label="Close assistant"><X size={15} /></button>
+        <button type="button" onClick={onClose} aria-label="Close assistant">
+          <X size={15} />
+        </button>
       </header>
 
       {attachment && (
         <div className="assistant-attachment" title={attachment.label}>
           <span className="assistant-attachment-kind">{attachment.type}</span>
-          <span className="assistant-attachment-label">{attachment.label || `#${attachment.id}`}</span>
+          <span className="assistant-attachment-label">
+            {attachment.label || `#${attachment.id}`}
+          </span>
           <span className="assistant-attachment-hint">attached for this session</span>
         </div>
       )}
@@ -116,7 +149,9 @@ export default function AssistantPane({ token, onClose, onOpenResource, initialQ
             <p>Ask about your day, find a resource, or get something organised.</p>
             <div className="assistant-examples">
               {EXAMPLE_PROMPTS.map((prompt) => (
-                <button key={prompt} type="button" onClick={() => send(prompt)}>{prompt}</button>
+                <button key={prompt} type="button" onClick={() => send(prompt)}>
+                  {prompt}
+                </button>
               ))}
             </div>
           </div>
@@ -153,18 +188,38 @@ export default function AssistantPane({ token, onClose, onOpenResource, initialQ
                       {action.due_at && <span>{formatDueHint(action.due_at)}</span>}
                     </div>
                     {(action.state || "idle") === "idle" && (
-                      <button type="button" onClick={() => setActionState(mi, ai, "confirming")}>Add task</button>
+                      <button type="button" onClick={() => setActionState(mi, ai, "confirming")}>
+                        Add task
+                      </button>
                     )}
                     {action.state === "confirming" && (
                       <span className="assistant-action-confirm">
                         Create?
-                        <button type="button" onClick={() => runAction(mi, ai)} aria-label="Confirm create task">✓</button>
-                        <button type="button" onClick={() => setActionState(mi, ai, "idle")} aria-label="Cancel">✕</button>
+                        <button
+                          type="button"
+                          onClick={() => runAction(mi, ai)}
+                          aria-label="Confirm create task"
+                        >
+                          ✓
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setActionState(mi, ai, "idle")}
+                          aria-label="Cancel"
+                        >
+                          ✕
+                        </button>
                       </span>
                     )}
-                    {action.state === "running" && <span className="assistant-action-state">Adding…</span>}
-                    {action.state === "done" && <span className="assistant-action-state">Added ✓</span>}
-                    {action.state === "error" && <span className="assistant-action-state is-error">Failed — try again</span>}
+                    {action.state === "running" && (
+                      <span className="assistant-action-state">Adding…</span>
+                    )}
+                    {action.state === "done" && (
+                      <span className="assistant-action-state">Added ✓</span>
+                    )}
+                    {action.state === "error" && (
+                      <span className="assistant-action-state is-error">Failed — try again</span>
+                    )}
                   </div>
                 ))}
               </div>

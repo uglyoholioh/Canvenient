@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef } from "react"
-import { useNavigate } from "react-router-dom"
+import { useState, useEffect, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Calendar,
   CheckSquare,
@@ -10,30 +10,35 @@ import {
   Search,
   Settings,
   X,
-  Sparkles
-} from "lucide-react"
+  Sparkles,
+} from "lucide-react";
 
-export default function CommandPalette({ isOpen, onClose, onQuickCreateTask, onTriggerCanvasSync }) {
-  const [query, setQuery] = useState("")
-  const [selectedIndex, setSelectedIndex] = useState(0)
-  const inputRef = useRef(null)
-  const navigate = useNavigate()
+export default function CommandPalette({
+  isOpen,
+  onClose,
+  onQuickCreateTask,
+  onTriggerCanvasSync,
+}) {
+  const [query, setQuery] = useState("");
+  const [selectedIndex, setSelectedIndex] = useState(0);
+  const inputRef = useRef(null);
+  const navigate = useNavigate();
 
   // Reset the palette contents whenever it opens (adjust-during-render pattern).
-  const [wasOpen, setWasOpen] = useState(isOpen)
+  const [wasOpen, setWasOpen] = useState(isOpen);
   if (isOpen && !wasOpen) {
-    setWasOpen(true)
-    setQuery("")
-    setSelectedIndex(0)
+    setWasOpen(true);
+    setQuery("");
+    setSelectedIndex(0);
   } else if (!isOpen && wasOpen) {
-    setWasOpen(false)
+    setWasOpen(false);
   }
 
   useEffect(() => {
     if (isOpen) {
-      setTimeout(() => inputRef.current?.focus(), 50)
+      setTimeout(() => inputRef.current?.focus(), 50);
     }
-  }, [isOpen])
+  }, [isOpen]);
 
   // Build items based on query
   const navigationItems = [
@@ -44,8 +49,8 @@ export default function CommandPalette({ isOpen, onClose, onQuickCreateTask, onT
       label: "Go to Today Hub",
       shortcut: "G T",
       action: () => {
-        navigate("/dashboard")
-        onClose()
+        navigate("/dashboard");
+        onClose();
       },
     },
     {
@@ -55,8 +60,8 @@ export default function CommandPalette({ isOpen, onClose, onQuickCreateTask, onT
       label: "Go to Tasks & Planner",
       shortcut: "G P",
       action: () => {
-        navigate("/planner")
-        onClose()
+        navigate("/planner");
+        onClose();
       },
     },
     {
@@ -66,8 +71,8 @@ export default function CommandPalette({ isOpen, onClose, onQuickCreateTask, onT
       label: "Go to Timetable & Schedule",
       shortcut: "G S",
       action: () => {
-        navigate("/schedule")
-        onClose()
+        navigate("/schedule");
+        onClose();
       },
     },
     {
@@ -77,8 +82,8 @@ export default function CommandPalette({ isOpen, onClose, onQuickCreateTask, onT
       label: "Go to Canvas Hub",
       shortcut: "G C",
       action: () => {
-        navigate("/canvas")
-        onClose()
+        navigate("/canvas");
+        onClose();
       },
     },
     {
@@ -88,11 +93,11 @@ export default function CommandPalette({ isOpen, onClose, onQuickCreateTask, onT
       label: "Settings & Profile",
       shortcut: "G ,",
       action: () => {
-        navigate("/settings")
-        onClose()
+        navigate("/settings");
+        onClose();
       },
     },
-  ]
+  ];
 
   const actionItems = [
     {
@@ -102,15 +107,15 @@ export default function CommandPalette({ isOpen, onClose, onQuickCreateTask, onT
       label: "Refresh & Sync Canvas (Assignments, Announcements, Files)",
       shortcut: "⌘ R",
       action: () => {
-        if (onTriggerCanvasSync) onTriggerCanvasSync()
-        onClose()
+        if (onTriggerCanvasSync) onTriggerCanvasSync();
+        onClose();
       },
     },
-  ]
+  ];
 
-  let items = []
+  let items = [];
 
-  const cleanQuery = query.trim()
+  const cleanQuery = query.trim();
 
   if (cleanQuery.length > 0) {
     items.push({
@@ -121,49 +126,49 @@ export default function CommandPalette({ isOpen, onClose, onQuickCreateTask, onT
       badge: "Press Enter",
       action: () => {
         if (onQuickCreateTask) {
-          onQuickCreateTask(cleanQuery)
+          onQuickCreateTask(cleanQuery);
         }
-        onClose()
+        onClose();
       },
-    })
+    });
   }
 
   // Filter navigation & actions
-  const filteredNav = navigationItems.filter(
-    (item) => item.label.toLowerCase().includes(query.toLowerCase())
-  )
-  const filteredActions = actionItems.filter(
-    (item) => item.label.toLowerCase().includes(query.toLowerCase())
-  )
+  const filteredNav = navigationItems.filter((item) =>
+    item.label.toLowerCase().includes(query.toLowerCase()),
+  );
+  const filteredActions = actionItems.filter((item) =>
+    item.label.toLowerCase().includes(query.toLowerCase()),
+  );
 
-  items = [...items, ...filteredNav, ...filteredActions]
+  items = [...items, ...filteredNav, ...filteredActions];
 
   // Reset the selection whenever the query changes (adjust-during-render pattern).
-  const [syncedQuery, setSyncedQuery] = useState(query)
+  const [syncedQuery, setSyncedQuery] = useState(query);
   if (query !== syncedQuery) {
-    setSyncedQuery(query)
-    setSelectedIndex(0)
+    setSyncedQuery(query);
+    setSelectedIndex(0);
   }
 
   const handleKeyDown = (e) => {
     if (e.key === "Escape") {
-      e.preventDefault()
-      onClose()
+      e.preventDefault();
+      onClose();
     } else if (e.key === "ArrowDown") {
-      e.preventDefault()
-      setSelectedIndex((prev) => (items.length > 0 ? (prev + 1) % items.length : 0))
+      e.preventDefault();
+      setSelectedIndex((prev) => (items.length > 0 ? (prev + 1) % items.length : 0));
     } else if (e.key === "ArrowUp") {
-      e.preventDefault()
-      setSelectedIndex((prev) => (items.length > 0 ? (prev - 1 + items.length) % items.length : 0))
+      e.preventDefault();
+      setSelectedIndex((prev) => (items.length > 0 ? (prev - 1 + items.length) % items.length : 0));
     } else if (e.key === "Enter") {
-      e.preventDefault()
+      e.preventDefault();
       if (items[selectedIndex]) {
-        items[selectedIndex].action()
+        items[selectedIndex].action();
       }
     }
-  }
+  };
 
-  if (!isOpen) return null
+  if (!isOpen) return null;
 
   return (
     <div className="cmd-backdrop" onClick={onClose}>
@@ -192,13 +197,15 @@ export default function CommandPalette({ isOpen, onClose, onQuickCreateTask, onT
           {items.length === 0 ? (
             <div className="cmd-empty">
               <p>No matching commands found</p>
-              <span className="text-xs text-muted">Try typing a task title or navigation target</span>
+              <span className="text-xs text-muted">
+                Try typing a task title or navigation target
+              </span>
             </div>
           ) : (
             <div className="cmd-list">
               {items.map((item, idx) => {
-                const Icon = item.icon
-                const isSelected = idx === selectedIndex
+                const Icon = item.icon;
+                const isSelected = idx === selectedIndex;
                 return (
                   <div
                     key={item.id}
@@ -217,7 +224,7 @@ export default function CommandPalette({ isOpen, onClose, onQuickCreateTask, onT
                       {item.shortcut && <kbd className="cmd-item-shortcut">{item.shortcut}</kbd>}
                     </div>
                   </div>
-                )
+                );
               })}
             </div>
           )}
@@ -225,9 +232,16 @@ export default function CommandPalette({ isOpen, onClose, onQuickCreateTask, onT
 
         <div className="cmd-footer">
           <div className="cmd-hints">
-            <span><kbd>↑</kbd><kbd>↓</kbd> Navigate</span>
-            <span><kbd>↵</kbd> Select</span>
-            <span><kbd>ESC</kbd> Close</span>
+            <span>
+              <kbd>↑</kbd>
+              <kbd>↓</kbd> Navigate
+            </span>
+            <span>
+              <kbd>↵</kbd> Select
+            </span>
+            <span>
+              <kbd>ESC</kbd> Close
+            </span>
           </div>
           <div className="cmd-brand">
             <Sparkles size={12} />
@@ -236,5 +250,5 @@ export default function CommandPalette({ isOpen, onClose, onQuickCreateTask, onT
         </div>
       </div>
     </div>
-  )
+  );
 }

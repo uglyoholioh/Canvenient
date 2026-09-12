@@ -11,15 +11,19 @@ import NotesModule from "./dashboard/NotesModule";
 import AssistantBriefCard from "./dashboard/AssistantBriefCard";
 import StudyTimerModule from "./dashboard/StudyTimerModule";
 import WheelModule from "./dashboard/WheelModule";
-import { DEFAULT_DASHBOARD_CONFIG, readDashboardConfig, readDashboardLayout, saveDashboardConfig, saveDashboardLayout, threeColumnDashboardConfig } from "./dashboard/dashboardConfig";
+import {
+  DEFAULT_DASHBOARD_CONFIG,
+  readDashboardConfig,
+  readDashboardLayout,
+  saveDashboardConfig,
+  saveDashboardLayout,
+  threeColumnDashboardConfig,
+} from "./dashboard/dashboardConfig";
 import { getSchedule, getTasks } from "../api";
 import { dashboardAgendaItems, getAcademicWeek } from "./scheduleUtils";
 import { useQuickCapture } from "./QuickCaptureContext";
 import { WorkspaceToolbarContext } from "./WorkspaceToolbarContext";
 import { useContext } from "react";
-
-
-
 
 export default function Dashboard({ token, user, onNavigate }) {
   const { openQuickCapture } = useQuickCapture();
@@ -53,14 +57,20 @@ export default function Dashboard({ token, user, onNavigate }) {
   useEffect(() => {
     if (!token) return undefined;
     let cancelled = false;
-    Promise.allSettled([getSchedule(token), getTasks(token)]).then(([scheduleResult, taskResult]) => {
-      if (cancelled) return;
-      setSchedule(scheduleResult.status === "fulfilled" && scheduleResult.value
-        ? scheduleResult.value
-        : { classes: [], exams: [], events: [] });
-      setTasks(taskResult.status === "fulfilled" ? taskResult.value || [] : []);
-    });
-    return () => { cancelled = true; };
+    Promise.allSettled([getSchedule(token), getTasks(token)]).then(
+      ([scheduleResult, taskResult]) => {
+        if (cancelled) return;
+        setSchedule(
+          scheduleResult.status === "fulfilled" && scheduleResult.value
+            ? scheduleResult.value
+            : { classes: [], exams: [], events: [] },
+        );
+        setTasks(taskResult.status === "fulfilled" ? taskResult.value || [] : []);
+      },
+    );
+    return () => {
+      cancelled = true;
+    };
   }, [token, taskRefreshKey]);
 
   const hero = useMemo(() => {
@@ -68,7 +78,11 @@ export default function Dashboard({ token, user, onNavigate }) {
     dayStart.setHours(0, 0, 0, 0);
     const agenda = schedule ? dashboardAgendaItems(schedule, tasks, dayStart) : [];
     const remaining = agenda.filter((item) => item.end >= now);
-    const dateLabel = now.toLocaleDateString([], { weekday: "long", day: "numeric", month: "long" });
+    const dateLabel = now.toLocaleDateString([], {
+      weekday: "long",
+      day: "numeric",
+      month: "long",
+    });
     const weekLabel = getAcademicWeek(now)?.label;
     const metaParts = [];
     if (weekLabel) metaParts.push(weekLabel);
@@ -95,9 +109,11 @@ export default function Dashboard({ token, user, onNavigate }) {
     });
   }, []);
 
-
   useEffect(() => {
-    const syncSettings = () => { setLayout(readDashboardLayout()); setConfig(readDashboardConfig()); };
+    const syncSettings = () => {
+      setLayout(readDashboardLayout());
+      setConfig(readDashboardConfig());
+    };
     window.addEventListener("storage", syncSettings);
     window.addEventListener("dashboard-settings-updated", syncSettings);
     return () => {
@@ -122,11 +138,14 @@ export default function Dashboard({ token, user, onNavigate }) {
     saveDashboardLayout(nextLayout);
   }, []);
 
-  const selectLayout = useCallback((nextLayout) => {
-    setIsEditingLayout(false);
-    setDraggedModule(null);
-    changeLayout(nextLayout);
-  }, [changeLayout]);
+  const selectLayout = useCallback(
+    (nextLayout) => {
+      setIsEditingLayout(false);
+      setDraggedModule(null);
+      changeLayout(nextLayout);
+    },
+    [changeLayout],
+  );
 
   const changeConfig = useCallback((nextConfig) => {
     setConfig(nextConfig);
@@ -151,12 +170,24 @@ export default function Dashboard({ token, user, onNavigate }) {
     canvas: {
       title: "Canvas",
       onViewFull: () => onNavigate("canvas"),
-      body: <CanvasModule token={token} enabled={Boolean(user?.canvas_connected)} onOpenItem={setActiveCanvasItem} onNavigate={onNavigate} />,
+      body: (
+        <CanvasModule
+          token={token}
+          enabled={Boolean(user?.canvas_connected)}
+          onOpenItem={setActiveCanvasItem}
+          onNavigate={onNavigate}
+        />
+      ),
     },
     notes: {
       title: "Notes",
       onViewFull: () => onNavigate("notes"),
-      body: <NotesModule token={token} onOpenNote={(note) => onNavigate("notes", { openNoteId: note.id })} />,
+      body: (
+        <NotesModule
+          token={token}
+          onOpenNote={(note) => onNavigate("notes", { openNoteId: note.id })}
+        />
+      ),
     },
     aibrief: {
       title: "My Day",
@@ -173,7 +204,6 @@ export default function Dashboard({ token, user, onNavigate }) {
     },
   };
 
-
   const visibleModules = useMemo(
     () => config.order.filter((moduleId) => !config.hidden.includes(moduleId)),
     [config.hidden, config.order],
@@ -183,35 +213,48 @@ export default function Dashboard({ token, user, onNavigate }) {
     ? activeModuleId
     : visibleModules[0] || null;
 
-  const moveBrowseFocus = useCallback((moduleId, key) => {
-    if (key === "Home" || key === "End") {
-      const targetId = key === "Home" ? visibleModules[0] : visibleModules[visibleModules.length - 1];
-      if (targetId) moduleRefs.current.get(targetId)?.focus();
-      return;
-    }
-    const current = moduleRefs.current.get(moduleId);
-    const currentRect = current?.getBoundingClientRect();
-    if (!currentRect) return;
-    const currentCenter = { x: currentRect.left + currentRect.width / 2, y: currentRect.top + currentRect.height / 2 };
-    const candidates = visibleModules.flatMap((candidateId) => {
-      if (candidateId === moduleId) return [];
-      const element = moduleRefs.current.get(candidateId);
-      const rect = element?.getBoundingClientRect();
-      if (!rect) return [];
-      const center = { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
-      const dx = center.x - currentCenter.x;
-      const dy = center.y - currentCenter.y;
-      const inDirection = key === "ArrowRight" ? dx > 1
-        : key === "ArrowLeft" ? dx < -1
-          : key === "ArrowDown" ? dy > 1
-            : dy < -1;
-      if (!inDirection) return [];
-      const primary = key === "ArrowRight" || key === "ArrowLeft" ? Math.abs(dx) : Math.abs(dy);
-      const cross = key === "ArrowRight" || key === "ArrowLeft" ? Math.abs(dy) : Math.abs(dx);
-      return [{ id: candidateId, score: primary + cross * 0.35 }];
-    }).sort((a, b) => a.score - b.score);
-    if (candidates[0]) moduleRefs.current.get(candidates[0].id)?.focus();
-  }, [visibleModules]);
+  const moveBrowseFocus = useCallback(
+    (moduleId, key) => {
+      if (key === "Home" || key === "End") {
+        const targetId =
+          key === "Home" ? visibleModules[0] : visibleModules[visibleModules.length - 1];
+        if (targetId) moduleRefs.current.get(targetId)?.focus();
+        return;
+      }
+      const current = moduleRefs.current.get(moduleId);
+      const currentRect = current?.getBoundingClientRect();
+      if (!currentRect) return;
+      const currentCenter = {
+        x: currentRect.left + currentRect.width / 2,
+        y: currentRect.top + currentRect.height / 2,
+      };
+      const candidates = visibleModules
+        .flatMap((candidateId) => {
+          if (candidateId === moduleId) return [];
+          const element = moduleRefs.current.get(candidateId);
+          const rect = element?.getBoundingClientRect();
+          if (!rect) return [];
+          const center = { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+          const dx = center.x - currentCenter.x;
+          const dy = center.y - currentCenter.y;
+          const inDirection =
+            key === "ArrowRight"
+              ? dx > 1
+              : key === "ArrowLeft"
+                ? dx < -1
+                : key === "ArrowDown"
+                  ? dy > 1
+                  : dy < -1;
+          if (!inDirection) return [];
+          const primary = key === "ArrowRight" || key === "ArrowLeft" ? Math.abs(dx) : Math.abs(dy);
+          const cross = key === "ArrowRight" || key === "ArrowLeft" ? Math.abs(dy) : Math.abs(dx);
+          return [{ id: candidateId, score: primary + cross * 0.35 }];
+        })
+        .sort((a, b) => a.score - b.score);
+      if (candidates[0]) moduleRefs.current.get(candidates[0].id)?.focus();
+    },
+    [visibleModules],
+  );
 
   const moveModule = (moduleId, direction) => {
     const index = config.order.indexOf(moduleId);
@@ -288,7 +331,7 @@ export default function Dashboard({ token, user, onNavigate }) {
 
   const today = new Date();
   const dayLabel = today.toLocaleDateString([], { weekday: "long", month: "long", day: "numeric" });
-  
+
   useEffect(() => {
     if (!setToolbar) return;
     setToolbar({
@@ -296,22 +339,62 @@ export default function Dashboard({ token, user, onNavigate }) {
       hideSearch: false,
       actions: (
         <>
-            <button
-              type="button"
-              className={`dashboard-edit-button ${isEditingLayout ? "is-active" : ""}`}
-              onClick={() => isEditingLayout ? setIsEditingLayout(false) : beginLayoutEdit()}
-              aria-label={isEditingLayout ? "Finish editing dashboard layout" : "Edit dashboard layout"}
-              title={isEditingLayout ? "Done" : "Edit layout"}
-            >
-              {isEditingLayout ? <Check size={15} /> : <Pencil size={15} />}
-            </button>
-            <button type="button" className={`dashboard-customize-button ${isCustomizing ? "is-active" : ""}`} onClick={() => setIsCustomizing((open) => !open)} aria-label="Customize dashboard" title="Customize dashboard"><SlidersHorizontal size={15} /></button>
-            {isCustomizing && <div className="dashboard-customizer-popover is-in-toolbar"><header><strong>Customize dashboard</strong><button type="button" onClick={() => setIsCustomizing(false)} aria-label="Close dashboard customizer"><X size={14} /></button></header><DashboardCustomizer compact layout={layout} config={config} onLayoutChange={selectLayout} onConfigChange={changeConfig} /></div>}
+          <button
+            type="button"
+            className={`dashboard-edit-button ${isEditingLayout ? "is-active" : ""}`}
+            onClick={() => (isEditingLayout ? setIsEditingLayout(false) : beginLayoutEdit())}
+            aria-label={
+              isEditingLayout ? "Finish editing dashboard layout" : "Edit dashboard layout"
+            }
+            title={isEditingLayout ? "Done" : "Edit layout"}
+          >
+            {isEditingLayout ? <Check size={15} /> : <Pencil size={15} />}
+          </button>
+          <button
+            type="button"
+            className={`dashboard-customize-button ${isCustomizing ? "is-active" : ""}`}
+            onClick={() => setIsCustomizing((open) => !open)}
+            aria-label="Customize dashboard"
+            title="Customize dashboard"
+          >
+            <SlidersHorizontal size={15} />
+          </button>
+          {isCustomizing && (
+            <div className="dashboard-customizer-popover is-in-toolbar">
+              <header>
+                <strong>Customize dashboard</strong>
+                <button
+                  type="button"
+                  onClick={() => setIsCustomizing(false)}
+                  aria-label="Close dashboard customizer"
+                >
+                  <X size={14} />
+                </button>
+              </header>
+              <DashboardCustomizer
+                compact
+                layout={layout}
+                config={config}
+                onLayoutChange={selectLayout}
+                onConfigChange={changeConfig}
+              />
+            </div>
+          )}
         </>
-      )
+      ),
     });
     return () => setToolbar(null);
-  }, [setToolbar, dayLabel, isEditingLayout, beginLayoutEdit, isCustomizing, layout, config, selectLayout, changeConfig]);
+  }, [
+    setToolbar,
+    dayLabel,
+    isEditingLayout,
+    beginLayoutEdit,
+    isCustomizing,
+    layout,
+    config,
+    selectLayout,
+    changeConfig,
+  ]);
 
   const gridTracks = previewTracks || config.tracks;
 
@@ -326,7 +409,10 @@ export default function Dashboard({ token, user, onNavigate }) {
   }, [gridTracks.rows]);
 
   const totalRequestedRowHeight = balancedRows.reduce((sum, value) => sum + value, 0) || 1;
-  const availableGridHeight = Math.max(balancedRows.length * 96, Math.min(balancedRows.length * 400, viewportHeight - 120));
+  const availableGridHeight = Math.max(
+    balancedRows.length * 96,
+    Math.min(balancedRows.length * 400, viewportHeight - 120),
+  );
   const rowScale = availableGridHeight / totalRequestedRowHeight;
 
   return (
@@ -342,14 +428,29 @@ export default function Dashboard({ token, user, onNavigate }) {
           className={`dashboard-grid is-${layout} ${isEditingLayout ? "is-layout-editing" : ""}`}
           style={{
             "--dashboard-column-tracks": gridTracks.columns.map((value) => `${value}fr`).join(" "),
-            "--dashboard-row-tracks": balancedRows.map((value) => `${Math.max(72, Math.round(value * rowScale))}px`).join(" "),
+            "--dashboard-row-tracks": balancedRows
+              .map((value) => `${Math.max(72, Math.round(value * rowScale))}px`)
+              .join(" "),
           }}
         >
           {visibleModules.map(renderModule)}
-          {visibleModules.length === 0 && <div className="dashboard-no-modules">No modules are visible. Use the customize button to add one.</div>}
+          {visibleModules.length === 0 && (
+            <div className="dashboard-no-modules">
+              No modules are visible. Use the customize button to add one.
+            </div>
+          )}
         </div>
       </div>
-      <CanvasDrawer key={activeCanvasItem ? `${activeCanvasItem.itemType}-${activeCanvasItem.course_id}-${activeCanvasItem.id}` : "empty"} item={activeCanvasItem} token={token} onClose={() => setActiveCanvasItem(null)} />
+      <CanvasDrawer
+        key={
+          activeCanvasItem
+            ? `${activeCanvasItem.itemType}-${activeCanvasItem.course_id}-${activeCanvasItem.id}`
+            : "empty"
+        }
+        item={activeCanvasItem}
+        token={token}
+        onClose={() => setActiveCanvasItem(null)}
+      />
     </div>
   );
 }

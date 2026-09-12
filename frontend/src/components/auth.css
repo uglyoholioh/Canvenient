@@ -34,10 +34,38 @@
   animation: auth-tick-in 350ms var(--auth-ease) both;
 }
 
-.auth-tick--tl { top: 28px; left: 28px; border-top-width: 1px; border-left-width: 1px; transform-origin: top left; animation-delay: 120ms; }
-.auth-tick--tr { top: 28px; right: 28px; border-top-width: 1px; border-right-width: 1px; transform-origin: top right; animation-delay: 160ms; }
-.auth-tick--br { bottom: 28px; right: 28px; border-bottom-width: 1px; border-right-width: 1px; transform-origin: bottom right; animation-delay: 200ms; }
-.auth-tick--bl { bottom: 28px; left: 28px; border-bottom-width: 1px; border-left-width: 1px; transform-origin: bottom left; animation-delay: 240ms; }
+.auth-tick--tl {
+  top: 28px;
+  left: 28px;
+  border-top-width: 1px;
+  border-left-width: 1px;
+  transform-origin: top left;
+  animation-delay: 120ms;
+}
+.auth-tick--tr {
+  top: 28px;
+  right: 28px;
+  border-top-width: 1px;
+  border-right-width: 1px;
+  transform-origin: top right;
+  animation-delay: 160ms;
+}
+.auth-tick--br {
+  bottom: 28px;
+  right: 28px;
+  border-bottom-width: 1px;
+  border-right-width: 1px;
+  transform-origin: bottom right;
+  animation-delay: 200ms;
+}
+.auth-tick--bl {
+  bottom: 28px;
+  left: 28px;
+  border-bottom-width: 1px;
+  border-left-width: 1px;
+  transform-origin: bottom left;
+  animation-delay: 240ms;
+}
 
 /* --- Corner metadata --- */
 .auth-corner {
@@ -51,9 +79,18 @@
   pointer-events: none;
 }
 
-.auth-corner--tl { top: 26px; left: 56px; }
-.auth-corner--tr { top: 26px; right: 56px; }
-.auth-corner--br { bottom: 26px; right: 56px; }
+.auth-corner--tl {
+  top: 26px;
+  left: 56px;
+}
+.auth-corner--tr {
+  top: 26px;
+  right: 56px;
+}
+.auth-corner--br {
+  bottom: 26px;
+  right: 56px;
+}
 
 .auth-wordmark {
   font-weight: 600;
@@ -167,7 +204,9 @@
   padding: 9px 2px;
   outline: none;
   caret-color: var(--accent);
-  transition: border-color 150ms ease, box-shadow 150ms ease;
+  transition:
+    border-color 150ms ease,
+    box-shadow 150ms ease;
 }
 
 .auth-input::placeholder {
@@ -198,7 +237,9 @@
   border-radius: 6px;
   color: var(--text-muted);
   cursor: pointer;
-  transition: color 150ms ease, background-color 150ms ease;
+  transition:
+    color 150ms ease,
+    background-color 150ms ease;
 }
 
 .auth-toggle:hover {
@@ -245,7 +286,11 @@
   letter-spacing: 0.02em;
   cursor: pointer;
   border-radius: 8px;
-  transition: background-color 150ms ease, border-color 150ms ease, transform 100ms ease, opacity 150ms ease;
+  transition:
+    background-color 150ms ease,
+    border-color 150ms ease,
+    transform 100ms ease,
+    opacity 150ms ease;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -317,7 +362,9 @@
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 @keyframes auth-tick-in {
@@ -354,20 +401,39 @@
 }
 
 @keyframes auth-blink {
-  0%, 54% { opacity: 1; }
-  55%, 100% { opacity: 0; }
+  0%,
+  54% {
+    opacity: 1;
+  }
+  55%,
+  100% {
+    opacity: 0;
+  }
 }
 
 @keyframes auth-pulse {
-  50% { opacity: 0.35; }
+  50% {
+    opacity: 0.35;
+  }
 }
 
 @keyframes auth-shake {
-  0%, 100% { transform: translateX(0); }
-  20% { transform: translateX(-4px); }
-  40% { transform: translateX(4px); }
-  60% { transform: translateX(-3px); }
-  80% { transform: translateX(3px); }
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  20% {
+    transform: translateX(-4px);
+  }
+  40% {
+    transform: translateX(4px);
+  }
+  60% {
+    transform: translateX(-3px);
+  }
+  80% {
+    transform: translateX(3px);
+  }
 }
 
 @keyframes auth-pop {

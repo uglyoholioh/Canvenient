@@ -16,10 +16,13 @@ router = APIRouter(prefix="/module-colors", tags=["module-colors"])
 
 async def build_module_color_payload(user_id: int):
     await ensure_discovered_module_colors(user_id)
-    active_palette = await db.fetch_val(
-        "SELECT palette_name FROM module_color_settings WHERE user_id = :user_id",
-        values={"user_id": user_id},
-    ) or "balanced"
+    active_palette = (
+        await db.fetch_val(
+            "SELECT palette_name FROM module_color_settings WHERE user_id = :user_id",
+            values={"user_id": user_id},
+        )
+        or "balanced"
+    )
     rows = await db.fetch_all(
         """
             SELECT module_code, module_name, color
@@ -145,10 +148,7 @@ async def update_module_color(
                     values={"user_id": current_user.id},
                 )
             }
-            temporary = next(
-                f"#{value:06X}" for value in range(1, 0xFFFFFF)
-                if f"#{value:06X}" not in used
-            )
+            temporary = next(f"#{value:06X}" for value in range(1, 0xFFFFFF) if f"#{value:06X}" not in used)
             await db.execute(
                 """
                     UPDATE module_colors

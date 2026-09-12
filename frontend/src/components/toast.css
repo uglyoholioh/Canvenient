@@ -49,10 +49,8 @@
 @keyframes mac-toast-slide-up {
   from {
     opacity: 0;
-    
   }
   to {
     opacity: 1;
-    
   }
 }

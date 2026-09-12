@@ -272,9 +272,16 @@ describe("ModuleCard resizing", () => {
       </div>,
     );
     const target = container.querySelector('[data-module="schedule"]');
-    Object.defineProperty(document, "elementFromPoint", { configurable: true, value: vi.fn(() => target) });
+    Object.defineProperty(document, "elementFromPoint", {
+      configurable: true,
+      value: vi.fn(() => target),
+    });
 
-    fireEvent.mouseDown(screen.getByRole("button", { name: "Drag Tasks to move or reorder" }), { button: 0, clientX: 10, clientY: 10 });
+    fireEvent.mouseDown(screen.getByRole("button", { name: "Drag Tasks to move or reorder" }), {
+      button: 0,
+      clientX: 10,
+      clientY: 10,
+    });
     fireEvent.mouseMove(window, { clientX: 40, clientY: 40 });
     fireEvent.mouseUp(window, { clientX: 40, clientY: 40 });
 
@@ -351,8 +358,22 @@ describe("ModuleCard resizing", () => {
     });
 
     const items = container.querySelectorAll(".task-module-item button");
-    items[0].getBoundingClientRect = () => ({ top: 10, bottom: 60, height: 50, width: 280, left: 10, right: 290 });
-    items[1].getBoundingClientRect = () => ({ top: 70, bottom: 220, height: 150, width: 280, left: 10, right: 290 });
+    items[0].getBoundingClientRect = () => ({
+      top: 10,
+      bottom: 60,
+      height: 50,
+      width: 280,
+      left: 10,
+      right: 290,
+    });
+    items[1].getBoundingClientRect = () => ({
+      top: 70,
+      bottom: 220,
+      height: 150,
+      width: 280,
+      left: 10,
+      right: 290,
+    });
 
     fireEvent.mouseEnter(card);
 
@@ -395,7 +416,14 @@ describe("ModuleCard resizing", () => {
     });
 
     const item = container.querySelector(".task-module-item button");
-    item.getBoundingClientRect = () => ({ top: 10, bottom: 60, height: 50, width: 280, left: 10, right: 290 });
+    item.getBoundingClientRect = () => ({
+      top: 10,
+      bottom: 60,
+      height: 50,
+      width: 280,
+      left: 10,
+      right: 290,
+    });
 
     fireEvent.mouseEnter(card);
 

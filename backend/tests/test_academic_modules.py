@@ -19,7 +19,9 @@ async def test_module_selection_is_persisted_per_user(client, auth):
     modules = listed.json()
     cs2040_id = next(module["id"] for module in modules if module["module_code"] == "CS2040")
 
-    saved = await client.put("/academic-modules/selection", json={"module_ids": [cs2040_id]}, headers=auth_headers(token))
+    saved = await client.put(
+        "/academic-modules/selection", json={"module_ids": [cs2040_id]}, headers=auth_headers(token)
+    )
     assert saved.status_code == 200, saved.text
     selected = {module["module_code"]: module["is_selected"] for module in saved.json()}
     assert selected == {"CS2040": True, "ST2334": False}

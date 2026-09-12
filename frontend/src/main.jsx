@@ -1,9 +1,9 @@
-import React, { StrictMode } from 'react'
-import { createRoot } from 'react-dom/client'
-import './index.css'
-import App from './App.jsx'
+import React, { StrictMode } from "react";
+import { createRoot } from "react-dom/client";
+import "./index.css";
+import App from "./App.jsx";
 
-document.addEventListener('contextmenu', event => event.preventDefault());
+document.addEventListener("contextmenu", (event) => event.preventDefault());
 
 class ErrorBoundary extends React.Component {
   constructor(props) {
@@ -19,11 +19,22 @@ class ErrorBoundary extends React.Component {
   render() {
     if (this.state.hasError) {
       return (
-        <div style={{ padding: 40, background: 'red', color: 'white', height: '100vh', boxSizing: 'border-box', overflow: 'auto' }}>
+        <div
+          style={{
+            padding: 40,
+            background: "red",
+            color: "white",
+            height: "100vh",
+            boxSizing: "border-box",
+            overflow: "auto",
+          }}
+        >
           <h1>App Crashed!</h1>
           <pre>{this.state.error?.toString()}</pre>
           <pre>{this.state.info?.componentStack}</pre>
-          <button type="button" onClick={() => window.location.reload()}>Reload Canvenient</button>
+          <button type="button" onClick={() => window.location.reload()}>
+            Reload Canvenient
+          </button>
         </div>
       );
     }
@@ -33,18 +44,18 @@ class ErrorBoundary extends React.Component {
 
 // A background error (e.g. a PDF decoder failing) must never replace the
 // whole workspace; log it and surface a dismissible toast instead.
-window.addEventListener('error', e => {
-  console.error('Unhandled error:', e.error || e.message);
+window.addEventListener("error", (e) => {
+  console.error("Unhandled error:", e.error || e.message);
 });
 
-window.addEventListener('unhandledrejection', e => {
-  console.error('Unhandled rejection:', e.reason);
+window.addEventListener("unhandledrejection", (e) => {
+  console.error("Unhandled rejection:", e.reason);
 });
 
-createRoot(document.getElementById('root')).render(
+createRoot(document.getElementById("root")).render(
   <StrictMode>
     <ErrorBoundary>
       <App />
     </ErrorBoundary>
   </StrictMode>,
-)
+);

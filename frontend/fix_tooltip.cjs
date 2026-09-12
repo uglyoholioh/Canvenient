@@ -1,13 +1,18 @@
-const fs = require('fs');
+const fs = require("fs");
 
-let content = fs.readFileSync('src/components/VenueFinder.jsx', 'utf8');
+let content = fs.readFileSync("src/components/VenueFinder.jsx", "utf8");
 
 // 1. Add tooltip state
-const stateHookPos = content.indexOf('const [inspectedVenue, setInspectedVenue] = useState(null);');
+const stateHookPos = content.indexOf("const [inspectedVenue, setInspectedVenue] = useState(null);");
 const stateInject = `const [inspectedVenue, setInspectedVenue] = useState(null);
   const [tooltipData, setTooltipData] = useState(null);
 `;
-content = content.substring(0, stateHookPos) + stateInject + content.substring(stateHookPos + 'const [inspectedVenue, setInspectedVenue] = useState(null);'.length);
+content =
+  content.substring(0, stateHookPos) +
+  stateInject +
+  content.substring(
+    stateHookPos + "const [inspectedVenue, setInspectedVenue] = useState(null);".length,
+  );
 
 // 2. Add onMouseEnter and onMouseLeave to the vf-t-block elements
 const blockDiv = `className={\`vf-t-block \${isVacant ? "free" : "occupied"} \${isSelected ? "selected" : ""}\`}
@@ -31,7 +36,7 @@ const newBlockDiv = `className={\`vf-t-block \${isVacant ? "free" : "occupied"} 
 content = content.replace(blockDiv, newBlockDiv);
 
 // 3. Inject the tooltip rendering right before the final closing </div>
-const closingDivPos = content.lastIndexOf('</div>');
+const closingDivPos = content.lastIndexOf("</div>");
 const tooltipRender = `
       {tooltipData && (
         <div
@@ -62,4 +67,4 @@ const tooltipRender = `
 
 content = content.substring(0, closingDivPos) + tooltipRender + content.substring(closingDivPos);
 
-fs.writeFileSync('src/components/VenueFinder.jsx', content);
+fs.writeFileSync("src/components/VenueFinder.jsx", content);

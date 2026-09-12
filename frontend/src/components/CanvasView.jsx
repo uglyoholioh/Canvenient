@@ -1,9 +1,21 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import DOMPurify from "dompurify";
 import {
-  Bell, BookOpen, CheckCircle2,
-  ExternalLink, File, Loader2, RefreshCw, Link as LinkIcon,
-  MessageSquare, HelpCircle, Layers, BookMarked, Calendar, Plus, Check
+  Bell,
+  BookOpen,
+  CheckCircle2,
+  ExternalLink,
+  File,
+  Loader2,
+  RefreshCw,
+  Link as LinkIcon,
+  MessageSquare,
+  HelpCircle,
+  Layers,
+  BookMarked,
+  Calendar,
+  Plus,
+  Check,
 } from "lucide-react";
 import {
   getAcademicModules,
@@ -61,27 +73,31 @@ export default function CanvasView({ token }) {
     } catch {}
   }, [token]);
 
-  const load = useCallback(async (force = false) => {
-    setLoading(true); setError("");
-    try {
-      const [c, a, ann, m, t] = await Promise.all([
-        getCanvasCourses(token, force),
-        getCanvasAssignments(token, force),
-        getCanvasAnnouncements(token, force),
-        getAcademicModules(token),
-        getTasks(token).catch(() => []),
-      ]);
-      setCourses(c || []);
-      setAssignments(a || []);
-      setAnnouncements(ann || []);
-      setAcademicModules(m || []);
-      setTasks(Array.isArray(t) ? t : []);
-    } catch (e) {
-      setError(e.message || "Could not load Canvas data.");
-    } finally {
-      setLoading(false);
-    }
-  }, [token]);
+  const load = useCallback(
+    async (force = false) => {
+      setLoading(true);
+      setError("");
+      try {
+        const [c, a, ann, m, t] = await Promise.all([
+          getCanvasCourses(token, force),
+          getCanvasAssignments(token, force),
+          getCanvasAnnouncements(token, force),
+          getAcademicModules(token),
+          getTasks(token).catch(() => []),
+        ]);
+        setCourses(c || []);
+        setAssignments(a || []);
+        setAnnouncements(ann || []);
+        setAcademicModules(m || []);
+        setTasks(Array.isArray(t) ? t : []);
+      } catch (e) {
+        setError(e.message || "Could not load Canvas data.");
+      } finally {
+        setLoading(false);
+      }
+    },
+    [token],
+  );
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- kicks off the async Canvas load; loading state must apply immediately
@@ -89,7 +105,9 @@ export default function CanvasView({ token }) {
   }, [load]);
 
   useEffect(() => {
-    const handleTasksChanged = () => { loadTasks(); };
+    const handleTasksChanged = () => {
+      loadTasks();
+    };
     window.addEventListener("canvenient-tasks-changed", handleTasksChanged);
     window.addEventListener("canvenient-task-created", handleTasksChanged);
     return () => {
@@ -108,69 +126,90 @@ export default function CanvasView({ token }) {
     return set;
   }, [tasks]);
 
-  const isAssignmentAdded = useCallback((item) => {
-    const sourceId = `canvas:${item.course_id}:${item.id}`;
-    return activeCanvasTaskSourceIds.has(sourceId);
-  }, [activeCanvasTaskSourceIds]);
+  const isAssignmentAdded = useCallback(
+    (item) => {
+      const sourceId = `canvas:${item.course_id}:${item.id}`;
+      return activeCanvasTaskSourceIds.has(sourceId);
+    },
+    [activeCanvasTaskSourceIds],
+  );
 
-  const handleAddAssignmentAsTask = useCallback(async (e, assignment) => {
-    if (e) e.stopPropagation();
-    if (!token || addingTaskId === assignment.id || isAssignmentAdded(assignment)) return;
-    const sourceId = `canvas:${assignment.course_id}:${assignment.id}`;
-    setAddingTaskId(assignment.id);
-    try {
-      const existing = (tasks || []).find((t) => t.source_type === "canvas" && t.source_id === sourceId);
-      if (existing) {
-        if (existing.status === "done") {
-          await updateTask(token, existing.id, { status: "todo" });
+  const handleAddAssignmentAsTask = useCallback(
+    async (e, assignment) => {
+      if (e) e.stopPropagation();
+      if (!token || addingTaskId === assignment.id || isAssignmentAdded(assignment)) return;
+      const sourceId = `canvas:${assignment.course_id}:${assignment.id}`;
+      setAddingTaskId(assignment.id);
+      try {
+        const existing = (tasks || []).find(
+          (t) => t.source_type === "canvas" && t.source_id === sourceId,
+        );
+        if (existing) {
+          if (existing.status === "done") {
+            await updateTask(token, existing.id, { status: "todo" });
+            notifyTasksChanged();
+          }
+        } else {
+          const module = (academicModules || []).find(
+            (m) =>
+              String(m.source_course_id) === String(assignment.course_id) ||
+              m.module_code === assignment.course_code,
+          );
+          const cleanDescription = stripHtml(assignment.description || "").slice(0, 4000);
+          await createTask(token, {
+            title: assignment.title,
+            description: cleanDescription,
+            module_id: module?.id,
+            priority_manual: assignment.is_priority ? "high" : "medium",
+            source_type: "canvas",
+            source_id: sourceId,
+            source_due_at: assignment.due_at || null,
+            external_url: assignment.external_url || null,
+          });
           notifyTasksChanged();
         }
-      } else {
-        const module = (academicModules || []).find(
-          (m) => String(m.source_course_id) === String(assignment.course_id) || m.module_code === assignment.course_code
-        );
-        const cleanDescription = stripHtml(assignment.description || "").slice(0, 4000);
-        await createTask(token, {
-          title: assignment.title,
-          description: cleanDescription,
-          module_id: module?.id,
-          priority_manual: assignment.is_priority ? "high" : "medium",
-          source_type: "canvas",
-          source_id: sourceId,
-          source_due_at: assignment.due_at || null,
-          external_url: assignment.external_url || null,
-        });
-        notifyTasksChanged();
+        loadTasks();
+      } catch {
+      } finally {
+        setAddingTaskId(null);
       }
-      loadTasks();
-    } catch {} finally {
-      setAddingTaskId(null);
-    }
-  }, [token, addingTaskId, isAssignmentAdded, tasks, academicModules, loadTasks]);
+    },
+    [token, addingTaskId, isAssignmentAdded, tasks, academicModules, loadTasks],
+  );
 
   // Derived: courses active for this student
   const displayedCourses = useMemo(() => {
-    const codes = academicModules.filter(m => m.is_selected && m.module_code?.trim()).map(m => m.module_code.trim());
+    const codes = academicModules
+      .filter((m) => m.is_selected && m.module_code?.trim())
+      .map((m) => m.module_code.trim());
     if (!codes.length) return courses || [];
-    return (courses || []).filter(c => {
+    return (courses || []).filter((c) => {
       if (!c.course_code) return false;
-      return codes.some(mod => new RegExp(`(?:^|[^a-zA-Z0-9])${mod}(?![a-zA-Z0-9])`, "i").test(c.course_code));
+      return codes.some((mod) =>
+        new RegExp(`(?:^|[^a-zA-Z0-9])${mod}(?![a-zA-Z0-9])`, "i").test(c.course_code),
+      );
     });
   }, [courses, academicModules]);
 
-  const validCourseIds = useMemo(() => new Set(displayedCourses.map(c => String(c.id))), [displayedCourses]);
-  const courseColors = useMemo(() => new Map(courses.map(c => [c.course_code, c.color])), [courses]);
+  const validCourseIds = useMemo(
+    () => new Set(displayedCourses.map((c) => String(c.id))),
+    [displayedCourses],
+  );
+  const courseColors = useMemo(
+    () => new Map(courses.map((c) => [c.course_code, c.color])),
+    [courses],
+  );
 
   // Preload files for displayed courses so search across all modules or within modules works seamlessly
   useEffect(() => {
     if (!token || !displayedCourses.length) return;
-    displayedCourses.forEach(course => {
+    displayedCourses.forEach((course) => {
       const cid = String(course.id);
       if (!filesByCourse[cid]) {
         getCanvasFiles(token, cid)
-          .then(data => {
+          .then((data) => {
             if (data) {
-              setFilesByCourse(prev => ({ ...prev, [cid]: data }));
+              setFilesByCourse((prev) => ({ ...prev, [cid]: data }));
             }
           })
           .catch(() => {});
@@ -200,17 +239,21 @@ export default function CanvasView({ token }) {
       let canceled = false;
       setTabLoading(true);
       getCanvasFiles(token, selectedCourseId)
-        .then(d => {
+        .then((d) => {
           if (!canceled) {
             const list = d || [];
             setFiles(list);
-            setFilesByCourse(prev => ({ ...prev, [selectedCourseId]: list }));
+            setFilesByCourse((prev) => ({ ...prev, [selectedCourseId]: list }));
           }
         })
         .catch(() => {})
-        .finally(() => { if (!canceled) setTabLoading(false); });
+        .finally(() => {
+          if (!canceled) setTabLoading(false);
+        });
 
-      return () => { canceled = true; };
+      return () => {
+        canceled = true;
+      };
     }
   }, [selectedCourseId, tab, token, filesByCourse]);
 
@@ -223,44 +266,75 @@ export default function CanvasView({ token }) {
       // eslint-disable-next-line react-hooks/set-state-in-effect -- tab switch must show the loading state immediately
       setTabLoading(true);
       getCanvasCourseModules(token, selectedCourseId)
-        .then(d => { if (!canceled) setCourseModules(d || []); })
+        .then((d) => {
+          if (!canceled) setCourseModules(d || []);
+        })
         .catch(() => {})
-        .finally(() => { if (!canceled) setTabLoading(false); });
+        .finally(() => {
+          if (!canceled) setTabLoading(false);
+        });
     } else if (tab === "pages" && coursePages.length === 0) {
       setTabLoading(true);
       getCanvasPages(token, selectedCourseId)
-        .then(d => { if (!canceled) setCoursePages(d || []); })
+        .then((d) => {
+          if (!canceled) setCoursePages(d || []);
+        })
         .catch(() => {})
-        .finally(() => { if (!canceled) setTabLoading(false); });
+        .finally(() => {
+          if (!canceled) setTabLoading(false);
+        });
     } else if (tab === "syllabus" && courseSyllabus === null) {
       setTabLoading(true);
       getCanvasSyllabus(token, selectedCourseId)
-        .then(d => { if (!canceled) setCourseSyllabus(d); })
+        .then((d) => {
+          if (!canceled) setCourseSyllabus(d);
+        })
         .catch(() => {})
-        .finally(() => { if (!canceled) setTabLoading(false); });
+        .finally(() => {
+          if (!canceled) setTabLoading(false);
+        });
     } else if (tab === "grades" && grades.length === 0) {
       setTabLoading(true);
       getCanvasGrades(token)
-        .then(d => { if (!canceled) setGrades(d || []); })
+        .then((d) => {
+          if (!canceled) setGrades(d || []);
+        })
         .catch(() => {})
-        .finally(() => { if (!canceled) setTabLoading(false); });
+        .finally(() => {
+          if (!canceled) setTabLoading(false);
+        });
     }
 
-    return () => { canceled = true; };
-  }, [tab, selectedCourseId, token, courseModules.length, coursePages.length, courseSyllabus, grades.length]);
+    return () => {
+      canceled = true;
+    };
+  }, [
+    tab,
+    selectedCourseId,
+    token,
+    courseModules.length,
+    coursePages.length,
+    courseSyllabus,
+    grades.length,
+  ]);
 
   // Filtered lists
   const filteredAssignments = useMemo(() => {
-    const list = assignments.filter(item => {
-      if (selectedCourseId !== "all" && String(item.course_id) !== String(selectedCourseId)) return false;
+    const list = assignments.filter((item) => {
+      if (selectedCourseId !== "all" && String(item.course_id) !== String(selectedCourseId))
+        return false;
       if (!validCourseIds.has(String(item.course_id))) return false;
       const due = item.due_at ? new Date(item.due_at) : null;
       if (assignmentFilter === "all") return true;
-      return assignmentFilter === "upcoming" ? (!due || due >= new Date()) : Boolean(due && due < new Date());
+      return assignmentFilter === "upcoming"
+        ? !due || due >= new Date()
+        : Boolean(due && due < new Date());
     });
-    list.sort((a,b) => {
-      if (!a.due_at) return 1; if (!b.due_at) return -1;
-      const da = new Date(a.due_at), db = new Date(b.due_at);
+    list.sort((a, b) => {
+      if (!a.due_at) return 1;
+      if (!b.due_at) return -1;
+      const da = new Date(a.due_at),
+        db = new Date(b.due_at);
       return assignmentFilter === "past" ? db - da : da - db;
     });
     return list;
@@ -268,16 +342,18 @@ export default function CanvasView({ token }) {
 
   const filteredAnnouncements = useMemo(() => {
     return announcements
-      .filter(item => {
-        if (selectedCourseId !== "all" && String(item.course_id) !== String(selectedCourseId)) return false;
+      .filter((item) => {
+        if (selectedCourseId !== "all" && String(item.course_id) !== String(selectedCourseId))
+          return false;
         return validCourseIds.has(String(item.course_id));
       })
-      .sort((a,b) => new Date(b.posted_at || 0) - new Date(a.posted_at || 0));
+      .sort((a, b) => new Date(b.posted_at || 0) - new Date(a.posted_at || 0));
   }, [announcements, selectedCourseId, validCourseIds]);
 
   const filteredGrades = useMemo(() => {
-    return grades.filter(item => {
-      if (selectedCourseId !== "all" && String(item.course_id) !== String(selectedCourseId)) return false;
+    return grades.filter((item) => {
+      if (selectedCourseId !== "all" && String(item.course_id) !== String(selectedCourseId))
+        return false;
       return validCourseIds.has(String(item.course_id));
     });
   }, [grades, selectedCourseId, validCourseIds]);
@@ -294,11 +370,16 @@ export default function CanvasView({ token }) {
   }, [refreshSyncStatus]);
 
   const sync = useCallback(async () => {
-    setSyncing(true); setError("");
+    setSyncing(true);
+    setError("");
     try {
       await syncCanvasAssignments(token);
       await load(true);
-      setGrades([]); setFiles([]); setCourseModules([]); setCoursePages([]); setCourseSyllabus(null);
+      setGrades([]);
+      setFiles([]);
+      setCourseModules([]);
+      setCoursePages([]);
+      setCourseSyllabus(null);
     } catch (e) {
       setError(e.message || "Sync failed.");
     } finally {
@@ -307,12 +388,17 @@ export default function CanvasView({ token }) {
     }
   }, [load, refreshSyncStatus, token]);
 
-  const selectedCourse = courses.find(c => String(c.id) === String(selectedCourseId));
+  const selectedCourse = courses.find((c) => String(c.id) === String(selectedCourseId));
 
-  useWorkspaceToolbar(useMemo(() => ({
-    title: "Modules",
-    subtitle: selectedCourse ? selectedCourse.course_code : "All Modules",
-  }), [selectedCourse]));
+  useWorkspaceToolbar(
+    useMemo(
+      () => ({
+        title: "Modules",
+        subtitle: selectedCourse ? selectedCourse.course_code : "All Modules",
+      }),
+      [selectedCourse],
+    ),
+  );
 
   if (loading) {
     return (
@@ -324,21 +410,24 @@ export default function CanvasView({ token }) {
   }
 
   // Available tabs depending on context
-  const tabs = selectedCourseId === "all" ? [
-    { id: "overview", label: "Overview" },
-    { id: "assignments", label: "Assignments" },
-    { id: "announcements", label: "Announcements" },
-    { id: "grades", label: "Grades" },
-  ] : [
-    { id: "overview", label: "Overview" },
-    { id: "files", label: "Files" },
-    { id: "modules", label: "Modules" },
-    { id: "assignments", label: "Assignments" },
-    { id: "announcements", label: "Announcements" },
-    { id: "grades", label: "Grades" },
-    { id: "pages", label: "Pages" },
-    { id: "syllabus", label: "Syllabus" },
-  ];
+  const tabs =
+    selectedCourseId === "all"
+      ? [
+          { id: "overview", label: "Overview" },
+          { id: "assignments", label: "Assignments" },
+          { id: "announcements", label: "Announcements" },
+          { id: "grades", label: "Grades" },
+        ]
+      : [
+          { id: "overview", label: "Overview" },
+          { id: "files", label: "Files" },
+          { id: "modules", label: "Modules" },
+          { id: "assignments", label: "Assignments" },
+          { id: "announcements", label: "Announcements" },
+          { id: "grades", label: "Grades" },
+          { id: "pages", label: "Pages" },
+          { id: "syllabus", label: "Syllabus" },
+        ];
 
   return (
     <div className="cv-wrapper">
@@ -352,9 +441,15 @@ export default function CanvasView({ token }) {
           >
             All Modules
           </button>
-          {displayedCourses.map(c => {
+          {displayedCourses.map((c) => {
             const isSelected = selectedCourseId === String(c.id);
-            const dueCount = assignments.filter(a => String(a.course_id) === String(c.id) && !a.has_submitted && a.due_at && new Date(a.due_at) >= new Date()).length;
+            const dueCount = assignments.filter(
+              (a) =>
+                String(a.course_id) === String(c.id) &&
+                !a.has_submitted &&
+                a.due_at &&
+                new Date(a.due_at) >= new Date(),
+            ).length;
             return (
               <button
                 key={c.id}
@@ -390,7 +485,7 @@ export default function CanvasView({ token }) {
       {/* ── Second Bar: Sub-Navigation Tabs ── */}
       <nav className="cv-sub-bar">
         <div className="cv-tab-strip">
-          {tabs.map(t => (
+          {tabs.map((t) => (
             <button
               key={t.id}
               type="button"
@@ -423,8 +518,8 @@ export default function CanvasView({ token }) {
         )}
 
         {/* 1. OVERVIEW TAB */}
-        {tab === "overview" && (
-          selectedCourseId === "all" ? (
+        {tab === "overview" &&
+          (selectedCourseId === "all" ? (
             <div className="cv-all-overview">
               <div className="cv-overview-grid">
                 {/* Global Search across all modules */}
@@ -444,31 +539,49 @@ export default function CanvasView({ token }) {
                 {/* Cross-course Assignments */}
                 <section className="cv-card">
                   <header className="cv-card-header">
-                    <div className="cv-card-title"><Calendar size={13} /> Upcoming Assignments Across All Modules</div>
-                    <button type="button" className="cv-btn-link" onClick={() => setTab("assignments")}>View all →</button>
+                    <div className="cv-card-title">
+                      <Calendar size={13} /> Upcoming Assignments Across All Modules
+                    </div>
+                    <button
+                      type="button"
+                      className="cv-btn-link"
+                      onClick={() => setTab("assignments")}
+                    >
+                      View all →
+                    </button>
                   </header>
                   <div className="cv-card-content">
                     {filteredAssignments.slice(0, 7).length === 0 ? (
                       <div className="cv-empty-note">All clear! No assignments due.</div>
                     ) : (
-                      filteredAssignments.slice(0, 7).map(a => {
+                      filteredAssignments.slice(0, 7).map((a) => {
                         const due = a.due_at ? new Date(a.due_at) : null;
-                        const urgent = due && (due - new Date()) < 86400000 * 3;
+                        const urgent = due && due - new Date() < 86400000 * 3;
                         const isAdded = isAssignmentAdded(a);
                         const isAdding = addingTaskId === a.id;
                         return (
                           <div
                             key={`${a.course_id}-${a.id}`}
                             className="cv-list-item"
-                            onClick={() => { setSelectedCourseId(String(a.course_id)); setActiveItem({ ...a, itemType: "assignment" }); }}
+                            onClick={() => {
+                              setSelectedCourseId(String(a.course_id));
+                              setActiveItem({ ...a, itemType: "assignment" });
+                            }}
                           >
-                            <span className="cv-pill-dot" style={{ backgroundColor: courseColors.get(a.course_code) }} />
+                            <span
+                              className="cv-pill-dot"
+                              style={{ backgroundColor: courseColors.get(a.course_code) }}
+                            />
                             <div className="cv-list-item-body">
                               <div className="cv-list-item-title">{a.title}</div>
-                              <div className="cv-list-item-sub">{a.course_code} · {dueLabel(a.due_at)}</div>
+                              <div className="cv-list-item-sub">
+                                {a.course_code} · {dueLabel(a.due_at)}
+                              </div>
                             </div>
-                            {urgent && <span className="cv-badge-urgent">{dueLabel(a.due_at)}</span>}
-                            <div className="cv-row-actions" onClick={e => e.stopPropagation()}>
+                            {urgent && (
+                              <span className="cv-badge-urgent">{dueLabel(a.due_at)}</span>
+                            )}
+                            <div className="cv-row-actions" onClick={(e) => e.stopPropagation()}>
                               <button
                                 type="button"
                                 className={`cv-task-action-btn ${isAdded ? "is-added" : ""}`}
@@ -477,7 +590,13 @@ export default function CanvasView({ token }) {
                                 aria-label={isAdded ? "In Tasks" : "Add as Task"}
                                 title={isAdded ? "Already added to Tasks" : "Add as Task"}
                               >
-                                {isAdding ? <Loader2 size={12} className="retro-icon-spin" /> : isAdded ? <Check size={12} /> : <Plus size={12} />}
+                                {isAdding ? (
+                                  <Loader2 size={12} className="retro-icon-spin" />
+                                ) : isAdded ? (
+                                  <Check size={12} />
+                                ) : (
+                                  <Plus size={12} />
+                                )}
                               </button>
                             </div>
                           </div>
@@ -490,23 +609,39 @@ export default function CanvasView({ token }) {
                 {/* Cross-course Announcements */}
                 <section className="cv-card">
                   <header className="cv-card-header">
-                    <div className="cv-card-title"><Bell size={13} /> Latest Announcements</div>
-                    <button type="button" className="cv-btn-link" onClick={() => setTab("announcements")}>View all →</button>
+                    <div className="cv-card-title">
+                      <Bell size={13} /> Latest Announcements
+                    </div>
+                    <button
+                      type="button"
+                      className="cv-btn-link"
+                      onClick={() => setTab("announcements")}
+                    >
+                      View all →
+                    </button>
                   </header>
                   <div className="cv-card-content">
                     {filteredAnnouncements.slice(0, 7).length === 0 ? (
                       <div className="cv-empty-note">No recent announcements.</div>
                     ) : (
-                      filteredAnnouncements.slice(0, 7).map(ann => (
+                      filteredAnnouncements.slice(0, 7).map((ann) => (
                         <div
                           key={ann.id}
                           className="cv-list-item"
-                          onClick={() => { setSelectedCourseId(String(ann.course_id)); setActiveItem({ ...ann, itemType: "announcement" }); }}
+                          onClick={() => {
+                            setSelectedCourseId(String(ann.course_id));
+                            setActiveItem({ ...ann, itemType: "announcement" });
+                          }}
                         >
-                          <span className="cv-pill-dot" style={{ backgroundColor: courseColors.get(ann.course_code) }} />
+                          <span
+                            className="cv-pill-dot"
+                            style={{ backgroundColor: courseColors.get(ann.course_code) }}
+                          />
                           <div className="cv-list-item-body">
                             <div className="cv-list-item-title">{ann.title}</div>
-                            <div className="cv-list-item-sub">{ann.course_code} · {relDate(ann.posted_at)}</div>
+                            <div className="cv-list-item-sub">
+                              {ann.course_code} · {relDate(ann.posted_at)}
+                            </div>
                           </div>
                         </div>
                       ))
@@ -533,8 +668,7 @@ export default function CanvasView({ token }) {
               addingTaskId={addingTaskId}
               isAssignmentAdded={isAssignmentAdded}
             />
-          )
-        )}
+          ))}
 
         {/* 2. FILES TAB */}
         {tab === "files" && selectedCourseId !== "all" && (
@@ -548,14 +682,14 @@ export default function CanvasView({ token }) {
               <div className="cv-empty-note">No Canvas module units found for this course.</div>
             ) : (
               <div className="cv-modules-list">
-                {courseModules.map(mod => (
+                {courseModules.map((mod) => (
                   <div key={mod.id} className="cv-module-block">
                     <div className="cv-module-block-header">
                       <Layers size={14} />
                       <span>{mod.name}</span>
                     </div>
                     <div className="cv-module-items">
-                      {mod.items.map(item => {
+                      {mod.items.map((item) => {
                         if (item.type === "SubHeader") {
                           return (
                             <div key={item.id} className="cv-module-subheader">
@@ -573,12 +707,16 @@ export default function CanvasView({ token }) {
                         return (
                           <a
                             key={item.id}
-                            href={item.external_url || item.html_url || `https://canvas.nus.edu.sg/courses/${selectedCourseId}/modules/items/${item.id}`}
+                            href={
+                              item.external_url ||
+                              item.html_url ||
+                              `https://canvas.nus.edu.sg/courses/${selectedCourseId}/modules/items/${item.id}`
+                            }
                             target="_blank"
                             rel="noreferrer"
                             className="cv-module-item-row"
                             style={{ paddingLeft: `${14 + (item.indent || 0) * 16}px` }}
-                            onClick={e => {
+                            onClick={(e) => {
                               if (item.type === "Assignment" || item.type === "Page") {
                                 e.preventDefault();
                                 setActiveItem({
@@ -590,16 +728,23 @@ export default function CanvasView({ token }) {
                               }
                             }}
                           >
-                            <span className="cv-module-item-icon"><Icon size={13} /></span>
+                            <span className="cv-module-item-icon">
+                              <Icon size={13} />
+                            </span>
                             <span className="cv-module-item-title">{item.title}</span>
                             {item.completion_requirement?.completed && (
-                              <CheckCircle2 size={13} style={{ color: "var(--success)", marginLeft: "auto" }} />
+                              <CheckCircle2
+                                size={13}
+                                style={{ color: "var(--success)", marginLeft: "auto" }}
+                              />
                             )}
                           </a>
                         );
                       })}
                       {mod.items.length === 0 && (
-                        <div className="cv-empty-note" style={{ padding: "8px 14px" }}>Empty module section</div>
+                        <div className="cv-empty-note" style={{ padding: "8px 14px" }}>
+                          Empty module section
+                        </div>
                       )}
                     </div>
                   </div>
@@ -617,7 +762,7 @@ export default function CanvasView({ token }) {
                 {selectedCourse ? `${selectedCourse.course_code} Assignments` : "All Assignments"}
               </span>
               <div className="cv-filter-segmented">
-                {["upcoming", "past", "all"].map(v => (
+                {["upcoming", "past", "all"].map((v) => (
                   <button
                     key={v}
                     type="button"
@@ -634,7 +779,7 @@ export default function CanvasView({ token }) {
               <div className="cv-empty-pane">No assignments in this filter view.</div>
             ) : (
               <div className="cv-item-rows">
-                {filteredAssignments.map(item => {
+                {filteredAssignments.map((item) => {
                   const isAdded = isAssignmentAdded(item);
                   const isAdding = addingTaskId === item.id;
                   return (
@@ -643,15 +788,28 @@ export default function CanvasView({ token }) {
                       className="cv-assignment-row"
                       onClick={() => setActiveItem({ ...item, itemType: "assignment" })}
                     >
-                      <span className="cv-pill-dot" style={{ backgroundColor: courseColors.get(item.course_code) }} />
+                      <span
+                        className="cv-pill-dot"
+                        style={{ backgroundColor: courseColors.get(item.course_code) }}
+                      />
                       <div className="cv-row-body">
                         <div className="cv-row-title">{item.title}</div>
                         <div className="cv-row-sub">
-                          {item.course_code} · {item.due_at ? new Date(item.due_at).toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : "No due date"}
+                          {item.course_code} ·{" "}
+                          {item.due_at
+                            ? new Date(item.due_at).toLocaleString([], {
+                                month: "short",
+                                day: "numeric",
+                                hour: "numeric",
+                                minute: "2-digit",
+                              })
+                            : "No due date"}
                         </div>
                       </div>
-                      <div className="cv-row-actions" onClick={e => e.stopPropagation()}>
-                        <span className={`cv-badge-status ${item.has_submitted ? "is-submitted" : ""}`}>
+                      <div className="cv-row-actions" onClick={(e) => e.stopPropagation()}>
+                        <span
+                          className={`cv-badge-status ${item.has_submitted ? "is-submitted" : ""}`}
+                        >
                           {item.has_submitted ? "Submitted" : "Not submitted"}
                         </span>
                         <button
@@ -662,7 +820,13 @@ export default function CanvasView({ token }) {
                           aria-label={isAdded ? "In Tasks" : "Add as Task"}
                           title={isAdded ? "Already added to Tasks" : "Add as Task"}
                         >
-                          {isAdding ? <Loader2 size={12} className="retro-icon-spin" /> : isAdded ? <Check size={12} /> : <Plus size={12} />}
+                          {isAdding ? (
+                            <Loader2 size={12} className="retro-icon-spin" />
+                          ) : isAdded ? (
+                            <Check size={12} />
+                          ) : (
+                            <Plus size={12} />
+                          )}
                         </button>
                       </div>
                     </div>
@@ -680,18 +844,23 @@ export default function CanvasView({ token }) {
               <div className="cv-empty-pane">No announcements.</div>
             ) : (
               <div className="cv-item-rows">
-                {filteredAnnouncements.map(item => (
+                {filteredAnnouncements.map((item) => (
                   <div
                     key={item.id}
                     className="cv-announcement-row"
                     onClick={() => setActiveItem({ ...item, itemType: "announcement" })}
                   >
                     <div className="cv-row-top">
-                      <span className="cv-pill-dot" style={{ backgroundColor: courseColors.get(item.course_code) }} />
+                      <span
+                        className="cv-pill-dot"
+                        style={{ backgroundColor: courseColors.get(item.course_code) }}
+                      />
                       <strong className="cv-row-title">{item.title}</strong>
                       <span className="cv-row-date">{relDate(item.posted_at)}</span>
                     </div>
-                    <div className="cv-row-sub">{item.course_code} {item.author ? `· by ${item.author}` : ""}</div>
+                    <div className="cv-row-sub">
+                      {item.course_code} {item.author ? `· by ${item.author}` : ""}
+                    </div>
                     <p className="cv-announcement-snippet">{stripHtml(item.body).slice(0, 160)}</p>
                   </div>
                 ))}
@@ -707,7 +876,7 @@ export default function CanvasView({ token }) {
               <div className="cv-empty-pane">No grade summaries currently available.</div>
             ) : (
               <div className="grade-course-grid">
-                {filteredGrades.map(course => (
+                {filteredGrades.map((course) => (
                   <article className="grade-course-card" key={course.course_id}>
                     <header>
                       <div>
@@ -715,17 +884,22 @@ export default function CanvasView({ token }) {
                         <strong>{course.course_name}</strong>
                       </div>
                       <div className="grade-total">
-                        <strong>{course.current_score != null ? `${course.current_score}%` : "—"}</strong>
+                        <strong>
+                          {course.current_score != null ? `${course.current_score}%` : "—"}
+                        </strong>
                         <span>{course.current_grade || "No grade"}</span>
                       </div>
                     </header>
                     <div className="grade-assignment-list">
-                      {course.assignments.filter(i => i.score != null || i.grade).slice(0, 12).map(i => (
-                        <div key={i.id}>
-                          <span>{i.title}</span>
-                          <strong>{i.grade ?? `${i.score}/${i.points_possible ?? "?"}`}</strong>
-                        </div>
-                      ))}
+                      {course.assignments
+                        .filter((i) => i.score != null || i.grade)
+                        .slice(0, 12)
+                        .map((i) => (
+                          <div key={i.id}>
+                            <span>{i.title}</span>
+                            <strong>{i.grade ?? `${i.score}/${i.points_possible ?? "?"}`}</strong>
+                          </div>
+                        ))}
                     </div>
                   </article>
                 ))}
@@ -741,7 +915,7 @@ export default function CanvasView({ token }) {
               <div className="cv-empty-pane">No course pages found.</div>
             ) : (
               <div className="cv-item-rows">
-                {coursePages.map(page => (
+                {coursePages.map((page) => (
                   <a
                     key={page.url}
                     href={`https://canvas.nus.edu.sg/courses/${selectedCourseId}/pages/${page.url}`}
@@ -751,7 +925,9 @@ export default function CanvasView({ token }) {
                   >
                     <BookMarked size={14} style={{ color: "var(--text-muted)" }} />
                     <span className="cv-row-title">{page.title}</span>
-                    <span className="cv-row-date">{page.updated_at ? relDate(page.updated_at) : ""}</span>
+                    <span className="cv-row-date">
+                      {page.updated_at ? relDate(page.updated_at) : ""}
+                    </span>
                   </a>
                 ))}
               </div>
@@ -775,7 +951,9 @@ export default function CanvasView({ token }) {
       </main>
 
       <CanvasDrawer
-        key={activeItem ? `${activeItem.itemType}-${activeItem.course_id}-${activeItem.id}` : "empty"}
+        key={
+          activeItem ? `${activeItem.itemType}-${activeItem.course_id}-${activeItem.id}` : "empty"
+        }
         item={activeItem}
         token={token}
         onClose={() => setActiveItem(null)}

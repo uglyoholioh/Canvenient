@@ -20,14 +20,16 @@ export function queueTaskDeletion(token, task) {
   PENDING_DELETIONS.set(task.id, { task, timeoutId, token });
 
   // Show undo toast
-  window.dispatchEvent(new CustomEvent('canvenient-toast', {
-    detail: {
-      message: `Deleted "${task.title}"`,
-      actionLabel: 'Undo',
-      onAction: () => undoTaskDeletion(task.id),
-      timeout: FLUSH_DELAY_MS
-    }
-  }));
+  window.dispatchEvent(
+    new CustomEvent("canvenient-toast", {
+      detail: {
+        message: `Deleted "${task.title}"`,
+        actionLabel: "Undo",
+        onAction: () => undoTaskDeletion(task.id),
+        timeout: FLUSH_DELAY_MS,
+      },
+    }),
+  );
 }
 
 export function undoTaskDeletion(taskId) {
@@ -36,10 +38,12 @@ export function undoTaskDeletion(taskId) {
 
   clearTimeout(pending.timeoutId);
   PENDING_DELETIONS.delete(taskId);
-  
-  window.dispatchEvent(new CustomEvent('canvenient-task-restored', {
-    detail: pending.task
-  }));
+
+  window.dispatchEvent(
+    new CustomEvent("canvenient-task-restored", {
+      detail: pending.task,
+    }),
+  );
   notifyTasksChanged();
 }
 
@@ -51,4 +55,4 @@ export function flushPendingDeletions() {
   }
 }
 
-window.addEventListener('beforeunload', flushPendingDeletions);
+window.addEventListener("beforeunload", flushPendingDeletions);

@@ -1,7 +1,16 @@
 // React is required by the test JSX transform.
- 
+
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ArrowLeft, ArrowLeftRight, LocateFixed, RotateCw, Star, X, Search, Route } from "lucide-react";
+import {
+  ArrowLeft,
+  ArrowLeftRight,
+  LocateFixed,
+  RotateCw,
+  Star,
+  X,
+  Search,
+  Route,
+} from "lucide-react";
 import {
   getCampusBusArrivals,
   getCampusBusStops,
@@ -12,11 +21,31 @@ import {
 
 // ── Storage keys ────────────────────────────────────────────────────────────
 
-import { normalise, stopLabel, findStop, resolvePlace, formatEta, formatClock, serviceTone,
-  urgencyFill, readFavourites, readCache, writeCache, venueToStop, distanceInMetres, QUICK_POPULAR_PLACES,
-  STOP_STORAGE_KEY, FROM_STORAGE_KEY, TO_STORAGE_KEY, FAVOURITES_STORAGE_KEY,
-  STOPS_CACHE_KEY, ARRIVALS_PREFIX, DEFAULT_STOP_ID, STOPS_TTL_MS,
-  ARRIVALS_TTL_MS, REFRESH_INTERVAL_S,
+import {
+  normalise,
+  stopLabel,
+  findStop,
+  resolvePlace,
+  formatEta,
+  formatClock,
+  serviceTone,
+  urgencyFill,
+  readFavourites,
+  readCache,
+  writeCache,
+  venueToStop,
+  distanceInMetres,
+  QUICK_POPULAR_PLACES,
+  STOP_STORAGE_KEY,
+  FROM_STORAGE_KEY,
+  TO_STORAGE_KEY,
+  FAVOURITES_STORAGE_KEY,
+  STOPS_CACHE_KEY,
+  ARRIVALS_PREFIX,
+  DEFAULT_STOP_ID,
+  STOPS_TTL_MS,
+  ARRIVALS_TTL_MS,
+  REFRESH_INTERVAL_S,
 } from "../bus/busHelpers";
 import { PlaceCombobox } from "../bus/PlaceCombobox";
 
@@ -30,21 +59,27 @@ export default function CampusBusModule({ token }) {
     return Array.isArray(cached?.stops) ? cached.stops : [];
   });
   const stopsRef = useRef([]);
-  useEffect(() => { stopsRef.current = stops; }, [stops]);
+  useEffect(() => {
+    stopsRef.current = stops;
+  }, [stops]);
 
   // Selected stop
-  const [stopId,   setStopId]   = useState(() => localStorage.getItem(STOP_STORAGE_KEY) || DEFAULT_STOP_ID);
-  const [stopText, setStopText] = useState(() => localStorage.getItem(STOP_STORAGE_KEY) || DEFAULT_STOP_ID);
+  const [stopId, setStopId] = useState(
+    () => localStorage.getItem(STOP_STORAGE_KEY) || DEFAULT_STOP_ID,
+  );
+  const [stopText, setStopText] = useState(
+    () => localStorage.getItem(STOP_STORAGE_KEY) || DEFAULT_STOP_ID,
+  );
 
   // Arrivals
   const [arrivalData, setArrivalData] = useState(null);
-  const [status,      setStatus]      = useState("loading");
+  const [status, setStatus] = useState("loading");
 
   // Favourites
   const [favourites, setFavourites] = useState(readFavourites);
 
   // Geolocation
-  const [location,       setLocation]       = useState(null);
+  const [location, setLocation] = useState(null);
   const [locationStatus, setLocationStatus] = useState("idle");
   const [pendingAutoSelect, setPendingAutoSelect] = useState(false);
 
@@ -58,19 +93,19 @@ export default function CampusBusModule({ token }) {
   const [lastRefreshAt, setLastRefreshAt] = useState(null);
 
   // Schedule suggestion
-  const [scheduleSuggestion,  setScheduleSuggestion]  = useState(null);
+  const [scheduleSuggestion, setScheduleSuggestion] = useState(null);
   const [suggestionDismissed, setSuggestionDismissed] = useState(false);
 
   // Route planner state
-  const [fromText,    setFromText]    = useState(() => localStorage.getItem(FROM_STORAGE_KEY) || "");
-  const [toText,      setToText]      = useState(() => localStorage.getItem(TO_STORAGE_KEY)   || "");
-  const [fromPlaces,  setFromPlaces]  = useState([]);
-  const [toPlaces,    setToPlaces]    = useState([]);
-  const [fromPlace,   setFromPlace]   = useState(null);
-  const [toPlace,     setToPlace]     = useState(null);
+  const [fromText, setFromText] = useState(() => localStorage.getItem(FROM_STORAGE_KEY) || "");
+  const [toText, setToText] = useState(() => localStorage.getItem(TO_STORAGE_KEY) || "");
+  const [fromPlaces, setFromPlaces] = useState([]);
+  const [toPlaces, setToPlaces] = useState([]);
+  const [fromPlace, setFromPlace] = useState(null);
+  const [toPlace, setToPlace] = useState(null);
   const [routeStatus, setRouteStatus] = useState("idle");
-  const [routePlan,   setRoutePlan]   = useState(null);
-  const [routeError,  setRouteError]  = useState("");
+  const [routePlan, setRoutePlan] = useState(null);
+  const [routeError, setRouteError] = useState("");
 
   const toInputRef = useRef(null);
 
@@ -84,7 +119,9 @@ export default function CampusBusModule({ token }) {
         setStops(next);
         writeCache(STOPS_CACHE_KEY, { stops: next });
       })
-      .catch(() => { if (!cached?.stops) setStops([]); });
+      .catch(() => {
+        if (!cached?.stops) setStops([]);
+      });
   }, [token]);
 
   // Geolocation auto-select
@@ -103,26 +140,35 @@ export default function CampusBusModule({ token }) {
   }, [stops, location, pendingAutoSelect]);
 
   // Load arrivals
-  const loadArrivals = useCallback(async (showLoading = false) => {
-    if (!stopId) return;
-    const cached = readCache(`${ARRIVALS_PREFIX}${stopId}`, ARRIVALS_TTL_MS);
-    if (cached) { setArrivalData(cached); setStatus("cached"); }
-    if (showLoading) setStatus("loading");
-    try {
-      const data = await getCampusBusArrivals(token, stopId);
-      setArrivalData(data);
-      writeCache(`${ARRIVALS_PREFIX}${stopId}`, data);
-      setStatus("success");
-      setLastRefreshAt(Date.now());
-    } catch {
-      setStatus(cached ? "cached" : "error");
-    }
-  }, [stopId, token]);
+  const loadArrivals = useCallback(
+    async (showLoading = false) => {
+      if (!stopId) return;
+      const cached = readCache(`${ARRIVALS_PREFIX}${stopId}`, ARRIVALS_TTL_MS);
+      if (cached) {
+        setArrivalData(cached);
+        setStatus("cached");
+      }
+      if (showLoading) setStatus("loading");
+      try {
+        const data = await getCampusBusArrivals(token, stopId);
+        setArrivalData(data);
+        writeCache(`${ARRIVALS_PREFIX}${stopId}`, data);
+        setStatus("success");
+        setLastRefreshAt(Date.now());
+      } catch {
+        setStatus(cached ? "cached" : "error");
+      }
+    },
+    [stopId, token],
+  );
 
   useEffect(() => {
-    const initial  = window.setTimeout(() => loadArrivals(), 0);
+    const initial = window.setTimeout(() => loadArrivals(), 0);
     const interval = window.setInterval(() => loadArrivals(), REFRESH_INTERVAL_S * 1000);
-    return () => { window.clearTimeout(initial); window.clearInterval(interval); };
+    return () => {
+      window.clearTimeout(initial);
+      window.clearInterval(interval);
+    };
   }, [loadArrivals]);
 
   // Refresh ticker removed to prevent 1s full component re-renders.
@@ -134,7 +180,7 @@ export default function CampusBusModule({ token }) {
     getSchedule(token)
       .then((schedule) => {
         if (cancelled) return;
-        const now      = new Date();
+        const now = new Date();
         const todayStr = now.toDateString();
         const upcoming = (schedule?.classes ?? [])
           .filter((cls) => cls.venue && new Date(cls.class_date).toDateString() === todayStr)
@@ -152,14 +198,18 @@ export default function CampusBusModule({ token }) {
         const suggestedStop = venueToStop(upcoming.venue);
         if (!suggestedStop) return;
         setScheduleSuggestion({
-          moduleCode:   upcoming.module_code,
-          venue:        upcoming.venue,
-          stopText:     suggestedStop,
+          moduleCode: upcoming.module_code,
+          venue: upcoming.venue,
+          stopText: suggestedStop,
           minutesUntil: Math.round((upcoming.start - now) / 60000),
         });
       })
-      .catch(() => { /* Non-critical */ });
-    return () => { cancelled = true; };
+      .catch(() => {
+        /* Non-critical */
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [token]);
 
   // Place search for route planner inputs (debounced 250 ms)
@@ -172,10 +222,17 @@ export default function CampusBusModule({ token }) {
     let cancelled = false;
     const t = window.setTimeout(() => {
       searchCampusBusPlaces(token, fromText)
-        .then(({ places = [] }) => { if (!cancelled) setFromPlaces(places); })
-        .catch(() =>            { if (!cancelled) setFromPlaces([]); });
+        .then(({ places = [] }) => {
+          if (!cancelled) setFromPlaces(places);
+        })
+        .catch(() => {
+          if (!cancelled) setFromPlaces([]);
+        });
     }, 250);
-    return () => { cancelled = true; window.clearTimeout(t); };
+    return () => {
+      cancelled = true;
+      window.clearTimeout(t);
+    };
   }, [fromText, token]);
 
   useEffect(() => {
@@ -187,10 +244,17 @@ export default function CampusBusModule({ token }) {
     let cancelled = false;
     const t = window.setTimeout(() => {
       searchCampusBusPlaces(token, toText)
-        .then(({ places = [] }) => { if (!cancelled) setToPlaces(places); })
-        .catch(() =>            { if (!cancelled) setToPlaces([]); });
+        .then(({ places = [] }) => {
+          if (!cancelled) setToPlaces(places);
+        })
+        .catch(() => {
+          if (!cancelled) setToPlaces([]);
+        });
     }, 250);
-    return () => { cancelled = true; window.clearTimeout(t); };
+    return () => {
+      cancelled = true;
+      window.clearTimeout(t);
+    };
   }, [toText, token]);
 
   // ── Handlers ───────────────────────────────────────────────────────────────
@@ -206,7 +270,10 @@ export default function CampusBusModule({ token }) {
   }, []);
 
   const findNearbyStops = useCallback(() => {
-    if (!navigator.geolocation) { setLocationStatus("unsupported"); return; }
+    if (!navigator.geolocation) {
+      setLocationStatus("unsupported");
+      return;
+    }
     setLocationStatus("loading");
     navigator.geolocation.getCurrentPosition(
       ({ coords }) => {
@@ -234,9 +301,7 @@ export default function CampusBusModule({ token }) {
 
   const toggleFavourite = useCallback(() => {
     setFavourites((cur) => {
-      const next = cur.includes(stopId)
-        ? cur.filter((id) => id !== stopId)
-        : [...cur, stopId];
+      const next = cur.includes(stopId) ? cur.filter((id) => id !== stopId) : [...cur, stopId];
       localStorage.setItem(FAVOURITES_STORAGE_KEY, JSON.stringify(next));
       return next;
     });
@@ -297,13 +362,17 @@ export default function CampusBusModule({ token }) {
       return;
     }
     localStorage.setItem(FROM_STORAGE_KEY, origin.name);
-    localStorage.setItem(TO_STORAGE_KEY,   destination.name);
+    localStorage.setItem(TO_STORAGE_KEY, destination.name);
     setRouteError("");
     setRouteStatus("loading");
     try {
       const plan = await planCampusBusTrip(token, {
-        from_name: origin.name, from_latitude: origin.latitude, from_longitude: origin.longitude,
-        to_name:   destination.name, to_latitude: destination.latitude, to_longitude: destination.longitude,
+        from_name: origin.name,
+        from_latitude: origin.latitude,
+        from_longitude: origin.longitude,
+        to_name: destination.name,
+        to_latitude: destination.latitude,
+        to_longitude: destination.longitude,
       });
       setRoutePlan(plan);
       setRouteStatus("success");
@@ -315,17 +384,16 @@ export default function CampusBusModule({ token }) {
 
   const submitRoute = async (event) => {
     if (event) event.preventDefault();
-    const origin      = fromPlace || resolvePlace(fromText, fromPlaces);
-    const destination = toPlace   || resolvePlace(toText,   toPlaces);
+    const origin = fromPlace || resolvePlace(fromText, fromPlaces);
+    const destination = toPlace || resolvePlace(toText, toPlaces);
     executeRoutePlan(origin, destination);
   };
 
   // ── Derived values ─────────────────────────────────────────────────────────
 
-  const isFavourite    = favourites.includes(stopId);
-  const selectedStop   = stops.find((s) => s.id === stopId);
-  const displayName    = arrivalData?.stop?.name || stopLabel(selectedStop) || stopId;
-
+  const isFavourite = favourites.includes(stopId);
+  const selectedStop = stops.find((s) => s.id === stopId);
+  const displayName = arrivalData?.stop?.name || stopLabel(selectedStop) || stopId;
 
   const nearbyStops = useMemo(() => {
     if (!location) return [];
@@ -410,7 +478,6 @@ export default function CampusBusModule({ token }) {
 
   return (
     <div className="cbm" data-status={status}>
-
       {/* ════════════════ PAGE 1: DEPARTURES VIEW (DEFAULT) ═════════════════ */}
       {currentView === "departures" && (
         <div className="cbm-page cbm-departures-page">
@@ -419,10 +486,13 @@ export default function CampusBusModule({ token }) {
             <div className="cbm-stop-title-wrap">
               <span
                 className={`cbm-status-dot${
-                  status === "success" ? " is-live"
-                  : status === "cached" ? " is-stale"
-                  : status === "error"  ? " is-error"
-                  : ""
+                  status === "success"
+                    ? " is-live"
+                    : status === "cached"
+                      ? " is-stale"
+                      : status === "error"
+                        ? " is-error"
+                        : ""
                 }`}
                 aria-hidden="true"
               />
@@ -475,7 +545,11 @@ export default function CampusBusModule({ token }) {
 
               {/* Search suggestions dropdown */}
               {isSearchOpen && (
-                <div className="cbm-stop-search-dropdown" role="listbox" aria-label="Bus stop suggestions">
+                <div
+                  className="cbm-stop-search-dropdown"
+                  role="listbox"
+                  aria-label="Bus stop suggestions"
+                >
                   {searchResults.map((stop, idx) => (
                     <button
                       type="button"
@@ -492,7 +566,12 @@ export default function CampusBusModule({ token }) {
                       <span className="cbm-stop-search-name">{stopLabel(stop)}</span>
                       <small className="cbm-stop-search-code">{stop.id}</small>
                       {favourites.includes(stop.id) && (
-                        <Star size={9} fill="currentColor" className="cbm-picker-star" aria-hidden="true" />
+                        <Star
+                          size={9}
+                          fill="currentColor"
+                          className="cbm-picker-star"
+                          aria-hidden="true"
+                        />
                       )}
                     </button>
                   ))}
@@ -519,14 +598,18 @@ export default function CampusBusModule({ token }) {
                 className={`cbm-action-btn${locationStatus === "ready" ? " is-active" : ""}`}
                 onClick={findNearbyStops}
                 aria-label={
-                  locationStatus === "denied" ? "Location access denied — tap to retry"
-                  : locationStatus === "ready" ? "Location active — tap to refresh nearest stop"
-                  : "Find nearest stop and switch to it"
+                  locationStatus === "denied"
+                    ? "Location access denied — tap to retry"
+                    : locationStatus === "ready"
+                      ? "Location active — tap to refresh nearest stop"
+                      : "Find nearest stop and switch to it"
                 }
                 title={
-                  locationStatus === "denied"  ? "Location unavailable"
-                  : locationStatus === "ready" ? "Nearest stop active"
-                  : "Use my location"
+                  locationStatus === "denied"
+                    ? "Location unavailable"
+                    : locationStatus === "ready"
+                      ? "Nearest stop active"
+                      : "Use my location"
                 }
               >
                 <LocateFixed size={12} className={locationStatus === "loading" ? "spin" : ""} />
@@ -619,17 +702,29 @@ export default function CampusBusModule({ token }) {
             </div>
 
             {status === "loading" && !arrivalData && (
-              <div className="cbm-msg" aria-live="polite">Loading live timings…</div>
+              <div className="cbm-msg" aria-live="polite">
+                Loading live timings…
+              </div>
             )}
             {status === "error" && !arrivalData && (
-              <div className="cbm-msg is-error" role="alert" style={{ flexDirection: "column", alignItems: "flex-start", gap: "6px" }}>
-                <span>NUS bus APIs are currently down. Please use the official <strong>uNivUS</strong> app for live timings in the meantime.</span>
-                <button type="button" onClick={() => loadArrivals(true)}>Retry</button>
+              <div
+                className="cbm-msg is-error"
+                role="alert"
+                style={{ flexDirection: "column", alignItems: "flex-start", gap: "6px" }}
+              >
+                <span>
+                  NUS bus APIs are currently down. Please use the official <strong>uNivUS</strong>{" "}
+                  app for live timings in the meantime.
+                </span>
+                <button type="button" onClick={() => loadArrivals(true)}>
+                  Retry
+                </button>
               </div>
             )}
             {status === "error" && arrivalData && (
               <div className="cbm-msg is-error" role="alert" style={{ marginBottom: "8px" }}>
-                Live timings are unavailable. Showing cached data. Please use <strong>uNivUS</strong> instead.
+                Live timings are unavailable. Showing cached data. Please use{" "}
+                <strong>uNivUS</strong> instead.
               </div>
             )}
 
@@ -640,18 +735,25 @@ export default function CampusBusModule({ token }) {
                 )}
                 {(arrivalData.arrivals ?? []).map((arrival) => {
                   const firstMin = arrival.minutes[0];
-                  const fill     = urgencyFill(firstMin);
+                  const fill = urgencyFill(firstMin);
                   return (
-                    <div className={`cbm-row ${serviceTone(arrival.service)}`} key={arrival.service}>
+                    <div
+                      className={`cbm-row ${serviceTone(arrival.service)}`}
+                      key={arrival.service}
+                    >
                       <strong className="cbm-svc">{arrival.service}</strong>
                       <div className="cbm-urgency-track" aria-hidden="true">
                         <div className="cbm-urgency-fill" style={{ width: `${fill}%` }} />
                       </div>
                       {arrival.minutes.length > 0 ? (
                         <div className="cbm-times">
-                          <span className={firstMin <= 2 ? "is-imminent" : ""}>{formatEta(firstMin)}</span>
+                          <span className={firstMin <= 2 ? "is-imminent" : ""}>
+                            {formatEta(firstMin)}
+                          </span>
                           {arrival.minutes.length > 1 && (
-                            <small>then {arrival.minutes.slice(1).map(formatEta).join(" · ")}</small>
+                            <small>
+                              then {arrival.minutes.slice(1).map(formatEta).join(" · ")}
+                            </small>
                           )}
                         </div>
                       ) : (
@@ -689,7 +791,9 @@ export default function CampusBusModule({ token }) {
                 value={fromText}
                 onChange={(val) => {
                   setFromText(val);
-                  setFromPlace(fromPlaces.find((p) => normalise(p.name) === normalise(val)) ?? null);
+                  setFromPlace(
+                    fromPlaces.find((p) => normalise(p.name) === normalise(val)) ?? null,
+                  );
                 }}
                 onSelectPlace={handleSelectFromPlace}
                 suggestions={fromPlaces}
@@ -765,61 +869,73 @@ export default function CampusBusModule({ token }) {
           <div className="cbm-route-results" aria-live="polite">
             {routeStatus === "idle" && (
               <div className="cbm-route-empty-hint">
-                <p>Search campus locations or faculties — we&rsquo;ll calculate the optimal bus and walking path.</p>
+                <p>
+                  Search campus locations or faculties — we&rsquo;ll calculate the optimal bus and
+                  walking path.
+                </p>
               </div>
             )}
-            {routeStatus === "loading" && <div className="cbm-msg">Finding optimal campus bus routes…</div>}
-            {routeStatus === "error"   && (
-              <div className="cbm-msg is-error" role="alert">{routeError}</div>
+            {routeStatus === "loading" && (
+              <div className="cbm-msg">Finding optimal campus bus routes…</div>
+            )}
+            {routeStatus === "error" && (
+              <div className="cbm-msg is-error" role="alert">
+                {routeError}
+              </div>
             )}
             {routeStatus === "success" && !routePlan?.routes?.length && (
               <div className="cbm-msg">{routePlan?.message ?? "No direct route found."}</div>
             )}
-            {routeStatus === "success" && routePlan?.routes?.map((route, rIdx) => (
-              <article
-                className={`cbm-route-card ${serviceTone(route.service)}`}
-                key={`${route.service}-${route.from_stop.id}-${route.to_stop.id}-${rIdx}`}
-              >
-                <div className="cbm-route-card-header">
-                  <span className="cbm-route-badge">{route.service}</span>
-                  <div className="cbm-route-eta-summary">
-                    <strong className="cbm-route-next-eta">
-                      {route.next_bus_minutes == null
-                        ? "No live bus"
-                        : `Next bus in ${formatEta(route.next_bus_minutes)}`}
-                    </strong>
-                    <span className="cbm-route-total-time">
-                      ~{route.total_minutes ?? (route.bus_travel_minutes + 4)} min total
-                    </span>
+            {routeStatus === "success" &&
+              routePlan?.routes?.map((route, rIdx) => (
+                <article
+                  className={`cbm-route-card ${serviceTone(route.service)}`}
+                  key={`${route.service}-${route.from_stop.id}-${route.to_stop.id}-${rIdx}`}
+                >
+                  <div className="cbm-route-card-header">
+                    <span className="cbm-route-badge">{route.service}</span>
+                    <div className="cbm-route-eta-summary">
+                      <strong className="cbm-route-next-eta">
+                        {route.next_bus_minutes == null
+                          ? "No live bus"
+                          : `Next bus in ${formatEta(route.next_bus_minutes)}`}
+                      </strong>
+                      <span className="cbm-route-total-time">
+                        ~{route.total_minutes ?? route.bus_travel_minutes + 4} min total
+                      </span>
+                    </div>
                   </div>
-                </div>
 
-                <div className="cbm-route-card-body">
-                  <div className="cbm-route-journey-line">
-                    <div className="cbm-journey-stop">
-                      <span className="cbm-journey-dot" />
-                      <span>{route.from_stop.name}</span>
-                      {route.walking_to_stop_metres > 0 && (
-                        <small className="cbm-walk-tag">Walk ~{Math.ceil(route.walking_to_stop_metres / 80)} min</small>
-                      )}
-                    </div>
-                    <div className="cbm-journey-transit">
-                      <span className="cbm-transit-text">{route.stops_count} stops · {route.bus_travel_minutes} min ride</span>
-                    </div>
-                    <div className="cbm-journey-stop">
-                      <span className="cbm-journey-dot is-dest" />
-                      <span>{route.to_stop.name}</span>
-                      <small className="cbm-arrival-time">arr {formatClock(route.destination_arrival_at)}</small>
+                  <div className="cbm-route-card-body">
+                    <div className="cbm-route-journey-line">
+                      <div className="cbm-journey-stop">
+                        <span className="cbm-journey-dot" />
+                        <span>{route.from_stop.name}</span>
+                        {route.walking_to_stop_metres > 0 && (
+                          <small className="cbm-walk-tag">
+                            Walk ~{Math.ceil(route.walking_to_stop_metres / 80)} min
+                          </small>
+                        )}
+                      </div>
+                      <div className="cbm-journey-transit">
+                        <span className="cbm-transit-text">
+                          {route.stops_count} stops · {route.bus_travel_minutes} min ride
+                        </span>
+                      </div>
+                      <div className="cbm-journey-stop">
+                        <span className="cbm-journey-dot is-dest" />
+                        <span>{route.to_stop.name}</span>
+                        <small className="cbm-arrival-time">
+                          arr {formatClock(route.destination_arrival_at)}
+                        </small>
+                      </div>
                     </div>
                   </div>
-                </div>
-              </article>
-            ))}
+                </article>
+              ))}
           </div>
         </div>
       )}
-
     </div>
   );
 }
-

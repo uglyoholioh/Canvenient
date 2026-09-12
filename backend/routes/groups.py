@@ -5,66 +5,59 @@ from dependencies import CurrentUser
 from models.group import GroupCreate, GroupMemberOut, GroupOut, GroupUpdate
 from models.task import TaskOut
 
-router = APIRouter(prefix = "/groups", tags = ["groups"])
+router = APIRouter(prefix="/groups", tags=["groups"])
 
-@router.get("", response_model = list[GroupOut])
+
+@router.get("", response_model=list[GroupOut])
 async def get_groups(current_user: CurrentUser):
     rows = await db.fetch_all(
-        query = """
+        query="""
             SELECT g.*, gm.role
             FROM groups g
             JOIN g_members gm ON gm.g_id = g.id
             WHERE gm.user_id = :user_id
         """,
-        values = {"user_id": current_user.id}
+        values={"user_id": current_user.id},
     )
     return [GroupOut.model_validate(dict(row)) for row in rows]
 
-@router.post("", response_model = GroupOut, status_code = status.HTTP_201_CREATED)
+
+@router.post("", response_model=GroupOut, status_code=status.HTTP_201_CREATED)
 async def create_group(payload: GroupCreate, current_user: CurrentUser):
     # Verify community exists and belongs to the current user
-    comm = await db.fetch_one(
-        query="SELECT user_id FROM communities WHERE id = :c_id",
-        values={"c_id": payload.c_id}
-    )
+    comm = await db.fetch_one(query="SELECT user_id FROM communities WHERE id = :c_id", values={"c_id": payload.c_id})
     if not comm:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Community not found."
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Community not found.")
     if comm["user_id"] != current_user.id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only the community creator can create groups in this community."
+            detail="Only the community creator can create groups in this community.",
         )
 
     async with db.transaction():
         row = await db.fetch_one(
-            query = """
+            query="""
                 INSERT INTO groups (user_id, c_id, name, description)
                 VALUES (:user_id, :c_id, :name, :description)
                 RETURNING *
             """,
-            values = {
+            values={
                 "user_id": current_user.id,
                 "c_id": payload.c_id,
                 "name": payload.name,
-                "description": payload.description
-            }
+                "description": payload.description,
+            },
         )
-        
-        #adding creator as first member and admin
+
+        # adding creator as first member and admin
         await db.execute(
-            query = """
+            query="""
                 INSERT INTO g_members (g_id, user_id, role)
                 VALUES (:g_id, :user_id, 'admin')
             """,
-            values = {
-                "g_id": row["id"],
-                "user_id": current_user.id
-            }
+            values={"g_id": row["id"], "user_id": current_user.id},
         )
-        
+
         group_dict = dict(row)
         group_dict["role"] = "admin"
         return GroupOut.model_validate(group_dict)
@@ -74,7 +67,7 @@ async def create_group(payload: GroupCreate, current_user: CurrentUser):
 async def get_group_members(group_id: int, current_user: CurrentUser):
     member_check = await db.fetch_one(
         query="SELECT role FROM g_members WHERE g_id = :g_id AND user_id = :user_id",
-        values={"g_id": group_id, "user_id": current_user.id}
+        values={"g_id": group_id, "user_id": current_user.id},
     )
     if not member_check:
         raise HTTPException(status_code=403, detail="You are not a member of this group.")
@@ -88,30 +81,26 @@ async def get_group_members(group_id: int, current_user: CurrentUser):
             WHERE gm.g_id = :g_id
             ORDER BY gm.role DESC, u.email ASC
         """,
-        values={"g_id": group_id}
+        values={"g_id": group_id},
     )
     return [GroupMemberOut.model_validate(dict(row)) for row in rows]
 
 
 @router.patch("/{group_id}", response_model=GroupOut)
 async def update_group(group_id: int, payload: GroupUpdate, current_user: CurrentUser):
-    existing = await db.fetch_one(
-        query="SELECT * FROM groups WHERE id = :id",
-        values={"id": group_id}
-    )
+    existing = await db.fetch_one(query="SELECT * FROM groups WHERE id = :id", values={"id": group_id})
     if not existing:
         raise HTTPException(status_code=404, detail="Group not found.")
-        
+
     member = await db.fetch_one(
         query="SELECT role FROM g_members WHERE g_id = :g_id AND user_id = :user_id",
-        values={"g_id": group_id, "user_id": current_user.id}
+        values={"g_id": group_id, "user_id": current_user.id},
     )
     if not member or member["role"] != "admin":
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only group admins can update group settings."
+            status_code=status.HTTP_403_FORBIDDEN, detail="Only group admins can update group settings."
         )
-        
+
     updates = payload.model_dump(exclude_unset=True)
     name = updates.get("name")
     if name is not None:
@@ -120,11 +109,11 @@ async def update_group(group_id: int, payload: GroupUpdate, current_user: Curren
             raise HTTPException(status_code=400, detail="Group name cannot be empty.")
     else:
         name = existing["name"]
-        
+
     description = updates.get("description") if "description" in updates else existing["description"]
     if description is None:
         description = ""
-        
+
     row = await db.fetch_one(
         query="""
             UPDATE groups
@@ -132,9 +121,9 @@ async def update_group(group_id: int, payload: GroupUpdate, current_user: Curren
             WHERE id = :id
             RETURNING *
         """,
-        values={"id": group_id, "name": name, "description": description}
+        values={"id": group_id, "name": name, "description": description},
     )
-    
+
     group_dict = dict(row)
     group_dict["role"] = member["role"]
     return GroupOut.model_validate(group_dict)
@@ -142,33 +131,26 @@ async def update_group(group_id: int, payload: GroupUpdate, current_user: Curren
 
 @router.delete("/{group_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_group(group_id: int, current_user: CurrentUser):
-    existing = await db.fetch_one(
-        query="SELECT * FROM groups WHERE id = :id",
-        values={"id": group_id}
-    )
+    existing = await db.fetch_one(query="SELECT * FROM groups WHERE id = :id", values={"id": group_id})
     if not existing:
         raise HTTPException(status_code=404, detail="Group not found.")
-        
+
     # Check if they are the group creator or community owner
     is_authorized = existing["user_id"] == current_user.id
     if not is_authorized and existing["c_id"] is not None:
         comm = await db.fetch_one(
-            query="SELECT user_id FROM communities WHERE id = :c_id",
-            values={"c_id": existing["c_id"]}
+            query="SELECT user_id FROM communities WHERE id = :c_id", values={"c_id": existing["c_id"]}
         )
         if comm and comm["user_id"] == current_user.id:
             is_authorized = True
-            
+
     if not is_authorized:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only the group creator or community owner can delete this group."
+            detail="Only the group creator or community owner can delete this group.",
         )
-        
-    await db.execute(
-        query="DELETE FROM groups WHERE id = :id",
-        values={"id": group_id}
-    )
+
+    await db.execute(query="DELETE FROM groups WHERE id = :id", values={"id": group_id})
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
@@ -176,15 +158,13 @@ async def delete_group(group_id: int, current_user: CurrentUser):
 async def get_group_tasks(group_id: int, current_user: CurrentUser):
     member = await db.fetch_one(
         query="SELECT 1 FROM g_members WHERE g_id = :g_id AND user_id = :user_id",
-        values={"g_id": group_id, "user_id": current_user.id}
+        values={"g_id": group_id, "user_id": current_user.id},
     )
     if not member:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="You are not a member of this group."
-        )
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You are not a member of this group.")
 
     from routes.tasks import TASK_SELECT_FIELDS, build_task
+
     rows = await db.fetch_all(
         query=f"""
             SELECT {TASK_SELECT_FIELDS}
@@ -194,7 +174,6 @@ async def get_group_tasks(group_id: int, current_user: CurrentUser):
                 COALESCE(t.due_at_override, t.source_due_at) ASC NULLS LAST,
                 t.created_at DESC
         """,
-        values={"group_id": group_id, "current_user_id": current_user.id}
+        values={"group_id": group_id, "current_user_id": current_user.id},
     )
     return [build_task(row) for row in rows]
-

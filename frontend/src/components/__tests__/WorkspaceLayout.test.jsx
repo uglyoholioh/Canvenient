@@ -1,11 +1,20 @@
 // React is required by the test JSX transform.
- 
+
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import WorkspaceLayout from "../WorkspaceLayout";
 
-vi.mock("../Dashboard", () => ({ default: () => <button type="button">Dashboard content</button> }));
-vi.mock("../TaskView", () => ({ default: ({ embedded, composerAutoFocus }) => <div>Tasks content{embedded && <textarea autoFocus={composerAutoFocus} aria-label="Panel task composer" />}</div> }));
+vi.mock("../Dashboard", () => ({
+  default: () => <button type="button">Dashboard content</button>,
+}));
+vi.mock("../TaskView", () => ({
+  default: ({ embedded, composerAutoFocus }) => (
+    <div>
+      Tasks content
+      {embedded && <textarea autoFocus={composerAutoFocus} aria-label="Panel task composer" />}
+    </div>
+  ),
+}));
 vi.mock("../Schedule", () => ({ default: () => <div>Schedule content</div> }));
 vi.mock("../SettingsView", () => ({ default: () => <div>Settings content</div> }));
 vi.mock("../CanvasView", () => ({ default: () => <div>Canvas content</div> }));
@@ -29,10 +38,16 @@ describe("WorkspaceLayout", () => {
     Object.defineProperty(window, "localStorage", {
       configurable: true,
       value: {
-        clear: vi.fn(() => { for (const key of Object.keys(store)) delete store[key]; }),
+        clear: vi.fn(() => {
+          for (const key of Object.keys(store)) delete store[key];
+        }),
         getItem: vi.fn((key) => store[key] ?? null),
-        removeItem: vi.fn((key) => { delete store[key]; }),
-        setItem: vi.fn((key, val) => { store[key] = String(val); }),
+        removeItem: vi.fn((key) => {
+          delete store[key];
+        }),
+        setItem: vi.fn((key, val) => {
+          store[key] = String(val);
+        }),
       },
     });
   });
@@ -94,7 +109,9 @@ describe("WorkspaceLayout", () => {
     dashboardCard.focus();
     fireEvent.keyDown(dashboardCard, { key: "Tab", shiftKey: true });
 
-    fireEvent.keyDown(screen.getByRole("textbox", { name: "Panel task composer" }), { key: "Escape" });
+    fireEvent.keyDown(screen.getByRole("textbox", { name: "Panel task composer" }), {
+      key: "Escape",
+    });
 
     expect(screen.queryByRole("dialog", { name: "Tasks" })).not.toBeInTheDocument();
   });

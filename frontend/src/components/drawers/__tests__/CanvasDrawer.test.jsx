@@ -29,7 +29,9 @@ describe("CanvasDrawer", () => {
     vi.clearAllMocks();
     api.getCanvasAssignment.mockResolvedValue(mockAssignment);
     api.getTasks.mockResolvedValue([]);
-    api.getAcademicModules.mockResolvedValue([{ id: "mod1", source_course_id: "cs101", module_code: "CS101" }]);
+    api.getAcademicModules.mockResolvedValue([
+      { id: "mod1", source_course_id: "cs101", module_code: "CS101" },
+    ]);
     api.createTask.mockResolvedValue({ id: "task1" });
   });
 
@@ -42,11 +44,14 @@ describe("CanvasDrawer", () => {
     fireEvent.click(addTaskBtn);
 
     await waitFor(() => {
-      expect(api.createTask).toHaveBeenCalledWith("test-token", expect.objectContaining({
-        title: "Problem Set 1",
-        source_type: "canvas",
-        source_id: "canvas:cs101:assign1",
-      }));
+      expect(api.createTask).toHaveBeenCalledWith(
+        "test-token",
+        expect.objectContaining({
+          title: "Problem Set 1",
+          source_type: "canvas",
+          source_id: "canvas:cs101:assign1",
+        }),
+      );
     });
 
     await waitFor(() => {

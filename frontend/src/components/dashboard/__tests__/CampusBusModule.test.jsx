@@ -1,5 +1,5 @@
 // React is required by the test JSX transform.
- 
+
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
@@ -35,37 +35,50 @@ describe("CampusBusModule", () => {
     getCampusBusStops.mockResolvedValue({ stops });
     getCampusBusArrivals.mockResolvedValue({
       stop: { id: "COM3", name: "COM 3" },
-      arrivals: [{ service: "A1", minutes: [2, 9] }, { service: "D2", minutes: [0] }],
+      arrivals: [
+        { service: "A1", minutes: [2, 9] },
+        { service: "D2", minutes: [0] },
+      ],
       updated_at: "2026-09-01T10:00:00+08:00",
     });
-    searchCampusBusPlaces.mockImplementation((_token, query) => Promise.resolve({
-      places: normaliseQuery(query).includes("computing") ? [{
-        id: "place:soc",
-        name: "School of Computing",
-        subtitle: "Kent Ridge Campus",
-        latitude: 1.2946,
-        longitude: 103.7748,
-      }] : [{
-        id: "place:utown",
-        name: "University Town",
-        subtitle: "Kent Ridge Campus",
-        latitude: 1.3038,
-        longitude: 103.7746,
-      }],
-    }));
+    searchCampusBusPlaces.mockImplementation((_token, query) =>
+      Promise.resolve({
+        places: normaliseQuery(query).includes("computing")
+          ? [
+              {
+                id: "place:soc",
+                name: "School of Computing",
+                subtitle: "Kent Ridge Campus",
+                latitude: 1.2946,
+                longitude: 103.7748,
+              },
+            ]
+          : [
+              {
+                id: "place:utown",
+                name: "University Town",
+                subtitle: "Kent Ridge Campus",
+                latitude: 1.3038,
+                longitude: 103.7746,
+              },
+            ],
+      }),
+    );
     planCampusBusTrip.mockResolvedValue({
-      routes: [{
-        service: "D2",
-        from_stop: { id: "COM3", name: "COM 3" },
-        to_stop: { id: "UTOWN", name: "University Town" },
-        next_bus_minutes: 6,
-        bus_travel_minutes: 10,
-        travel_time_source: "live",
-        stops_count: 2,
-        stops: ["COM 3", "Museum", "University Town"],
-        stop_arrival_at: "2026-09-01T10:16:00+08:00",
-        destination_arrival_at: "2026-09-01T10:17:00+08:00",
-      }],
+      routes: [
+        {
+          service: "D2",
+          from_stop: { id: "COM3", name: "COM 3" },
+          to_stop: { id: "UTOWN", name: "University Town" },
+          next_bus_minutes: 6,
+          bus_travel_minutes: 10,
+          travel_time_source: "live",
+          stops_count: 2,
+          stops: ["COM 3", "Museum", "University Town"],
+          stop_arrival_at: "2026-09-01T10:16:00+08:00",
+          destination_arrival_at: "2026-09-01T10:17:00+08:00",
+        },
+      ],
     });
   });
 
@@ -104,7 +117,8 @@ describe("CampusBusModule", () => {
   it("uses the current location to switch to nearest stop", async () => {
     vi.stubGlobal("navigator", {
       geolocation: {
-        getCurrentPosition: (success) => success({ coords: { latitude: 1.3038, longitude: 103.7746 } }),
+        getCurrentPosition: (success) =>
+          success({ coords: { latitude: 1.3038, longitude: 103.7746 } }),
       },
     });
     render(<CampusBusModule token="token" />);
@@ -118,8 +132,12 @@ describe("CampusBusModule", () => {
   it("plans a location-to-location trip with a catchable bus and destination time", async () => {
     render(<CampusBusModule token="token" />);
     fireEvent.click(screen.getByLabelText("Plan a campus route"));
-    fireEvent.change(screen.getByPlaceholderText(/School of Computing/i), { target: { value: "School of Computing" } });
-    fireEvent.change(screen.getByPlaceholderText(/University Town/i), { target: { value: "University Town" } });
+    fireEvent.change(screen.getByPlaceholderText(/School of Computing/i), {
+      target: { value: "School of Computing" },
+    });
+    fireEvent.change(screen.getByPlaceholderText(/University Town/i), {
+      target: { value: "University Town" },
+    });
 
     await waitFor(() => expect(searchCampusBusPlaces).toHaveBeenCalledTimes(2));
     fireEvent.click(screen.getByRole("button", { name: "Find Routes" }));
@@ -127,10 +145,13 @@ describe("CampusBusModule", () => {
     expect(await screen.findByText("Next bus in 6 min")).toBeInTheDocument();
     expect(screen.getAllByText("University Town").length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText(/2 stops · 10 min ride/)).toBeInTheDocument();
-    expect(planCampusBusTrip).toHaveBeenCalledWith("token", expect.objectContaining({
-      from_name: "School of Computing",
-      to_name: "University Town",
-    }));
+    expect(planCampusBusTrip).toHaveBeenCalledWith(
+      "token",
+      expect.objectContaining({
+        from_name: "School of Computing",
+        to_name: "University Town",
+      }),
+    );
   });
 
   it("offers retry when the live provider is unavailable", async () => {
@@ -142,14 +163,17 @@ describe("CampusBusModule", () => {
   });
 
   it("shows a fresh cached arrival while it refreshes in the background", async () => {
-    localStorage.setItem("canvenient-isb-arrivals-cache:COM3", JSON.stringify({
-      cachedAt: Date.now(),
-      value: {
-        stop: { id: "COM3", name: "COM 3" },
-        arrivals: [{ service: "A2", minutes: [4] }],
-        updated_at: "2026-09-01T10:00:00+08:00",
-      },
-    }));
+    localStorage.setItem(
+      "canvenient-isb-arrivals-cache:COM3",
+      JSON.stringify({
+        cachedAt: Date.now(),
+        value: {
+          stop: { id: "COM3", name: "COM 3" },
+          arrivals: [{ service: "A2", minutes: [4] }],
+          updated_at: "2026-09-01T10:00:00+08:00",
+        },
+      }),
+    );
     getCampusBusArrivals.mockImplementation(() => new Promise(() => {}));
 
     render(<CampusBusModule token="token" />);

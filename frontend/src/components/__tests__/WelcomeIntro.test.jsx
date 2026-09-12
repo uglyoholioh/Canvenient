@@ -16,10 +16,16 @@ describe("WelcomeIntro", () => {
     Object.defineProperty(window, "localStorage", {
       configurable: true,
       value: {
-        clear: vi.fn(() => { store = {}; }),
+        clear: vi.fn(() => {
+          store = {};
+        }),
         getItem: vi.fn((key) => store[key] || null),
-        setItem: vi.fn((key, val) => { store[key] = String(val); }),
-        removeItem: vi.fn((key) => { delete store[key]; }),
+        setItem: vi.fn((key, val) => {
+          store[key] = String(val);
+        }),
+        removeItem: vi.fn((key) => {
+          delete store[key];
+        }),
       },
     });
   });

@@ -1,6 +1,6 @@
-import { ReactRenderer } from '@tiptap/react';
-import tippy from 'tippy.js';
-import { SuggestionMenu } from './SuggestionMenu';
+import { ReactRenderer } from "@tiptap/react";
+import tippy from "tippy.js";
+import { SuggestionMenu } from "./SuggestionMenu";
 
 export default function createSuggestionOptions(itemsFetcher) {
   return {
@@ -12,7 +12,7 @@ export default function createSuggestionOptions(itemsFetcher) {
       let popup;
 
       return {
-        onStart: props => {
+        onStart: (props) => {
           component = new ReactRenderer(SuggestionMenu, {
             props,
             editor: props.editor,
@@ -22,14 +22,14 @@ export default function createSuggestionOptions(itemsFetcher) {
             return;
           }
 
-          popup = tippy('body', {
+          popup = tippy("body", {
             getReferenceClientRect: props.clientRect,
             appendTo: () => document.body,
             content: component.element,
             showOnCreate: true,
             interactive: true,
-            trigger: 'manual',
-            placement: 'bottom-start',
+            trigger: "manual",
+            placement: "bottom-start",
           });
         },
 
@@ -46,7 +46,7 @@ export default function createSuggestionOptions(itemsFetcher) {
         },
 
         onKeyDown(props) {
-          if (props.event.key === 'Escape') {
+          if (props.event.key === "Escape") {
             popup[0].hide();
             return true;
           }

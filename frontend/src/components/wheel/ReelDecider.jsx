@@ -299,9 +299,7 @@ export default function ReelDecider({
           borderBottom: "1.5px solid var(--accent, #38bdf8)",
           borderRadius: "4px",
           pointerEvents: "none",
-          boxShadow: isLocked
-            ? "0 0 12px rgba(56, 189, 248, 0.25)"
-            : "none",
+          boxShadow: isLocked ? "0 0 12px rgba(56, 189, 248, 0.25)" : "none",
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",

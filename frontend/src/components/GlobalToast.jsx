@@ -8,7 +8,7 @@ export default function GlobalToast() {
     const handleShowToast = (e) => {
       const id = Date.now().toString() + Math.random().toString();
       const newToast = { id, ...e.detail };
-      
+
       setToasts((current) => [...current, newToast]);
 
       if (newToast.timeout !== false) {
@@ -18,8 +18,8 @@ export default function GlobalToast() {
       }
     };
 
-    window.addEventListener('canvenient-toast', handleShowToast);
-    return () => window.removeEventListener('canvenient-toast', handleShowToast);
+    window.addEventListener("canvenient-toast", handleShowToast);
+    return () => window.removeEventListener("canvenient-toast", handleShowToast);
   }, []);
 
   if (toasts.length === 0) return null;

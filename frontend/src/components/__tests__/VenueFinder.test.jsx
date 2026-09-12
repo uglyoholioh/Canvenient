@@ -1,5 +1,5 @@
 // React is required by the test JSX transform.
- 
+
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { getVenueInformation, getVenueLocations, searchCampusBusPlaces } from "../../api";
@@ -27,10 +27,10 @@ const MOCK_VENUE_INFO = {
         },
       ],
       availability: {
-        "1000": "occupied",
-        "1030": "occupied",
-        "1100": "occupied",
-        "1130": "occupied",
+        1000: "occupied",
+        1030: "occupied",
+        1100: "occupied",
+        1130: "occupied",
       },
     },
     {
@@ -54,14 +54,14 @@ const MOCK_VENUE_INFO = {
         },
       ],
       availability: {
-        "1400": "occupied",
-        "1430": "occupied",
-        "1500": "occupied",
-        "1530": "occupied",
+        1400: "occupied",
+        1430: "occupied",
+        1500: "occupied",
+        1530: "occupied",
       },
     },
   ],
-  "LT27": [
+  LT27: [
     {
       day: "Monday",
       classes: [],
@@ -81,7 +81,7 @@ const MOCK_LOCATIONS = {
     floor: 2,
     location: { x: 103.77265, y: 1.29532 },
   },
-  "LT27": {
+  LT27: {
     roomName: "Lecture Theatre 27",
     floor: 1,
     location: { x: 103.78035, y: 1.29785 },
@@ -91,7 +91,7 @@ const MOCK_LOCATIONS = {
 const MOCK_BUILDING_CENTROIDS = {
   COM1: [1.29495, 103.77372, "School of Computing 1", "Computing"],
   AS6: [1.29532, 103.77265, "Arts 6", "Arts & Social Sciences"],
-  LT: [1.29600, 103.77300, "Lecture Theatre", "General"],
+  LT: [1.296, 103.773, "Lecture Theatre", "General"],
 };
 
 describe("VenueFinder", () => {
@@ -129,9 +129,11 @@ describe("VenueFinder", () => {
     expect(screen.getByText("LT27")).toBeInTheDocument();
 
     // Switch day to Tuesday
-    const daySelect = screen.getByDisplayValue(/Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday/);
+    const daySelect = screen.getByDisplayValue(
+      /Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday/,
+    );
     fireEvent.change(daySelect, { target: { value: "Tuesday" } });
-    
+
     expect(daySelect.value).toBe("Tuesday");
   });
 
@@ -198,7 +200,9 @@ describe("VenueFinder", () => {
 
     await screen.findByText("COM1-0206");
 
-    const daySelect = screen.getByDisplayValue(/Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday/);
+    const daySelect = screen.getByDisplayValue(
+      /Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday/,
+    );
     fireEvent.change(daySelect, { target: { value: "Monday" } });
 
     // Ensure all rooms are visible
@@ -217,7 +221,7 @@ describe("VenueFinder", () => {
     const getCurrentPositionMock = vi.fn((success) =>
       success({
         coords: { latitude: 1.29495, longitude: 103.77372, accuracy: 10 },
-      })
+      }),
     );
     globalThis.navigator.geolocation = { getCurrentPosition: getCurrentPositionMock };
 

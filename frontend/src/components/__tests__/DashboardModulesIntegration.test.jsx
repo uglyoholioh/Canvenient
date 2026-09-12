@@ -35,9 +35,7 @@ describe("Dashboard module integration", () => {
 
   it("renders Tasks, Schedule, Campus Bus (NUS ISB), and Canvas, but not Notes by default", async () => {
     await act(async () => {
-      render(
-        <Dashboard token="test-token" user={{ id: 1 }} onNavigate={vi.fn()} />
-      );
+      render(<Dashboard token="test-token" user={{ id: 1 }} onNavigate={vi.fn()} />);
     });
 
     expect(screen.getByTestId("mock-tasks-module")).toBeInTheDocument();

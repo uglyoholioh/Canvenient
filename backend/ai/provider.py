@@ -119,9 +119,7 @@ async def _generate_json_gemini(
             if response.status_code == 200:
                 return _extract_json(response)
 
-            last_error = AIUnavailable(
-                f"AI provider error {response.status_code}: {response.text[:200]}"
-            )
+            last_error = AIUnavailable(f"AI provider error {response.status_code}: {response.text[:200]}")
             if response.status_code not in RETRIABLE_STATUS_CODES:
                 break
 
@@ -172,9 +170,7 @@ async def _generate_json_zai(
     extra_parts: list[dict] | None,
 ) -> dict:
     if extra_parts:
-        raise AIUnavailable(
-            "PDF attachments are not supported by the configured AI provider"
-        )
+        raise AIUnavailable("PDF attachments are not supported by the configured AI provider")
     url = f"{os.getenv('AI_BASE_URL') or ZAI_API_BASE}/chat/completions"
     headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
     payload = _zai_payload(system, prompt, response_schema)
@@ -191,9 +187,7 @@ async def _generate_json_zai(
             if response.status_code == 200:
                 return _extract_zai_json(response)
 
-            last_error = AIUnavailable(
-                f"AI provider error {response.status_code}: {response.text[:200]}"
-            )
+            last_error = AIUnavailable(f"AI provider error {response.status_code}: {response.text[:200]}")
             if response.status_code not in RETRIABLE_STATUS_CODES:
                 break
 

@@ -1,8 +1,26 @@
 // React is required by the test JSX transform.
- 
+
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Calendar, CalendarClock, CheckCircle2, Download, FileText, Paperclip, Plus, Repeat, Upload, X } from "lucide-react";
-import { createNote, createTask, downloadClassFile, getClassContext, updateClass, uploadClassFile } from "../../api";
+import {
+  Calendar,
+  CalendarClock,
+  CheckCircle2,
+  Download,
+  FileText,
+  Paperclip,
+  Plus,
+  Repeat,
+  Upload,
+  X,
+} from "lucide-react";
+import {
+  createNote,
+  createTask,
+  downloadClassFile,
+  getClassContext,
+  updateClass,
+  uploadClassFile,
+} from "../../api";
 
 const RELATIONS = [
   { value: "due_before", label: "Due before class" },
@@ -46,12 +64,16 @@ export default function ClassContextDrawer({ item, token, onClose, onContextChan
   }, [item.classId, item.occurrenceDate, token]);
 
   useEffect(() => {
-    const timer = window.setTimeout(() => { void loadContext(); }, 0);
+    const timer = window.setTimeout(() => {
+      void loadContext();
+    }, 0);
     return () => window.clearTimeout(timer);
   }, [loadContext]);
 
   useEffect(() => {
-    const closeOnEscape = (event) => { if (event.key === "Escape") onClose(); };
+    const closeOnEscape = (event) => {
+      if (event.key === "Escape") onClose();
+    };
     window.addEventListener("keydown", closeOnEscape);
     return () => {
       window.removeEventListener("keydown", closeOnEscape);
@@ -66,7 +88,9 @@ export default function ClassContextDrawer({ item, token, onClose, onContextChan
 
   // Effective attendance for THIS occurrence, from the backend's merged
   // context; falls back to the calendar item while the context loads.
-  const classAttendInPerson = context?.class ? context.class.attend_in_person !== false : item.attendInPerson !== false;
+  const classAttendInPerson = context?.class
+    ? context.class.attend_in_person !== false
+    : item.attendInPerson !== false;
 
   const applyAttendance = async (nextAttending, scope) => {
     if (attendanceSaving) return;
@@ -128,13 +152,16 @@ export default function ClassContextDrawer({ item, token, onClose, onContextChan
     setIsSaving(true);
     setError("");
     try {
-      await createNote({
-        title: noteTitle.trim(),
-        content: noteContent.trim(),
-        class_id: item.classId,
-        class_occurrence_date: item.occurrenceDate,
-        is_recurring: isRecurring,
-      }, token);
+      await createNote(
+        {
+          title: noteTitle.trim(),
+          content: noteContent.trim(),
+          class_id: item.classId,
+          class_occurrence_date: item.occurrenceDate,
+          is_recurring: isRecurring,
+        },
+        token,
+      );
       setNoteTitle("");
       setNoteContent("");
       setMode(null);
@@ -178,33 +205,62 @@ export default function ClassContextDrawer({ item, token, onClose, onContextChan
     }
   };
 
-  const classDate = item.start.toLocaleDateString([], { weekday: "long", month: "long", day: "numeric" });
+  const classDate = item.start.toLocaleDateString([], {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+  });
   const classDateShort = item.start.toLocaleDateString([], { month: "short", day: "numeric" });
   const times = `${item.start.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })} – ${item.end.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}`;
 
   return (
-    <div className="class-context-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
-      <aside className="class-context-drawer" role="dialog" aria-modal="true" aria-label={`${item.title} class context`}>
+    <div
+      className="class-context-backdrop"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) onClose();
+      }}
+    >
+      <aside
+        className="class-context-drawer"
+        role="dialog"
+        aria-modal="true"
+        aria-label={`${item.title} class context`}
+      >
         <header className="class-context-header" style={{ "--class-color": item.color }}>
           <div style={{ flex: 1 }}>
             <strong>{item.title}</strong>
-            <span>{item.subtitle}{item.classNo ? ` [${item.classNo}]` : ""}{item.weeksLabel ? ` · ${item.weeksLabel}` : ""} · {classDate}</span>
-            <small>{times}{item.venue ? ` · ${item.venue}` : ""}</small>
+            <span>
+              {item.subtitle}
+              {item.classNo ? ` [${item.classNo}]` : ""}
+              {item.weeksLabel ? ` · ${item.weeksLabel}` : ""} · {classDate}
+            </span>
+            <small>
+              {times}
+              {item.venue ? ` · ${item.venue}` : ""}
+            </small>
           </div>
-          <button type="button" onClick={onClose} aria-label="Close class context"><X size={18} /></button>
+          <button type="button" onClick={onClose} aria-label="Close class context">
+            <X size={18} />
+          </button>
         </header>
 
         <section className="class-context-attendance" aria-label="Attendance">
           <div className="class-context-scope-group">
             <span className="class-context-scope-label">Attendance</span>
-            <div className="class-context-scope-toggle" role="radiogroup" aria-label="Attendance status">
+            <div
+              className="class-context-scope-toggle"
+              role="radiogroup"
+              aria-label="Attendance status"
+            >
               <button
                 type="button"
                 role="radio"
                 aria-checked={classAttendInPerson}
                 disabled={attendanceSaving}
                 className={`scope-option ${classAttendInPerson ? "is-active" : ""}`}
-                onClick={() => { if (!classAttendInPerson) void applyAttendance(true, attendanceScope); }}
+                onClick={() => {
+                  if (!classAttendInPerson) void applyAttendance(true, attendanceScope);
+                }}
               >
                 <CheckCircle2 size={13} />
                 In person
@@ -215,7 +271,9 @@ export default function ClassContextDrawer({ item, token, onClose, onContextChan
                 aria-checked={!classAttendInPerson}
                 disabled={attendanceSaving}
                 className={`scope-option ${!classAttendInPerson ? "is-active" : ""}`}
-                onClick={() => { if (classAttendInPerson) void applyAttendance(false, attendanceScope); }}
+                onClick={() => {
+                  if (classAttendInPerson) void applyAttendance(false, attendanceScope);
+                }}
               >
                 <X size={13} />
                 Not attending
@@ -224,7 +282,11 @@ export default function ClassContextDrawer({ item, token, onClose, onContextChan
           </div>
           <div className="class-context-scope-group">
             <span className="class-context-scope-label">Apply to</span>
-            <div className="class-context-scope-toggle" role="radiogroup" aria-label="Attendance scope">
+            <div
+              className="class-context-scope-toggle"
+              role="radiogroup"
+              aria-label="Attendance scope"
+            >
               <button
                 type="button"
                 role="radio"
@@ -255,16 +317,41 @@ export default function ClassContextDrawer({ item, token, onClose, onContextChan
         </section>
 
         <div className="class-context-actions" aria-label="Add to this class">
-          <button type="button" className={mode === "task" ? "is-active" : ""} onClick={() => setMode(mode === "task" ? null : "task")}><Plus size={15} />Task</button>
-          <button type="button" className={mode === "note" ? "is-active" : ""} onClick={() => setMode(mode === "note" ? null : "note")}><FileText size={15} />Note</button>
-          <button type="button" className={mode === "file" ? "is-active" : ""} onClick={() => setMode(mode === "file" ? null : "file")}><Paperclip size={15} />File</button>
+          <button
+            type="button"
+            className={mode === "task" ? "is-active" : ""}
+            onClick={() => setMode(mode === "task" ? null : "task")}
+          >
+            <Plus size={15} />
+            Task
+          </button>
+          <button
+            type="button"
+            className={mode === "note" ? "is-active" : ""}
+            onClick={() => setMode(mode === "note" ? null : "note")}
+          >
+            <FileText size={15} />
+            Note
+          </button>
+          <button
+            type="button"
+            className={mode === "file" ? "is-active" : ""}
+            onClick={() => setMode(mode === "file" ? null : "file")}
+          >
+            <Paperclip size={15} />
+            File
+          </button>
         </div>
 
         {mode === "task" && (
           <form className="class-context-form" onSubmit={submitTask}>
             <div className="class-context-scope-group">
               <span className="class-context-scope-label">Apply to</span>
-              <div className="class-context-scope-toggle" role="radiogroup" aria-label="Class occurrence scope">
+              <div
+                className="class-context-scope-toggle"
+                role="radiogroup"
+                aria-label="Class occurrence scope"
+              >
                 <button
                   type="button"
                   role="radio"
@@ -287,10 +374,40 @@ export default function ClassContextDrawer({ item, token, onClose, onContextChan
                 </button>
               </div>
             </div>
-            <label>Task title<input autoFocus value={taskTitle} maxLength={160} onChange={(event) => setTaskTitle(event.target.value)} placeholder="e.g. Submit Lab 4" /></label>
-            <label>How it relates<select value={relation} onChange={(event) => setRelation(event.target.value)}>{RELATIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label>
-            {!isRecurring && relation === "due_before" && <p><CalendarClock size={14} />Due at class start: {times.split(" – ")[0]}</p>}
-            <div><button type="submit" disabled={!taskTitle.trim() || isSaving}>{isSaving ? "Adding…" : "Add task"}</button><button type="button" onClick={() => setMode(null)}>Cancel</button></div>
+            <label>
+              Task title
+              <input
+                autoFocus
+                value={taskTitle}
+                maxLength={160}
+                onChange={(event) => setTaskTitle(event.target.value)}
+                placeholder="e.g. Submit Lab 4"
+              />
+            </label>
+            <label>
+              How it relates
+              <select value={relation} onChange={(event) => setRelation(event.target.value)}>
+                {RELATIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            {!isRecurring && relation === "due_before" && (
+              <p>
+                <CalendarClock size={14} />
+                Due at class start: {times.split(" – ")[0]}
+              </p>
+            )}
+            <div>
+              <button type="submit" disabled={!taskTitle.trim() || isSaving}>
+                {isSaving ? "Adding…" : "Add task"}
+              </button>
+              <button type="button" onClick={() => setMode(null)}>
+                Cancel
+              </button>
+            </div>
           </form>
         )}
 
@@ -298,7 +415,11 @@ export default function ClassContextDrawer({ item, token, onClose, onContextChan
           <form className="class-context-form" onSubmit={submitNote}>
             <div className="class-context-scope-group">
               <span className="class-context-scope-label">Apply to</span>
-              <div className="class-context-scope-toggle" role="radiogroup" aria-label="Class occurrence scope">
+              <div
+                className="class-context-scope-toggle"
+                role="radiogroup"
+                aria-label="Class occurrence scope"
+              >
                 <button
                   type="button"
                   role="radio"
@@ -321,9 +442,33 @@ export default function ClassContextDrawer({ item, token, onClose, onContextChan
                 </button>
               </div>
             </div>
-            <label>Note title<input autoFocus value={noteTitle} maxLength={160} onChange={(event) => setNoteTitle(event.target.value)} placeholder="e.g. Lab 4 discussion" /></label>
-            <label>Details<textarea value={noteContent} rows={3} onChange={(event) => setNoteContent(event.target.value)} placeholder="Optional — you can continue editing this in Notes." /></label>
-            <div><button type="submit" disabled={!noteTitle.trim() || isSaving}>{isSaving ? "Adding…" : "Add note"}</button><button type="button" onClick={() => setMode(null)}>Cancel</button></div>
+            <label>
+              Note title
+              <input
+                autoFocus
+                value={noteTitle}
+                maxLength={160}
+                onChange={(event) => setNoteTitle(event.target.value)}
+                placeholder="e.g. Lab 4 discussion"
+              />
+            </label>
+            <label>
+              Details
+              <textarea
+                value={noteContent}
+                rows={3}
+                onChange={(event) => setNoteContent(event.target.value)}
+                placeholder="Optional — you can continue editing this in Notes."
+              />
+            </label>
+            <div>
+              <button type="submit" disabled={!noteTitle.trim() || isSaving}>
+                {isSaving ? "Adding…" : "Add note"}
+              </button>
+              <button type="button" onClick={() => setMode(null)}>
+                Cancel
+              </button>
+            </div>
           </form>
         )}
 
@@ -331,7 +476,11 @@ export default function ClassContextDrawer({ item, token, onClose, onContextChan
           <div className="class-context-form">
             <div className="class-context-scope-group">
               <span className="class-context-scope-label">Apply to</span>
-              <div className="class-context-scope-toggle" role="radiogroup" aria-label="Class occurrence scope">
+              <div
+                className="class-context-scope-toggle"
+                role="radiogroup"
+                aria-label="Class occurrence scope"
+              >
                 <button
                   type="button"
                   role="radio"
@@ -354,73 +503,120 @@ export default function ClassContextDrawer({ item, token, onClose, onContextChan
                 </button>
               </div>
             </div>
-            <input ref={fileInputRef} className="class-context-file-input" type="file" onChange={attachFile} />
+            <input
+              ref={fileInputRef}
+              className="class-context-file-input"
+              type="file"
+              onChange={attachFile}
+            />
             <div>
-              <button type="button" onClick={() => fileInputRef.current?.click()} disabled={isSaving}>
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isSaving}
+              >
                 <Upload size={14} />
                 {isSaving ? "Attaching…" : "Choose file to attach"}
               </button>
-              <button type="button" onClick={() => setMode(null)}>Cancel</button>
+              <button type="button" onClick={() => setMode(null)}>
+                Cancel
+              </button>
             </div>
           </div>
         )}
 
-        {error && <div className="class-context-error" role="alert">{error}</div>}
+        {error && (
+          <div className="class-context-error" role="alert">
+            {error}
+          </div>
+        )}
 
-        {!context ? <div className="class-context-loading">Loading linked items…</div> : (
+        {!context ? (
+          <div className="class-context-loading">Loading linked items…</div>
+        ) : (
           <div className="class-context-list">
             <section>
-              <h2>Tasks <span>{context.tasks.length}</span></h2>
-              {context.tasks.length ? context.tasks.map((task) => (
-                <div className="class-context-item" key={task.id}>
-                  <CheckCircle2 size={15} />
-                  <span>
-                    <strong>{task.title}</strong>
-                    <small>
-                      {relationshipLabel(task.relation)}
-                      <span className={`class-scope-tag ${task.is_recurring ? "is-recurring" : "is-instance"}`}>
-                        {task.is_recurring ? "All classes" : "This instance"}
-                      </span>
-                    </small>
-                  </span>
-                  {task.status === "done" && <em>Done</em>}
-                </div>
-              )) : <p>No tasks linked to this class.</p>}
+              <h2>
+                Tasks <span>{context.tasks.length}</span>
+              </h2>
+              {context.tasks.length ? (
+                context.tasks.map((task) => (
+                  <div className="class-context-item" key={task.id}>
+                    <CheckCircle2 size={15} />
+                    <span>
+                      <strong>{task.title}</strong>
+                      <small>
+                        {relationshipLabel(task.relation)}
+                        <span
+                          className={`class-scope-tag ${task.is_recurring ? "is-recurring" : "is-instance"}`}
+                        >
+                          {task.is_recurring ? "All classes" : "This instance"}
+                        </span>
+                      </small>
+                    </span>
+                    {task.status === "done" && <em>Done</em>}
+                  </div>
+                ))
+              ) : (
+                <p>No tasks linked to this class.</p>
+              )}
             </section>
             <section>
-              <h2>Notes <span>{context.notes.length}</span></h2>
-              {context.notes.length ? context.notes.map((note) => (
-                <div className="class-context-item" key={note.id}>
-                  <FileText size={15} />
-                  <span>
-                    <strong>{note.title || "Untitled"}</strong>
-                    <small>
-                      Updated {new Date(note.updated_at).toLocaleDateString()}
-                      <span className={`class-scope-tag ${note.is_recurring ? "is-recurring" : "is-instance"}`}>
-                        {note.is_recurring ? "All classes" : "This instance"}
-                      </span>
-                    </small>
-                  </span>
-                </div>
-              )) : <p>No notes linked to this class.</p>}
+              <h2>
+                Notes <span>{context.notes.length}</span>
+              </h2>
+              {context.notes.length ? (
+                context.notes.map((note) => (
+                  <div className="class-context-item" key={note.id}>
+                    <FileText size={15} />
+                    <span>
+                      <strong>{note.title || "Untitled"}</strong>
+                      <small>
+                        Updated {new Date(note.updated_at).toLocaleDateString()}
+                        <span
+                          className={`class-scope-tag ${note.is_recurring ? "is-recurring" : "is-instance"}`}
+                        >
+                          {note.is_recurring ? "All classes" : "This instance"}
+                        </span>
+                      </small>
+                    </span>
+                  </div>
+                ))
+              ) : (
+                <p>No notes linked to this class.</p>
+              )}
             </section>
             <section>
-              <h2>Files <span>{context.files.length}</span></h2>
-              {context.files.length ? context.files.map((file) => (
-                <div className="class-context-item" key={file.id}>
-                  <Paperclip size={15} />
-                  <span>
-                    <strong>{file.filename}</strong>
-                    <small>
-                      {formatFileSize(file.byte_size)}
-                      <span className={`class-scope-tag ${file.is_recurring ? "is-recurring" : "is-instance"}`}>
-                        {file.is_recurring ? "All classes" : "This instance"}
-                      </span>
-                    </small>
-                  </span>
-                  <button type="button" onClick={() => downloadFile(file)} aria-label={`Download ${file.filename}`}><Download size={15} /></button>
-                </div>
-              )) : <p>No files linked to this class.</p>}
+              <h2>
+                Files <span>{context.files.length}</span>
+              </h2>
+              {context.files.length ? (
+                context.files.map((file) => (
+                  <div className="class-context-item" key={file.id}>
+                    <Paperclip size={15} />
+                    <span>
+                      <strong>{file.filename}</strong>
+                      <small>
+                        {formatFileSize(file.byte_size)}
+                        <span
+                          className={`class-scope-tag ${file.is_recurring ? "is-recurring" : "is-instance"}`}
+                        >
+                          {file.is_recurring ? "All classes" : "This instance"}
+                        </span>
+                      </small>
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => downloadFile(file)}
+                      aria-label={`Download ${file.filename}`}
+                    >
+                      <Download size={15} />
+                    </button>
+                  </div>
+                ))
+              ) : (
+                <p>No files linked to this class.</p>
+              )}
             </section>
           </div>
         )}

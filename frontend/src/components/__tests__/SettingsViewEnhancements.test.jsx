@@ -8,7 +8,9 @@ vi.mock("../../api", () => ({
   applyModulePalette: vi.fn(),
   claimTelegramLink: vi.fn(),
   getAcademicModules: vi.fn().mockResolvedValue([]),
-  getModuleColors: vi.fn().mockResolvedValue({ active_palette: "balanced", palettes: [], modules: [] }),
+  getModuleColors: vi
+    .fn()
+    .mockResolvedValue({ active_palette: "balanced", palettes: [], modules: [] }),
   getTelegramLink: vi.fn().mockResolvedValue({ linked: false }),
   unlinkTelegram: vi.fn(),
   updateAcademicModuleSelection: vi.fn(),
@@ -28,10 +30,16 @@ describe("SettingsView Enhancements", () => {
     Object.defineProperty(window, "localStorage", {
       configurable: true,
       value: {
-        clear: vi.fn(() => { store = {}; }),
+        clear: vi.fn(() => {
+          store = {};
+        }),
         getItem: vi.fn((key) => store[key] || null),
-        setItem: vi.fn((key, val) => { store[key] = String(val); }),
-        removeItem: vi.fn((key) => { delete store[key]; }),
+        setItem: vi.fn((key, val) => {
+          store[key] = String(val);
+        }),
+        removeItem: vi.fn((key) => {
+          delete store[key];
+        }),
       },
     });
   });
@@ -52,9 +60,15 @@ describe("SettingsView Enhancements", () => {
     render(
       <SettingsView
         token="test-token"
-        user={{ id: 1, name: "Jordan", email: "jordan@example.com", canvas_connected: false, theme: "graphite" }}
+        user={{
+          id: 1,
+          name: "Jordan",
+          email: "jordan@example.com",
+          canvas_connected: false,
+          theme: "graphite",
+        }}
         onUpdateUser={onUpdateUser}
-      />
+      />,
     );
 
     expect(screen.getByLabelText("Email Address")).toHaveValue("jordan@example.com");
@@ -96,9 +110,15 @@ describe("SettingsView Enhancements", () => {
     render(
       <SettingsView
         token="test-token"
-        user={{ id: 1, name: "Jordan", email: "jordan@example.com", canvas_connected: false, theme: "graphite" }}
+        user={{
+          id: 1,
+          name: "Jordan",
+          email: "jordan@example.com",
+          canvas_connected: false,
+          theme: "graphite",
+        }}
         onUpdateUser={onUpdateUser}
-      />
+      />,
     );
 
     const tokenInput = screen.getByLabelText("Canvas API Token");
@@ -142,9 +162,16 @@ describe("SettingsView Enhancements", () => {
     render(
       <SettingsView
         token="test-token"
-        user={{ id: 1, name: "Jordan", email: "jordan@example.com", canvas_connected: true, canvas_token_hint: "•••• oken", theme: "graphite" }}
+        user={{
+          id: 1,
+          name: "Jordan",
+          email: "jordan@example.com",
+          canvas_connected: true,
+          canvas_token_hint: "•••• oken",
+          theme: "graphite",
+        }}
         onUpdateUser={onUpdateUser}
-      />
+      />,
     );
 
     expect(screen.getByText("Connected")).toBeInTheDocument();
@@ -171,9 +198,15 @@ describe("SettingsView Enhancements", () => {
     render(
       <SettingsView
         token="test-token"
-        user={{ id: 1, name: "Jordan", email: "jordan@example.com", canvas_connected: false, theme: "graphite" }}
+        user={{
+          id: 1,
+          name: "Jordan",
+          email: "jordan@example.com",
+          canvas_connected: false,
+          theme: "graphite",
+        }}
         onReplayOnboarding={onReplayOnboarding}
-      />
+      />,
     );
 
     const tgInput = screen.getByLabelText("Telegram link code");

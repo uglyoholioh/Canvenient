@@ -31,9 +31,7 @@ def format_items(title: str, tasks: list, events: list) -> str:
     lines = [title]
     if events:
         lines.append("\nEvents")
-        lines.extend(
-            f"• {_format_time(row['start_at'])} — {row['title']}" for row in events
-        )
+        lines.extend(f"• {_format_time(row['start_at'])} — {row['title']}" for row in events)
     if tasks:
         lines.append("\nTasks")
         for row in tasks:

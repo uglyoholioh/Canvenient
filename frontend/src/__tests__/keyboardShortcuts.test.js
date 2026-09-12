@@ -15,7 +15,9 @@ describe("keyboard shortcuts", () => {
       configurable: true,
       value: {
         getItem: vi.fn(() => stored),
-        setItem: vi.fn((_, value) => { stored = value; }),
+        setItem: vi.fn((_, value) => {
+          stored = value;
+        }),
       },
     });
   });

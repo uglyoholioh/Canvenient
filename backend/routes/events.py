@@ -74,27 +74,22 @@ async def create_event(payload: EventCreate, current_user: CurrentUser):
                 SELECT role FROM g_members
                 WHERE g_id = :g_id AND user_id = :user_id
             """,
-            values={"g_id": payload.g_id, "user_id": current_user.id}
+            values={"g_id": payload.g_id, "user_id": current_user.id},
         )
         if not member:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="You are not a member of this group."
-            )
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You are not a member of this group.")
         if member["role"] != "admin":
             raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Only group admins can create events for this group."
+                status_code=status.HTTP_403_FORBIDDEN, detail="Only group admins can create events for this group."
             )
     elif payload.c_id is not None:
         comm = await db.fetch_one(
-            query="SELECT user_id FROM communities WHERE id = :c_id",
-            values={"c_id": payload.c_id}
+            query="SELECT user_id FROM communities WHERE id = :c_id", values={"c_id": payload.c_id}
         )
         if not comm or comm["user_id"] != current_user.id:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail="Only the community creator can create events for this community."
+                detail="Only the community creator can create events for this community.",
             )
 
     async with db.transaction():
@@ -132,7 +127,7 @@ async def create_event(payload: EventCreate, current_user: CurrentUser):
                     SELECT user_id FROM g_members
                     WHERE g_id = :g_id AND user_id != :creator_id
                 """,
-                values={"g_id": payload.g_id, "creator_id": current_user.id}
+                values={"g_id": payload.g_id, "creator_id": current_user.id},
             )
             member_ids = [r["user_id"] for r in records]
         elif payload.c_id is not None:
@@ -143,7 +138,7 @@ async def create_event(payload: EventCreate, current_user: CurrentUser):
                     JOIN groups g ON gm.g_id = g.id
                     WHERE g.c_id = :c_id AND gm.user_id != :creator_id
                 """,
-                values={"c_id": payload.c_id, "creator_id": current_user.id}
+                values={"c_id": payload.c_id, "creator_id": current_user.id},
             )
             member_ids = [r["user_id"] for r in records]
 
@@ -156,8 +151,8 @@ async def create_event(payload: EventCreate, current_user: CurrentUser):
                 values={
                     "user_id": m_id,
                     "title": f"New Event: {payload.title}",
-                    "description": f"An event has been scheduled at {payload.venue or 'No venue specified'}."
-                }
+                    "description": f"An event has been scheduled at {payload.venue or 'No venue specified'}.",
+                },
             )
 
         rec_dict = dict(row)
@@ -259,7 +254,7 @@ async def get_attendance(event_id: int, current_user: CurrentUser):
             FROM event_attendance
             WHERE e_id = :event_id AND user_id = :user_id
         """,
-        values={"event_id": event_id, "user_id": current_user.id}
+        values={"event_id": event_id, "user_id": current_user.id},
     )
     if not row:
         return EventAttendanceOut(e_id=event_id, user_id=current_user.id, is_attending=False)
@@ -276,27 +271,20 @@ async def update_attendance(event_id: int, payload: EventAttendanceUpdate, curre
             DO UPDATE SET is_attending = EXCLUDED.is_attending
             RETURNING e_id, user_id, is_attending
         """,
-        values={
-            "user_id": current_user.id,
-            "event_id": event_id,
-            "is_attending": payload.is_attending
-        }
+        values={"user_id": current_user.id, "event_id": event_id, "is_attending": payload.is_attending},
     )
     return EventAttendanceOut.model_validate(dict(row))
 
 
 @router.get("/{event_id}/attendance-summary", response_model=list[AttendanceSummaryRow])
 async def get_attendance_summary(event_id: int, current_user: CurrentUser):
-    event = await db.fetch_one(
-        query="SELECT g_id FROM events WHERE id = :eid",
-        values={"eid": event_id}
-    )
+    event = await db.fetch_one(query="SELECT g_id FROM events WHERE id = :eid", values={"eid": event_id})
     if not event or not event["g_id"]:
         raise HTTPException(status_code=404, detail="Event not found or not a group event.")
 
     member_check = await db.fetch_one(
         query="SELECT role FROM g_members WHERE g_id = :g_id AND user_id = :uid",
-        values={"g_id": event["g_id"], "uid": current_user.id}
+        values={"g_id": event["g_id"], "uid": current_user.id},
     )
     if not member_check or member_check["role"] != "admin":
         raise HTTPException(status_code=403, detail="Only group admins can view attendance.")
@@ -315,23 +303,20 @@ async def get_attendance_summary(event_id: int, current_user: CurrentUser):
             WHERE gm.g_id = :g_id
             ORDER BY gm.role DESC, u.email ASC
         """,
-        values={"eid": event_id, "g_id": event["g_id"]}
+        values={"eid": event_id, "g_id": event["g_id"]},
     )
     return [AttendanceSummaryRow.model_validate(dict(row)) for row in rows]
 
 
 @router.post("/{event_id}/attendance-mark")
 async def mark_actual_attendance(event_id: int, payload: MarkActualAttendancePayload, current_user: CurrentUser):
-    event = await db.fetch_one(
-        query="SELECT g_id FROM events WHERE id = :eid",
-        values={"eid": event_id}
-    )
+    event = await db.fetch_one(query="SELECT g_id FROM events WHERE id = :eid", values={"eid": event_id})
     if not event or not event["g_id"]:
         raise HTTPException(status_code=404, detail="Event not found or not a group event.")
 
     member_check = await db.fetch_one(
         query="SELECT role FROM g_members WHERE g_id = :g_id AND user_id = :uid",
-        values={"g_id": event["g_id"], "uid": current_user.id}
+        values={"g_id": event["g_id"], "uid": current_user.id},
     )
     if not member_check or member_check["role"] != "admin":
         raise HTTPException(status_code=403, detail="Only group admins can mark attendance.")
@@ -342,6 +327,6 @@ async def mark_actual_attendance(event_id: int, payload: MarkActualAttendancePay
             VALUES (:uid, :eid, FALSE, :attended)
             ON CONFLICT (user_id, e_id) DO UPDATE SET attended = EXCLUDED.attended
         """,
-        values={"uid": payload.user_id, "eid": event_id, "attended": payload.attended}
+        values={"uid": payload.user_id, "eid": event_id, "attended": payload.attended},
     )
     return {"ok": True}

@@ -1,5 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { normalizeDashboardSize, normalizeDashboardTracks, readDashboardConfig, threeColumnDashboardConfig } from "../dashboardConfig";
+import {
+  normalizeDashboardSize,
+  normalizeDashboardTracks,
+  readDashboardConfig,
+  threeColumnDashboardConfig,
+} from "../dashboardConfig";
 
 describe("dashboard card sizes", () => {
   beforeEach(() => {
@@ -13,9 +18,12 @@ describe("dashboard card sizes", () => {
   });
 
   it("migrates the old named size presets", () => {
-    localStorage.setItem("canvenient-dashboard-config", JSON.stringify({
-      sizes: { tasks: "hero", schedule: "wide", canvas: "tall", notes: "full" },
-    }));
+    localStorage.setItem(
+      "canvenient-dashboard-config",
+      JSON.stringify({
+        sizes: { tasks: "hero", schedule: "wide", canvas: "tall", notes: "full" },
+      }),
+    );
 
     expect(readDashboardConfig().sizes).toEqual({
       tasks: { columns: 3, rows: 3 },
@@ -35,7 +43,9 @@ describe("dashboard card sizes", () => {
   });
 
   it("snaps continuous dashboard track proportions to 1/12 grid", () => {
-    expect(normalizeDashboardTracks({ columns: [0.2, 0.3, 0.25, 0.25], rows: [120, 210, 90, 180] })).toEqual({
+    expect(
+      normalizeDashboardTracks({ columns: [0.2, 0.3, 0.25, 0.25], rows: [120, 210, 90, 180] }),
+    ).toEqual({
       columns: [0.16666666666666666, 0.3333333333333333, 0.25, 0.25],
       rows: [120, 210, 90, 180],
     });

@@ -162,8 +162,12 @@
 }
 
 @keyframes assistant-blink {
-  from { opacity: 0.35; }
-  to { opacity: 1; }
+  from {
+    opacity: 0.35;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 .assistant-error {

@@ -107,7 +107,9 @@ async def test_unauthenticated_tasks_access(client: AsyncClient):
 async def test_create_canvas_task_strips_html_description(client: AsyncClient, auth):
     """Test creating a task with source_type='canvas' cleans HTML tags from description."""
     token, _, _ = auth
-    html_desc = "<p><span>Attached here are the Assignment 1 files.</span></p><p><a href='#'>BT2102-Assignment1.pdf</a></p>"
+    html_desc = (
+        "<p><span>Attached here are the Assignment 1 files.</span></p><p><a href='#'>BT2102-Assignment1.pdf</a></p>"
+    )
     resp = await client.post(
         "/tasks",
         json={
@@ -123,4 +125,3 @@ async def test_create_canvas_task_strips_html_description(client: AsyncClient, a
     assert "<span>" not in data["description"]
     assert "Attached here are the Assignment 1 files." in data["description"]
     assert "BT2102-Assignment1.pdf" in data["description"]
-

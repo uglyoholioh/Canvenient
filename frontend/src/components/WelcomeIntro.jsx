@@ -117,10 +117,22 @@ export default function WelcomeIntro({ user, onDone }) {
                 borderBottom: "1px solid var(--border)",
               }}
             >
-              <Icon size={16} style={{ flexShrink: 0, marginTop: "2px", color: "var(--text-muted)" }} />
+              <Icon
+                size={16}
+                style={{ flexShrink: 0, marginTop: "2px", color: "var(--text-muted)" }}
+              />
               <div>
-                <div style={{ fontSize: "13px", fontWeight: "600", color: "var(--text-h)" }}>{name}</div>
-                <div style={{ fontSize: "12px", color: "var(--text-muted)", marginTop: "2px", lineHeight: 1.45 }}>
+                <div style={{ fontSize: "13px", fontWeight: "600", color: "var(--text-h)" }}>
+                  {name}
+                </div>
+                <div
+                  style={{
+                    fontSize: "12px",
+                    color: "var(--text-muted)",
+                    marginTop: "2px",
+                    lineHeight: 1.45,
+                  }}
+                >
                   {description}
                 </div>
               </div>
@@ -133,7 +145,12 @@ export default function WelcomeIntro({ user, onDone }) {
             type="button"
             onClick={finish}
             className="secondary-button"
-            style={{ padding: "8px 14px", fontSize: "13px", color: "var(--text-muted)", flexShrink: 0 }}
+            style={{
+              padding: "8px 14px",
+              fontSize: "13px",
+              color: "var(--text-muted)",
+              flexShrink: 0,
+            }}
           >
             Skip intro
           </button>
@@ -142,7 +159,13 @@ export default function WelcomeIntro({ user, onDone }) {
             onClick={finish}
             autoFocus
             className="primary-button"
-            style={{ padding: "8px 18px", borderRadius: "4px", fontSize: "13px", fontWeight: "600", flexShrink: 0 }}
+            style={{
+              padding: "8px 18px",
+              borderRadius: "4px",
+              fontSize: "13px",
+              fontWeight: "600",
+              flexShrink: 0,
+            }}
           >
             Get started
           </button>

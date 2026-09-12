@@ -43,7 +43,11 @@ describe("Omnibar corpus caching", () => {
       { id: 20, course_id: 10, title: "Problem Set 4", due_at: "2026-09-20T12:00:00Z" },
     ]);
     getCanvasFiles.mockResolvedValue([
-      { id: 30, display_name: "week5-lecture.pdf", external_url: "https://canvas.nus.edu.sg/courses/10/files/30" },
+      {
+        id: 30,
+        display_name: "week5-lecture.pdf",
+        external_url: "https://canvas.nus.edu.sg/courses/10/files/30",
+      },
     ]);
   });
 
@@ -94,7 +98,10 @@ describe("Omnibar corpus caching", () => {
     expect(screen.getByText("ST2334")).toBeInTheDocument();
     fireEvent.click(screen.getByText("Problem Set 4"));
     await waitFor(() =>
-      expect(onNavigate).toHaveBeenCalledWith("canvas_resource", expect.objectContaining({ itemType: "assignment", id: 20 })),
+      expect(onNavigate).toHaveBeenCalledWith(
+        "canvas_resource",
+        expect.objectContaining({ itemType: "assignment", id: 20 }),
+      ),
     );
 
     // File match opens the Canvas drawer as a file resource.
@@ -102,12 +109,17 @@ describe("Omnibar corpus caching", () => {
     await waitFor(() => expect(screen.getByText("week5-lecture.pdf")).toBeInTheDocument());
     fireEvent.click(screen.getByText("week5-lecture.pdf"));
     await waitFor(() =>
-      expect(onNavigate).toHaveBeenCalledWith("canvas_resource", expect.objectContaining({ itemType: "file", id: 30 })),
+      expect(onNavigate).toHaveBeenCalledWith(
+        "canvas_resource",
+        expect.objectContaining({ itemType: "file", id: 30 }),
+      ),
     );
 
     // Course match navigates to the Modules view.
     fireEvent.change(input, { target: { value: "st2334" } });
-    await waitFor(() => expect(screen.getByText("ST2334 — Probability and Statistics")).toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.getByText("ST2334 — Probability and Statistics")).toBeInTheDocument(),
+    );
     fireEvent.click(screen.getByText("ST2334 — Probability and Statistics"));
     await waitFor(() =>
       expect(onNavigate).toHaveBeenCalledWith("view", expect.objectContaining({ view: "canvas" })),

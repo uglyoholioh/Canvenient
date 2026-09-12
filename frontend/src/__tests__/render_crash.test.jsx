@@ -1,6 +1,6 @@
-import { render } from '@testing-library/react';
-import { it, vi } from 'vitest';
-import App from '../App.jsx';
+import { render } from "@testing-library/react";
+import { it, vi } from "vitest";
+import App from "../App.jsx";
 
 globalThis.localStorage = {
   getItem: vi.fn(() => null),
@@ -8,7 +8,7 @@ globalThis.localStorage = {
   removeItem: vi.fn(),
 };
 
-it('renders app', () => {
+it("renders app", () => {
   render(<App />);
   console.log("Render succeeded!");
 });

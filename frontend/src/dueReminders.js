@@ -33,9 +33,7 @@ function loadNotified() {
 function saveNotified(store) {
   // Keep the map bounded: drop entries older than a week.
   const cutoff = Date.now() - 7 * 24 * 60 * 60 * 1000;
-  const pruned = Object.fromEntries(
-    Object.entries(store).filter(([, at]) => at > cutoff)
-  );
+  const pruned = Object.fromEntries(Object.entries(store).filter(([, at]) => at > cutoff));
   localStorage.setItem(REMINDER_STORE_KEY, JSON.stringify(pruned));
 }
 
@@ -52,7 +50,9 @@ export function selectDueSoonTasks(tasks, now = new Date()) {
     const due = task.due_at_override || task.source_due_at;
     if (!due) return false;
     const dueTime = new Date(due).getTime();
-    return !Number.isNaN(dueTime) && dueTime <= horizon && dueTime >= now.getTime() - 60 * 60 * 1000;
+    return (
+      !Number.isNaN(dueTime) && dueTime <= horizon && dueTime >= now.getTime() - 60 * 60 * 1000
+    );
   });
 }
 

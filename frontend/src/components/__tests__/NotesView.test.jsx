@@ -13,11 +13,13 @@ vi.mock("../../api", () => ({
 }));
 
 vi.mock("../MarkdownEditor", () => ({
-  default: ({ noteId }) => <div data-testid={`editor-for-${noteId}`}>Editor content for note {noteId}</div>
+  default: ({ noteId }) => (
+    <div data-testid={`editor-for-${noteId}`}>Editor content for note {noteId}</div>
+  ),
 }));
 
 vi.mock("../NotesGraph", () => ({
-  default: () => <div data-testid="notes-graph">Notes Graph View</div>
+  default: () => <div data-testid="notes-graph">Notes Graph View</div>,
 }));
 
 describe("NotesView tabbed split screen", () => {
@@ -64,7 +66,10 @@ describe("NotesView tabbed split screen", () => {
 
     // Click Lecture 2 Notes in sidebar (button with class notes-page-item)
     const sidebarButtons = screen.getAllByRole("button");
-    const lec2Btn = sidebarButtons.find(btn => btn.className.includes("notes-page-item") && btn.textContent.includes("Lecture 2 Notes"));
+    const lec2Btn = sidebarButtons.find(
+      (btn) =>
+        btn.className.includes("notes-page-item") && btn.textContent.includes("Lecture 2 Notes"),
+    );
     fireEvent.click(lec2Btn);
 
     // Both tabs should now be present
@@ -89,7 +94,10 @@ describe("NotesView tabbed split screen", () => {
 
     // Open Lecture 2 Notes so we have 2 tabs
     const sidebarButtons = screen.getAllByRole("button");
-    const lec2Btn = sidebarButtons.find(btn => btn.className.includes("notes-page-item") && btn.textContent.includes("Lecture 2 Notes"));
+    const lec2Btn = sidebarButtons.find(
+      (btn) =>
+        btn.className.includes("notes-page-item") && btn.textContent.includes("Lecture 2 Notes"),
+    );
     fireEvent.click(lec2Btn);
 
     expect(screen.getByTestId("editor-for-2")).toBeInTheDocument();
@@ -134,7 +142,9 @@ describe("NotesView tabbed split screen", () => {
     });
 
     // Hover over Lecture 2 Notes row
-    const lec2Text = screen.getAllByText("Lecture 2 Notes").find(el => el.closest(".notes-page-item"));
+    const lec2Text = screen
+      .getAllByText("Lecture 2 Notes")
+      .find((el) => el.closest(".notes-page-item"));
     const lec2Row = lec2Text.closest("div[style*='flex']");
     fireEvent.mouseEnter(lec2Row);
 

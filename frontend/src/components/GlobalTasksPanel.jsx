@@ -1,14 +1,18 @@
 // React is required by the test JSX transform.
- 
+
 import { useEffect, useRef } from "react";
 import { Maximize2, X } from "lucide-react";
 import TaskView from "./TaskView";
 
 function getFocusableElements(container) {
   if (!container) return [];
-  return Array.from(container.querySelectorAll(
-    "button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex='-1'])",
-  )).filter((element) => !element.closest("[inert]") && element.getAttribute("aria-hidden") !== "true");
+  return Array.from(
+    container.querySelectorAll(
+      "button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex='-1'])",
+    ),
+  ).filter(
+    (element) => !element.closest("[inert]") && element.getAttribute("aria-hidden") !== "true",
+  );
 }
 
 export default function GlobalTasksPanel({
@@ -57,8 +61,12 @@ export default function GlobalTasksPanel({
           }
           const currentIndex = focusable.indexOf(document.activeElement);
           const nextIndex = event.shiftKey
-            ? (currentIndex <= 0 ? focusable.length - 1 : currentIndex - 1)
-            : (currentIndex === focusable.length - 1 ? 0 : currentIndex + 1);
+            ? currentIndex <= 0
+              ? focusable.length - 1
+              : currentIndex - 1
+            : currentIndex === focusable.length - 1
+              ? 0
+              : currentIndex + 1;
           event.preventDefault();
           focusable[nextIndex]?.focus();
         }}
@@ -69,11 +77,28 @@ export default function GlobalTasksPanel({
             {shortcutLabel && <kbd>{shortcutLabel}</kbd>}
           </div>
           <div>
-            <button type="button" onClick={onOpenFull} aria-label="Open full Tasks page" title="Open full Tasks page"><Maximize2 size={14} /></button>
-            <button type="button" onClick={onClose} aria-label="Close Tasks panel"><X size={15} /></button>
+            <button
+              type="button"
+              onClick={onOpenFull}
+              aria-label="Open full Tasks page"
+              title="Open full Tasks page"
+            >
+              <Maximize2 size={14} />
+            </button>
+            <button type="button" onClick={onClose} aria-label="Close Tasks panel">
+              <X size={15} />
+            </button>
           </div>
         </header>
-        {isOpen && <TaskView token={token} embedded active composerAutoFocus={focusComposer} composerFocusRequestScope="global-tasks" />}
+        {isOpen && (
+          <TaskView
+            token={token}
+            embedded
+            active
+            composerAutoFocus={focusComposer}
+            composerFocusRequestScope="global-tasks"
+          />
+        )}
       </aside>
     </div>
   );

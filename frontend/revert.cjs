@@ -1,6 +1,6 @@
-const fs = require('fs');
+const fs = require("fs");
 
-let content = fs.readFileSync('src/components/VenueFinder.jsx', 'utf8');
+let content = fs.readFileSync("src/components/VenueFinder.jsx", "utf8");
 
 const oldTimelineBars = `<div className="vf-timeline-bars">
                 {(() => {
@@ -96,9 +96,9 @@ const newTimelineBars = `<div className="vf-timeline-bars">
               </div>`;
 
 content = content.replace(oldTimelineBars, newTimelineBars);
-fs.writeFileSync('src/components/VenueFinder.jsx', content);
+fs.writeFileSync("src/components/VenueFinder.jsx", content);
 
-let css = fs.readFileSync('src/index.css', 'utf8');
+let css = fs.readFileSync("src/index.css", "utf8");
 
 const oldCssBars = `/* Timeline Visual Strip */
 .vf-timeline-bars {
@@ -183,5 +183,4 @@ const newCssBars = `/* Timeline Visual Strip */
 }`;
 
 css = css.replace(oldCssBars, newCssBars);
-fs.writeFileSync('src/index.css', css);
-
+fs.writeFileSync("src/index.css", css);

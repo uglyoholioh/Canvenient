@@ -46,19 +46,28 @@ describe("runDueReminderCycle", () => {
       configurable: true,
       value: {
         getItem: vi.fn((k) => store[k] ?? null),
-        setItem: vi.fn((k, v) => { store[k] = String(v); }),
-        removeItem: vi.fn((k) => { delete store[k]; }),
-        clear: vi.fn(() => { Object.keys(store).forEach((k) => delete store[k]); }),
+        setItem: vi.fn((k, v) => {
+          store[k] = String(v);
+        }),
+        removeItem: vi.fn((k) => {
+          delete store[k];
+        }),
+        clear: vi.fn(() => {
+          Object.keys(store).forEach((k) => delete store[k]);
+        }),
       },
     });
     store["canvenient.due-reminders"] = "on";
     notified.store = store;
-    vi.stubGlobal("Notification", class {
-      static permission = "granted";
-      constructor(title, options) {
-        notified.last = { title, body: options?.body };
-      }
-    });
+    vi.stubGlobal(
+      "Notification",
+      class {
+        static permission = "granted";
+        constructor(title, options) {
+          notified.last = { title, body: options?.body };
+        }
+      },
+    );
     getTasks.mockResolvedValue([task(9, new Date(NOW.getTime() + 3 * HOUR).toISOString())]);
   });
 
@@ -84,7 +93,10 @@ describe("runDueReminderCycle", () => {
   it("skips tasks already recorded as notified", async () => {
     const t = task(9, new Date(NOW.getTime() + 3 * HOUR).toISOString());
     notified.store["canvenient.due-reminders"] = "on";
-    localStorage.setItem("canvenient.due-reminders", JSON.stringify({ [reminderKey(t)]: Date.now() }));
+    localStorage.setItem(
+      "canvenient.due-reminders",
+      JSON.stringify({ [reminderKey(t)]: Date.now() }),
+    );
     const announced = await runDueReminderCycle("token", NOW);
     expect(announced).toEqual([]);
   });

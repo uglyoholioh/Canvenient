@@ -71,7 +71,6 @@ class EventOut(BaseModel):
         return v
 
 
-
 class EventAttendanceUpdate(BaseModel):
     is_attending: bool
 

@@ -26,9 +26,7 @@ const fakeDoc = {
     }),
     render: () => ({ promise: Promise.resolve(), cancel: vi.fn() }),
     getTextContent: fakeText(
-      n === 1
-        ? [{ str: "binary trees lecture" }]
-        : [{ str: "binary search trees recap" }],
+      n === 1 ? [{ str: "binary trees lecture" }] : [{ str: "binary search trees recap" }],
     ),
   })),
   destroy: vi.fn(async () => {}),
@@ -52,8 +50,12 @@ Object.defineProperty(window, "localStorage", {
   configurable: true,
   value: {
     getItem: (key) => (storageMap.has(key) ? storageMap.get(key) : null),
-    setItem: (key, value) => { storageMap.set(key, String(value)); },
-    removeItem: (key) => { storageMap.delete(key); },
+    setItem: (key, value) => {
+      storageMap.set(key, String(value));
+    },
+    removeItem: (key) => {
+      storageMap.delete(key);
+    },
     clear: () => storageMap.clear(),
   },
 });
@@ -87,11 +89,15 @@ describe("PdfViewer", () => {
     await screen.findByText("/ 2");
 
     fireEvent.click(screen.getByRole("button", { name: "Next page" }));
-    await waitFor(() => expect(screen.getByRole("textbox", { name: "Go to page" })).toHaveValue("2"));
+    await waitFor(() =>
+      expect(screen.getByRole("textbox", { name: "Go to page" })).toHaveValue("2"),
+    );
     expect(screen.getByRole("button", { name: "Next page" })).toBeDisabled();
 
     fireEvent.click(screen.getByRole("button", { name: "Previous page" }));
-    await waitFor(() => expect(screen.getByRole("textbox", { name: "Go to page" })).toHaveValue("1"));
+    await waitFor(() =>
+      expect(screen.getByRole("textbox", { name: "Go to page" })).toHaveValue("1"),
+    );
   });
 
   it("zooms in from the toolbar and reports the percentage", async () => {
@@ -123,7 +129,9 @@ describe("PdfViewer", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Next match" }));
     await waitFor(() => expect(screen.getByText("2/2")).toBeInTheDocument());
-    await waitFor(() => expect(screen.getByRole("textbox", { name: "Go to page" })).toHaveValue("2"));
+    await waitFor(() =>
+      expect(screen.getByRole("textbox", { name: "Go to page" })).toHaveValue("2"),
+    );
   });
 
   it("reports when nothing matches the query", async () => {

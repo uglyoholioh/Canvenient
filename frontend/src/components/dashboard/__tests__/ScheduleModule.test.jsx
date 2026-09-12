@@ -1,5 +1,5 @@
 // React is required by the test JSX transform.
- 
+
 import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { getSchedule, getTasks } from "../../../api";
@@ -11,7 +11,11 @@ vi.mock("../../../api", () => ({
 }));
 
 function dateKey(date) {
-  return [date.getFullYear(), String(date.getMonth() + 1).padStart(2, "0"), String(date.getDate()).padStart(2, "0")].join("-");
+  return [
+    date.getFullYear(),
+    String(date.getMonth() + 1).padStart(2, "0"),
+    String(date.getDate()).padStart(2, "0"),
+  ].join("-");
 }
 
 describe("ScheduleModule", () => {
@@ -24,13 +28,41 @@ describe("ScheduleModule", () => {
 
     getSchedule.mockResolvedValue({
       classes: [
-        { id: 1, module_code: "Past class", lesson_type: "Lecture", class_no: "1", class_date: dateKey(today), start_time: "00:00", end_time: "00:01", venue: "LT19", module_color: "#246BFD" },
-        { id: 2, module_code: "ST2334", lesson_type: "Tutorial", class_no: "8", class_date: dateKey(tomorrow), start_time: "10:00", end_time: "11:00", venue: "S16-06118", module_color: "#C58B2A" },
+        {
+          id: 1,
+          module_code: "Past class",
+          lesson_type: "Lecture",
+          class_no: "1",
+          class_date: dateKey(today),
+          start_time: "00:00",
+          end_time: "00:01",
+          venue: "LT19",
+          module_color: "#246BFD",
+        },
+        {
+          id: 2,
+          module_code: "ST2334",
+          lesson_type: "Tutorial",
+          class_no: "8",
+          class_date: dateKey(tomorrow),
+          start_time: "10:00",
+          end_time: "11:00",
+          venue: "S16-06118",
+          module_color: "#C58B2A",
+        },
       ],
       exams: [],
       events: [],
     });
-    getTasks.mockResolvedValue([{ id: 3, title: "Tomorrow task", module_code: "CS2040S", status: "open", effective_due_at: tomorrow.toISOString() }]);
+    getTasks.mockResolvedValue([
+      {
+        id: 3,
+        title: "Tomorrow task",
+        module_code: "CS2040S",
+        status: "open",
+        effective_due_at: tomorrow.toISOString(),
+      },
+    ]);
   });
 
   it("shows today's time-scaled schedule by default", async () => {
@@ -60,11 +92,25 @@ describe("ScheduleModule", () => {
     const earlierTask = new Date(today);
     earlierTask.setHours(7, 0, 0, 0);
     getSchedule.mockResolvedValue({
-      classes: [{ id: 4, module_code: "CS2040S", lesson_type: "Lecture", class_no: "1", class_date: dateKey(today), start_time: "09:30", end_time: "11:30", venue: "LT19", module_color: "#246BFD" }],
+      classes: [
+        {
+          id: 4,
+          module_code: "CS2040S",
+          lesson_type: "Lecture",
+          class_no: "1",
+          class_date: dateKey(today),
+          start_time: "09:30",
+          end_time: "11:30",
+          venue: "LT19",
+          module_color: "#246BFD",
+        },
+      ],
       exams: [],
       events: [],
     });
-    getTasks.mockResolvedValue([{ id: 5, title: "Early task", status: "open", effective_due_at: earlierTask.toISOString() }]);
+    getTasks.mockResolvedValue([
+      { id: 5, title: "Early task", status: "open", effective_due_at: earlierTask.toISOString() },
+    ]);
 
     const { container } = render(<ScheduleModule token="token" onNavigate={() => {}} />);
 
@@ -123,6 +169,8 @@ describe("ScheduleModule", () => {
 
     render(<ScheduleModule token="token" onNavigate={() => {}} />);
 
-    expect(await screen.findByText("No scheduled classes or dated tasks today.")).toBeInTheDocument();
+    expect(
+      await screen.findByText("No scheduled classes or dated tasks today."),
+    ).toBeInTheDocument();
   });
 });

@@ -1,5 +1,5 @@
-const fs = require('fs');
-let code = fs.readFileSync('src/components/__tests__/TaskView.test.jsx', 'utf8');
+const fs = require("fs");
+let code = fs.readFileSync("src/components/__tests__/TaskView.test.jsx", "utf8");
 
 code = code.replace(
   /vi\.mock\("\.\.\/TaskInputBar", \(\) => \(\{ default: \(\) => <button type="button">Task date control<\/button> \}\)\);/,
@@ -19,13 +19,13 @@ code = code.replace(
         })}>Save</button>
       </div>
     )
-  }));`
+  }));`,
 );
 
 // We also need to fix the actual test to just click the "Save" button of our mock
 code = code.replace(
   /it\("edits title, note, due date, priority, and module in one save"[\s\S]*?(?=it\("clears an edited due date and time)/,
-`it("edits title, note, due date, priority, and module in one save", async () => {
+  `it("edits title, note, due date, priority, and module in one save", async () => {
     const onTasksChanged = vi.fn();
     window.addEventListener("canvenient-tasks-changed", onTasksChanged);
     updateTask.mockResolvedValue({
@@ -59,7 +59,7 @@ code = code.replace(
     window.removeEventListener("canvenient-tasks-changed", onTasksChanged);
   });
 
-  `
+  `,
 );
 
-fs.writeFileSync('src/components/__tests__/TaskView.test.jsx', code);
+fs.writeFileSync("src/components/__tests__/TaskView.test.jsx", code);

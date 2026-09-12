@@ -54,8 +54,6 @@ async def run_migrations(migrations: list[tuple[str, list[str]]] | None = None) 
         async with db.transaction():
             for statement in statements:
                 await db.execute(statement)
-            await db.execute(
-                "INSERT INTO _migrations (name) VALUES (:name)", {"name": name}
-            )
+            await db.execute("INSERT INTO _migrations (name) VALUES (:name)", {"name": name})
         applied_now.append(name)
     return applied_now

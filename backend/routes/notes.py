@@ -9,6 +9,7 @@ from dependencies import CurrentUser
 
 router = APIRouter(prefix="/notes", tags=["Notes"])
 
+
 class NoteCreate(BaseModel):
     title: str = "Untitled"
     content: str
@@ -17,11 +18,13 @@ class NoteCreate(BaseModel):
     class_occurrence_date: Optional[date] = None
     is_recurring: bool = False
 
+
 class NoteUpdate(BaseModel):
     title: Optional[str] = None
     content: Optional[str] = None
     folder_id: Optional[int] = None
     is_pinned: Optional[bool] = None
+
 
 @router.get("", response_model=list[dict[str, Any]])
 async def get_notes(current_user: CurrentUser):
@@ -42,6 +45,7 @@ async def get_notes(current_user: CurrentUser):
         out.append(d)
     return out
 
+
 @router.post("", response_model=dict[str, Any])
 async def create_note(data: NoteCreate, current_user: CurrentUser):
     linked_class = None
@@ -57,7 +61,10 @@ async def create_note(data: NoteCreate, current_user: CurrentUser):
         )
         if not linked_class:
             raise HTTPException(status_code=404, detail="Class not found")
-        if linked_class["class_date"] is not None and str(linked_class["class_date"]) != data.class_occurrence_date.isoformat():
+        if (
+            linked_class["class_date"] is not None
+            and str(linked_class["class_date"]) != data.class_occurrence_date.isoformat()
+        ):
             raise HTTPException(status_code=400, detail="That class does not occur on the selected date.")
     query = """
         INSERT INTO notes (user_id, title, content, folder_id)
@@ -65,20 +72,24 @@ async def create_note(data: NoteCreate, current_user: CurrentUser):
         RETURNING *
     """
     values = {
-        "user_id": current_user.id, 
+        "user_id": current_user.id,
         "title": data.title.strip(),
         "content": data.content.strip(),
-        "folder_id": data.folder_id
+        "folder_id": data.folder_id,
     }
     record = await db.fetch_one(query, values)
     result = dict(record)
     if linked_class is not None:
         date_part = "recurring" if data.is_recurring else data.class_occurrence_date.isoformat()
-        class_key = "|".join((
-            str(linked_class["module_code"] or "").strip().upper(),
-            date_part, str(linked_class["start_time"] or ""),
-            str(linked_class["lesson_type"] or "").strip().lower(), str(linked_class["class_no"] or "").strip().upper(),
-        ))
+        class_key = "|".join(
+            (
+                str(linked_class["module_code"] or "").strip().upper(),
+                date_part,
+                str(linked_class["start_time"] or ""),
+                str(linked_class["lesson_type"] or "").strip().lower(),
+                str(linked_class["class_no"] or "").strip().upper(),
+            )
+        )
         details = str(linked_class["lesson_type"] or "Class").strip()
         if linked_class["class_no"]:
             details = f"{details} [{linked_class['class_no']}]"
@@ -89,8 +100,10 @@ async def create_note(data: NoteCreate, current_user: CurrentUser):
                 VALUES (:note_id, :user_id, :class_occurrence_key, :occurrence_date, :class_summary)
             """,
             values={
-                "note_id": result["id"], "user_id": current_user.id,
-                "class_occurrence_key": class_key, "occurrence_date": data.class_occurrence_date,
+                "note_id": result["id"],
+                "user_id": current_user.id,
+                "class_occurrence_key": class_key,
+                "occurrence_date": data.class_occurrence_date,
                 "class_summary": summary,
             },
         )
@@ -98,6 +111,7 @@ async def create_note(data: NoteCreate, current_user: CurrentUser):
         result["class_summary"] = summary
         result["is_recurring"] = data.is_recurring
     return result
+
 
 @router.patch("/{note_id}", response_model=dict[str, Any])
 async def update_note(note_id: int, data: NoteUpdate, current_user: CurrentUser):
@@ -109,29 +123,30 @@ async def update_note(note_id: int, data: NoteUpdate, current_user: CurrentUser)
 
     updates = ["updated_at = CURRENT_TIMESTAMP"]
     values = {"id": note_id, "user_id": current_user.id}
-    
+
     if data.title is not None:
         updates.append("title = :title")
         values["title"] = data.title.strip()
     if data.content is not None:
         updates.append("content = :content")
         values["content"] = data.content.strip()
-    if hasattr(data, 'folder_id') and data.folder_id is not None:
+    if hasattr(data, "folder_id") and data.folder_id is not None:
         # Note: If we want to unset folder_id, we'd need a special sentinel, but for now we just allow setting
         updates.append("folder_id = :folder_id")
         values["folder_id"] = data.folder_id
-    if hasattr(data, 'is_pinned') and data.is_pinned is not None:
+    if hasattr(data, "is_pinned") and data.is_pinned is not None:
         updates.append("is_pinned = :is_pinned")
         values["is_pinned"] = data.is_pinned
 
     query = f"""
         UPDATE notes 
-        SET {', '.join(updates)}
+        SET {", ".join(updates)}
         WHERE id = :id AND user_id = :user_id
         RETURNING *
     """
     record = await db.fetch_one(query, values)
     return dict(record)
+
 
 @router.delete("/{note_id}")
 async def delete_note(note_id: int, current_user: CurrentUser):

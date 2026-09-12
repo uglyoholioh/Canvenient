@@ -57,7 +57,7 @@ async def upcoming_exams(user_id: int, days: int = 7) -> list[dict]:
             SELECT module_code, module_name, start_at
             FROM exams
             WHERE user_id = :user_id AND start_at >= {now_expr()}
-              AND start_at <= {today_plus_expr(f'{days} days')}
+              AND start_at <= {today_plus_expr(f"{days} days")}
             ORDER BY start_at ASC LIMIT 5
         """,
         values={"user_id": user_id},
@@ -71,7 +71,7 @@ async def upcoming_events(user_id: int, days: int = 7) -> list[dict]:
             SELECT id, title, start_at, venue
             FROM events
             WHERE user_id = :user_id AND start_at >= {now_expr()}
-              AND start_at <= {today_plus_expr(f'{days} days')}
+              AND start_at <= {today_plus_expr(f"{days} days")}
             ORDER BY start_at ASC LIMIT 5
         """,
         values={"user_id": user_id},
@@ -194,10 +194,7 @@ async def day_context(user) -> dict:
             }
             for t in tasks
         ],
-        "exams": [
-            {"code": e["module_code"], "name": e["module_name"], "start_at": _iso(e["start_at"])}
-            for e in exams
-        ],
+        "exams": [{"code": e["module_code"], "name": e["module_name"], "start_at": _iso(e["start_at"])} for e in exams],
         "new_announcements": recent,
     }
 
@@ -213,10 +210,7 @@ async def chat_context(user) -> dict:
     )
     context = dict(day)
     context["now"] = datetime.now().strftime("%Y-%m-%d %H:%M")
-    context["notes"] = [
-        {"id": n["id"], "title": n["title"], "snippet": (n["snippet"] or "").strip()}
-        for n in notes
-    ]
+    context["notes"] = [{"id": n["id"], "title": n["title"], "snippet": (n["snippet"] or "").strip()} for n in notes]
     context["files"] = [
         {
             "id": int(f["canvas_file_id"]),
@@ -238,7 +232,6 @@ async def chat_context(user) -> dict:
         if a.get("id") is not None
     ]
     context["events"] = [
-        {"id": e["id"], "title": e["title"], "start_at": _iso(e["start_at"]), "venue": e["venue"] or ""}
-        for e in events
+        {"id": e["id"], "title": e["title"], "start_at": _iso(e["start_at"]), "venue": e["venue"] or ""} for e in events
     ]
     return context

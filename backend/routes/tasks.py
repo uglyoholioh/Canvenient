@@ -13,23 +13,27 @@ router = APIRouter(prefix="/tasks", tags=["tasks"])
 
 
 def class_occurrence_key(record, occurrence_date: date) -> str:
-    return "|".join((
-        str(record["module_code"] or "").strip().upper(),
-        occurrence_date.isoformat() if hasattr(occurrence_date, "isoformat") else str(occurrence_date),
-        str(record["start_time"] or ""),
-        str(record["lesson_type"] or "").strip().lower(),
-        str(record["class_no"] or "").strip().upper(),
-    ))
+    return "|".join(
+        (
+            str(record["module_code"] or "").strip().upper(),
+            occurrence_date.isoformat() if hasattr(occurrence_date, "isoformat") else str(occurrence_date),
+            str(record["start_time"] or ""),
+            str(record["lesson_type"] or "").strip().lower(),
+            str(record["class_no"] or "").strip().upper(),
+        )
+    )
 
 
 def class_series_key(record) -> str:
-    return "|".join((
-        str(record["module_code"] or "").strip().upper(),
-        "recurring",
-        str(record["start_time"] or ""),
-        str(record["lesson_type"] or "").strip().lower(),
-        str(record["class_no"] or "").strip().upper(),
-    ))
+    return "|".join(
+        (
+            str(record["module_code"] or "").strip().upper(),
+            "recurring",
+            str(record["start_time"] or ""),
+            str(record["lesson_type"] or "").strip().lower(),
+            str(record["class_no"] or "").strip().upper(),
+        )
+    )
 
 
 def class_summary(record) -> str:
@@ -55,9 +59,7 @@ async def class_occurrence_for_user(class_id: int, occurrence_date: date, user_i
     return record
 
 
-def get_recommended_priority(
-    status: str, effective_due_at: datetime | str | None
-) -> TaskPriority:
+def get_recommended_priority(status: str, effective_due_at: datetime | str | None) -> TaskPriority:
     if status == "done":
         return "low"
 
@@ -153,9 +155,7 @@ def build_task(record) -> TaskOut:
         description=cleaned_description,
         status=record["status"],
         priority_manual=record["priority_manual"],
-        recommended_priority=get_recommended_priority(
-            record["status"], effective_due_at
-        ),
+        recommended_priority=get_recommended_priority(record["status"], effective_due_at),
         estimated_minutes=record["estimated_minutes"],
         source_type=record["source_type"],
         source_id=record["source_id"],
@@ -243,9 +243,7 @@ LEFT JOIN categories c
 """
 
 
-async def ensure_reference_belongs_to_user(
-    table_name: str, record_id: int | None, user_id: int, detail: str
-) -> None:
+async def ensure_reference_belongs_to_user(table_name: str, record_id: int | None, user_id: int, detail: str) -> None:
     if record_id is None:
         return
 
@@ -373,9 +371,7 @@ async def sync_canvas_tasks(current_user: CurrentUser):
     try:
         assignments = await list_canvas_assignments(current_user)
     except Exception as exc:
-        await record_canvas_sync_error(
-            current_user.id, f"Could not fetch Canvas assignments: {exc}"
-        )
+        await record_canvas_sync_error(current_user.id, f"Could not fetch Canvas assignments: {exc}")
         return await list_tasks(current_user)
 
     failed_assignments = 0
@@ -383,9 +379,7 @@ async def sync_canvas_tasks(current_user: CurrentUser):
         try:
             course_code = assignment.get("course_code") or "Canvas"
             course_id = str(assignment.get("course_id") or "")
-            course_url = (
-                f"https://canvas.nus.edu.sg/courses/{course_id}" if course_id else None
-            )
+            course_url = f"https://canvas.nus.edu.sg/courses/{course_id}" if course_id else None
 
             module_row = await db.fetch_one(
                 query="""
@@ -589,7 +583,9 @@ async def create_task(payload: TaskCreate, current_user: CurrentUser):
         if payload.class_id is None or payload.class_occurrence_date is None:
             raise HTTPException(status_code=422, detail="Choose both a class and its occurrence date.")
         linked_class = await class_occurrence_for_user(
-            payload.class_id, payload.class_occurrence_date, current_user.id,
+            payload.class_id,
+            payload.class_occurrence_date,
+            current_user.id,
         )
 
     completed_at = datetime.now(timezone.utc) if payload.status == "done" else None
@@ -659,7 +655,11 @@ async def create_task(payload: TaskCreate, current_user: CurrentUser):
     )
     if linked_class is not None:
         is_rec = bool(payload.is_recurring or payload.class_recurring)
-        key = class_series_key(linked_class) if is_rec else class_occurrence_key(linked_class, payload.class_occurrence_date)
+        key = (
+            class_series_key(linked_class)
+            if is_rec
+            else class_occurrence_key(linked_class, payload.class_occurrence_date)
+        )
         await db.execute(
             query="""
                 INSERT INTO class_task_links (
@@ -765,18 +765,12 @@ async def update_task(task_id: int, payload: TaskUpdate, current_user: CurrentUs
             "title": updates.get("title", existing["title"]),
             "description": desc_val,
             "status": status_value,
-            "priority_manual": updates.get(
-                "priority_manual", existing["priority_manual"]
-            ),
-            "estimated_minutes": updates.get(
-                "estimated_minutes", existing["estimated_minutes"]
-            ),
+            "priority_manual": updates.get("priority_manual", existing["priority_manual"]),
+            "estimated_minutes": updates.get("estimated_minutes", existing["estimated_minutes"]),
             "source_type": updates.get("source_type", existing["source_type"]),
             "source_id": updates.get("source_id", existing["source_id"]),
             "source_due_at": updates.get("source_due_at", existing["source_due_at"]),
-            "due_at_override": updates.get(
-                "due_at_override", existing["due_at_override"]
-            ),
+            "due_at_override": updates.get("due_at_override", existing["due_at_override"]),
             "external_url": updates.get("external_url", existing["external_url"]),
             "completed_at": completed_at,
             "group_id": group_id,

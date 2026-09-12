@@ -13,12 +13,14 @@ class FormCreate(BaseModel):
     c_id: int | None = None
     g_id: int | None = None
 
+
 class FormUpdate(BaseModel):
     title: str | None = Field(default=None, min_length=1, max_length=160)
     description: str | None = Field(default=None, max_length=4000)
     form_type: str | None = Field(default=None, max_length=50)
     fields: list[dict[str, Any]] | None = None
     closes_at: datetime | None = None
+
 
 class FormOut(BaseModel):
     id: int
@@ -33,8 +35,10 @@ class FormOut(BaseModel):
     user_response: dict[str, Any] | None = None
     created_at: datetime
 
+
 class FormResponseCreate(BaseModel):
     response_data: dict[str, Any]
+
 
 class FormResponseOut(BaseModel):
     id: int

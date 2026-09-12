@@ -63,10 +63,7 @@ async def list_academic_modules(current_user: CurrentUser):
         """,
         values={"user_id": current_user.id},
     )
-    return [
-        build_academic_module(row, colors.get(normalize_module_code(row["module_code"])))
-        for row in rows
-    ]
+    return [build_academic_module(row, colors.get(normalize_module_code(row["module_code"]))) for row in rows]
 
 
 @router.put("/selection", response_model=list[AcademicModuleOut])

@@ -238,7 +238,7 @@ export default function WheelCanvas({
 
       ctx.restore();
     },
-    [size, isSpinning]
+    [size, isSpinning],
   );
 
   // Redraw whenever items change or when idle
@@ -300,7 +300,8 @@ export default function WheelCanvas({
       currentRotationRef.current = currentRotation;
 
       // Calculate which slice currently crosses the top pointer
-      const currentPointerRadian = (1.5 * Math.PI - (currentRotation % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
+      const currentPointerRadian =
+        (1.5 * Math.PI - (currentRotation % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
       const currentSlice = Math.floor(currentPointerRadian / sliceAngle);
 
       if (currentSlice !== lastSliceTickRef.current) {
@@ -329,7 +330,8 @@ export default function WheelCanvas({
         if (pointerRef.current) {
           pointerRef.current.style.transform = "translateX(-50%) rotate(0deg)";
         }
-        const finalNormalizedRadian = (1.5 * Math.PI - (currentRotation % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
+        const finalNormalizedRadian =
+          (1.5 * Math.PI - (currentRotation % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
         const winningIndex = Math.floor(finalNormalizedRadian / sliceAngle) % count;
         const winner = currentList[winningIndex] || currentList[chosenIndex];
 

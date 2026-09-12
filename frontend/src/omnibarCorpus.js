@@ -98,10 +98,18 @@ function loadCanvasCorpus(token) {
 }
 
 export async function loadCorpus(token) {
-  if (corpusCache && corpusCache.token === token && Date.now() - corpusCache.fetchedAt < CORPUS_TTL_MS) {
+  if (
+    corpusCache &&
+    corpusCache.token === token &&
+    Date.now() - corpusCache.fetchedAt < CORPUS_TTL_MS
+  ) {
     return corpusCache;
   }
-  const [notes, tasks, canvas] = await Promise.all([getNotes(token), getTasks(token), loadCanvasCorpus(token)]);
+  const [notes, tasks, canvas] = await Promise.all([
+    getNotes(token),
+    getTasks(token),
+    loadCanvasCorpus(token),
+  ]);
   corpusCache = { token, notes, tasks, canvas, fetchedAt: Date.now() };
   return corpusCache;
 }

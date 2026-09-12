@@ -66,9 +66,7 @@ DEFAULT_ALLOWED_ORIGINS = [
     "http://127.0.0.1:5173",
 ]
 _configured_origins = [
-    origin.strip()
-    for origin in os.getenv("CANVENIENT_ALLOWED_ORIGINS", "").split(",")
-    if origin.strip()
+    origin.strip() for origin in os.getenv("CANVENIENT_ALLOWED_ORIGINS", "").split(",") if origin.strip()
 ]
 # CANVENIENT_ALLOWED_ORIGINS="*" permits any origin (no credentials/cookies;
 # clients auth via Bearer tokens) for private deployments where the webview
@@ -102,8 +100,6 @@ app.include_router(notes_router)
 app.include_router(folders_router)
 app.include_router(venues_router)
 app.include_router(backups_router)
-
-
 
 
 @app.get("/")

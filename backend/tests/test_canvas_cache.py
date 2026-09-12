@@ -42,7 +42,14 @@ async def test_save_and_get_canvas_cache(auth):
 async def test_canvas_courses_cache_hit(client: AsyncClient, auth):
     token, user_id, _ = auth
     await set_canvas_token(user_id)
-    cached_courses = [{"id": 202, "course_code": "CS3230", "name": "Algorithms", "external_url": "https://canvas.nus.edu.sg/courses/202"}]
+    cached_courses = [
+        {
+            "id": 202,
+            "course_code": "CS3230",
+            "name": "Algorithms",
+            "external_url": "https://canvas.nus.edu.sg/courses/202",
+        }
+    ]
 
     await save_canvas_cache(user_id, "courses", cached_courses)
 
@@ -55,7 +62,19 @@ async def test_canvas_courses_cache_hit(client: AsyncClient, auth):
 async def test_canvas_announcements_cache_hit(client: AsyncClient, auth):
     token, user_id, _ = auth
     await set_canvas_token(user_id)
-    cached_ann = [{"id": 55, "course_id": 202, "course_code": "CS3230", "title": "Midterm Update", "body": "Room change", "posted_at": "2026-08-01T10:00:00Z", "author": "Prof", "is_priority": True, "external_url": "url"}]
+    cached_ann = [
+        {
+            "id": 55,
+            "course_id": 202,
+            "course_code": "CS3230",
+            "title": "Midterm Update",
+            "body": "Room change",
+            "posted_at": "2026-08-01T10:00:00Z",
+            "author": "Prof",
+            "is_priority": True,
+            "external_url": "url",
+        }
+    ]
 
     await save_canvas_cache(user_id, "announcements", cached_ann)
 
@@ -67,7 +86,20 @@ async def test_canvas_announcements_cache_hit(client: AsyncClient, auth):
 async def test_canvas_assignments_cache_hit(client: AsyncClient, auth):
     token, user_id, _ = auth
     await set_canvas_token(user_id)
-    cached_asgn = [{"id": 77, "course_id": 202, "course_code": "CS3230", "course_name": "Algorithms", "title": "Assignment 1", "due_at": "2026-09-01T23:59:00Z", "is_priority": False, "external_url": "url", "description": "", "has_submitted": False}]
+    cached_asgn = [
+        {
+            "id": 77,
+            "course_id": 202,
+            "course_code": "CS3230",
+            "course_name": "Algorithms",
+            "title": "Assignment 1",
+            "due_at": "2026-09-01T23:59:00Z",
+            "is_priority": False,
+            "external_url": "url",
+            "description": "",
+            "has_submitted": False,
+        }
+    ]
 
     await save_canvas_cache(user_id, "assignments", cached_asgn)
 

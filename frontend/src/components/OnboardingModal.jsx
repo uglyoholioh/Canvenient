@@ -22,12 +22,48 @@ import { updateProfile, validateCanvasToken } from "../api";
 import "./onboarding.css";
 
 const THEMES = [
-  { id: "graphite", label: "Graphite", description: "Soft monochrome", icon: Moon, swatches: ["#101113", "#1a1b1e", "#9c9da1"] },
-  { id: "dusk", label: "Dusk", description: "Smoky violet", icon: Sparkles, swatches: ["#14131a", "#211e2a", "#b7a6d8"] },
-  { id: "forest", label: "Moss", description: "Muted green", icon: Trees, swatches: ["#101512", "#1a211c", "#9fb49f"] },
-  { id: "ocean", label: "Tide", description: "Muted blue", icon: Palette, swatches: ["#0f1418", "#182126", "#9ab7c2"] },
-  { id: "light", label: "Paper", description: "Quiet light", icon: Sun, swatches: ["#f2f1ed", "#ffffff", "#66716f"] },
-  { id: "system", label: "System", description: "Follow device", icon: Monitor, swatches: ["#242528", "#e7e5df", "#8b8b8b"] },
+  {
+    id: "graphite",
+    label: "Graphite",
+    description: "Soft monochrome",
+    icon: Moon,
+    swatches: ["#101113", "#1a1b1e", "#9c9da1"],
+  },
+  {
+    id: "dusk",
+    label: "Dusk",
+    description: "Smoky violet",
+    icon: Sparkles,
+    swatches: ["#14131a", "#211e2a", "#b7a6d8"],
+  },
+  {
+    id: "forest",
+    label: "Moss",
+    description: "Muted green",
+    icon: Trees,
+    swatches: ["#101512", "#1a211c", "#9fb49f"],
+  },
+  {
+    id: "ocean",
+    label: "Tide",
+    description: "Muted blue",
+    icon: Palette,
+    swatches: ["#0f1418", "#182126", "#9ab7c2"],
+  },
+  {
+    id: "light",
+    label: "Paper",
+    description: "Quiet light",
+    icon: Sun,
+    swatches: ["#f2f1ed", "#ffffff", "#66716f"],
+  },
+  {
+    id: "system",
+    label: "System",
+    description: "Follow device",
+    icon: Monitor,
+    swatches: ["#242528", "#e7e5df", "#8b8b8b"],
+  },
 ];
 
 export default function OnboardingModal({
@@ -42,7 +78,7 @@ export default function OnboardingModal({
   // Prefill from the email prefix so Continue is never a dead end; the
   // suggestion stays editable and profile-name semantics are unchanged.
   const [name, setName] = useState(
-    () => user?.name || (user?.email ? user.email.split("@")[0] : "")
+    () => user?.name || (user?.email ? user.email.split("@")[0] : ""),
   );
   // The raw Canvas token is never sent back to the client; the field starts
   // empty and only carries a value when entered during onboarding.
@@ -184,8 +220,21 @@ export default function OnboardingModal({
             >
               {step}
             </span>
-            <span style={{ fontSize: "13px", color: "var(--text-muted)", fontFamily: "var(--font-mono)" }}>
-              Step {step} of 4: {step === 1 ? "Identity" : step === 2 ? "Canvas LMS" : step === 3 ? "Appearance" : "Ready"}
+            <span
+              style={{
+                fontSize: "13px",
+                color: "var(--text-muted)",
+                fontFamily: "var(--font-mono)",
+              }}
+            >
+              Step {step} of 4:{" "}
+              {step === 1
+                ? "Identity"
+                : step === 2
+                  ? "Canvas LMS"
+                  : step === 3
+                    ? "Appearance"
+                    : "Ready"}
             </span>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
@@ -223,10 +272,24 @@ export default function OnboardingModal({
           {step === 1 && (
             <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
               <div>
-                <h2 style={{ fontSize: "18px", fontWeight: "600", color: "var(--text-h)", margin: "0 0 6px 0" }}>
+                <h2
+                  style={{
+                    fontSize: "18px",
+                    fontWeight: "600",
+                    color: "var(--text-h)",
+                    margin: "0 0 6px 0",
+                  }}
+                >
                   Welcome to Canvenient
                 </h2>
-                <p style={{ fontSize: "13px", color: "var(--text-muted)", margin: 0, lineHeight: "1.5" }}>
+                <p
+                  style={{
+                    fontSize: "13px",
+                    color: "var(--text-muted)",
+                    margin: 0,
+                    lineHeight: "1.5",
+                  }}
+                >
                   Let's personalize your workspace. What should we call you?
                 </p>
               </div>
@@ -259,7 +322,14 @@ export default function OnboardingModal({
                     if (e.key === "Enter" && name.trim()) setStep(2);
                   }}
                 />
-                <span style={{ display: "block", fontSize: "11px", color: "var(--text-muted)", marginTop: "6px" }}>
+                <span
+                  style={{
+                    display: "block",
+                    fontSize: "11px",
+                    color: "var(--text-muted)",
+                    marginTop: "6px",
+                  }}
+                >
                   This will be shown on your dashboard greeting and workspace header.
                 </span>
               </div>
@@ -270,10 +340,24 @@ export default function OnboardingModal({
           {step === 2 && (
             <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
               <div>
-                <h2 style={{ fontSize: "18px", fontWeight: "600", color: "var(--text-h)", margin: "0 0 6px 0" }}>
+                <h2
+                  style={{
+                    fontSize: "18px",
+                    fontWeight: "600",
+                    color: "var(--text-h)",
+                    margin: "0 0 6px 0",
+                  }}
+                >
                   Canvas LMS API Key
                 </h2>
-                <p style={{ fontSize: "13px", color: "var(--text-muted)", margin: 0, lineHeight: "1.5" }}>
+                <p
+                  style={{
+                    fontSize: "13px",
+                    color: "var(--text-muted)",
+                    margin: 0,
+                    lineHeight: "1.5",
+                  }}
+                >
                   Sync your modules, deadlines, assignments, and files directly to your workbench.
                 </p>
               </div>
@@ -338,7 +422,11 @@ export default function OnboardingModal({
                     className="secondary-button"
                     style={{ fontSize: "12px", fontWeight: "500", flexShrink: 0 }}
                   >
-                    {testingToken ? <Loader2 size={13} className="retro-icon-spin" /> : <Key size={13} />}
+                    {testingToken ? (
+                      <Loader2 size={13} className="retro-icon-spin" />
+                    ) : (
+                      <Key size={13} />
+                    )}
                     <span>Test</span>
                   </button>
                 </div>
@@ -384,10 +472,27 @@ export default function OnboardingModal({
                   How to generate your token:
                 </div>
                 <ol style={{ margin: 0, paddingLeft: "18px", color: "var(--text-muted)" }}>
-                  <li>Log in to Canvas at <a href="https://canvas.nus.edu.sg" target="_blank" rel="noreferrer" style={{ color: "var(--accent)" }}>canvas.nus.edu.sg <ExternalLink size={10} style={{ display: "inline" }} /></a></li>
-                  <li>Click <strong>Account</strong> in the left sidebar → <strong>Settings</strong></li>
-                  <li>Scroll down to <strong>Approved Integrations</strong></li>
-                  <li>Click <strong>+ New Access Token</strong>, enter a label (e.g. <em>Canvenient</em>), and generate</li>
+                  <li>
+                    Log in to Canvas at{" "}
+                    <a
+                      href="https://canvas.nus.edu.sg"
+                      target="_blank"
+                      rel="noreferrer"
+                      style={{ color: "var(--accent)" }}
+                    >
+                      canvas.nus.edu.sg <ExternalLink size={10} style={{ display: "inline" }} />
+                    </a>
+                  </li>
+                  <li>
+                    Click <strong>Account</strong> in the left sidebar → <strong>Settings</strong>
+                  </li>
+                  <li>
+                    Scroll down to <strong>Approved Integrations</strong>
+                  </li>
+                  <li>
+                    Click <strong>+ New Access Token</strong>, enter a label (e.g.{" "}
+                    <em>Canvenient</em>), and generate
+                  </li>
                   <li>Copy and paste the generated string above</li>
                 </ol>
               </div>
@@ -398,10 +503,24 @@ export default function OnboardingModal({
           {step === 3 && (
             <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
               <div>
-                <h2 style={{ fontSize: "18px", fontWeight: "600", color: "var(--text-h)", margin: "0 0 6px 0" }}>
+                <h2
+                  style={{
+                    fontSize: "18px",
+                    fontWeight: "600",
+                    color: "var(--text-h)",
+                    margin: "0 0 6px 0",
+                  }}
+                >
                   Workspace Appearance
                 </h2>
-                <p style={{ fontSize: "13px", color: "var(--text-muted)", margin: 0, lineHeight: "1.5" }}>
+                <p
+                  style={{
+                    fontSize: "13px",
+                    color: "var(--text-muted)",
+                    margin: 0,
+                    lineHeight: "1.5",
+                  }}
+                >
                   Choose your preferred color palette and navigation layout.
                 </p>
               </div>
@@ -448,14 +567,33 @@ export default function OnboardingModal({
                           textAlign: "left",
                         }}
                       >
-                        <span className="theme-picker-preview" aria-hidden="true" style={{ display: "flex", gap: "2px" }}>
+                        <span
+                          className="theme-picker-preview"
+                          aria-hidden="true"
+                          style={{ display: "flex", gap: "2px" }}
+                        >
                           {swatches.map((swatch) => (
-                            <i key={swatch} style={{ width: "8px", height: "18px", background: swatch, borderRadius: "2px", display: "inline-block" }} />
+                            <i
+                              key={swatch}
+                              style={{
+                                width: "8px",
+                                height: "18px",
+                                background: swatch,
+                                borderRadius: "2px",
+                                display: "inline-block",
+                              }}
+                            />
                           ))}
                         </span>
                         <div>
-                          <div style={{ fontSize: "12px", fontWeight: "600", color: "var(--text-h)" }}>{label}</div>
-                          <div style={{ fontSize: "10px", color: "var(--text-muted)" }}>{description}</div>
+                          <div
+                            style={{ fontSize: "12px", fontWeight: "600", color: "var(--text-h)" }}
+                          >
+                            {label}
+                          </div>
+                          <div style={{ fontSize: "10px", color: "var(--text-muted)" }}>
+                            {description}
+                          </div>
                         </div>
                       </button>
                     );
@@ -479,15 +617,24 @@ export default function OnboardingModal({
                 </label>
                 <div style={{ display: "flex", gap: "10px" }}>
                   {[
-                    { id: "hover", title: "Hover to expand", desc: "Compact 48px rail, expands on hover" },
-                    { id: "pinned", title: "Always expanded", desc: "Pinned sidebar with full labels" },
+                    {
+                      id: "hover",
+                      title: "Hover to expand",
+                      desc: "Compact 48px rail, expands on hover",
+                    },
+                    {
+                      id: "pinned",
+                      title: "Always expanded",
+                      desc: "Pinned sidebar with full labels",
+                    },
                   ].map((mode) => (
                     <label
                       key={mode.id}
                       style={{
                         flex: 1,
                         padding: "10px 12px",
-                        backgroundColor: sidebarMode === mode.id ? "var(--surface-hover)" : "var(--surface-muted)",
+                        backgroundColor:
+                          sidebarMode === mode.id ? "var(--surface-hover)" : "var(--surface-muted)",
                         border: `1px solid ${sidebarMode === mode.id ? "var(--border-focus)" : "var(--border)"}`,
                         borderRadius: "4px",
                         cursor: "pointer",
@@ -504,8 +651,14 @@ export default function OnboardingModal({
                         style={{ marginTop: "3px" }}
                       />
                       <div>
-                        <div style={{ fontSize: "12px", fontWeight: "600", color: "var(--text-h)" }}>{mode.title}</div>
-                        <div style={{ fontSize: "11px", color: "var(--text-muted)" }}>{mode.desc}</div>
+                        <div
+                          style={{ fontSize: "12px", fontWeight: "600", color: "var(--text-h)" }}
+                        >
+                          {mode.title}
+                        </div>
+                        <div style={{ fontSize: "11px", color: "var(--text-muted)" }}>
+                          {mode.desc}
+                        </div>
                       </div>
                     </label>
                   ))}
@@ -518,11 +671,26 @@ export default function OnboardingModal({
           {step === 4 && (
             <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
               <div>
-                <h2 style={{ fontSize: "18px", fontWeight: "600", color: "var(--text-h)", margin: "0 0 6px 0" }}>
+                <h2
+                  style={{
+                    fontSize: "18px",
+                    fontWeight: "600",
+                    color: "var(--text-h)",
+                    margin: "0 0 6px 0",
+                  }}
+                >
                   Workspace Ready
                 </h2>
-                <p style={{ fontSize: "13px", color: "var(--text-muted)", margin: 0, lineHeight: "1.5" }}>
-                  Here is a summary of your workspace configuration. You can change these anytime in Settings.
+                <p
+                  style={{
+                    fontSize: "13px",
+                    color: "var(--text-muted)",
+                    margin: 0,
+                    lineHeight: "1.5",
+                  }}
+                >
+                  Here is a summary of your workspace configuration. You can change these anytime in
+                  Settings.
                 </p>
               </div>
 
@@ -537,11 +705,27 @@ export default function OnboardingModal({
                   overflow: "hidden",
                 }}
               >
-                <div style={{ display: "flex", justifyContent: "space-between", padding: "12px 16px", backgroundColor: "var(--surface)" }}>
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    padding: "12px 16px",
+                    backgroundColor: "var(--surface)",
+                  }}
+                >
                   <span style={{ fontSize: "13px", color: "var(--text-muted)" }}>Profile Name</span>
-                  <strong style={{ fontSize: "13px", color: "var(--text-h)" }}>{name.trim() || "Student"}</strong>
+                  <strong style={{ fontSize: "13px", color: "var(--text-h)" }}>
+                    {name.trim() || "Student"}
+                  </strong>
                 </div>
-                <div style={{ display: "flex", justifyContent: "space-between", padding: "12px 16px", backgroundColor: "var(--surface)" }}>
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    padding: "12px 16px",
+                    backgroundColor: "var(--surface)",
+                  }}
+                >
                   <span style={{ fontSize: "13px", color: "var(--text-muted)" }}>Canvas LMS</span>
                   <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
                     <span
@@ -549,21 +733,59 @@ export default function OnboardingModal({
                         width: "8px",
                         height: "8px",
                         borderRadius: "50%",
-                        backgroundColor: canvasToken.trim() ? "var(--success)" : "var(--text-muted)",
+                        backgroundColor: canvasToken.trim()
+                          ? "var(--success)"
+                          : "var(--text-muted)",
                       }}
                     />
                     <strong style={{ fontSize: "13px", color: "var(--text-h)" }}>
-                      {canvasToken.trim() ? (tokenResult?.name ? `Connected (${tokenResult.name})` : "Key configured") : "Not configured"}
+                      {canvasToken.trim()
+                        ? tokenResult?.name
+                          ? `Connected (${tokenResult.name})`
+                          : "Key configured"
+                        : "Not configured"}
                     </strong>
                   </div>
                 </div>
-                <div style={{ display: "flex", justifyContent: "space-between", padding: "12px 16px", backgroundColor: "var(--surface)" }}>
-                  <span style={{ fontSize: "13px", color: "var(--text-muted)" }}>Theme Palette</span>
-                  <strong style={{ fontSize: "13px", color: "var(--text-h)", textTransform: "capitalize" }}>{selectedTheme}</strong>
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    padding: "12px 16px",
+                    backgroundColor: "var(--surface)",
+                  }}
+                >
+                  <span style={{ fontSize: "13px", color: "var(--text-muted)" }}>
+                    Theme Palette
+                  </span>
+                  <strong
+                    style={{
+                      fontSize: "13px",
+                      color: "var(--text-h)",
+                      textTransform: "capitalize",
+                    }}
+                  >
+                    {selectedTheme}
+                  </strong>
                 </div>
-                <div style={{ display: "flex", justifyContent: "space-between", padding: "12px 16px", backgroundColor: "var(--surface)" }}>
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    padding: "12px 16px",
+                    backgroundColor: "var(--surface)",
+                  }}
+                >
                   <span style={{ fontSize: "13px", color: "var(--text-muted)" }}>Sidebar Mode</span>
-                  <strong style={{ fontSize: "13px", color: "var(--text-h)", textTransform: "capitalize" }}>{sidebarMode}</strong>
+                  <strong
+                    style={{
+                      fontSize: "13px",
+                      color: "var(--text-h)",
+                      textTransform: "capitalize",
+                    }}
+                  >
+                    {sidebarMode}
+                  </strong>
                 </div>
               </div>
 

@@ -50,9 +50,7 @@ async def create_category(payload: CategoryCreate, current_user: CurrentUser):
 
 
 @router.patch("/{category_id}", response_model=CategoryOut)
-async def update_category(
-    category_id: int, payload: CategoryUpdate, current_user: CurrentUser
-):
+async def update_category(category_id: int, payload: CategoryUpdate, current_user: CurrentUser):
     existing = await db.fetch_one(
         query="""
             SELECT id, name, color

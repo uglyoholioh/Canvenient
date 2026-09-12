@@ -210,7 +210,9 @@ export function weekDates(anchor) {
 }
 
 export function dateAtTime(day, value) {
-  const [hours = 0, minutes = 0] = String(value || "00:00").split(":").map(Number);
+  const [hours = 0, minutes = 0] = String(value || "00:00")
+    .split(":")
+    .map(Number);
   const result = startOfLocalDay(day);
   result.setHours(hours, minutes, 0, 0);
   return result;
@@ -237,23 +239,32 @@ export function formatScheduleTime(date) {
 
 export function moduleHue(value) {
   let hash = 0;
-  for (const character of String(value || "Schedule")) hash = ((hash << 5) - hash + character.charCodeAt(0)) | 0;
+  for (const character of String(value || "Schedule"))
+    hash = ((hash << 5) - hash + character.charCodeAt(0)) | 0;
   return 185 + (Math.abs(hash) % 105);
 }
 
 export function moduleColor(item, fallbackValue) {
-  return item?.module_color || (fallbackValue ? `hsl(${moduleHue(fallbackValue)} 64% 58%)` : undefined);
+  return (
+    item?.module_color || (fallbackValue ? `hsl(${moduleHue(fallbackValue)} 64% 58%)` : undefined)
+  );
 }
 
 export function getTaskModuleColor(task, modules = []) {
   if (!task) return null;
   if (task.module_color) return task.module_color;
   if (task.module_id && Array.isArray(modules) && modules.length > 0) {
-    const mod = modules.find((m) => m.id === task.module_id || String(m.id) === String(task.module_id));
+    const mod = modules.find(
+      (m) => m.id === task.module_id || String(m.id) === String(task.module_id),
+    );
     if (mod?.color) return mod.color;
     if (mod?.module_code) return moduleColor(mod, mod.module_code);
   }
-  const code = task.module_code || (Array.isArray(modules) && modules.find((m) => m.id === task.module_id || String(m.id) === String(task.module_id))?.module_code);
+  const code =
+    task.module_code ||
+    (Array.isArray(modules) &&
+      modules.find((m) => m.id === task.module_id || String(m.id) === String(task.module_id))
+        ?.module_code);
   if (code) {
     if (Array.isArray(modules) && modules.length > 0) {
       const mod = modules.find((m) => m.module_code === code);
@@ -267,11 +278,13 @@ export function getTaskModuleColor(task, modules = []) {
 export function moduleCardInk(color) {
   const match = /^#([0-9a-f]{6})$/i.exec(String(color || ""));
   if (!match) return "var(--color-schedule-card-ink-light)";
-  const channels = [0, 2, 4].map((offset) => parseInt(match[1].slice(offset, offset + 2), 16) / 255);
-  const [red, green, blue] = channels.map((channel) => (
-    channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4
-  ));
-  const luminance = (0.2126 * red) + (0.7152 * green) + (0.0722 * blue);
+  const channels = [0, 2, 4].map(
+    (offset) => parseInt(match[1].slice(offset, offset + 2), 16) / 255,
+  );
+  const [red, green, blue] = channels.map((channel) =>
+    channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4,
+  );
+  const luminance = 0.2126 * red + 0.7152 * green + 0.0722 * blue;
   return luminance > 0.18
     ? "var(--color-schedule-card-ink-dark)"
     : "var(--color-schedule-card-ink-light)";
@@ -297,7 +310,9 @@ export function formatWeeksLabel(weeks) {
     return "";
   }
   if (!Array.isArray(weeks) || weeks.length === 0) return "";
-  const sorted = Array.from(new Set(weeks.map(Number))).filter(Number.isFinite).sort((a, b) => a - b);
+  const sorted = Array.from(new Set(weeks.map(Number)))
+    .filter(Number.isFinite)
+    .sort((a, b) => a - b);
   if (sorted.length === 0) return "";
   if (sorted.length === 1) return `Week ${sorted[0]}`;
 
@@ -326,18 +341,22 @@ export function formatWeeksLabel(weeks) {
     if (curr === prev + 1) {
       prev = curr;
     } else {
-      ranges.push(start === prev ? `${start}` : prev === start + 1 ? `${start}, ${prev}` : `${start}–${prev}`);
+      ranges.push(
+        start === prev ? `${start}` : prev === start + 1 ? `${start}, ${prev}` : `${start}–${prev}`,
+      );
       start = curr;
       prev = curr;
     }
   }
-  ranges.push(start === prev ? `${start}` : prev === start + 1 ? `${start}, ${prev}` : `${start}–${prev}`);
+  ranges.push(
+    start === prev ? `${start}` : prev === start + 1 ? `${start}, ${prev}` : `${start}–${prev}`,
+  );
 
   return ranges.length === 1 && ranges[0].includes("–")
     ? `Weeks ${ranges[0]}`
     : ranges.length === sorted.length && sorted.length <= 3
-    ? `Weeks ${sorted.join(", ")}`
-    : `Weeks ${ranges.join(", ")}`;
+      ? `Weeks ${sorted.join(", ")}`
+      : `Weeks ${ranges.join(", ")}`;
 }
 
 export function isClassHappeningInWeek(item, targetDate) {
@@ -350,7 +369,9 @@ export function isClassHappeningInWeek(item, targetDate) {
   }
   const weekInfo = getAcademicWeek(targetDate);
   if (!item.weeks) {
-    return weekInfo.type === "instructional" && weekInfo.weekNumber >= 1 && weekInfo.weekNumber <= 13;
+    return (
+      weekInfo.type === "instructional" && weekInfo.weekNumber >= 1 && weekInfo.weekNumber <= 13
+    );
   }
   if (weekInfo.type !== "instructional" || !weekInfo.weekNumber) {
     return false;
@@ -373,13 +394,15 @@ function timedItemOnDate(item, selectedDate) {
   const start = new Date(item.start_at);
   const end = item.end_at ? new Date(item.end_at) : new Date(start.getTime() + 60 * 60 * 1000);
   const dayStart = startOfLocalDay(selectedDate);
-  const dayEnd = new Date(dayStart); dayEnd.setDate(dayEnd.getDate() + 1);
+  const dayEnd = new Date(dayStart);
+  dayEnd.setDate(dayEnd.getDate() + 1);
   return start < dayEnd && end > dayStart;
 }
 
 export function scheduleItemsForDate(schedule, selectedDate) {
   const dayStart = startOfLocalDay(selectedDate);
-  const dayEnd = new Date(dayStart); dayEnd.setDate(dayEnd.getDate() + 1);
+  const dayEnd = new Date(dayStart);
+  dayEnd.setDate(dayEnd.getDate() + 1);
   const items = [];
 
   for (const item of schedule.classes || []) {
@@ -413,7 +436,9 @@ export function scheduleItemsForDate(schedule, selectedDate) {
   for (const item of schedule.events || []) {
     if (!timedItemOnDate(item, selectedDate)) continue;
     const rawStart = new Date(item.start_at);
-    const rawEnd = item.end_at ? new Date(item.end_at) : new Date(rawStart.getTime() + 60 * 60 * 1000);
+    const rawEnd = item.end_at
+      ? new Date(item.end_at)
+      : new Date(rawStart.getTime() + 60 * 60 * 1000);
     items.push({
       id: `event-${item.id}`,
       kind: "event",
@@ -462,9 +487,10 @@ export function describeRelativeStart(item, now) {
 export function taskDueDate(task) {
   const raw = task?.effective_due_at || task?.due_at_override || task?.source_due_at;
   if (!raw) return null;
-  const normalized = typeof raw === "string" && !raw.endsWith("Z") && !/[+-]\d{2}:\d{2}$/.test(raw)
-    ? `${raw.replace(" ", "T")}Z`
-    : raw;
+  const normalized =
+    typeof raw === "string" && !raw.endsWith("Z") && !/[+-]\d{2}:\d{2}$/.test(raw)
+      ? `${raw.replace(" ", "T")}Z`
+      : raw;
   const date = new Date(normalized);
   return Number.isNaN(date.getTime()) ? null : date;
 }
@@ -476,9 +502,11 @@ export function dashboardAgendaItems(schedule, tasks, now, dayCount = 14) {
   for (let offset = 0; offset < dayCount; offset += 1) {
     const day = new Date(start);
     day.setDate(start.getDate() + offset);
-    scheduleItemsForDate(schedule, day).filter((item) => item.attendInPerson !== false).forEach((item) => {
-      agenda.push({ ...item, destination: "schedule" });
-    });
+    scheduleItemsForDate(schedule, day)
+      .filter((item) => item.attendInPerson !== false)
+      .forEach((item) => {
+        agenda.push({ ...item, destination: "schedule" });
+      });
   }
 
   const end = new Date(start);
@@ -501,7 +529,9 @@ export function dashboardAgendaItems(schedule, tasks, now, dayCount = 14) {
     });
   });
 
-  return agenda.sort((left, right) => left.start - right.start || left.title.localeCompare(right.title));
+  return agenda.sort(
+    (left, right) => left.start - right.start || left.title.localeCompare(right.title),
+  );
 }
 
 export function dashboardAgendaView(items, now, view, limit = 5) {
@@ -512,8 +542,11 @@ export function dashboardAgendaView(items, now, view, limit = 5) {
   const remainingToday = today.filter((item) => item.end >= now);
   const upcoming = items.filter((item) => item.end >= now);
 
-  if (view === "today") return { items: today.slice(0, limit), fallback: false, total: today.length };
-  if (view === "upcoming") return { items: upcoming.slice(0, limit), fallback: false, total: upcoming.length };
-  if (remainingToday.length) return { items: remainingToday.slice(0, limit), fallback: false, total: remainingToday.length };
+  if (view === "today")
+    return { items: today.slice(0, limit), fallback: false, total: today.length };
+  if (view === "upcoming")
+    return { items: upcoming.slice(0, limit), fallback: false, total: upcoming.length };
+  if (remainingToday.length)
+    return { items: remainingToday.slice(0, limit), fallback: false, total: remainingToday.length };
   return { items: upcoming.slice(0, limit), fallback: true, total: upcoming.length };
 }

@@ -9,8 +9,8 @@ const isPackagedDesktopApp = window.location.protocol === "tauri:";
 // Tauri app has no Vite proxy, so it contacts its bundled sidecar directly —
 // unless a `use-remote-api` marker file in the app data directory names a
 // remote server, in which case the app is a client of that hosted backend.
-export let API_BASE_URL = configuredApiBaseUrl
-  || (isPackagedDesktopApp ? "http://127.0.0.1:8000" : "");
+export let API_BASE_URL =
+  configuredApiBaseUrl || (isPackagedDesktopApp ? "http://127.0.0.1:8000" : "");
 
 let apiBaseUrlPromise = null;
 let usingRemoteApi = false;
@@ -64,12 +64,15 @@ function base64ToBytes(b64) {
 async function remoteFetch(url, { method = "GET", headers = {}, body } = {}) {
   let bodyB64 = null;
   if (body instanceof FormData) {
-    throw new Error("File transfers to the remote server aren't supported in this build yet — use the desktop app in local mode for that.");
+    throw new Error(
+      "File transfers to the remote server aren't supported in this build yet — use the desktop app in local mode for that.",
+    );
   }
   if (body !== undefined) {
-    bodyB64 = typeof body === "string"
-      ? btoa(body)
-      : bytesToBase64(body instanceof Uint8Array ? body : new Uint8Array(body));
+    bodyB64 =
+      typeof body === "string"
+        ? btoa(body)
+        : bytesToBase64(body instanceof Uint8Array ? body : new Uint8Array(body));
   }
   const raw = await invoke("remote_http", {
     method,
@@ -224,9 +227,7 @@ async function executeApiRequest(path, { method = "GET", body, token } = {}) {
 
   if (!response.ok) {
     if (payload) {
-      throw new Error(
-        getErrorMessage(payload, `Request failed (${response.status}).`),
-      );
+      throw new Error(getErrorMessage(payload, `Request failed (${response.status}).`));
     }
     if (contentType.includes("text/html")) {
       throw new Error(
@@ -424,14 +425,16 @@ export function getTasks(token, { groupId, filter } = {}) {
   if (filter) params.set("filter", filter);
   const qs = params.toString();
   const request = apiRequest(`/tasks${qs ? `?${qs}` : ""}`, { token });
-  
+
   // Cache the default general task list
   if (groupId == null && !filter) {
-    request.then((tasks) => {
-      if (Array.isArray(tasks)) {
-        setCachedApiData(TASKS_CACHE_KEY, tasks);
-      }
-    }).catch(() => {});
+    request
+      .then((tasks) => {
+        if (Array.isArray(tasks)) {
+          setCachedApiData(TASKS_CACHE_KEY, tasks);
+        }
+      })
+      .catch(() => {});
   }
   return request;
 }
@@ -505,15 +508,21 @@ export function getCanvasAssignments(token, forceRefresh = false) {
 }
 
 export function getCanvasAssignment(token, courseId, assignmentId) {
-  return apiRequest(`/canvas/assignments/${assignmentId}?course_id=${encodeURIComponent(courseId)}`, { token });
+  return apiRequest(
+    `/canvas/assignments/${assignmentId}?course_id=${encodeURIComponent(courseId)}`,
+    { token },
+  );
 }
 
 export function submitCanvasAssignment(token, courseId, assignmentId, payload) {
-  return apiRequest(`/canvas/assignments/${assignmentId}/submit?course_id=${encodeURIComponent(courseId)}`, {
-    method: "POST",
-    body: payload,
-    token,
-  });
+  return apiRequest(
+    `/canvas/assignments/${assignmentId}/submit?course_id=${encodeURIComponent(courseId)}`,
+    {
+      method: "POST",
+      body: payload,
+      token,
+    },
+  );
 }
 
 export function getCanvasGrades(token, courseId) {
@@ -548,18 +557,27 @@ export async function fetchCanvasFileContent(token, fileId) {
   let response;
   try {
     response = await fetchWithDesktopStartupRetry(url, {
-      transport: transportFetch, headers: { Authorization: `Bearer ${token}` } });
+      transport: transportFetch,
+      headers: { Authorization: `Bearer ${token}` },
+    });
   } catch (error) {
-    throw new Error(`Could not connect to server at ${url}. Please check your backend connection.`, { cause: error });
+    throw new Error(
+      `Could not connect to server at ${url}. Please check your backend connection.`,
+      { cause: error },
+    );
   }
   if (!response.ok) {
-    const payload = (response.headers.get("content-type") || "").includes("application/json") ? await response.json().catch(() => null) : null;
+    const payload = (response.headers.get("content-type") || "").includes("application/json")
+      ? await response.json().catch(() => null)
+      : null;
     throw new Error(getErrorMessage(payload, `Could not load the file (${response.status}).`));
   }
   const blob = await response.blob();
   return {
     blob,
-    contentType: (response.headers.get("content-type") || "application/octet-stream").split(";")[0].trim(),
+    contentType: (response.headers.get("content-type") || "application/octet-stream")
+      .split(";")[0]
+      .trim(),
     filename: filenameFromDisposition(response.headers.get("content-disposition")),
   };
 }
@@ -585,7 +603,10 @@ export function getCanvasPages(token, courseId) {
 }
 
 export function getCanvasPage(token, courseId, pageUrl) {
-  return apiRequest(`/canvas/pages/${encodeURIComponent(pageUrl)}?course_id=${encodeURIComponent(courseId)}`, { token });
+  return apiRequest(
+    `/canvas/pages/${encodeURIComponent(pageUrl)}?course_id=${encodeURIComponent(courseId)}`,
+    { token },
+  );
 }
 
 export function getCanvasCourseModules(token, courseId) {
@@ -646,8 +667,7 @@ export function validateCanvasToken(token, canvasToken) {
 export async function loadCachedCanvasFiles(token, { onSyncRequired } = {}) {
   let data = await getCachedCanvasFiles(token);
   const needsCurrentCourseSnapshot =
-    !data.synced_at ||
-    ((data.files || []).length > 0 && (data.courses || []).length === 0);
+    !data.synced_at || ((data.files || []).length > 0 && (data.courses || []).length === 0);
 
   if (needsCurrentCourseSnapshot) {
     onSyncRequired?.();
@@ -674,9 +694,7 @@ export async function importIcs(token, file, fileName = "timetable.ics") {
       body: formData,
     });
   } catch {
-    throw new Error(
-      `Could not connect to server at ${url}. Please check your backend connection.`,
-    );
+    throw new Error(`Could not connect to server at ${url}. Please check your backend connection.`);
   }
 
   const contentType = response.headers.get("content-type") || "";
@@ -716,16 +734,21 @@ export function importNusmods(token, url) {
 
 export function getSchedule(token) {
   const request = apiRequest("/schedule", { token });
-  request.then((schedule) => {
-    if (schedule && typeof schedule === "object") {
-      setCachedApiData(SCHEDULE_CACHE_KEY, schedule);
-    }
-  }).catch(() => {});
+  request
+    .then((schedule) => {
+      if (schedule && typeof schedule === "object") {
+        setCachedApiData(SCHEDULE_CACHE_KEY, schedule);
+      }
+    })
+    .catch(() => {});
   return request;
 }
 
 export function getClassContext(token, classId, occurrenceDate) {
-  return apiRequest(`/schedule/classes/${classId}/context?occurrence_date=${encodeURIComponent(occurrenceDate)}`, { token });
+  return apiRequest(
+    `/schedule/classes/${classId}/context?occurrence_date=${encodeURIComponent(occurrenceDate)}`,
+    { token },
+  );
 }
 
 export function updateClass(token, classId, payload) {
@@ -753,11 +776,17 @@ export async function uploadClassFile(token, classId, occurrenceDate, file, isRe
       body: formData,
     });
   } catch (error) {
-    throw new Error(`Could not connect to server at ${url}. Please check your backend connection.`, { cause: error });
+    throw new Error(
+      `Could not connect to server at ${url}. Please check your backend connection.`,
+      { cause: error },
+    );
   }
   const contentType = response.headers.get("content-type") || "";
-  const payload = contentType.includes("application/json") ? await response.json().catch(() => null) : null;
-  if (!response.ok) throw new Error(getErrorMessage(payload, `Could not attach the file (${response.status}).`));
+  const payload = contentType.includes("application/json")
+    ? await response.json().catch(() => null)
+    : null;
+  if (!response.ok)
+    throw new Error(getErrorMessage(payload, `Could not attach the file (${response.status}).`));
   if (!payload) throw new Error("Server returned an empty or invalid JSON response.");
   return payload;
 }
@@ -767,12 +796,19 @@ export async function downloadClassFile(token, fileId) {
   let response;
   try {
     response = await fetchWithDesktopStartupRetry(url, {
-      transport: transportFetch, headers: { Authorization: `Bearer ${token}` } });
+      transport: transportFetch,
+      headers: { Authorization: `Bearer ${token}` },
+    });
   } catch (error) {
-    throw new Error(`Could not connect to server at ${url}. Please check your backend connection.`, { cause: error });
+    throw new Error(
+      `Could not connect to server at ${url}. Please check your backend connection.`,
+      { cause: error },
+    );
   }
   if (!response.ok) {
-    const payload = (response.headers.get("content-type") || "").includes("application/json") ? await response.json().catch(() => null) : null;
+    const payload = (response.headers.get("content-type") || "").includes("application/json")
+      ? await response.json().catch(() => null)
+      : null;
     throw new Error(getErrorMessage(payload, `Could not download the file (${response.status}).`));
   }
   return response.blob();
@@ -979,7 +1015,9 @@ export function createStudySession(token, payload) {
 
 export function completeStudySession(token, sessionId, payload) {
   return apiRequest(`/study-sessions/${sessionId}/complete`, {
-    method: "PATCH", body: payload, token,
+    method: "PATCH",
+    body: payload,
+    token,
   });
 }
 
@@ -995,15 +1033,31 @@ export function getStudyLeaderboard(token, period = "week") {
   return apiRequest(`/study-sessions/leaderboard?period=${period}`, { token });
 }
 
-export function getNotes(token) { return apiRequest("/notes", { token }); }
-export function createNote(payload, token) { return apiRequest("/notes", { method: "POST", body: payload, token }); }
-export function updateNote(noteId, payload, token) { return apiRequest(`/notes/${noteId}`, { method: "PATCH", body: payload, token }); }
-export function deleteNote(noteId, token) { return apiRequest(`/notes/${noteId}`, { method: "DELETE", token }); }
+export function getNotes(token) {
+  return apiRequest("/notes", { token });
+}
+export function createNote(payload, token) {
+  return apiRequest("/notes", { method: "POST", body: payload, token });
+}
+export function updateNote(noteId, payload, token) {
+  return apiRequest(`/notes/${noteId}`, { method: "PATCH", body: payload, token });
+}
+export function deleteNote(noteId, token) {
+  return apiRequest(`/notes/${noteId}`, { method: "DELETE", token });
+}
 
-export function getFolders(token) { return apiRequest("/folders", { token }); }
-export function createFolder(payload, token) { return apiRequest("/folders", { method: "POST", body: payload, token }); }
-export function updateFolder(id, payload, token) { return apiRequest(`/folders/${id}`, { method: "PATCH", body: payload, token }); }
-export function deleteFolder(id, token) { return apiRequest(`/folders/${id}`, { method: "DELETE", token }); }
+export function getFolders(token) {
+  return apiRequest("/folders", { token });
+}
+export function createFolder(payload, token) {
+  return apiRequest("/folders", { method: "POST", body: payload, token });
+}
+export function updateFolder(id, payload, token) {
+  return apiRequest(`/folders/${id}`, { method: "PATCH", body: payload, token });
+}
+export function deleteFolder(id, token) {
+  return apiRequest(`/folders/${id}`, { method: "DELETE", token });
+}
 
 export function getStoredUser() {
   const user = window.localStorage.getItem("canvenient.user");
@@ -1027,8 +1081,8 @@ export async function getVenueInformation(token, { academicYear, semester } = {}
   if (academicYear) params.set("academic_year", academicYear);
   if (semester) params.set("semester", semester);
   const q = params.toString() ? `?${params.toString()}` : "";
-  
-  const cacheKey = `canvenient.venues.info.${academicYear || 'current'}.${semester || 'current'}`;
+
+  const cacheKey = `canvenient.venues.info.${academicYear || "current"}.${semester || "current"}`;
   try {
     const cached = window.localStorage.getItem(cacheKey);
     if (cached) {
@@ -1038,7 +1092,9 @@ export async function getVenueInformation(token, { academicYear, semester } = {}
   } catch {}
 
   const data = await apiRequest(`/venues/info${q}`, { token });
-  try { window.localStorage.setItem(cacheKey, JSON.stringify({ timestamp: Date.now(), data })); } catch {}
+  try {
+    window.localStorage.setItem(cacheKey, JSON.stringify({ timestamp: Date.now(), data }));
+  } catch {}
   return data;
 }
 
@@ -1053,7 +1109,9 @@ export async function getVenueLocations(token) {
   } catch {}
 
   const data = await apiRequest("/venues/locations", { token });
-  try { window.localStorage.setItem(cacheKey, JSON.stringify({ timestamp: Date.now(), data })); } catch {}
+  try {
+    window.localStorage.setItem(cacheKey, JSON.stringify({ timestamp: Date.now(), data }));
+  } catch {}
   return data;
 }
 
@@ -1066,7 +1124,8 @@ export function searchFreeVenues(token, options = {}) {
   if (options.faculty) params.set("faculty", options.faculty);
   if (options.building) params.set("building", options.building);
   if (options.query) params.set("query", options.query);
-  if (options.minFreeMinutes !== undefined && options.minFreeMinutes !== null) params.set("min_free_minutes", options.minFreeMinutes);
+  if (options.minFreeMinutes !== undefined && options.minFreeMinutes !== null)
+    params.set("min_free_minutes", options.minFreeMinutes);
   if (options.onlyFree !== undefined) params.set("only_free", options.onlyFree);
   if (options.sort) params.set("sort", options.sort);
   if (options.academicYear) params.set("academic_year", options.academicYear);

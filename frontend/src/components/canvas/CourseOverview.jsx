@@ -1,5 +1,14 @@
 import { useCallback, useMemo, useState } from "react";
-import { Bell, Calendar, Check, CheckSquare, Download, FileText, Loader2, Plus } from "lucide-react";
+import {
+  Bell,
+  Calendar,
+  Check,
+  CheckSquare,
+  Download,
+  FileText,
+  Loader2,
+  Plus,
+} from "lucide-react";
 import CanvasSearchSection from "../CanvasSearchSection";
 import { downloadCanvasFile } from "../../api";
 import { dueLabel, formatSize, relDate } from "./fileUtils";
@@ -24,38 +33,59 @@ export function CourseOverview({
 
   // Mirrored Canvas URLs expire quickly; downloads go through the backend
   // content proxy like the Files tab does.
-  const handleDownload = useCallback(async (file) => {
-    if (!file || downloadingId) return;
-    setDownloadingId(file.id);
-    try {
-      await downloadCanvasFile(token, file.id, file.display_name || file.filename || "canvas-file");
-    } catch (error) {
-      window.dispatchEvent(new CustomEvent("canvenient-toast", { detail: { message: error.message || "Download failed." } }));
-    } finally {
-      setDownloadingId(null);
-    }
-  }, [downloadingId, token]);
+  const handleDownload = useCallback(
+    async (file) => {
+      if (!file || downloadingId) return;
+      setDownloadingId(file.id);
+      try {
+        await downloadCanvasFile(
+          token,
+          file.id,
+          file.display_name || file.filename || "canvas-file",
+        );
+      } catch (error) {
+        window.dispatchEvent(
+          new CustomEvent("canvenient-toast", {
+            detail: { message: error.message || "Download failed." },
+          }),
+        );
+      } finally {
+        setDownloadingId(null);
+      }
+    },
+    [downloadingId, token],
+  );
 
   const now = new Date();
   const upcoming = useMemo(() => {
     const now = new Date();
     return assignments
-      .filter(a => String(a.course_id) === String(courseId) && !a.has_submitted)
-      .filter(a => !a.due_at || new Date(a.due_at) >= now)
-      .sort((a,b) => (a.due_at ? new Date(a.due_at) : Infinity) - (b.due_at ? new Date(b.due_at) : Infinity))
+      .filter((a) => String(a.course_id) === String(courseId) && !a.has_submitted)
+      .filter((a) => !a.due_at || new Date(a.due_at) >= now)
+      .sort(
+        (a, b) =>
+          (a.due_at ? new Date(a.due_at) : Infinity) - (b.due_at ? new Date(b.due_at) : Infinity),
+      )
       .slice(0, 5);
   }, [assignments, courseId]);
 
-  const recentAnn = useMemo(() =>
-    announcements
-      .filter(a => String(a.course_id) === String(courseId))
-      .sort((a,b) => new Date(b.posted_at||0) - new Date(a.posted_at||0))
-      .slice(0, 4),
-  [announcements, courseId]);
+  const recentAnn = useMemo(
+    () =>
+      announcements
+        .filter((a) => String(a.course_id) === String(courseId))
+        .sort((a, b) => new Date(b.posted_at || 0) - new Date(a.posted_at || 0))
+        .slice(0, 4),
+    [announcements, courseId],
+  );
 
-  const recentFiles = useMemo(() =>
-    [...(files||[])].filter(f=>f.updated_at).sort((a,b)=>new Date(b.updated_at)-new Date(a.updated_at)).slice(0,6),
-  [files]);
+  const recentFiles = useMemo(
+    () =>
+      [...(files || [])]
+        .filter((f) => f.updated_at)
+        .sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at))
+        .slice(0, 6),
+    [files],
+  );
 
   return (
     <div className="cv-overview-grid">
@@ -72,28 +102,38 @@ export function CourseOverview({
       {/* Upcoming assignments card */}
       <section className="cv-card">
         <header className="cv-card-header">
-          <div className="cv-card-title"><Calendar size={13} /> Upcoming Tasks & Assignments</div>
-          <button type="button" className="cv-btn-link" onClick={() => onSelectTab("assignments")}>View all →</button>
+          <div className="cv-card-title">
+            <Calendar size={13} /> Upcoming Tasks & Assignments
+          </div>
+          <button type="button" className="cv-btn-link" onClick={() => onSelectTab("assignments")}>
+            View all →
+          </button>
         </header>
         <div className="cv-card-content">
           {upcoming.length === 0 ? (
             <div className="cv-empty-note">No upcoming assignments due.</div>
           ) : (
-            upcoming.map(a => {
+            upcoming.map((a) => {
               const due = a.due_at ? new Date(a.due_at) : null;
-              const urgent = due && (due - now) < 86400000 * 3;
+              const urgent = due && due - now < 86400000 * 3;
               const isAdded = isAssignmentAdded ? isAssignmentAdded(a) : false;
               const isAdding = addingTaskId === a.id;
               return (
-                <div key={a.id} className="cv-list-item" onClick={() => onOpenItem({ ...a, itemType: "assignment" })}>
-                  <span className="cv-list-item-icon"><CheckSquare size={13} /></span>
+                <div
+                  key={a.id}
+                  className="cv-list-item"
+                  onClick={() => onOpenItem({ ...a, itemType: "assignment" })}
+                >
+                  <span className="cv-list-item-icon">
+                    <CheckSquare size={13} />
+                  </span>
                   <div className="cv-list-item-body">
                     <div className="cv-list-item-title">{a.title}</div>
                     <div className="cv-list-item-sub">{dueLabel(a.due_at)}</div>
                   </div>
                   {urgent && <span className="cv-badge-urgent">Due soon</span>}
                   {onAddToTasks && (
-                    <div className="cv-row-actions" onClick={e => e.stopPropagation()}>
+                    <div className="cv-row-actions" onClick={(e) => e.stopPropagation()}>
                       <button
                         type="button"
                         className={`cv-task-action-btn ${isAdded ? "is-added" : ""}`}
@@ -102,7 +142,13 @@ export function CourseOverview({
                         aria-label={isAdded ? "In Tasks" : "Add as Task"}
                         title={isAdded ? "Already added to Tasks" : "Add as Task"}
                       >
-                        {isAdding ? <Loader2 size={12} className="retro-icon-spin" /> : isAdded ? <Check size={12} /> : <Plus size={12} />}
+                        {isAdding ? (
+                          <Loader2 size={12} className="retro-icon-spin" />
+                        ) : isAdded ? (
+                          <Check size={12} />
+                        ) : (
+                          <Plus size={12} />
+                        )}
                       </button>
                     </div>
                   )}
@@ -116,16 +162,30 @@ export function CourseOverview({
       {/* Announcements card */}
       <section className="cv-card">
         <header className="cv-card-header">
-          <div className="cv-card-title"><Bell size={13} /> Recent Announcements</div>
-          <button type="button" className="cv-btn-link" onClick={() => onSelectTab("announcements")}>View all →</button>
+          <div className="cv-card-title">
+            <Bell size={13} /> Recent Announcements
+          </div>
+          <button
+            type="button"
+            className="cv-btn-link"
+            onClick={() => onSelectTab("announcements")}
+          >
+            View all →
+          </button>
         </header>
         <div className="cv-card-content">
           {recentAnn.length === 0 ? (
             <div className="cv-empty-note">No recent announcements.</div>
           ) : (
-            recentAnn.map(a => (
-              <div key={a.id} className="cv-list-item" onClick={() => onOpenItem({ ...a, itemType: "announcement" })}>
-                <span className="cv-list-item-icon"><Bell size={13} /></span>
+            recentAnn.map((a) => (
+              <div
+                key={a.id}
+                className="cv-list-item"
+                onClick={() => onOpenItem({ ...a, itemType: "announcement" })}
+              >
+                <span className="cv-list-item-icon">
+                  <Bell size={13} />
+                </span>
                 <div className="cv-list-item-body">
                   <div className="cv-list-item-title">{a.title}</div>
                   <div className="cv-list-item-sub">{relDate(a.posted_at)}</div>
@@ -139,21 +199,29 @@ export function CourseOverview({
       {/* Recent Files card */}
       <section className="cv-card is-span-2">
         <header className="cv-card-header">
-          <div className="cv-card-title"><FileText size={13} /> Recently Uploaded Files</div>
-          <button type="button" className="cv-btn-link" onClick={() => onSelectTab("files")}>Browse files →</button>
+          <div className="cv-card-title">
+            <FileText size={13} /> Recently Uploaded Files
+          </div>
+          <button type="button" className="cv-btn-link" onClick={() => onSelectTab("files")}>
+            Browse files →
+          </button>
         </header>
         <div className="cv-card-content cv-grid-2col">
           {recentFiles.length === 0 ? (
             <div className="cv-empty-note">No files available.</div>
           ) : (
-            recentFiles.map(f => {
+            recentFiles.map((f) => {
               const name = f.display_name || f.filename || "Untitled";
               return (
                 <div key={f.id} className="cv-list-item">
                   <FileTypeIcon name={name} />
                   <div className="cv-list-item-body">
-                    <div className="cv-list-item-title" title={name}>{name}</div>
-                    <div className="cv-list-item-sub">{formatSize(f.size)} {f.updated_at ? `· ${relDate(f.updated_at)}` : ""}</div>
+                    <div className="cv-list-item-title" title={name}>
+                      {name}
+                    </div>
+                    <div className="cv-list-item-sub">
+                      {formatSize(f.size)} {f.updated_at ? `· ${relDate(f.updated_at)}` : ""}
+                    </div>
                   </div>
                   <button
                     type="button"
@@ -161,7 +229,11 @@ export function CourseOverview({
                     title="Download"
                     onClick={() => handleDownload(f)}
                   >
-                    {downloadingId === f.id ? <Loader2 size={13} className="retro-icon-spin" /> : <Download size={13} />}
+                    {downloadingId === f.id ? (
+                      <Loader2 size={13} className="retro-icon-spin" />
+                    ) : (
+                      <Download size={13} />
+                    )}
                   </button>
                 </div>
               );

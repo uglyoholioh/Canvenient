@@ -19,6 +19,7 @@ async def test_list_and_restore_backup(client: AsyncClient, auth):
     # Isolate: drop leftovers from previous runs so the listing is deterministic.
     import shutil
     from pathlib import Path
+
     backup_dir = Path("./backups")
     if backup_dir.exists():
         shutil.rmtree(backup_dir)
@@ -34,6 +35,7 @@ async def test_list_and_restore_backup(client: AsyncClient, auth):
     assert task.status_code == 201
 
     import os
+
     safety = backup_database(os.environ["DATABASE_URL"])
     assert safety is not None
 
@@ -69,9 +71,7 @@ async def test_restore_rejects_unknown_and_traversal_names(client: AsyncClient, 
     token, _, _ = auth
     headers = auth_headers(token)
 
-    missing = await client.post(
-        "/backups/restore", json={"name": "nope-20260101-000000.db"}, headers=headers
-    )
+    missing = await client.post("/backups/restore", json={"name": "nope-20260101-000000.db"}, headers=headers)
     assert missing.status_code == 404
 
     traversal = await client.post(

@@ -66,14 +66,45 @@ SEMESTER_STARTS = {
 NUS_HOLIDAYS = {
     date.fromisoformat(value)
     for value in (
-        "2024-08-09", "2024-10-31", "2024-11-01", "2024-12-25",
-        "2025-01-01", "2025-01-29", "2025-01-30", "2025-03-31", "2025-04-18",
-        "2025-05-01", "2025-05-12", "2025-06-07", "2025-08-09", "2025-10-20",
-        "2025-10-21", "2025-12-25", "2026-01-01", "2026-02-17", "2026-02-18",
-        "2026-03-21", "2026-04-03", "2026-05-01", "2026-05-27", "2026-06-01",
-        "2026-08-09", "2026-08-10", "2026-10-09", "2026-11-08", "2026-11-09",
-        "2026-12-25", "2027-01-01", "2027-02-06", "2027-02-07", "2027-02-08",
-        "2027-03-10", "2027-03-26", "2027-05-01", "2027-05-17", "2027-05-20",
+        "2024-08-09",
+        "2024-10-31",
+        "2024-11-01",
+        "2024-12-25",
+        "2025-01-01",
+        "2025-01-29",
+        "2025-01-30",
+        "2025-03-31",
+        "2025-04-18",
+        "2025-05-01",
+        "2025-05-12",
+        "2025-06-07",
+        "2025-08-09",
+        "2025-10-20",
+        "2025-10-21",
+        "2025-12-25",
+        "2026-01-01",
+        "2026-02-17",
+        "2026-02-18",
+        "2026-03-21",
+        "2026-04-03",
+        "2026-05-01",
+        "2026-05-27",
+        "2026-06-01",
+        "2026-08-09",
+        "2026-08-10",
+        "2026-10-09",
+        "2026-11-08",
+        "2026-11-09",
+        "2026-12-25",
+        "2027-01-01",
+        "2027-02-06",
+        "2027-02-07",
+        "2027-02-08",
+        "2027-03-10",
+        "2027-03-26",
+        "2027-05-01",
+        "2027-05-17",
+        "2027-05-20",
     )
 }
 
@@ -83,23 +114,27 @@ class NUSModsImportRequest(BaseModel):
 
 
 def class_occurrence_key(record, occurrence_date: date) -> str:
-    return "|".join((
-        str(record["module_code"] or "").strip().upper(),
-        occurrence_date.isoformat() if hasattr(occurrence_date, "isoformat") else str(occurrence_date),
-        str(record["start_time"] or ""),
-        str(record["lesson_type"] or "").strip().lower(),
-        str(record["class_no"] or "").strip().upper(),
-    ))
+    return "|".join(
+        (
+            str(record["module_code"] or "").strip().upper(),
+            occurrence_date.isoformat() if hasattr(occurrence_date, "isoformat") else str(occurrence_date),
+            str(record["start_time"] or ""),
+            str(record["lesson_type"] or "").strip().lower(),
+            str(record["class_no"] or "").strip().upper(),
+        )
+    )
 
 
 def class_series_key(record) -> str:
-    return "|".join((
-        str(record["module_code"] or "").strip().upper(),
-        "recurring",
-        str(record["start_time"] or ""),
-        str(record["lesson_type"] or "").strip().lower(),
-        str(record["class_no"] or "").strip().upper(),
-    ))
+    return "|".join(
+        (
+            str(record["module_code"] or "").strip().upper(),
+            "recurring",
+            str(record["start_time"] or ""),
+            str(record["lesson_type"] or "").strip().lower(),
+            str(record["class_no"] or "").strip().upper(),
+        )
+    )
 
 
 def class_summary(record) -> str:
@@ -282,7 +317,11 @@ async def _resolve_nusmods_url(raw_url: str) -> str:
 
 def _parse_serialized_weeks(raw: str):
     tokens = raw.split("_") if raw else []
-    if len(tokens) >= 2 and re.fullmatch(r"\d{4}-\d{2}-\d{2}", tokens[0]) and re.fullmatch(r"\d{4}-\d{2}-\d{2}", tokens[1]):
+    if (
+        len(tokens) >= 2
+        and re.fullmatch(r"\d{4}-\d{2}-\d{2}", tokens[0])
+        and re.fullmatch(r"\d{4}-\d{2}-\d{2}", tokens[1])
+    ):
         interval = int(tokens[2]) if len(tokens) > 2 and tokens[2].isdigit() and int(tokens[2]) > 0 else 1
         weeks = [int(value) for value in tokens[3:] if value.isdigit()]
         return {"start": tokens[0], "end": tokens[1], "weekInterval": interval, "weeks": weeks or None}
@@ -327,7 +366,8 @@ def _selected_lessons(serialized: str, timetable: list[dict]) -> list[dict]:
                         selected.append(timetable[index])
                 else:
                     selected.extend(
-                        lesson for lesson in timetable
+                        lesson
+                        for lesson in timetable
                         if lesson.get("lessonType") == lesson_type and str(lesson.get("classNo")) == item
                     )
     else:
@@ -339,7 +379,8 @@ def _selected_lessons(serialized: str, timetable: list[dict]) -> list[dict]:
             if not lesson_type:
                 continue
             selected.extend(
-                lesson for lesson in timetable
+                lesson
+                for lesson in timetable
                 if lesson.get("lessonType") == lesson_type and str(lesson.get("classNo")) == class_no
             )
 
@@ -347,8 +388,13 @@ def _selected_lessons(serialized: str, timetable: list[dict]) -> list[dict]:
     seen = set()
     for lesson in selected:
         key = (
-            lesson.get("lessonType"), lesson.get("classNo"), lesson.get("day"),
-            lesson.get("startTime"), lesson.get("endTime"), lesson.get("venue"), str(lesson.get("weeks")),
+            lesson.get("lessonType"),
+            lesson.get("classNo"),
+            lesson.get("day"),
+            lesson.get("startTime"),
+            lesson.get("endTime"),
+            lesson.get("venue"),
+            str(lesson.get("weeks")),
         )
         if key not in seen:
             seen.add(key)
@@ -416,10 +462,7 @@ async def _replace_timetable(user_id: int, classes: list[dict], exams: list[dict
             )
         await ensure_module_colors(
             user_id,
-            (
-                (item["module_code"], item.get("module_name"))
-                for item in [*classes, *exams]
-            ),
+            ((item["module_code"], item.get("module_name")) for item in [*classes, *exams]),
         )
 
 
@@ -455,10 +498,15 @@ async def import_ics(file: UploadFile, current_user: CurrentUser):
         if "exam" in class_type.lower() or "exam" in summary.lower():
             start_sgt = to_sgt_datetime(dtstart)
             end_sgt = to_sgt_datetime(dtend)
-            exams.append({
-                "user_id": current_user.id, "module_code": module_code,
-                "module_name": module_name, "start_at": start_sgt, "end_at": end_sgt,
-            })
+            exams.append(
+                {
+                    "user_id": current_user.id,
+                    "module_code": module_code,
+                    "module_name": module_name,
+                    "start_at": start_sgt,
+                    "end_at": end_sgt,
+                }
+            )
             continue
 
         exdates = component.get("EXDATE")
@@ -491,14 +539,21 @@ async def import_ics(file: UploadFile, current_user: CurrentUser):
         for occurrence in occurrences:
             start_sgt = to_sgt_datetime(occurrence)
             end_sgt = start_sgt + duration
-            classes.append({
-                "user_id": current_user.id, "module_code": module_code,
-                "module_name": module_name, "lesson_type": class_type or "Class",
-                "class_no": class_no, "day_of_week": start_sgt.isoweekday(),
-                "start_time": start_sgt.time(), "end_time": end_sgt.time(),
-                "venue": str(component.get("LOCATION") or ""), "class_date": start_sgt.date(),
-                "weeks": json.dumps(derived_weeks),
-            })
+            classes.append(
+                {
+                    "user_id": current_user.id,
+                    "module_code": module_code,
+                    "module_name": module_name,
+                    "lesson_type": class_type or "Class",
+                    "class_no": class_no,
+                    "day_of_week": start_sgt.isoweekday(),
+                    "start_time": start_sgt.time(),
+                    "end_time": end_sgt.time(),
+                    "venue": str(component.get("LOCATION") or ""),
+                    "class_date": start_sgt.date(),
+                    "weeks": json.dumps(derived_weeks),
+                }
+            )
 
     await _replace_timetable(current_user.id, classes, exams)
     return {"source": "ics", "classes": len(classes), "exams": len(exams)}
@@ -523,9 +578,9 @@ async def import_nusmods(payload: NUSModsImportRequest, current_user: CurrentUse
     api_year = academic_year.replace("/", "-")
     try:
         async with httpx.AsyncClient(timeout=15.0) as client:
-            module_data = await asyncio.gather(*(
-                fetch_nusmods_module(client, api_year, module_code) for module_code in module_configs
-            ))
+            module_data = await asyncio.gather(
+                *(fetch_nusmods_module(client, api_year, module_code) for module_code in module_configs)
+            )
     except (httpx.HTTPError, ValueError) as error:
         raise HTTPException(status_code=400, detail="Could not load one or more modules from NUSMods.") from error
 
@@ -534,7 +589,9 @@ async def import_nusmods(payload: NUSModsImportRequest, current_user: CurrentUse
     semester_start = _semester_start(academic_year, semester)
     seen_classes = set()
     for module_code, module in zip(module_configs, module_data, strict=False):
-        semester_data = next((item for item in module.get("semesterData", []) if item.get("semester") == semester), None)
+        semester_data = next(
+            (item for item in module.get("semesterData", []) if item.get("semester") == semester), None
+        )
         if not semester_data:
             continue
         title = module.get("title") or module_code
@@ -547,37 +604,57 @@ async def import_nusmods(payload: NUSModsImportRequest, current_user: CurrentUse
             lesson_weeks = lesson.get("weeks")
             for class_date in _lesson_dates(lesson, semester_start):
                 key = (
-                    module_code, lesson.get("lessonType"), lesson.get("classNo"), class_date,
-                    start_time, end_time, lesson.get("venue") or "",
+                    module_code,
+                    lesson.get("lessonType"),
+                    lesson.get("classNo"),
+                    class_date,
+                    start_time,
+                    end_time,
+                    lesson.get("venue") or "",
                 )
                 if key in seen_classes:
                     continue
                 seen_classes.add(key)
-                classes.append({
-                    "user_id": current_user.id, "module_code": module_code, "module_name": title,
-                    "lesson_type": lesson.get("lessonType") or "Class",
-                    "class_no": str(lesson.get("classNo") or "") or None,
-                    "day_of_week": class_date.isoweekday(), "start_time": start_time,
-                    "end_time": end_time, "venue": lesson.get("venue") or "",
-                    "class_date": class_date,
-                    "weeks": json.dumps(lesson_weeks) if lesson_weeks is not None else None,
-                })
+                classes.append(
+                    {
+                        "user_id": current_user.id,
+                        "module_code": module_code,
+                        "module_name": title,
+                        "lesson_type": lesson.get("lessonType") or "Class",
+                        "class_no": str(lesson.get("classNo") or "") or None,
+                        "day_of_week": class_date.isoweekday(),
+                        "start_time": start_time,
+                        "end_time": end_time,
+                        "venue": lesson.get("venue") or "",
+                        "class_date": class_date,
+                        "weeks": json.dumps(lesson_weeks) if lesson_weeks is not None else None,
+                    }
+                )
 
         exam_date = semester_data.get("examDate")
         if exam_date:
             start_at = datetime.fromisoformat(exam_date.replace("Z", "+00:00"))
             duration = int(semester_data.get("examDuration") or 120)
-            exams.append({
-                "user_id": current_user.id, "module_code": module_code, "module_name": title,
-                "start_at": start_at, "end_at": start_at + timedelta(minutes=duration),
-            })
+            exams.append(
+                {
+                    "user_id": current_user.id,
+                    "module_code": module_code,
+                    "module_name": title,
+                    "start_at": start_at,
+                    "end_at": start_at + timedelta(minutes=duration),
+                }
+            )
 
     if not classes and not exams:
         raise HTTPException(status_code=400, detail="No selected lessons or exams could be read from that timetable.")
     await _replace_timetable(current_user.id, classes, exams)
     return {
-        "source": "nusmods", "academic_year": academic_year, "semester": semester,
-        "modules": len(module_configs), "classes": len(classes), "exams": len(exams),
+        "source": "nusmods",
+        "academic_year": academic_year,
+        "semester": semester,
+        "modules": len(module_configs),
+        "classes": len(classes),
+        "exams": len(exams),
     }
 
 
@@ -634,6 +711,7 @@ async def get_class_context(
         """,
         values={"user_id": current_user.id, "occurrence_key": occurrence_key, "series_key": series_key},
     )
+
     def _with_recurring(records):
         out = []
         for r in records:
@@ -665,9 +743,11 @@ async def get_class_context(
         "files": _with_recurring(files),
     }
 
+
 class ClassUpdate(BaseModel):
     attend_in_person: bool
     occurrence_date: date | None = None
+
 
 # Sibling occurrences of the same recurring class (mirrors class_series_key).
 _SERIES_MATCH_SQL = """
@@ -677,6 +757,7 @@ _SERIES_MATCH_SQL = """
     AND LOWER(TRIM(lesson_type)) = :lesson_type
     AND UPPER(TRIM(class_no)) IS NOT DISTINCT FROM :class_no
 """
+
 
 @router.patch("/classes/{class_id}")
 async def update_class(class_id: int, payload: ClassUpdate, current_user: CurrentUser):
@@ -688,7 +769,12 @@ async def update_class(class_id: int, payload: ClassUpdate, current_user: Curren
             VALUES (:user_id, :class_id, :occurrence_date, :attend_in_person)
             ON CONFLICT (class_id, occurrence_date) DO UPDATE SET attend_in_person = EXCLUDED.attend_in_person
             """,
-            {"user_id": current_user.id, "class_id": class_id, "occurrence_date": payload.occurrence_date, "attend_in_person": payload.attend_in_person}
+            {
+                "user_id": current_user.id,
+                "class_id": class_id,
+                "occurrence_date": payload.occurrence_date,
+                "attend_in_person": payload.attend_in_person,
+            },
         )
         return {"status": "ok"}
 
@@ -723,6 +809,7 @@ async def update_class(class_id: int, payload: ClassUpdate, current_user: Curren
             values=series_values,
         )
     return {"status": "ok"}
+
 
 @router.post("/classes/{class_id}/files", status_code=status.HTTP_201_CREATED)
 async def upload_class_file(
@@ -792,7 +879,7 @@ async def download_class_file(file_id: int, current_user: CurrentUser):
 @router.get("", response_model=ScheduleOut)
 async def list_schedule(current_user: CurrentUser):
     await ensure_discovered_module_colors(current_user.id)
-    
+
     classes_query = db.fetch_all(
         query="""
             SELECT c.*, mc.color AS module_color
@@ -865,7 +952,7 @@ async def list_schedule(current_user: CurrentUser):
     )
     attendance_overrides_query = db.fetch_all(
         "SELECT class_id, occurrence_date, attend_in_person FROM class_attendance_overrides WHERE user_id = :user_id",
-        {"user_id": current_user.id}
+        {"user_id": current_user.id},
     )
 
     (
@@ -886,18 +973,9 @@ async def list_schedule(current_user: CurrentUser):
         attendance_overrides_query,
     )
 
-    task_counts = {
-        item["class_occurrence_key"]: item["total"]
-        for item in task_counts_raw
-    }
-    note_counts = {
-        item["class_occurrence_key"]: item["total"]
-        for item in note_counts_raw
-    }
-    file_counts = {
-        item["class_occurrence_key"]: item["total"]
-        for item in file_counts_raw
-    }
+    task_counts = {item["class_occurrence_key"]: item["total"] for item in task_counts_raw}
+    note_counts = {item["class_occurrence_key"]: item["total"] for item in note_counts_raw}
+    file_counts = {item["class_occurrence_key"]: item["total"] for item in file_counts_raw}
     series_dates = {}
     for r in classes:
         s_key = (r["module_code"], r["lesson_type"], r["class_no"])
@@ -905,13 +983,9 @@ async def list_schedule(current_user: CurrentUser):
             series_dates[s_key] = []
         if r["class_date"]:
             series_dates[s_key].append(r["class_date"])
-    series_derived_weeks = {
-        s_key: _derive_series_weeks(dates)
-        for s_key, dates in series_dates.items()
-    }
+    series_derived_weeks = {s_key: _derive_series_weeks(dates) for s_key, dates in series_dates.items()}
     attendance_overrides_map = {
-        (o["class_id"], str(o["occurrence_date"])): bool(o["attend_in_person"])
-        for o in attendance_overrides
+        (o["class_id"], str(o["occurrence_date"])): bool(o["attend_in_person"]) for o in attendance_overrides
     }
 
     class_results = []

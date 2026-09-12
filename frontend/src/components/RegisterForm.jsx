@@ -1,50 +1,50 @@
-import { useState } from "react"
-import { useNavigate, Link } from "react-router-dom"
-import { Eye, EyeOff, Loader2, AlertCircle, Check } from "lucide-react"
-import { register } from "../api"
-import AuthShell, { BrandMark } from "./AuthShell"
-import "./auth.css"
+import { useState } from "react";
+import { useNavigate, Link } from "react-router-dom";
+import { Eye, EyeOff, Loader2, AlertCircle, Check } from "lucide-react";
+import { register } from "../api";
+import AuthShell, { BrandMark } from "./AuthShell";
+import "./auth.css";
 
 function RegisterForm({ onLoginSuccess }) {
-  const navigate = useNavigate()
-  const [email, setEmail] = useState("")
-  const [password, setPassword] = useState("")
-  const [showPassword, setShowPassword] = useState(false)
-  const [message, setMessage] = useState("")
-  const [isError, setIsError] = useState(false)
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [didSucceed, setDidSucceed] = useState(false)
-  const [isShaking, setIsShaking] = useState(false)
+  const navigate = useNavigate();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [message, setMessage] = useState("");
+  const [isError, setIsError] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [didSucceed, setDidSucceed] = useState(false);
+  const [isShaking, setIsShaking] = useState(false);
 
   // The backend returns a session on register, so new accounts land straight
   // in the workspace instead of bouncing through the login form.
   const handleSubmit = async (event) => {
-    event.preventDefault()
-    setMessage("")
-    setIsError(false)
-    setIsSubmitting(true)
+    event.preventDefault();
+    setMessage("");
+    setIsError(false);
+    setIsSubmitting(true);
 
     try {
-      const session = await register({ email, password })
-      setDidSucceed(true)
+      const session = await register({ email, password });
+      setDidSucceed(true);
       window.setTimeout(() => {
-        onLoginSuccess(session)
-        navigate("/workspace", { replace: true })
-      }, 350)
+        onLoginSuccess(session);
+        navigate("/workspace", { replace: true });
+      }, 350);
     } catch (error) {
-      setMessage(error.message || "Registration failed")
-      setIsError(true)
-      setIsSubmitting(false)
-      setIsShaking(true)
+      setMessage(error.message || "Registration failed");
+      setIsError(true);
+      setIsSubmitting(false);
+      setIsShaking(true);
     }
-  }
+  };
 
   return (
     <AuthShell>
       <div
         className={isShaking ? "auth-poster--shake" : ""}
         onAnimationEnd={(e) => {
-          if (e.target === e.currentTarget) setIsShaking(false)
+          if (e.target === e.currentTarget) setIsShaking(false);
         }}
       >
         <BrandMark />
@@ -54,7 +54,9 @@ function RegisterForm({ onLoginSuccess }) {
 
         <form onSubmit={handleSubmit}>
           <div className="auth-field auth-rise" style={{ "--auth-delay": "380ms" }}>
-            <label className="auth-label" htmlFor="email">Email address</label>
+            <label className="auth-label" htmlFor="email">
+              Email address
+            </label>
             <input
               id="email"
               type="email"
@@ -68,8 +70,13 @@ function RegisterForm({ onLoginSuccess }) {
             />
           </div>
 
-          <div className="auth-field auth-field--with-toggle auth-rise" style={{ "--auth-delay": "440ms" }}>
-            <label className="auth-label" htmlFor="password">Password</label>
+          <div
+            className="auth-field auth-field--with-toggle auth-rise"
+            style={{ "--auth-delay": "440ms" }}
+          >
+            <label className="auth-label" htmlFor="password">
+              Password
+            </label>
             <input
               id="password"
               type={showPassword ? "text" : "password"}
@@ -104,7 +111,9 @@ function RegisterForm({ onLoginSuccess }) {
               {didSucceed ? (
                 <Check size={16} className="auth-check-pop" />
               ) : isSubmitting ? (
-                <><Loader2 size={15} className="retro-icon-spin" /> Creating account…</>
+                <>
+                  <Loader2 size={15} className="retro-icon-spin" /> Creating account…
+                </>
               ) : (
                 "Create account"
               )}
@@ -120,7 +129,7 @@ function RegisterForm({ onLoginSuccess }) {
         </form>
       </div>
     </AuthShell>
-  )
+  );
 }
 
-export default RegisterForm
+export default RegisterForm;

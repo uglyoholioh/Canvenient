@@ -7,42 +7,87 @@ from collections.abc import Iterable
 from database import db
 
 LEGACY_BALANCED_COLORS = [
-    "#4F7CFF", "#19A974", "#DE7548", "#A66DD4",
-    "#E05D7B", "#159CA4", "#C58B2A", "#66768C",
-    "#8D6748", "#4D8C65", "#B15D9B", "#6C73CC",
+    "#4F7CFF",
+    "#19A974",
+    "#DE7548",
+    "#A66DD4",
+    "#E05D7B",
+    "#159CA4",
+    "#C58B2A",
+    "#66768C",
+    "#8D6748",
+    "#4D8C65",
+    "#B15D9B",
+    "#6C73CC",
 ]
 
 MODULE_COLOR_PALETTES = {
     "balanced": {
         "name": "Timetable",
         "colors": [
-            "#F0757C", "#6A9DCF", "#F4C55D", "#65C6C8",
-            "#99CA9B", "#F28C5A", "#9A82D4", "#D978A8",
-            "#5BB2D6", "#A7C65A", "#7C89C8", "#C98562",
+            "#F0757C",
+            "#6A9DCF",
+            "#F4C55D",
+            "#65C6C8",
+            "#99CA9B",
+            "#F28C5A",
+            "#9A82D4",
+            "#D978A8",
+            "#5BB2D6",
+            "#A7C65A",
+            "#7C89C8",
+            "#C98562",
         ],
     },
     "coastal": {
         "name": "Coastal",
         "colors": [
-            "#167D9A", "#2C6EAD", "#3C8D7C", "#5597C4",
-            "#2F9EAA", "#617CC4", "#4F8175", "#3287B4",
-            "#6B8E9A", "#4074A8", "#3E9A91", "#637FA8",
+            "#167D9A",
+            "#2C6EAD",
+            "#3C8D7C",
+            "#5597C4",
+            "#2F9EAA",
+            "#617CC4",
+            "#4F8175",
+            "#3287B4",
+            "#6B8E9A",
+            "#4074A8",
+            "#3E9A91",
+            "#637FA8",
         ],
     },
     "earth": {
         "name": "Earth",
         "colors": [
-            "#A35D3B", "#647A45", "#B07B32", "#7E6751",
-            "#477A67", "#9B5F62", "#7D7140", "#6F5E83",
-            "#4F7E85", "#8C6941", "#5D755D", "#9A684F",
+            "#A35D3B",
+            "#647A45",
+            "#B07B32",
+            "#7E6751",
+            "#477A67",
+            "#9B5F62",
+            "#7D7140",
+            "#6F5E83",
+            "#4F7E85",
+            "#8C6941",
+            "#5D755D",
+            "#9A684F",
         ],
     },
     "vivid": {
         "name": "Vivid",
         "colors": [
-            "#246BFD", "#E04474", "#0A9E7A", "#9A55D1",
-            "#E36B24", "#008FA8", "#C58A00", "#5965D8",
-            "#C43D62", "#16865A", "#7D4BC4", "#D04E2E",
+            "#246BFD",
+            "#E04474",
+            "#0A9E7A",
+            "#9A55D1",
+            "#E36B24",
+            "#008FA8",
+            "#C58A00",
+            "#5965D8",
+            "#C43D62",
+            "#16865A",
+            "#7D4BC4",
+            "#D04E2E",
         ],
     },
 }
@@ -181,11 +226,7 @@ async def ensure_module_colors(
         """,
         values={"user_id": user_id},
     )
-    return {
-        row["module_code"]: row["color"]
-        for row in rows
-        if row["module_code"] in normalized
-    }
+    return {row["module_code"]: row["color"] for row in rows if row["module_code"] in normalized}
 
 
 async def ensure_discovered_module_colors(user_id: int) -> dict[str, str]:
@@ -217,6 +258,5 @@ async def ensure_discovered_module_colors(user_id: int) -> dict[str, str]:
 
 def public_palettes() -> list[dict[str, object]]:
     return [
-        {"id": key, "name": value["name"], "colors": value["colors"]}
-        for key, value in MODULE_COLOR_PALETTES.items()
+        {"id": key, "name": value["name"], "colors": value["colors"]} for key, value in MODULE_COLOR_PALETTES.items()
     ]

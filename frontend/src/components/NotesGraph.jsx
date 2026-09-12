@@ -1,5 +1,5 @@
-import { useMemo, useState, useEffect, useRef } from 'react';
-import ForceGraph2D from 'react-force-graph-2d';
+import { useMemo, useState, useEffect, useRef } from "react";
+import ForceGraph2D from "react-force-graph-2d";
 
 export default function NotesGraph({ notes, onNodeClick }) {
   const containerRef = useRef(null);
@@ -10,14 +10,14 @@ export default function NotesGraph({ notes, onNodeClick }) {
       if (containerRef.current) {
         setDimensions({
           width: containerRef.current.clientWidth,
-          height: containerRef.current.clientHeight
+          height: containerRef.current.clientHeight,
         });
       }
     };
-    
+
     updateDimensions();
-    window.addEventListener('resize', updateDimensions);
-    return () => window.removeEventListener('resize', updateDimensions);
+    window.addEventListener("resize", updateDimensions);
+    return () => window.removeEventListener("resize", updateDimensions);
   }, []);
 
   const graphData = useMemo(() => {
@@ -27,7 +27,7 @@ export default function NotesGraph({ notes, onNodeClick }) {
 
     const tagHubs = {};
 
-    notes.forEach(note => {
+    notes.forEach((note) => {
       nodes.push({
         id: note.id,
         name: note.title || "Untitled",
@@ -59,24 +59,24 @@ export default function NotesGraph({ notes, onNodeClick }) {
             edges.push({
               source: note.id,
               target: targetId,
-              isDirectLink: true
+              isDirectLink: true,
             });
           }
         }
       }
     });
 
-    Object.keys(classGroups).forEach(className => {
+    Object.keys(classGroups).forEach((className) => {
       const hubId = `hub_${className}`;
       nodes.push({
         id: hubId,
         name: className,
         group: className,
-        val: 2, 
+        val: 2,
         isHub: true,
       });
-      
-      classGroups[className].forEach(noteId => {
+
+      classGroups[className].forEach((noteId) => {
         edges.push({
           source: noteId,
           target: hubId,
@@ -84,17 +84,17 @@ export default function NotesGraph({ notes, onNodeClick }) {
       });
     });
 
-    Object.keys(tagHubs).forEach(tag => {
+    Object.keys(tagHubs).forEach((tag) => {
       const hubId = `tag_${tag}`;
       nodes.push({
         id: hubId,
         name: `#${tag}`,
-        group: 'tags',
+        group: "tags",
         val: 1.5,
         isTagHub: true,
       });
-      
-      tagHubs[tag].forEach(noteId => {
+
+      tagHubs[tag].forEach((noteId) => {
         edges.push({
           source: noteId,
           target: hubId,
@@ -106,7 +106,10 @@ export default function NotesGraph({ notes, onNodeClick }) {
   }, [notes]);
 
   return (
-    <div ref={containerRef} style={{ width: '100%', height: '100%', backgroundColor: 'var(--surface-muted)' }}>
+    <div
+      ref={containerRef}
+      style={{ width: "100%", height: "100%", backgroundColor: "var(--surface-muted)" }}
+    >
       {dimensions.width > 0 && (
         <ForceGraph2D
           width={dimensions.width}
@@ -124,27 +127,27 @@ export default function NotesGraph({ notes, onNodeClick }) {
             const label = node.name;
             const isSpecial = node.isHub || node.isTagHub;
             const fontSize = isSpecial ? 13 / globalScale : 10 / globalScale;
-            ctx.font = `${isSpecial ? 'bold ' : ''}${fontSize}px Sans-Serif`;
-            
+            ctx.font = `${isSpecial ? "bold " : ""}${fontSize}px Sans-Serif`;
+
             // Draw circle
             const r = isSpecial ? 7 : 4;
             ctx.beginPath();
             ctx.arc(node.x, node.y, r, 0, 2 * Math.PI, false);
-            
+
             if (node.isTagHub) {
-              ctx.fillStyle = '#0a84ff'; // Blue for tags
+              ctx.fillStyle = "#0a84ff"; // Blue for tags
             } else if (node.isHub) {
-              ctx.fillStyle = '#ff9f0a'; // Orange for classes
+              ctx.fillStyle = "#ff9f0a"; // Orange for classes
             } else {
-              ctx.fillStyle = node.color || '#98989d'; // Gray for standard notes
+              ctx.fillStyle = node.color || "#98989d"; // Gray for standard notes
             }
             ctx.fill();
 
             // Label
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'top';
-            ctx.fillStyle = 'var(--text-h)';
-            ctx.shadowColor = 'var(--surface-muted)';
+            ctx.textAlign = "center";
+            ctx.textBaseline = "top";
+            ctx.fillStyle = "var(--text-h)";
+            ctx.shadowColor = "var(--surface-muted)";
             ctx.shadowBlur = 4;
             ctx.shadowOffsetX = 0;
             ctx.shadowOffsetY = 0;
@@ -153,14 +156,14 @@ export default function NotesGraph({ notes, onNodeClick }) {
           }}
           nodePointerAreaPaint={(node, color, ctx) => {
             ctx.fillStyle = color;
-            const r = (node.isHub || node.isTagHub) ? 7 : 4;
+            const r = node.isHub || node.isTagHub ? 7 : 4;
             ctx.beginPath();
             ctx.arc(node.x, node.y, r + 4, 0, 2 * Math.PI, false);
             ctx.fill();
           }}
-          linkColor={(link) => link.isDirectLink ? 'var(--blue)' : 'var(--border-strong)'}
-          linkWidth={(link) => link.isDirectLink ? 2 : 1}
-          linkLineDash={(link) => link.isDirectLink ? [4, 4] : null}
+          linkColor={(link) => (link.isDirectLink ? "var(--blue)" : "var(--border-strong)")}
+          linkWidth={(link) => (link.isDirectLink ? 2 : 1)}
+          linkLineDash={(link) => (link.isDirectLink ? [4, 4] : null)}
           d3AlphaDecay={0.02}
           d3VelocityDecay={0.3}
           cooldownTicks={100}

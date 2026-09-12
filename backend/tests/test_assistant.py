@@ -20,9 +20,7 @@ pytestmark = pytest.mark.asyncio
 async def test_parse_requires_ai(client: AsyncClient, auth, monkeypatch):
     token, _, _ = auth
     monkeypatch.delenv("MODEL_API_KEY", raising=False)
-    resp = await client.post(
-        "/assistant/parse", json={"text": "lab report due friday"}, headers=auth_headers(token)
-    )
+    resp = await client.post("/assistant/parse", json={"text": "lab report due friday"}, headers=auth_headers(token))
     assert resp.status_code == 503
 
 

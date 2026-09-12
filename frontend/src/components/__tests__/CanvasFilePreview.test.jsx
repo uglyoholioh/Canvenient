@@ -1,5 +1,5 @@
 // React is required by the test JSX transform.
- 
+
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { downloadCanvasFile, fetchCanvasFileContent, getCanvasFolders } from "../../api";
@@ -13,7 +13,11 @@ vi.mock("../../api", () => ({
 
 vi.mock("../PdfViewer", () => ({
   default: (props) => (
-    <div data-testid="pdf-viewer-stub" data-file-id={String(props.fileId)} data-external-url={props.externalUrl} />
+    <div
+      data-testid="pdf-viewer-stub"
+      data-file-id={String(props.fileId)}
+      data-external-url={props.externalUrl}
+    />
   ),
 }));
 
@@ -64,14 +68,32 @@ describe("FileBrowser PDF preview", () => {
     await waitFor(() => expect(document.querySelector(".cv-files-split.is-pdf-focus")).toBeNull());
 
     fireEvent.click(screen.getByRole("button", { name: "Read full width" }));
-    await waitFor(() => expect(document.querySelector(".cv-files-split.is-pdf-focus")).not.toBeNull());
+    await waitFor(() =>
+      expect(document.querySelector(".cv-files-split.is-pdf-focus")).not.toBeNull(),
+    );
   });
 
   it("keeps non-pdf files in the side preview pane", async () => {
-    render(<FileBrowser token="token" courseId={1} allFiles={[{ ...pdfFile, id: 7, display_name: "diagram.png", filename: "diagram.png", content_type: "image/png" }]} />);
+    render(
+      <FileBrowser
+        token="token"
+        courseId={1}
+        allFiles={[
+          {
+            ...pdfFile,
+            id: 7,
+            display_name: "diagram.png",
+            filename: "diagram.png",
+            content_type: "image/png",
+          },
+        ]}
+      />,
+    );
     fireEvent.click(await screen.findByText("diagram.png"));
 
-    await waitFor(() => expect(document.querySelector(".cv-file-preview-aside img")).not.toBeNull());
+    await waitFor(() =>
+      expect(document.querySelector(".cv-file-preview-aside img")).not.toBeNull(),
+    );
     expect(document.querySelector(".cv-files-split.is-pdf-focus")).toBeNull();
   });
 
@@ -81,7 +103,9 @@ describe("FileBrowser PDF preview", () => {
     const downloadButtons = await screen.findAllByTitle("Download");
     fireEvent.click(downloadButtons[0]);
 
-    await waitFor(() => expect(downloadCanvasFile).toHaveBeenCalledWith("token", 42, "lecture-03.pdf"));
+    await waitFor(() =>
+      expect(downloadCanvasFile).toHaveBeenCalledWith("token", 42, "lecture-03.pdf"),
+    );
   });
 
   it("does not fetch file content for types without an inline preview", async () => {
@@ -93,14 +117,23 @@ describe("FileBrowser PDF preview", () => {
 
   it("matches files by their folder name, not only the filename", async () => {
     getCanvasFolders.mockResolvedValue([
-      { id: 5, name: "Lectures", full_name: "Lectures", parent_folder_id: null, files_count: 1, folders_count: 0 },
+      {
+        id: 5,
+        name: "Lectures",
+        full_name: "Lectures",
+        parent_folder_id: null,
+        files_count: 1,
+        folders_count: 0,
+      },
     ]);
     render(
       <FileBrowser
         token="token"
         courseId={1}
-        allFiles={[{ ...pdfFile, id: 9, display_name: "data.csv", filename: "data.csv", folder_id: 5 }]}
-      />
+        allFiles={[
+          { ...pdfFile, id: 9, display_name: "data.csv", filename: "data.csv", folder_id: 5 },
+        ]}
+      />,
     );
     // Wait for the folder tree to load first.
     await waitFor(() => expect(document.querySelector(".cv-ftree-label")).not.toBeNull());

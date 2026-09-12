@@ -50,8 +50,8 @@
   --width-mac-sidebar-compact: 58px;
   --radius-mac-control: 6px;
   --radius-mac-panel: 10px;
-  --shadow-mac-overlay: 2px 0 8px rgba(0,0,0,0.1);
-  --shadow-mac-sheet: 0 2px 8px rgba(0,0,0,0.1);
+  --shadow-mac-overlay: 2px 0 8px rgba(0, 0, 0, 0.1);
+  --shadow-mac-sheet: 0 2px 8px rgba(0, 0, 0, 0.1);
 
   --color-schedule-paper: var(--bg);
   --color-schedule-surface: var(--surface);

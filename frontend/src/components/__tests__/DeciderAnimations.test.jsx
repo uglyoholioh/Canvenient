@@ -112,7 +112,10 @@ describe("Decider Animation Styles", () => {
       // Switch back to Terminal
       fireEvent.click(screen.getByRole("button", { name: /^Terminal$/i }));
       expect(screen.getByRole("button", { name: /CYCLE FLAPS/i })).toBeInTheDocument();
-      expect(window.localStorage.setItem).toHaveBeenCalledWith("canvenient-decider-style", "splitflap");
+      expect(window.localStorage.setItem).toHaveBeenCalledWith(
+        "canvenient-decider-style",
+        "splitflap",
+      );
     });
   });
 });

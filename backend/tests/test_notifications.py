@@ -22,7 +22,9 @@ async def _create_notification(user_id: int, message: str = "Test notification")
         values={"uid": user_id, "title": message, "desc": message},
     )
     if not row:
-        row = await db.fetch_one("SELECT MAX(id) AS id FROM notifications WHERE user_id = :uid", values={"uid": user_id})
+        row = await db.fetch_one(
+            "SELECT MAX(id) AS id FROM notifications WHERE user_id = :uid", values={"uid": user_id}
+        )
     return row["id"]
 
 

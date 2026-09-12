@@ -39,7 +39,7 @@ export default function AssistantBriefCard({ token }) {
         .catch((err) => setError(err.message || "Could not load your brief."))
         .finally(() => setLoading(false));
     },
-    [token]
+    [token],
   );
 
   useEffect(() => {
@@ -100,7 +100,9 @@ export default function AssistantBriefCard({ token }) {
                 {brief.classes.map((c, i) => (
                   <li key={i}>
                     <span className="brief-card-time">{formatTime(c.start)}</span>
-                    <span className="brief-card-main">{c.code} {c.type}</span>
+                    <span className="brief-card-main">
+                      {c.code} {c.type}
+                    </span>
                     {c.venue && <span className="brief-card-sub">{c.venue}</span>}
                   </li>
                 ))}

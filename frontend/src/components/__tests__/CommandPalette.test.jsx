@@ -9,7 +9,7 @@ function renderPalette(props = {}) {
   return render(
     <MemoryRouter initialEntries={["/"]}>
       <CommandPalette isOpen onClose={() => {}} {...props} />
-    </MemoryRouter>
+    </MemoryRouter>,
   );
 }
 
@@ -22,7 +22,7 @@ describe("CommandPalette", () => {
     const { container } = render(
       <MemoryRouter initialEntries={["/"]}>
         <CommandPalette isOpen={false} onClose={() => {}} />
-      </MemoryRouter>
+      </MemoryRouter>,
     );
     expect(container).toBeEmptyDOMElement();
   });

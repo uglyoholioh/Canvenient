@@ -174,9 +174,7 @@ def _distance_in_metres(latitude: float, longitude: float, stop: dict) -> float:
     destination_latitude = math.radians(stop_latitude)
     a = (
         math.sin(latitude_delta / 2) ** 2
-        + math.cos(origin_latitude)
-        * math.cos(destination_latitude)
-        * math.sin(longitude_delta / 2) ** 2
+        + math.cos(origin_latitude) * math.cos(destination_latitude) * math.sin(longitude_delta / 2) ** 2
     )
     return 6371000 * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
 
@@ -216,13 +214,15 @@ def _normalise_route_stops(payload: dict, service: str) -> list[dict]:
         longitude = raw_stop.get("lng")
         if not stop_id or not isinstance(latitude, (int, float)) or not isinstance(longitude, (int, float)):
             continue
-        stops.append({
-            "id": stop_id,
-            "name": raw_stop.get("LongName") or raw_stop.get("pickupname") or stop_id,
-            "latitude": latitude,
-            "longitude": longitude,
-            "sequence": int(raw_stop.get("seq") or 0),
-        })
+        stops.append(
+            {
+                "id": stop_id,
+                "name": raw_stop.get("LongName") or raw_stop.get("pickupname") or stop_id,
+                "latitude": latitude,
+                "longitude": longitude,
+                "sequence": int(raw_stop.get("seq") or 0),
+            }
+        )
     return sorted(stops, key=lambda stop: stop["sequence"])
 
 
@@ -234,7 +234,7 @@ def _route_segment(route_stops: list[dict], origin_id: str, destination_id: str)
         for destination_index in range(origin_index + 1, len(route_stops)):
             if route_stops[destination_index]["id"] != destination_id:
                 continue
-            segment = route_stops[origin_index: destination_index + 1]
+            segment = route_stops[origin_index : destination_index + 1]
             if best is None or len(segment) < len(best):
                 best = segment
             break
@@ -318,15 +318,17 @@ async def search_campus_places(
     for stop in stops:
         fields = [stop["id"], stop["name"], stop["short_name"]]
         if any(normalised_query in _normalise_text(str(field)) for field in fields):
-            matching_stops.append({
-                "id": f"bus-stop:{stop['id']}",
-                "name": stop["name"],
-                "subtitle": f"NUS ISB stop · {stop['short_name']}",
-                "latitude": stop["latitude"],
-                "longitude": stop["longitude"],
-                "kind": "bus_stop",
-                "stop_id": stop["id"],
-            })
+            matching_stops.append(
+                {
+                    "id": f"bus-stop:{stop['id']}",
+                    "name": stop["name"],
+                    "subtitle": f"NUS ISB stop · {stop['short_name']}",
+                    "latitude": stop["latitude"],
+                    "longitude": stop["longitude"],
+                    "kind": "bus_stop",
+                    "stop_id": stop["id"],
+                }
+            )
 
     raw_places = await _fetch_place_results(query)
     places = []
@@ -354,14 +356,16 @@ async def search_campus_places(
             str(raw_place.get("location_name") or "").strip(),
             str(raw_place.get("campus_name") or "").strip(),
         ]
-        places.append({
-            "id": f"{raw_place.get('tbl') or 'place'}:{raw_place.get('id') or len(places)}",
-            "name": name,
-            "subtitle": next((part for part in subtitle_parts if part and part != name), "NUS campus location"),
-            "latitude": latitude,
-            "longitude": longitude,
-            "kind": "location",
-        })
+        places.append(
+            {
+                "id": f"{raw_place.get('tbl') or 'place'}:{raw_place.get('id') or len(places)}",
+                "name": name,
+                "subtitle": next((part for part in subtitle_parts if part and part != name), "NUS campus location"),
+                "latitude": latitude,
+                "longitude": longitude,
+                "kind": "location",
+            }
+        )
 
     def result_rank(place: dict):
         name = _normalise_text(place["name"])
@@ -436,17 +440,19 @@ async def plan_campus_trip(payload: CampusTripRequest, _: CurrentUser):
     if not services:
         raise HTTPException(status_code=502, detail="NUS bus routes are temporarily unavailable.")
 
-    route_payloads = await asyncio.gather(*[
-        _cached_payload(f"route:{service}", "/api/pickup-point", {"route_code": service})
-        for service in services
-    ])
+    route_payloads = await asyncio.gather(
+        *[_cached_payload(f"route:{service}", "/api/pickup-point", {"route_code": service}) for service in services]
+    )
     routes = {
         service: _normalise_route_stops(route_payload, service)
         for service, route_payload in zip(services, route_payloads, strict=False)
     }
 
     all_origins = sorted(
-        ({**stop, "distance": _distance_in_metres(payload.from_latitude, payload.from_longitude, stop)} for stop in stops),
+        (
+            {**stop, "distance": _distance_in_metres(payload.from_latitude, payload.from_longitude, stop)}
+            for stop in stops
+        ),
         key=lambda stop: stop["distance"],
     )
     all_destinations = sorted(
@@ -456,8 +462,12 @@ async def plan_campus_trip(payload: CampusTripRequest, _: CurrentUser):
     # Restrict candidates to stops within walking distance. Always keep the
     # nearest stop as a fallback so a cutoff never produces an empty result.
     # MAX_STOP_CANDIDATES = 3 matches NavUS's NUM_SOURCES / NUM_DESTS.
-    nearest_origins = [s for s in all_origins[:MAX_STOP_CANDIDATES] if s["distance"] <= MAX_WALK_METRES] or all_origins[:1]
-    nearest_destinations = [s for s in all_destinations[:MAX_STOP_CANDIDATES] if s["distance"] <= MAX_WALK_METRES] or all_destinations[:1]
+    nearest_origins = [s for s in all_origins[:MAX_STOP_CANDIDATES] if s["distance"] <= MAX_WALK_METRES] or all_origins[
+        :1
+    ]
+    nearest_destinations = [
+        s for s in all_destinations[:MAX_STOP_CANDIDATES] if s["distance"] <= MAX_WALK_METRES
+    ] or all_destinations[:1]
 
     candidates = []
     for service, route_stops in routes.items():
@@ -472,20 +482,24 @@ async def plan_campus_trip(payload: CampusTripRequest, _: CurrentUser):
                     _distance_in_metres(stop["latitude"], stop["longitude"], next_stop)
                     for stop, next_stop in zip(segment, segment[1:], strict=False)
                 )
-                candidates.append({
-                    "service": service,
-                    "origin": origin,
-                    "destination": destination,
-                    "segment": segment,
-                    "route_distance": route_distance,
-                    # Destination proximity is weighted 1.5× — passengers care more
-                    # about where they get off than where they board. The final sort
-                    # by total_minutes naturally handles cases where the closest
-                    # destination stop has a significantly worse bus wait time.
-                    # The bus-distance multiplier converts route metres to an equivalent
-                    # walk-metre cost using the speed ratio (walk ÷ bus).
-                    "geometric_score": origin["distance"] + destination["distance"] * 1.5 + route_distance * (WALK_SPEED_M_PER_MIN / BUS_SPEED_M_PER_MIN),
-                })
+                candidates.append(
+                    {
+                        "service": service,
+                        "origin": origin,
+                        "destination": destination,
+                        "segment": segment,
+                        "route_distance": route_distance,
+                        # Destination proximity is weighted 1.5× — passengers care more
+                        # about where they get off than where they board. The final sort
+                        # by total_minutes naturally handles cases where the closest
+                        # destination stop has a significantly worse bus wait time.
+                        # The bus-distance multiplier converts route metres to an equivalent
+                        # walk-metre cost using the speed ratio (walk ÷ bus).
+                        "geometric_score": origin["distance"]
+                        + destination["distance"] * 1.5
+                        + route_distance * (WALK_SPEED_M_PER_MIN / BUS_SPEED_M_PER_MIN),
+                    }
+                )
 
     candidates.sort(key=lambda candidate: candidate["geometric_score"])
     unique_candidates = []
@@ -507,19 +521,19 @@ async def plan_campus_trip(payload: CampusTripRequest, _: CurrentUser):
             "message": "No direct NUS ISB route was found between nearby stops.",
         }
 
-    arrival_stop_ids = sorted({
-        candidate[side]["id"]
-        for candidate in unique_candidates
-        for side in ("origin", "destination")
-    })
-    arrival_payloads = await asyncio.gather(*[
-        _cached_payload(
-            f"arrivals:{stop_id}",
-            "/api/shuttle-service",
-            {"busstopname": stop_id},
-        )
-        for stop_id in arrival_stop_ids
-    ])
+    arrival_stop_ids = sorted(
+        {candidate[side]["id"] for candidate in unique_candidates for side in ("origin", "destination")}
+    )
+    arrival_payloads = await asyncio.gather(
+        *[
+            _cached_payload(
+                f"arrivals:{stop_id}",
+                "/api/shuttle-service",
+                {"busstopname": stop_id},
+            )
+            for stop_id in arrival_stop_ids
+        ]
+    )
     arrivals_by_stop = dict(zip(arrival_stop_ids, arrival_payloads, strict=False))
 
     now = datetime.now(timezone.utc)
@@ -535,9 +549,7 @@ async def plan_campus_trip(payload: CampusTripRequest, _: CurrentUser):
         walk_to_stop_minutes = max(1, math.ceil(origin["distance"] / WALK_SPEED_M_PER_MIN))
         walk_from_stop_minutes = max(1, math.ceil(destination["distance"] / WALK_SPEED_M_PER_MIN))
         arrival_minutes = sorted(
-            minute
-            for eta in origin_etas
-            if (minute := _arrival_minutes(eta.get("eta"))) is not None
+            minute for eta in origin_etas if (minute := _arrival_minutes(eta.get("eta"))) is not None
         )
         wait_minutes = next(
             (minute for minute in arrival_minutes if minute >= walk_to_stop_minutes + 1),
@@ -546,27 +558,31 @@ async def plan_campus_trip(payload: CampusTripRequest, _: CurrentUser):
         effective_wait = wait_minutes if wait_minutes is not None else max(15, walk_to_stop_minutes + 5)
         stop_arrival_minutes = effective_wait + bus_travel_minutes
         total_minutes = stop_arrival_minutes + walk_from_stop_minutes
-        planned_routes.append({
-            "service": service,
-            "from_stop": {"id": origin["id"], "name": origin["name"]},
-            "to_stop": {"id": destination["id"], "name": destination["name"]},
-            "walking_to_stop_metres": round(origin["distance"]),
-            "walking_from_stop_metres": round(destination["distance"]),
-            "next_bus_minutes": wait_minutes,
-            "bus_travel_minutes": bus_travel_minutes,
-            "travel_time_source": "live" if live_travel_minutes else "estimated",
-            "stops_count": len(candidate["segment"]) - 1,
-            "stops": [stop["name"] for stop in candidate["segment"]],
-            "stop_arrival_at": (now + timedelta(minutes=stop_arrival_minutes)).isoformat(),
-            "destination_arrival_at": (now + timedelta(minutes=total_minutes)).isoformat(),
-            "total_minutes": total_minutes,
-        })
+        planned_routes.append(
+            {
+                "service": service,
+                "from_stop": {"id": origin["id"], "name": origin["name"]},
+                "to_stop": {"id": destination["id"], "name": destination["name"]},
+                "walking_to_stop_metres": round(origin["distance"]),
+                "walking_from_stop_metres": round(destination["distance"]),
+                "next_bus_minutes": wait_minutes,
+                "bus_travel_minutes": bus_travel_minutes,
+                "travel_time_source": "live" if live_travel_minutes else "estimated",
+                "stops_count": len(candidate["segment"]) - 1,
+                "stops": [stop["name"] for stop in candidate["segment"]],
+                "stop_arrival_at": (now + timedelta(minutes=stop_arrival_minutes)).isoformat(),
+                "destination_arrival_at": (now + timedelta(minutes=total_minutes)).isoformat(),
+                "total_minutes": total_minutes,
+            }
+        )
 
-    planned_routes.sort(key=lambda route: (
-        route["next_bus_minutes"] is None,
-        route["total_minutes"],
-        route["stops_count"],
-    ))
+    planned_routes.sort(
+        key=lambda route: (
+            route["next_bus_minutes"] is None,
+            route["total_minutes"],
+            route["stops_count"],
+        )
+    )
     return {
         "from": payload.from_name,
         "to": payload.to_name,

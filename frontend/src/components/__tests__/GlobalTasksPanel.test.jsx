@@ -1,5 +1,5 @@
 // React is required by the test JSX transform.
- 
+
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import GlobalTasksPanel from "../GlobalTasksPanel";
@@ -11,7 +11,12 @@ vi.mock("../TaskView", () => ({
 describe("GlobalTasksPanel", () => {
   it("closes on Escape and keeps Tab navigation inside the overlay", () => {
     const onClose = vi.fn();
-    render(<><button type="button">Background control</button><GlobalTasksPanel token="token" isOpen onClose={onClose} onOpenFull={() => {}} /></>);
+    render(
+      <>
+        <button type="button">Background control</button>
+        <GlobalTasksPanel token="token" isOpen onClose={onClose} onOpenFull={() => {}} />
+      </>,
+    );
 
     const dialog = screen.getByRole("dialog", { name: "Tasks" });
     const close = screen.getByRole("button", { name: "Close Tasks panel" });

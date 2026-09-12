@@ -247,7 +247,11 @@ export default function SplitFlapDecider({
               color: isSpinning ? "var(--accent, #38bdf8)" : "var(--text-muted)",
             }}
           >
-            {isSpinning ? "STATUS: CYCLING FLAPS" : isLocked ? "STATUS: SELECTION LOCKED" : "STATUS: STANDBY"}
+            {isSpinning
+              ? "STATUS: CYCLING FLAPS"
+              : isLocked
+                ? "STATUS: SELECTION LOCKED"
+                : "STATUS: STANDBY"}
           </span>
         </div>
 

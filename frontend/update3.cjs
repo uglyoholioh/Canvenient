@@ -1,12 +1,12 @@
-const fs = require('fs');
+const fs = require("fs");
 
-let content = fs.readFileSync('src/components/VenueFinder.jsx', 'utf8');
+let content = fs.readFileSync("src/components/VenueFinder.jsx", "utf8");
 
 // 1. Add Star to lucide-react imports
-content = content.replace('Search,', 'Search,\n  Star,');
+content = content.replace("Search,", "Search,\n  Star,");
 
 // 2. Add starredVenues state
-const stateHookPos = content.indexOf('const [inspectedVenue, setInspectedVenue] = useState(null);');
+const stateHookPos = content.indexOf("const [inspectedVenue, setInspectedVenue] = useState(null);");
 const stateInject = `const [inspectedVenue, setInspectedVenue] = useState(null);
   
   const [starredVenues, setStarredVenues] = useState(() => {
@@ -27,7 +27,12 @@ const stateInject = `const [inspectedVenue, setInspectedVenue] = useState(null);
     try { window.localStorage.setItem("canvenient.venues.starred", JSON.stringify(newStarred)); } catch(e) {}
   };
 `;
-content = content.substring(0, stateHookPos) + stateInject + content.substring(stateHookPos + 'const [inspectedVenue, setInspectedVenue] = useState(null);'.length);
+content =
+  content.substring(0, stateHookPos) +
+  stateInject +
+  content.substring(
+    stateHookPos + "const [inspectedVenue, setInspectedVenue] = useState(null);".length,
+  );
 
 // 3. Update the sorting logic to account for starredVenues
 const sortLogic = `list.sort((a, b) => {
@@ -102,7 +107,7 @@ const segmentDiv = `return (
                         title={tooltip}
                       />
                     );`;
-                    
+
 const newSegmentDiv = `return (
                       <div
                         key={idx}
@@ -116,7 +121,9 @@ const newSegmentDiv = `return (
 content = content.replace(segmentDiv, newSegmentDiv);
 
 // 6. Make sure starredVenues is a dependency of the useMemo
-content = content.replace('minDuration, userCoords]);', 'minDuration, userCoords, starredVenues]);');
+content = content.replace(
+  "minDuration, userCoords]);",
+  "minDuration, userCoords, starredVenues]);",
+);
 
-fs.writeFileSync('src/components/VenueFinder.jsx', content);
-
+fs.writeFileSync("src/components/VenueFinder.jsx", content);

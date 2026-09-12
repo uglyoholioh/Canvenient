@@ -39,9 +39,7 @@ async def test_assistant_brief_builds_context_on_sqlite(client: AsyncClient, aut
 async def test_sync_canvas_tasks_on_sqlite(client: AsyncClient, auth, monkeypatch):
     """The sync delete/update statements must run on SQLite without swallowing errors."""
     token, user_id, _ = auth
-    monkeypatch.setattr(
-        "routes.tasks.sync_canvas_courses_as_academic_modules", AsyncMock(return_value=None)
-    )
+    monkeypatch.setattr("routes.tasks.sync_canvas_courses_as_academic_modules", AsyncMock(return_value=None))
     monkeypatch.setattr("routes.tasks.list_canvas_assignments", AsyncMock(return_value=[]))
 
     resp = await client.post("/tasks/sync-canvas", headers=auth_headers(token))
@@ -81,9 +79,7 @@ async def test_study_session_summary_and_leaderboard_on_sqlite(client: AsyncClie
     assert len(entries) == 1
     assert entries[0]["completed_sessions"] == 1
 
-    leaderboard_day = await client.get(
-        "/study-sessions/leaderboard?period=day", headers=auth_headers(token)
-    )
+    leaderboard_day = await client.get("/study-sessions/leaderboard?period=day", headers=auth_headers(token))
     assert leaderboard_day.status_code == 200, leaderboard_day.text
 
 

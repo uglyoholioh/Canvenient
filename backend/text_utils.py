@@ -14,8 +14,20 @@ class HTMLTextExtractor(HTMLParser):
         if tag_lower in ("script", "style", "head", "title", "meta", "noscript"):
             self.hide_output = True
         elif tag_lower in (
-            "p", "div", "h1", "h2", "h3", "h4", "h5", "h6",
-            "tr", "table", "section", "article", "blockquote", "pre"
+            "p",
+            "div",
+            "h1",
+            "h2",
+            "h3",
+            "h4",
+            "h5",
+            "h6",
+            "tr",
+            "table",
+            "section",
+            "article",
+            "blockquote",
+            "pre",
         ):
             self.result.append("\n")
         elif tag_lower in ("br", "hr"):
@@ -28,8 +40,20 @@ class HTMLTextExtractor(HTMLParser):
         if tag_lower in ("script", "style", "head", "title", "meta", "noscript"):
             self.hide_output = False
         elif tag_lower in (
-            "p", "div", "h1", "h2", "h3", "h4", "h5", "h6",
-            "tr", "table", "section", "article", "blockquote", "pre"
+            "p",
+            "div",
+            "h1",
+            "h2",
+            "h3",
+            "h4",
+            "h5",
+            "h6",
+            "tr",
+            "table",
+            "section",
+            "article",
+            "blockquote",
+            "pre",
         ):
             self.result.append("\n")
 

@@ -1,6 +1,5 @@
 """Pure-logic tests for the assistant layer (no DB, no asyncio mark)."""
 
-
 import pytest
 
 from ai.assistant import _normalize_parse, _sanitize_chat
@@ -136,5 +135,3 @@ def test_sanitize_chat_keeps_only_real_resources():
     assert cleaned["actions"][0]["priority"] == "high"
     assert cleaned["actions"][1]["due_at"] is None
     assert cleaned["actions"][1]["priority"] is None
-
-

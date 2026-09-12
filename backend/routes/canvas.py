@@ -32,12 +32,13 @@ async def attach_course_colors(user_id: int, courses: list[dict[str, Any]]) -> l
     ]
 
 
-
 class DismissAnnouncementRequest(BaseModel):
     announcement_id: int
 
+
 class ValidateTokenRequest(BaseModel):
     token: str
+
 
 class CanvasSubmissionRequest(BaseModel):
     type: str
@@ -147,8 +148,7 @@ async def fetch_assignment_submission(
 ) -> dict[str, Any]:
     try:
         response = await client.get(
-            "https://canvas.nus.edu.sg/api/v1/courses/"
-            f"{course_id}/assignments/{assignment_id}/submissions/self",
+            f"https://canvas.nus.edu.sg/api/v1/courses/{course_id}/assignments/{assignment_id}/submissions/self",
             headers=headers,
             timeout=5.0,
         )
@@ -178,8 +178,7 @@ async def list_canvas_courses(
     try:
         async with httpx.AsyncClient() as client:
             response = await client.get(
-                "https://canvas.nus.edu.sg/api/v1/courses"
-                "?enrollment_state=active&per_page=50",
+                "https://canvas.nus.edu.sg/api/v1/courses?enrollment_state=active&per_page=50",
                 headers=headers,
                 timeout=5.0,
             )
@@ -255,7 +254,7 @@ async def list_canvas_announcements(
     try:
         dismissed_rows = await db.fetch_all(
             "SELECT announcement_id FROM dismissed_canvas_announcements WHERE user_id = :user_id",
-            {"user_id": current_user.id}
+            {"user_id": current_user.id},
         )
         dismissed_ids = {row["announcement_id"] for row in dismissed_rows}
     except Exception:
@@ -309,11 +308,7 @@ async def list_canvas_announcements(
     result = []
     for ann in announcements:
         context_code = ann.get("context_code") or ""
-        course_id = (
-            int(context_code.replace("course_", ""))
-            if context_code.startswith("course_")
-            else None
-        )
+        course_id = int(context_code.replace("course_", "")) if context_code.startswith("course_") else None
 
         course_code = ""
         for c in courses:
@@ -356,10 +351,7 @@ async def list_canvas_announcements(
                 "posted_at": ann.get("posted_at"),
                 "author": ann.get("author", {}).get("display_name") or "Instructor",
                 "is_priority": is_priority,
-                "external_url": (
-                    f"https://canvas.nus.edu.sg/courses/{course_id}"
-                    f"/discussion_topics/{ann['id']}"
-                ),
+                "external_url": (f"https://canvas.nus.edu.sg/courses/{course_id}/discussion_topics/{ann['id']}"),
             }
         )
 
@@ -368,9 +360,7 @@ async def list_canvas_announcements(
     return attach_dismissed(result)
 
 
-async def fetch_course_assignments(
-    client: httpx.AsyncClient, headers: dict, course: dict
-):
+async def fetch_course_assignments(client: httpx.AsyncClient, headers: dict, course: dict):
     course_id = course["id"]
     url = f"https://canvas.nus.edu.sg/api/v1/courses/{course_id}/assignments"
 
@@ -401,12 +391,8 @@ async def fetch_course_assignments(
         due_at = asgn.get("due_at")
         submission = asgn.get("submission")
         if submission is None:
-            submission = await fetch_assignment_submission(
-                client, headers, course_id, assignment_id
-            )
-        has_submitted = bool(
-            asgn.get("has_submitted_submissions") or has_canvas_submission(submission)
-        )
+            submission = await fetch_assignment_submission(client, headers, course_id, assignment_id)
+        has_submitted = bool(asgn.get("has_submitted_submissions") or has_canvas_submission(submission))
         is_priority = False
 
         if due_at:
@@ -427,17 +413,12 @@ async def fetch_course_assignments(
                 "due_at": due_at,
                 "is_priority": is_priority,
                 "external_url": asgn.get("html_url")
-                or (
-                    f"https://canvas.nus.edu.sg/courses/{course['id']}"
-                    f"/assignments/{assignment_id}"
-                ),
+                or (f"https://canvas.nus.edu.sg/courses/{course['id']}/assignments/{assignment_id}"),
                 "description": asgn.get("description", "") or "",
                 "has_submitted": has_submitted,
             }
         )
     return result
-
-
 
 
 @router.post("/announcements/dismiss", response_model=dict[str, Any])
@@ -450,12 +431,12 @@ async def dismiss_canvas_announcement(
         if is_sqlite:
             await db.execute(
                 "INSERT OR IGNORE INTO dismissed_canvas_announcements (user_id, announcement_id) VALUES (:user_id, :announcement_id)",
-                {"user_id": current_user.id, "announcement_id": req.announcement_id}
+                {"user_id": current_user.id, "announcement_id": req.announcement_id},
             )
         else:
             await db.execute(
                 "INSERT INTO dismissed_canvas_announcements (user_id, announcement_id) VALUES (:user_id, :announcement_id) ON CONFLICT DO NOTHING",
-                {"user_id": current_user.id, "announcement_id": req.announcement_id}
+                {"user_id": current_user.id, "announcement_id": req.announcement_id},
             )
     except Exception:
         raise HTTPException(status_code=500, detail="Failed to dismiss announcement") from None
@@ -485,9 +466,7 @@ async def list_canvas_assignments(
 
     try:
         async with httpx.AsyncClient() as client:
-            tasks = [
-                fetch_course_assignments(client, headers, course) for course in courses
-            ]
+            tasks = [fetch_course_assignments(client, headers, course) for course in courses]
             all_results = await asyncio.gather(*tasks, return_exceptions=True)
     except Exception:
         stale_data, _ = await get_canvas_cache(current_user.id, "assignments")
@@ -495,9 +474,7 @@ async def list_canvas_assignments(
             return stale_data
         return []
 
-    flat_list = [
-        item for sublist in all_results if isinstance(sublist, list) for item in sublist
-    ]
+    flat_list = [item for sublist in all_results if isinstance(sublist, list) for item in sublist]
 
     flat_list.sort(key=lambda x: x["due_at"] or "9999-12-31T23:59:59Z")
     await save_canvas_cache(current_user.id, "assignments", flat_list)
@@ -531,9 +508,7 @@ async def get_canvas_assignment(
     submission = assignment.get("submission")
     if submission is None:
         async with httpx.AsyncClient() as client:
-            submission = await fetch_assignment_submission(
-                client, headers, course_id, assignment_id
-            )
+            submission = await fetch_assignment_submission(client, headers, course_id, assignment_id)
     return {
         "id": assignment_id,
         "course_id": course_id,
@@ -563,10 +538,7 @@ async def submit_canvas_assignment(
         raise HTTPException(status_code=400, detail="Connect Canvas in Settings first.")
     await require_canvas_course(current_user, course_id)
     headers = {"Authorization": f"Bearer {token}"}
-    submit_url = (
-        f"https://canvas.nus.edu.sg/api/v1/courses/{course_id}"
-        f"/assignments/{assignment_id}/submissions"
-    )
+    submit_url = f"https://canvas.nus.edu.sg/api/v1/courses/{course_id}/assignments/{assignment_id}/submissions"
 
     async with httpx.AsyncClient(follow_redirects=True) as client:
         if data.type == "text_entry":
@@ -672,9 +644,7 @@ async def fetch_course_grades(
         params=[("student_ids[]", "self"), ("include[]", "assignment"), ("per_page", "100")],
         timeout=15.0,
     )
-    enrollment_response, submissions_response = await asyncio.gather(
-        enrollment_request, submissions_request
-    )
+    enrollment_response, submissions_response = await asyncio.gather(enrollment_request, submissions_request)
     enrollments = enrollment_response.json() if enrollment_response.is_success else []
     submissions = submissions_response.json() if submissions_response.is_success else []
     enrollment = enrollments[0] if isinstance(enrollments, list) and enrollments else {}
@@ -714,7 +684,7 @@ async def list_canvas_grades(
     token = current_user.canvas_token
     if not token:
         return []
-    
+
     cache_key = f"grades_{course_id}" if course_id else "grades_all"
     cached_data, synced_at = await get_canvas_cache(current_user.id, cache_key)
     if cached_data is not None and is_cache_fresh(synced_at):
@@ -725,7 +695,7 @@ async def list_canvas_grades(
         courses = [course for course in courses if int(course["id"]) == course_id]
         if not courses:
             raise HTTPException(status_code=404, detail="Canvas course not found.")
-            
+
     headers = {"Authorization": f"Bearer {token}"}
     try:
         async with httpx.AsyncClient() as client:
@@ -807,8 +777,7 @@ async def list_canvas_files(
                 "updated_at": f["updated_at"],
                 "content_type": f.get("content-type") or f.get("mime_class"),
                 "folder_id": f.get("folder_id"),
-                "external_url": f.get("html_url")
-                or f"https://canvas.nus.edu.sg/courses/{course_id}/files/{f['id']}",
+                "external_url": f.get("html_url") or f"https://canvas.nus.edu.sg/courses/{course_id}/files/{f['id']}",
             }
         )
     await save_canvas_cache(current_user.id, cache_key, result)
@@ -841,10 +810,14 @@ async def get_canvas_file_content(file_id: int, current_user: CurrentUser):
         except httpx.TimeoutException:
             raise HTTPException(status_code=504, detail="Canvas took too long to respond. Try again.") from None
         except httpx.HTTPError:
-            raise HTTPException(status_code=502, detail="Could not reach Canvas. Check your connection and try again.") from None
+            raise HTTPException(
+                status_code=502, detail="Could not reach Canvas. Check your connection and try again."
+            ) from None
 
         if meta_response.status_code == 401:
-            raise HTTPException(status_code=401, detail="Your Canvas token is invalid or expired. Update it in Settings.")
+            raise HTTPException(
+                status_code=401, detail="Your Canvas token is invalid or expired. Update it in Settings."
+            )
         if meta_response.status_code == 404:
             raise HTTPException(status_code=404, detail="This file no longer exists in Canvas.")
         try:
@@ -910,8 +883,7 @@ async def list_canvas_folders(course_id: int, current_user: CurrentUser):
     async with httpx.AsyncClient() as client:
         try:
             response = await client.get(
-                f"https://canvas.nus.edu.sg/api/v1/courses/{course_id}/folders"
-                "?per_page=100",
+                f"https://canvas.nus.edu.sg/api/v1/courses/{course_id}/folders?per_page=100",
                 headers=headers,
                 timeout=5.0,
             )
@@ -979,7 +951,9 @@ async def list_canvas_course_navigation(course_id: int, current_user: CurrentUse
     return result
 
 
-async def canvas_course_get(course_id: int, current_user: CurrentUser, path: str, params: list[tuple[str, str]] | None = None) -> Any:
+async def canvas_course_get(
+    course_id: int, current_user: CurrentUser, path: str, params: list[tuple[str, str]] | None = None
+) -> Any:
     if not current_user.canvas_token:
         raise HTTPException(status_code=400, detail="Connect Canvas in Settings first.")
     await require_canvas_course(current_user, course_id)
@@ -991,7 +965,10 @@ async def canvas_course_get(course_id: int, current_user: CurrentUser, path: str
             timeout=10.0,
         )
     if not response.is_success:
-        raise HTTPException(status_code=response.status_code, detail=canvas_error_detail(response, "Could not load this Canvas section."))
+        raise HTTPException(
+            status_code=response.status_code,
+            detail=canvas_error_detail(response, "Could not load this Canvas section."),
+        )
     return response.json()
 
 
@@ -1009,7 +986,15 @@ async def list_canvas_pages(
         pages = await canvas_course_get(course_id, current_user, "pages", [("per_page", "100")])
         if not isinstance(pages, list):
             return cached_data if cached_data is not None else []
-        result = [{"url": page.get("url"), "title": page.get("title") or "Untitled page", "updated_at": page.get("updated_at")} for page in pages if isinstance(page, dict) and page.get("url")]
+        result = [
+            {
+                "url": page.get("url"),
+                "title": page.get("title") or "Untitled page",
+                "updated_at": page.get("updated_at"),
+            }
+            for page in pages
+            if isinstance(page, dict) and page.get("url")
+        ]
         await save_canvas_cache(current_user.id, cache_key, result)
         return result
     except Exception:
@@ -1019,7 +1004,11 @@ async def list_canvas_pages(
 @router.get("/pages/{page_url}", response_model=dict[str, Any])
 async def get_canvas_page(page_url: str, course_id: int, current_user: CurrentUser):
     page = await canvas_course_get(course_id, current_user, f"pages/{quote(page_url, safe='')}")
-    return {"title": page.get("title") or "Untitled page", "body": page.get("body") or "", "updated_at": page.get("updated_at")}
+    return {
+        "title": page.get("title") or "Untitled page",
+        "body": page.get("body") or "",
+        "updated_at": page.get("updated_at"),
+    }
 
 
 @router.get("/modules", response_model=list[dict[str, Any]])
@@ -1033,31 +1022,33 @@ async def list_canvas_course_modules(
     if not force_refresh and cached_data is not None and is_cache_fresh(synced_at):
         return cached_data
     try:
-        modules = await canvas_course_get(course_id, current_user, "modules", [("include[]", "items"), ("per_page", "100")])
+        modules = await canvas_course_get(
+            course_id, current_user, "modules", [("include[]", "items"), ("per_page", "100")]
+        )
         if not isinstance(modules, list):
             return cached_data if cached_data is not None else []
         result = [
             {
-                "id": module.get("id"), 
-                "name": module.get("name") or "Untitled module", 
+                "id": module.get("id"),
+                "name": module.get("name") or "Untitled module",
                 "state": module.get("state"),
                 "items": [
                     {
-                        "id": item.get("id"), 
-                        "title": item.get("title") or "Untitled item", 
-                        "type": item.get("type"), 
-                        "page_url": item.get("page_url"), 
-                        "content_id": item.get("content_id"), 
-                        "html_url": item.get("html_url"), 
-                        "external_url": item.get("external_url"), 
+                        "id": item.get("id"),
+                        "title": item.get("title") or "Untitled item",
+                        "type": item.get("type"),
+                        "page_url": item.get("page_url"),
+                        "content_id": item.get("content_id"),
+                        "html_url": item.get("html_url"),
+                        "external_url": item.get("external_url"),
                         "indent": item.get("indent", 0),
-                        "completion_requirement": item.get("completion_requirement")
-                    } 
-                    for item in module.get("items", []) 
+                        "completion_requirement": item.get("completion_requirement"),
+                    }
+                    for item in module.get("items", [])
                     if isinstance(item, dict)
-                ]
-            } 
-            for module in modules 
+                ],
+            }
+            for module in modules
             if isinstance(module, dict) and module.get("id") is not None
         ]
         await save_canvas_cache(current_user.id, cache_key, result)
@@ -1273,10 +1264,7 @@ async def sync_canvas_files(current_user: CurrentUser):
         headers = {"Authorization": f"Bearer {token}"}
         async with httpx.AsyncClient() as client:
             results = await asyncio.gather(
-                *(
-                    fetch_course_files_for_sync(client, headers, course)
-                    for course in courses
-                )
+                *(fetch_course_files_for_sync(client, headers, course) for course in courses)
             )
     except Exception as exc:
         await record_canvas_sync_error(current_user.id, f"Could not fetch Canvas files: {exc}")
@@ -1295,9 +1283,7 @@ async def sync_canvas_files(current_user: CurrentUser):
     cached_files = []
     for course, files in successful_results:
         for file in files:
-            filename = (
-                file.get("display_name") or file.get("filename") or "Untitled file"
-            )
+            filename = file.get("display_name") or file.get("filename") or "Untitled file"
             updated_at = parse_canvas_file_datetime(
                 file.get("updated_at") or file.get("created_at"),
                 now,
@@ -1309,20 +1295,14 @@ async def sync_canvas_files(current_user: CurrentUser):
                     "module_code": course["course_code"],
                     "canvas_course_id": str(course["id"]),
                     "canvas_file_id": str(file.get("id", "")),
-                    "canvas_folder_id": (
-                        str(file["folder_id"]) if file.get("folder_id") else None
-                    ),
+                    "canvas_folder_id": (str(file["folder_id"]) if file.get("folder_id") else None),
                     "filename": filename,
-                    "content_type": file.get("content-type")
-                    or "application/octet-stream",
+                    "content_type": file.get("content-type") or "application/octet-stream",
                     "file_type": get_file_type(filename),
                     "size_bytes": int(file.get("size") or 0),
                     "canvas_url": file.get("url") or file.get("html_url") or "",
                     "external_url": file.get("html_url")
-                    or (
-                        f"https://canvas.nus.edu.sg/courses/{course['id']}"
-                        f"/files/{file.get('id')}"
-                    ),
+                    or (f"https://canvas.nus.edu.sg/courses/{course['id']}/files/{file.get('id')}"),
                     "thumbnail_url": file.get("thumbnail_url"),
                     "locked": bool(file.get("locked")),
                     "hidden": bool(file.get("hidden")),
@@ -1444,8 +1424,7 @@ async def sync_canvas_files(current_user: CurrentUser):
     if failed_courses:
         await record_canvas_sync_error(
             current_user.id,
-            f"{failed_courses} of {len(courses)} courses failed to sync; "
-            "showing cached files for the rest.",
+            f"{failed_courses} of {len(courses)} courses failed to sync; showing cached files for the rest.",
         )
 
     return await list_cached_canvas_files(current_user)

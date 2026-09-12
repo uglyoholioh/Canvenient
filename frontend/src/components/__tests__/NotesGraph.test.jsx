@@ -18,7 +18,12 @@ import NotesGraph from "../NotesGraph";
 const tagMention = (tag) => `<span data-type="tagMention" data-id="${tag}">${tag}</span>`;
 
 const notes = [
-  { id: 1, title: "Concurrency", content: `race conditions ${tagMention("concurrency")}`, tags: [] },
+  {
+    id: 1,
+    title: "Concurrency",
+    content: `race conditions ${tagMention("concurrency")}`,
+    tags: [],
+  },
   { id: 2, title: "Locks deep dive", content: `locks ${tagMention("concurrency")}`, tags: [] },
   { id: 3, title: "Cooking notes", content: "pasta basics", tags: [] },
 ];

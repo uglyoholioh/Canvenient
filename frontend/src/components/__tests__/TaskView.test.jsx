@@ -1,5 +1,5 @@
 // React is required by the test JSX transform.
- 
+
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import TaskView from "../TaskView";
@@ -11,22 +11,36 @@ vi.mock("../../api", () => ({
   updateTask: vi.fn(),
 }));
 vi.mock("../TaskInputBar", () => ({
-    default: ({ initialTask, onSubmitTaskEdit }) => (
-      <div data-testid="task-input-bar">
-        <button type="button">Task date control</button>
-        <input aria-label="Edit task title" defaultValue={initialTask?.title || ""} />
-        <textarea aria-label="Edit task note" defaultValue={initialTask?.description || ""} />
-        <button type="button" aria-label="Clear due date and time" onClick={() => onSubmitTaskEdit(initialTask?.id, { due_at_override: null })}>Clear due date and time</button>
-        <button type="button" aria-label="Save" onClick={() => onSubmitTaskEdit(initialTask?.id, {
-          title: "Revised task",
-          description: "Bring the tutorial worksheet.",
-          due_at_override: new Date(2026, 8, 15, 14, 30).toISOString(),
-          priority_manual: "high",
-          module_id: 42,
-        })}>Save</button>
-      </div>
-    )
-  }));
+  default: ({ initialTask, onSubmitTaskEdit }) => (
+    <div data-testid="task-input-bar">
+      <button type="button">Task date control</button>
+      <input aria-label="Edit task title" defaultValue={initialTask?.title || ""} />
+      <textarea aria-label="Edit task note" defaultValue={initialTask?.description || ""} />
+      <button
+        type="button"
+        aria-label="Clear due date and time"
+        onClick={() => onSubmitTaskEdit(initialTask?.id, { due_at_override: null })}
+      >
+        Clear due date and time
+      </button>
+      <button
+        type="button"
+        aria-label="Save"
+        onClick={() =>
+          onSubmitTaskEdit(initialTask?.id, {
+            title: "Revised task",
+            description: "Bring the tutorial worksheet.",
+            due_at_override: new Date(2026, 8, 15, 14, 30).toISOString(),
+            priority_manual: "high",
+            module_id: 42,
+          })
+        }
+      >
+        Save
+      </button>
+    </div>
+  ),
+}));
 
 describe("TaskView keyboard navigation", () => {
   beforeEach(() => {
@@ -40,8 +54,20 @@ describe("TaskView keyboard navigation", () => {
       },
     });
     getTasks.mockResolvedValue([
-      { id: 1, title: "First task", status: "todo", created_at: "2026-08-29T10:00:00Z", priority_manual: "medium" },
-      { id: 2, title: "Second task", status: "todo", created_at: "2026-08-29T11:00:00Z", priority_manual: "medium" },
+      {
+        id: 1,
+        title: "First task",
+        status: "todo",
+        created_at: "2026-08-29T10:00:00Z",
+        priority_manual: "medium",
+      },
+      {
+        id: 2,
+        title: "Second task",
+        status: "todo",
+        created_at: "2026-08-29T11:00:00Z",
+        priority_manual: "medium",
+      },
     ]);
     getAcademicModules.mockResolvedValue([{ id: 42, module_code: "CS2040" }]);
     updateTask.mockResolvedValue({ id: 1, status: "done" });
@@ -110,18 +136,33 @@ describe("TaskView keyboard navigation", () => {
   it("opens external url on row click or Enter when external_url exists", async () => {
     const windowOpenSpy = vi.spyOn(window, "open").mockImplementation(() => null);
     getTasks.mockResolvedValue([
-      { id: 1, title: "Canvas assignment task", status: "todo", external_url: "https://canvas.nus.edu.sg/courses/1/assignments/2", created_at: "2026-08-29T10:00:00Z", priority_manual: "medium" },
+      {
+        id: 1,
+        title: "Canvas assignment task",
+        status: "todo",
+        external_url: "https://canvas.nus.edu.sg/courses/1/assignments/2",
+        created_at: "2026-08-29T10:00:00Z",
+        priority_manual: "medium",
+      },
     ]);
     render(<TaskView token="token" />);
     const taskText = await screen.findByText("Canvas assignment task");
 
     fireEvent.click(taskText);
-    expect(windowOpenSpy).toHaveBeenCalledWith("https://canvas.nus.edu.sg/courses/1/assignments/2", "_blank", "noopener,noreferrer");
+    expect(windowOpenSpy).toHaveBeenCalledWith(
+      "https://canvas.nus.edu.sg/courses/1/assignments/2",
+      "_blank",
+      "noopener,noreferrer",
+    );
 
     windowOpenSpy.mockClear();
     fireEvent.keyDown(window, { key: "ArrowDown" });
     fireEvent.keyDown(window, { key: "Enter" });
-    expect(windowOpenSpy).toHaveBeenCalledWith("https://canvas.nus.edu.sg/courses/1/assignments/2", "_blank", "noopener,noreferrer");
+    expect(windowOpenSpy).toHaveBeenCalledWith(
+      "https://canvas.nus.edu.sg/courses/1/assignments/2",
+      "_blank",
+      "noopener,noreferrer",
+    );
 
     windowOpenSpy.mockRestore();
   });
@@ -144,36 +185,56 @@ describe("TaskView keyboard navigation", () => {
     await screen.findByText("First task");
 
     fireEvent.click(screen.getByRole("button", { name: "Edit First task" }));
-    
+
     const saveBtn = await screen.findByRole("button", { name: "Save" });
     fireEvent.click(saveBtn);
 
-    await waitFor(() => expect(updateTask).toHaveBeenCalledWith("token", 1, {
-      title: "Revised task",
-      description: "Bring the tutorial worksheet.",
-      due_at_override: new Date(2026, 8, 15, 14, 30).toISOString(),
-      priority_manual: "high",
-      module_id: 42,
-    }));
+    await waitFor(() =>
+      expect(updateTask).toHaveBeenCalledWith("token", 1, {
+        title: "Revised task",
+        description: "Bring the tutorial worksheet.",
+        due_at_override: new Date(2026, 8, 15, 14, 30).toISOString(),
+        priority_manual: "high",
+        module_id: 42,
+      }),
+    );
     expect(await screen.findByText("Revised task")).toBeInTheDocument();
     expect(screen.getByText("CS2040")).toBeInTheDocument();
     window.removeEventListener("canvenient-tasks-changed", onTasksChanged);
   });
 
   it("clears an edited due date and time to a null override", async () => {
-    updateTask.mockResolvedValue({ id: 1, title: "First task", status: "todo", due_at_override: null, effective_due_at: null });
+    updateTask.mockResolvedValue({
+      id: 1,
+      title: "First task",
+      status: "todo",
+      due_at_override: null,
+      effective_due_at: null,
+    });
     render(<TaskView token="token" />);
 
     fireEvent.click(await screen.findByRole("button", { name: "Edit First task" }));
     fireEvent.click(screen.getByRole("button", { name: "Clear due date and time" }));
     fireEvent.click(screen.getByRole("button", { name: "Save" }));
 
-    await waitFor(() => expect(updateTask).toHaveBeenCalledWith("token", 1, expect.objectContaining({ due_at_override: null })));
+    await waitFor(() =>
+      expect(updateTask).toHaveBeenCalledWith(
+        "token",
+        1,
+        expect.objectContaining({ due_at_override: null }),
+      ),
+    );
   });
 
   it("orders pending tasks by effective deadline and shows Canvas source deadlines", async () => {
     getTasks.mockResolvedValue([
-      { id: 1, title: "No deadline", status: "todo", created_at: "2026-08-30T10:00:00Z", priority_manual: "medium" },
+      {
+        id: 1,
+        title: "No deadline",
+        status: "todo",
+        created_at: "2026-08-30T10:00:00Z",
+        priority_manual: "medium",
+      },
       {
         id: 2,
         title: "Canvas deadline",
@@ -185,7 +246,13 @@ describe("TaskView keyboard navigation", () => {
         effective_due_at: "2026-09-01T08:00:00+08:00",
         module_code: "CS2040",
       },
-      { id: 3, title: "Completed", status: "done", created_at: "2026-08-28T10:00:00Z", priority_manual: "high" },
+      {
+        id: 3,
+        title: "Completed",
+        status: "done",
+        created_at: "2026-08-28T10:00:00Z",
+        priority_manual: "high",
+      },
     ]);
 
     render(<TaskView token="token" />);
@@ -212,7 +279,13 @@ describe("TaskView keyboard navigation", () => {
 
   it("displays tasks with the module attached using the module colour strip", async () => {
     getTasks.mockResolvedValue([
-      { id: 10, title: "Task with module color", status: "todo", module_code: "CS2040", module_color: "#246BFD" },
+      {
+        id: 10,
+        title: "Task with module color",
+        status: "todo",
+        module_code: "CS2040",
+        module_color: "#246BFD",
+      },
       { id: 11, title: "Task without module", status: "todo" },
     ]);
     getAcademicModules.mockResolvedValue([{ id: 42, module_code: "CS2040", color: "#246BFD" }]);
@@ -223,7 +296,9 @@ describe("TaskView keyboard navigation", () => {
     const rows = container.querySelectorAll(".task-row");
     expect(rows[0]).toHaveClass("has-module");
     expect(rows[0].querySelector(".task-module-strip")).toBeInTheDocument();
-    expect(rows[0].querySelector(".task-module-strip")).toHaveStyle({ backgroundColor: "rgb(36, 107, 253)" });
+    expect(rows[0].querySelector(".task-module-strip")).toHaveStyle({
+      backgroundColor: "rgb(36, 107, 253)",
+    });
 
     expect(rows[1]).not.toHaveClass("has-module");
     expect(rows[1].querySelector(".task-module-strip")).not.toBeInTheDocument();

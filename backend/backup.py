@@ -78,11 +78,13 @@ def list_backups(database_url: str | None = None) -> list[dict]:
     for file in backup_dir.glob(f"{db_path.stem}-*.db"):
         if not file.is_file():
             continue
-        result.append({
-            "name": file.name,
-            "size_bytes": file.stat().st_size,
-            "modified_at": datetime.fromtimestamp(file.stat().st_mtime, tz=timezone.utc).isoformat(),
-        })
+        result.append(
+            {
+                "name": file.name,
+                "size_bytes": file.stat().st_size,
+                "modified_at": datetime.fromtimestamp(file.stat().st_mtime, tz=timezone.utc).isoformat(),
+            }
+        )
     return sorted(result, key=lambda b: b["modified_at"], reverse=True)
 
 

@@ -38,7 +38,7 @@ describe("MarkdownEditor multi-instance live synchronization", () => {
         <div data-testid="pane-1">
           <MarkdownEditor noteId={1} token="mock-token" initialNote={noteData} />
         </div>
-      </div>
+      </div>,
     );
 
     const titleInputs = screen.getAllByPlaceholderText("Untitled Note");
@@ -64,7 +64,7 @@ describe("MarkdownEditor multi-instance live synchronization", () => {
         <div data-testid="pane-1">
           <MarkdownEditor noteId={1} token="mock-token" initialNote={noteData} />
         </div>
-      </div>
+      </div>,
     );
 
     await waitFor(() => {
@@ -81,7 +81,7 @@ describe("MarkdownEditor multi-instance live synchronization", () => {
             type: "content",
             content: "<p>Updated content live from split pane</p>",
           },
-        })
+        }),
       );
     });
 
@@ -101,7 +101,7 @@ describe("MarkdownEditor multi-instance live synchronization", () => {
         <div data-testid="pane-1">
           <MarkdownEditor noteId={1} token="mock-token" initialNote={noteData} />
         </div>
-      </div>
+      </div>,
     );
 
     // Broadcast saved event
@@ -115,7 +115,7 @@ describe("MarkdownEditor multi-instance live synchronization", () => {
             note: { ...noteData, is_pinned: true },
             saveState: "saved",
           },
-        })
+        }),
       );
     });
 

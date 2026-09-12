@@ -21,7 +21,6 @@ class GroupOut(BaseModel):
     role: str = "member"
 
 
-
 class GroupMemberOut(BaseModel):
     user_id: int
     name: str

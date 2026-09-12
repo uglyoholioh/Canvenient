@@ -35,7 +35,7 @@ async def send_message(chat_id: int, text: str, retries: int = 3) -> None:
             except (httpx.HTTPStatusError, httpx.RequestError) as err:
                 if attempt == retries - 1:
                     raise err
-                await asyncio.sleep(0.5 * (2 ** attempt))
+                await asyncio.sleep(0.5 * (2**attempt))
 
 
 async def _tasks(user_id: int, interval: str | None = None) -> list:

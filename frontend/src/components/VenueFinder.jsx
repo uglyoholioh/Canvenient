@@ -16,11 +16,34 @@ import { useWorkspaceToolbar } from "./WorkspaceToolbarContext";
 const DAYS_OF_WEEK = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
 const TIME_SLOTS = [
-  "0800", "0830", "0900", "0930", "1000", "1030",
-  "1100", "1130", "1200", "1230", "1300", "1330",
-  "1400", "1430", "1500", "1530", "1600", "1630",
-  "1700", "1730", "1800", "1830", "1900", "1930",
-  "2000", "2030", "2100", "2130",
+  "0800",
+  "0830",
+  "0900",
+  "0930",
+  "1000",
+  "1030",
+  "1100",
+  "1130",
+  "1200",
+  "1230",
+  "1300",
+  "1330",
+  "1400",
+  "1430",
+  "1500",
+  "1530",
+  "1600",
+  "1630",
+  "1700",
+  "1730",
+  "1800",
+  "1830",
+  "1900",
+  "1930",
+  "2000",
+  "2030",
+  "2100",
+  "2130",
 ];
 
 const DURATION_OPTIONS = [
@@ -44,25 +67,55 @@ const CAMPUS_PRESETS = [
     id: "utown",
     name: "UTown",
     prefixes: ["UT", "ERC", "TGR", "TP-", "CAPT", "RC4", "UTR", "CQT"],
-    keywords: ["utown", "university town", "erc", "town plaza", "stephen riady", "cinnamon", "tembusu"],
-    lat: 1.30390,
-    lon: 103.77400,
+    keywords: [
+      "utown",
+      "university town",
+      "erc",
+      "town plaza",
+      "stephen riady",
+      "cinnamon",
+      "tembusu",
+    ],
+    lat: 1.3039,
+    lon: 103.774,
   },
   {
     id: "clb",
     name: "Central Library",
     prefixes: ["CLB", "YIH", "LT", "USC", "MPSH"],
     keywords: ["central library", "yusof ishak", "forum", "clb", "yih"],
-    lat: 1.29660,
-    lon: 103.77320,
+    lat: 1.2966,
+    lon: 103.7732,
   },
   {
     id: "sci",
     name: "Science (S17)",
     prefixes: [
-      "S1", "S2", "S3", "S4", "S5", "S6", "S7", "S8", "S9", "S10",
-      "S11", "S12", "S13", "S14", "S15", "S16", "S17",
-      "LT26", "LT27", "LT28", "LT29", "LT31", "LT32", "LT33", "LT34",
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "S6",
+      "S7",
+      "S8",
+      "S9",
+      "S10",
+      "S11",
+      "S12",
+      "S13",
+      "S14",
+      "S15",
+      "S16",
+      "S17",
+      "LT26",
+      "LT27",
+      "LT28",
+      "LT29",
+      "LT31",
+      "LT32",
+      "LT33",
+      "LT34",
     ],
     keywords: ["science", "s16", "s17"],
     lat: 1.29785,
@@ -72,10 +125,36 @@ const CAMPUS_PRESETS = [
     id: "fass",
     name: "Arts (AS6)",
     prefixes: [
-      "AS", "AS1", "AS2", "AS3", "AS4", "AS5", "AS6", "AS7", "AS8",
-      "LT8", "LT9", "LT10", "LT11", "LT12", "LT13", "LT14", "LT15",
+      "AS",
+      "AS1",
+      "AS2",
+      "AS3",
+      "AS4",
+      "AS5",
+      "AS6",
+      "AS7",
+      "AS8",
+      "LT8",
+      "LT9",
+      "LT10",
+      "LT11",
+      "LT12",
+      "LT13",
+      "LT14",
+      "LT15",
     ],
-    keywords: ["arts & social sciences", "fass", "as1", "as2", "as3", "as4", "as5", "as6", "as7", "as8"],
+    keywords: [
+      "arts & social sciences",
+      "fass",
+      "as1",
+      "as2",
+      "as3",
+      "as4",
+      "as5",
+      "as6",
+      "as7",
+      "as8",
+    ],
     lat: 1.29532,
     lon: 103.77265,
   },
@@ -91,36 +170,51 @@ const CAMPUS_PRESETS = [
     id: "eng",
     name: "Engineering (EA)",
     prefixes: [
-      "EA", "E1", "E2", "E3", "E4", "E5", "E6", "EW1", "EW2", "ENG",
-      "LT1", "LT2", "LT3", "LT4", "LT5", "LT6", "LT7",
+      "EA",
+      "E1",
+      "E2",
+      "E3",
+      "E4",
+      "E5",
+      "E6",
+      "EW1",
+      "EW2",
+      "ENG",
+      "LT1",
+      "LT2",
+      "LT3",
+      "LT4",
+      "LT5",
+      "LT6",
+      "LT7",
     ],
     keywords: ["engineering", "techno edge"],
-    lat: 1.30040,
-    lon: 103.77050,
+    lat: 1.3004,
+    lon: 103.7705,
   },
   {
     id: "sde",
     name: "Design & Environment (SDE)",
     prefixes: ["SDE", "SDE1", "SDE2", "SDE3", "SDE4"],
     keywords: ["design & environment", "sde"],
-    lat: 1.29740,
-    lon: 103.77060,
+    lat: 1.2974,
+    lon: 103.7706,
   },
   {
     id: "med",
     name: "Medicine (MD6)",
     prefixes: ["MD", "MD1", "MD2", "MD3", "MD4", "MD5", "MD6", "MD7", "MD8", "MD9", "MD10", "MD11"],
     keywords: ["medicine", "dentistry", "tahir", "translational"],
-    lat: 1.29470,
-    lon: 103.78310,
+    lat: 1.2947,
+    lon: 103.7831,
   },
   {
     id: "law",
     name: "Law (BTC)",
     prefixes: ["BTC", "SR-BTC", "LKY", "BTH"],
     keywords: ["bukit timah", "law", "btc", "lee kuan yew"],
-    lat: 1.31950,
-    lon: 103.81750,
+    lat: 1.3195,
+    lon: 103.8175,
   },
 ];
 
@@ -159,24 +253,27 @@ function distanceInMetres(lat1, lon1, lat2, lon2) {
   const R = 6371000;
   const dphi = ((lat2 - lat1) * Math.PI) / 180;
   const dlambda = ((lon2 - lon1) * Math.PI) / 180;
-  const a = Math.sin(dphi / 2) ** 2 + Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dlambda / 2) ** 2;
+  const a =
+    Math.sin(dphi / 2) ** 2 +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dlambda / 2) ** 2;
   return 2 * R * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
-
 
 function formatWeeks(weeks) {
   if (!weeks) return "Regular schedule";
   if (Array.isArray(weeks)) {
     if (weeks.length === 0) return "";
-    const sorted = [...weeks].sort((a,b)=>a-b);
+    const sorted = [...weeks].sort((a, b) => a - b);
     let isContiguous = true;
-    for(let i=1; i<sorted.length; i++) {
-      if (sorted[i] !== sorted[i-1] + 1) isContiguous = false;
+    for (let i = 1; i < sorted.length; i++) {
+      if (sorted[i] !== sorted[i - 1] + 1) isContiguous = false;
     }
-    if (isContiguous) return `Weeks ${sorted[0]}-${sorted[sorted.length-1]}`;
-    return `Weeks: ${sorted.join(', ')}`;
+    if (isContiguous) return `Weeks ${sorted[0]}-${sorted[sorted.length - 1]}`;
+    return `Weeks: ${sorted.join(", ")}`;
   }
-  if (typeof weeks === 'object') {
+  if (typeof weeks === "object") {
     if (weeks.start && weeks.end) {
       return `${weeks.start} to ${weeks.end}`;
     }
@@ -216,19 +313,23 @@ export default function VenueFinder({ token }) {
   const [starredVenues, setStarredVenues] = useState(() => {
     try {
       return JSON.parse(window.localStorage.getItem("canvenient.venues.starred") || "[]");
-    } catch { return []; }
+    } catch {
+      return [];
+    }
   });
 
   const toggleStar = (venueCode, e) => {
     e.stopPropagation();
     let newStarred;
     if (starredVenues.includes(venueCode)) {
-      newStarred = starredVenues.filter(c => c !== venueCode);
+      newStarred = starredVenues.filter((c) => c !== venueCode);
     } else {
       newStarred = [...starredVenues, venueCode];
     }
     setStarredVenues(newStarred);
-    try { window.localStorage.setItem("canvenient.venues.starred", JSON.stringify(newStarred)); } catch {}
+    try {
+      window.localStorage.setItem("canvenient.venues.starred", JSON.stringify(newStarred));
+    } catch {}
   };
 
   useEffect(() => {
@@ -290,10 +391,13 @@ export default function VenueFinder({ token }) {
     return "Discover vacant rooms";
   }, [locationLabel, selectedLocations]);
 
-  const toolbarConfig = useMemo(() => ({
-    title: "Venue Finder",
-    subtitle: toolbarSubtitle,
-  }), [toolbarSubtitle]);
+  const toolbarConfig = useMemo(
+    () => ({
+      title: "Venue Finder",
+      subtitle: toolbarSubtitle,
+    }),
+    [toolbarSubtitle],
+  );
 
   useWorkspaceToolbar(toolbarConfig);
 
@@ -330,7 +434,7 @@ export default function VenueFinder({ token }) {
       () => {
         setIsLocating(false);
       },
-      { timeout: 10000, enableHighAccuracy: true }
+      { timeout: 10000, enableHighAccuracy: true },
     );
   };
 
@@ -354,16 +458,16 @@ export default function VenueFinder({ token }) {
     let daysDiff = selectedDayIdx - currentDayIdx;
     if (daysDiff < 0) daysDiff += 7; // Next occurrence
     const targetDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() + daysDiff);
-    const targetDateStr = `${targetDate.getFullYear()}-${String(targetDate.getMonth() + 1).padStart(2, '0')}-${String(targetDate.getDate()).padStart(2, '0')}`;
+    const targetDateStr = `${targetDate.getFullYear()}-${String(targetDate.getMonth() + 1).padStart(2, "0")}-${String(targetDate.getDate()).padStart(2, "0")}`;
 
     for (const [venueCode, dayList] of Object.entries(venuesData)) {
       const loc = locationsData[venueCode] || {};
       const coords = loc.location;
-      
+
       let vLat = coords?.y ?? null;
       let vLon = coords?.x ?? null;
       let roomName = loc.roomName || venueCode;
-      
+
       let buildingName = "NUS Kent Ridge";
       for (const [prefix, [cLat, cLon, bName]] of Object.entries(buildingCentroids)) {
         if (venueCode.toUpperCase().startsWith(prefix)) {
@@ -377,36 +481,45 @@ export default function VenueFinder({ token }) {
         }
       }
 
-      if (q && !venueCode.toLowerCase().includes(q) && !roomName.toLowerCase().includes(q) && !buildingName.toLowerCase().includes(q)) {
+      if (
+        q &&
+        !venueCode.toLowerCase().includes(q) &&
+        !roomName.toLowerCase().includes(q) &&
+        !buildingName.toLowerCase().includes(q)
+      ) {
         continue;
       }
 
       if (selectedLocations.length > 0 && selectedLocations.length < CAMPUS_PRESETS.length) {
         const matchesSelected = selectedLocations.some((locId) => {
           const preset = CAMPUS_PRESETS.find((p) => p.id === locId);
-          return preset ? venueMatchesPreset(venueCode, buildingName, roomName, vLat, vLon, preset) : false;
+          return preset
+            ? venueMatchesPreset(venueCode, buildingName, roomName, vLat, vLon, preset)
+            : false;
         });
         if (!matchesSelected) {
           continue;
         }
       }
 
-      const dayData = (dayList || []).find((d) => (d.day || "").toLowerCase() === selectedDay.toLowerCase());
+      const dayData = (dayList || []).find(
+        (d) => (d.day || "").toLowerCase() === selectedDay.toLowerCase(),
+      );
       const rawClasses = dayData?.classes || [];
-      
-      const classesToday = rawClasses.filter(cls => {
-        if (cls.weeks && typeof cls.weeks === 'object' && cls.weeks.start && cls.weeks.end) {
+
+      const classesToday = rawClasses.filter((cls) => {
+        if (cls.weeks && typeof cls.weeks === "object" && cls.weeks.start && cls.weeks.end) {
           return targetDateStr >= cls.weeks.start && targetDateStr <= cls.weeks.end;
         }
         return true;
       });
 
       const computedAvail = {};
-      TIME_SLOTS.forEach(slot => computedAvail[slot] = "vacant");
-      classesToday.forEach(cls => {
+      TIME_SLOTS.forEach((slot) => (computedAvail[slot] = "vacant"));
+      classesToday.forEach((cls) => {
         const start = cls.startTime || "0000";
         const end = cls.endTime || "0000";
-        TIME_SLOTS.forEach(slot => {
+        TIME_SLOTS.forEach((slot) => {
           if (slot >= start && slot < end) {
             computedAvail[slot] = "occupied";
           }
@@ -414,10 +527,10 @@ export default function VenueFinder({ token }) {
       });
 
       const isVacantNow = (computedAvail[selectedTime] || "vacant") === "vacant";
-      
+
       let freeMinutes = 0;
       const targetIdx = TIME_SLOTS.indexOf(selectedTime);
-      
+
       if (isVacantNow) {
         let occupiedSlot = null;
         for (let i = targetIdx; i < TIME_SLOTS.length; i++) {
@@ -427,11 +540,14 @@ export default function VenueFinder({ token }) {
           }
         }
         if (occupiedSlot) {
-          const tMin = parseInt(selectedTime.slice(0, 2), 10) * 60 + parseInt(selectedTime.slice(2), 10);
-          const oMin = parseInt(occupiedSlot.slice(0, 2), 10) * 60 + parseInt(occupiedSlot.slice(2), 10);
+          const tMin =
+            parseInt(selectedTime.slice(0, 2), 10) * 60 + parseInt(selectedTime.slice(2), 10);
+          const oMin =
+            parseInt(occupiedSlot.slice(0, 2), 10) * 60 + parseInt(occupiedSlot.slice(2), 10);
           freeMinutes = Math.max(0, oMin - tMin);
         } else {
-          const tMin = parseInt(selectedTime.slice(0, 2), 10) * 60 + parseInt(selectedTime.slice(2), 10);
+          const tMin =
+            parseInt(selectedTime.slice(0, 2), 10) * 60 + parseInt(selectedTime.slice(2), 10);
           freeMinutes = Math.max(0, 22 * 60 - tMin);
         }
       }
@@ -442,7 +558,9 @@ export default function VenueFinder({ token }) {
       let distanceM = null;
       let walkMins = null;
       if (effectiveCoords && vLat !== null && vLon !== null) {
-        distanceM = Math.round(distanceInMetres(effectiveCoords.lat, effectiveCoords.lon, vLat, vLon));
+        distanceM = Math.round(
+          distanceInMetres(effectiveCoords.lat, effectiveCoords.lon, vLat, vLon),
+        );
         walkMins = Math.max(1, Math.ceil(distanceM / 80));
       }
 
@@ -474,7 +592,19 @@ export default function VenueFinder({ token }) {
     });
 
     return list.slice(0, 100);
-  }, [venuesData, locationsData, buildingCentroids, selectedDay, selectedTime, searchQuery, showOnlyFree, minDuration, effectiveCoords, selectedLocations, starredVenues]);
+  }, [
+    venuesData,
+    locationsData,
+    buildingCentroids,
+    selectedDay,
+    selectedTime,
+    searchQuery,
+    showOnlyFree,
+    minDuration,
+    effectiveCoords,
+    selectedLocations,
+    starredVenues,
+  ]);
 
   return (
     <div className="vf-container">
@@ -493,22 +623,40 @@ export default function VenueFinder({ token }) {
 
         <div className="vf-filters-row">
           <div className="vf-filter-group">
-            <select className="vf-select" value={selectedDay} onChange={(e) => setSelectedDay(e.target.value)}>
+            <select
+              className="vf-select"
+              value={selectedDay}
+              onChange={(e) => setSelectedDay(e.target.value)}
+            >
               {DAYS_OF_WEEK.map((d) => (
-                <option key={d} value={d}>{d}</option>
+                <option key={d} value={d}>
+                  {d}
+                </option>
               ))}
             </select>
-            <select className="vf-select" value={selectedTime} onChange={(e) => setSelectedTime(e.target.value)}>
+            <select
+              className="vf-select"
+              value={selectedTime}
+              onChange={(e) => setSelectedTime(e.target.value)}
+            >
               {TIME_SLOTS.map((t) => (
-                <option key={t} value={t}>{formatTimeSlot(t)}</option>
+                <option key={t} value={t}>
+                  {formatTimeSlot(t)}
+                </option>
               ))}
             </select>
-            <select className="vf-select" value={minDuration} onChange={(e) => setMinDuration(Number(e.target.value))}>
+            <select
+              className="vf-select"
+              value={minDuration}
+              onChange={(e) => setMinDuration(Number(e.target.value))}
+            >
               {DURATION_OPTIONS.map((d) => (
-                <option key={d.value} value={d.value}>{d.label}</option>
+                <option key={d.value} value={d.value}>
+                  {d.label}
+                </option>
               ))}
             </select>
-            <button 
+            <button
               className={`vf-filter-btn ${showOnlyFree ? "active" : ""}`}
               onClick={() => setShowOnlyFree(!showOnlyFree)}
             >
@@ -528,7 +676,10 @@ export default function VenueFinder({ token }) {
               >
                 <MapPin size={14} />
                 <span>{dropdownButtonLabel}</span>
-                <ChevronDown size={14} className={`vf-dropdown-chevron ${isLocationDropdownOpen ? "open" : ""}`} />
+                <ChevronDown
+                  size={14}
+                  className={`vf-dropdown-chevron ${isLocationDropdownOpen ? "open" : ""}`}
+                />
               </button>
 
               {isLocationDropdownOpen && (
@@ -556,7 +707,10 @@ export default function VenueFinder({ token }) {
                     {CAMPUS_PRESETS.map((p) => {
                       const isChecked = selectedLocations.includes(p.id);
                       return (
-                        <label key={p.id} className={`vf-dropdown-item ${isChecked ? "selected" : ""}`}>
+                        <label
+                          key={p.id}
+                          className={`vf-dropdown-item ${isChecked ? "selected" : ""}`}
+                        >
                           <input
                             type="checkbox"
                             className="vf-dropdown-checkbox"
@@ -575,12 +729,21 @@ export default function VenueFinder({ token }) {
               )}
             </div>
 
-            <button className={`vf-filter-btn ${userCoords ? "active" : ""}`} onClick={handleUseCurrentLocation}>
+            <button
+              className={`vf-filter-btn ${userCoords ? "active" : ""}`}
+              onClick={handleUseCurrentLocation}
+            >
               {isLocating ? <Loader2 size={14} className="spin" /> : <LocateFixed size={14} />}
               {locationLabel || "Near me"}
             </button>
             {userCoords && (
-              <button className="vf-icon-btn" onClick={() => { setUserCoords(null); setLocationLabel(""); }}>
+              <button
+                className="vf-icon-btn"
+                onClick={() => {
+                  setUserCoords(null);
+                  setLocationLabel("");
+                }}
+              >
                 <X size={14} />
               </button>
             )}
@@ -608,11 +771,7 @@ export default function VenueFinder({ token }) {
                 </span>
               );
             })}
-            <button
-              type="button"
-              className="vf-location-pill-clear"
-              onClick={clearAllLocations}
-            >
+            <button type="button" className="vf-location-pill-clear" onClick={clearAllLocations}>
               Clear all
             </button>
           </div>
@@ -643,28 +802,42 @@ export default function VenueFinder({ token }) {
                   {v.distanceM !== null && (
                     <div className="vf-card-distance">
                       <MapPin size={12} />
-                      {v.distanceM < 1000 ? `${v.distanceM}m` : `${(v.distanceM / 1000).toFixed(1)}km`}
+                      {v.distanceM < 1000
+                        ? `${v.distanceM}m`
+                        : `${(v.distanceM / 1000).toFixed(1)}km`}
                     </div>
                   )}
-                  <button 
-                    className="vf-icon-btn" 
+                  <button
+                    className="vf-icon-btn"
                     onClick={(e) => toggleStar(v.venueCode, e)}
-                    title={starredVenues.includes(v.venueCode) ? "Remove from favorites" : "Add to favorites"}
-                    style={{ padding: 0, width: '24px', height: '24px', flex: 'none' }}
+                    title={
+                      starredVenues.includes(v.venueCode)
+                        ? "Remove from favorites"
+                        : "Add to favorites"
+                    }
+                    style={{ padding: 0, width: "24px", height: "24px", flex: "none" }}
                   >
-                    <Star size={14} fill={starredVenues.includes(v.venueCode) ? "var(--warning)" : "none"} color={starredVenues.includes(v.venueCode) ? "var(--warning)" : "currentColor"} />
+                    <Star
+                      size={14}
+                      fill={starredVenues.includes(v.venueCode) ? "var(--warning)" : "none"}
+                      color={
+                        starredVenues.includes(v.venueCode) ? "var(--warning)" : "currentColor"
+                      }
+                    />
                   </button>
                 </div>
               </div>
-              
+
               <div className="vf-timeline-bars">
                 {TIME_SLOTS.map((slot) => {
                   const isVacant = (v.rawAvail[slot] || "vacant") === "vacant";
                   const isSelected = slot === selectedTime;
-                  
+
                   let currentClass = null;
                   if (!isVacant) {
-                    currentClass = v.classesToday.find(c => (c.startTime || "0000") <= slot && (c.endTime || "0000") > slot);
+                    currentClass = v.classesToday.find(
+                      (c) => (c.startTime || "0000") <= slot && (c.endTime || "0000") > slot,
+                    );
                   }
 
                   let tooltip = isVacant ? "Available" : "Occupied";
@@ -672,8 +845,11 @@ export default function VenueFinder({ token }) {
                     tooltip = `${currentClass.moduleCode} ${currentClass.lessonType}\n${formatTimeSlot(currentClass.startTime)} - ${formatTimeSlot(currentClass.endTime)}\n${formatWeeks(currentClass.weeks)}`;
                   } else if (isVacant) {
                     // For vacant block, show the time of the block
-                    const endMin = parseInt(slot.slice(0, 2), 10) * 60 + parseInt(slot.slice(2), 10) + 30;
-                    const endHour = Math.floor(endMin / 60).toString().padStart(2, "0");
+                    const endMin =
+                      parseInt(slot.slice(0, 2), 10) * 60 + parseInt(slot.slice(2), 10) + 30;
+                    const endHour = Math.floor(endMin / 60)
+                      .toString()
+                      .padStart(2, "0");
                     const endMinute = (endMin % 60).toString().padStart(2, "0");
                     tooltip = `Available \n${formatTimeSlot(slot)} - ${endHour}:${endMinute}`;
                   }
@@ -691,8 +867,11 @@ export default function VenueFinder({ token }) {
                         });
                       }}
                       onMouseLeave={() => setTooltipData(null)}
-                      onClick={(e) => { e.stopPropagation(); setSelectedTime(slot); }}
-                      style={{ cursor: 'pointer' }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedTime(slot);
+                      }}
+                      style={{ cursor: "pointer" }}
                     />
                   );
                 })}
@@ -715,7 +894,7 @@ export default function VenueFinder({ token }) {
                 <X size={16} />
               </button>
             </div>
-            
+
             <div className="vf-modal-body">
               {inspectedVenue.latitude && inspectedVenue.longitude && (
                 <div style={{ marginBottom: "20px" }}>
@@ -741,9 +920,13 @@ export default function VenueFinder({ token }) {
                       .sort((a, b) => (a.startTime || "").localeCompare(b.startTime || ""))
                       .map((cls, i) => (
                         <div key={i} className="vf-schedule-item">
-                          <span className="vf-schedule-time">{formatTimeSlot(cls.startTime)} - {formatTimeSlot(cls.endTime)}</span>
+                          <span className="vf-schedule-time">
+                            {formatTimeSlot(cls.startTime)} - {formatTimeSlot(cls.endTime)}
+                          </span>
                           <div className="vf-schedule-info">
-                            <span className="vf-schedule-module">{cls.moduleCode} ({cls.lessonType})</span>
+                            <span className="vf-schedule-module">
+                              {cls.moduleCode} ({cls.lessonType})
+                            </span>
                             <span className="vf-schedule-weeks">{formatWeeks(cls.weeks)}</span>
                           </div>
                         </div>
@@ -755,32 +938,32 @@ export default function VenueFinder({ token }) {
           </div>
         </div>
       )}
-    
+
       {tooltipData && (
         <div
           style={{
-            position: 'fixed',
+            position: "fixed",
             left: tooltipData.x,
             top: tooltipData.y,
-            transform: 'translate(-50%, -100%)',
-            backgroundColor: 'var(--surface-warm)',
-            border: '1px solid var(--border-strong)',
-            padding: '8px 12px',
-            borderRadius: 'var(--radius-sm)',
-            fontSize: '12px',
-            color: 'var(--text-h)',
-            whiteSpace: 'pre-wrap',
-            pointerEvents: 'none',
+            transform: "translate(-50%, -100%)",
+            backgroundColor: "var(--surface-warm)",
+            border: "1px solid var(--border-strong)",
+            padding: "8px 12px",
+            borderRadius: "var(--radius-sm)",
+            fontSize: "12px",
+            color: "var(--text-h)",
+            whiteSpace: "pre-wrap",
+            pointerEvents: "none",
             zIndex: 99999,
-            boxShadow: 'var(--shadow)',
-            lineHeight: '1.4',
-            textAlign: 'center',
-            fontFamily: 'var(--font-sans)',
+            boxShadow: "var(--shadow)",
+            lineHeight: "1.4",
+            textAlign: "center",
+            fontFamily: "var(--font-sans)",
           }}
         >
           {tooltipData.text}
         </div>
       )}
-</div>
+    </div>
   );
 }

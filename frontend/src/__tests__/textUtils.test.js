@@ -9,9 +9,9 @@ describe("stripHtml", () => {
 
   it("handles complex Canvas assignment HTML snippet with entities and nested tags", () => {
     const input =
-      '<p>Submit your completed activity &amp; budget proposal as<span>&nbsp;</span><strong>a PDF file</strong><span>&nbsp;here. N</span>ame file as&nbsp;<strong>Student ID_MMMYY_Proposal<span>&nbsp;</span></strong><span>e.g. A0123456B_Sep23_Proposal.</span></p>';
+      "<p>Submit your completed activity &amp; budget proposal as<span>&nbsp;</span><strong>a PDF file</strong><span>&nbsp;here. N</span>ame file as&nbsp;<strong>Student ID_MMMYY_Proposal<span>&nbsp;</span></strong><span>e.g. A0123456B_Sep23_Proposal.</span></p>";
     expect(stripHtml(input)).toBe(
-      "Submit your completed activity & budget proposal as a PDF file here. Name file as Student ID_MMMYY_Proposal e.g. A0123456B_Sep23_Proposal."
+      "Submit your completed activity & budget proposal as a PDF file here. Name file as Student ID_MMMYY_Proposal e.g. A0123456B_Sep23_Proposal.",
     );
   });
 

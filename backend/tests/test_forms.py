@@ -22,15 +22,11 @@ async def build_group_with_member(client: AsyncClient, auth):
     owner_token, _, _ = auth
     owner_headers = auth_headers(owner_token)
 
-    comm = await client.post(
-        "/communities", json={"name": "Form Test Community"}, headers=owner_headers
-    )
+    comm = await client.post("/communities", json={"name": "Form Test Community"}, headers=owner_headers)
     assert comm.status_code == 201
     comm_id = comm.json()["id"]
 
-    group = await client.post(
-        "/groups", json={"c_id": comm_id, "name": "Form Test Group"}, headers=owner_headers
-    )
+    group = await client.post("/groups", json={"c_id": comm_id, "name": "Form Test Group"}, headers=owner_headers)
     assert group.status_code == 201
     group_id = group.json()["id"]
 
@@ -152,6 +148,7 @@ async def test_submission_rejected_after_form_closes(client: AsyncClient, auth):
     owner_headers, member_token, group_id = await build_group_with_member(client, auth)
 
     from datetime import datetime, timedelta, timezone
+
     closed_at = datetime.now(timezone.utc) - timedelta(hours=1)
     created = await client.post(
         "/forms",

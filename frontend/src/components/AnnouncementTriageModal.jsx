@@ -414,7 +414,7 @@ export default function AnnouncementTriageModal({
                       className="triage-reader-html"
                       dangerouslySetInnerHTML={{
                         __html: DOMPurify.sanitize(
-                          currentItem.body || currentItem.message || "<p>No content.</p>"
+                          currentItem.body || currentItem.message || "<p>No content.</p>",
                         ),
                       }}
                     />
@@ -481,7 +481,11 @@ export default function AnnouncementTriageModal({
                         className="triage-btn"
                         onClick={() => {
                           openAssistant({
-                            attachment: { type: "announcement", id: currentItem.id, label: currentItem.title },
+                            attachment: {
+                              type: "announcement",
+                              id: currentItem.id,
+                              label: currentItem.title,
+                            },
                           });
                           onClose?.();
                         }}

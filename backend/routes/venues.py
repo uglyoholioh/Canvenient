@@ -25,11 +25,7 @@ _cache: dict[str, tuple[datetime, dict]] = {}
 _cache_lock = asyncio.Lock()
 
 # Standard time slots from 08:00 to 22:00 in 30-minute intervals
-TIME_SLOTS = [
-    f"{hour:02d}{minute:02d}"
-    for hour in range(8, 22)
-    for minute in (0, 30)
-]
+TIME_SLOTS = [f"{hour:02d}{minute:02d}" for hour in range(8, 22) for minute in (0, 30)]
 
 # Approximate building centroids on NUS Kent Ridge / Bukit Timah campus as fallbacks
 BUILDING_CENTROIDS: dict[str, tuple[float, float, str, str]] = {
@@ -102,10 +98,7 @@ def _distance_in_metres(lat1: float, lon1: float, lat2: float, lon2: float) -> f
     phi1, phi2 = math.radians(lat1), math.radians(lat2)
     dphi = math.radians(lat2 - lat1)
     dlambda = math.radians(lon2 - lon1)
-    a = (
-        math.sin(dphi / 2.0) ** 2
-        + math.cos(phi1) * math.cos(phi2) * math.sin(dlambda / 2.0) ** 2
-    )
+    a = math.sin(dphi / 2.0) ** 2 + math.cos(phi1) * math.cos(phi2) * math.sin(dlambda / 2.0) ** 2
     return 2.0 * R * math.atan2(math.sqrt(a), math.sqrt(1.0 - a))
 
 
@@ -314,7 +307,7 @@ def _calculate_slot_availability(
             if slots[slot] == "occupied":
                 free_until = slot
                 break
-        
+
         # Free minutes calculation
         target_minutes = int(target_time[:2]) * 60 + int(target_time[2:])
         until_minutes = int(free_until[:2]) * 60 + int(free_until[2:])
@@ -450,25 +443,27 @@ async def search_free_venues(
             distance_m = round(_distance_in_metres(lat, lon, v_lat, v_lon))
             walking_mins = _walking_minutes(distance_m)
 
-        results.append({
-            "venue_code": venue_code,
-            "room_name": room_name,
-            "floor": floor,
-            "building_prefix": bldg_prefix,
-            "building_name": bldg_name,
-            "faculty": v_faculty,
-            "latitude": v_lat,
-            "longitude": v_lon,
-            "distance_metres": distance_m,
-            "walking_minutes": walking_mins,
-            "is_free": avail["is_free"],
-            "free_until": avail["free_until"],
-            "free_minutes": avail["free_minutes"],
-            "current_lesson": avail["current_lesson"],
-            "next_lesson": avail["next_lesson"],
-            "slots": avail["slots"],
-            "classes_count": len(avail["classes_today"]),
-        })
+        results.append(
+            {
+                "venue_code": venue_code,
+                "room_name": room_name,
+                "floor": floor,
+                "building_prefix": bldg_prefix,
+                "building_name": bldg_name,
+                "faculty": v_faculty,
+                "latitude": v_lat,
+                "longitude": v_lon,
+                "distance_metres": distance_m,
+                "walking_minutes": walking_mins,
+                "is_free": avail["is_free"],
+                "free_until": avail["free_until"],
+                "free_minutes": avail["free_minutes"],
+                "current_lesson": avail["current_lesson"],
+                "next_lesson": avail["next_lesson"],
+                "slots": avail["slots"],
+                "classes_count": len(avail["classes_today"]),
+            }
+        )
 
     # Sort results
     if sort == "distance":

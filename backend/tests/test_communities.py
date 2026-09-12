@@ -36,15 +36,11 @@ async def test_create_and_list_communities(client: AsyncClient, auth):
 async def test_only_creator_can_update_or_delete(client: AsyncClient, auth):
     token, _, _ = auth
     headers = auth_headers(token)
-    community = (
-        await client.post("/communities", json={"name": "Study Circle"}, headers=headers)
-    ).json()
+    community = (await client.post("/communities", json={"name": "Study Circle"}, headers=headers)).json()
 
     other_headers = await create_user(client)
 
-    renamed = await client.patch(
-        f"/communities/{community['id']}", json={"name": "Renamed"}, headers=headers
-    )
+    renamed = await client.patch(f"/communities/{community['id']}", json={"name": "Renamed"}, headers=headers)
     assert renamed.status_code == 200
     assert renamed.json()["name"] == "Renamed"
 
@@ -66,8 +62,6 @@ async def test_only_creator_can_update_or_delete(client: AsyncClient, auth):
 async def test_empty_name_rejected(client: AsyncClient, auth):
     token, _, _ = auth
     headers = auth_headers(token)
-    community = (
-        await client.post("/communities", json={"name": "Keep"}, headers=headers)
-    ).json()
+    community = (await client.post("/communities", json={"name": "Keep"}, headers=headers)).json()
     resp = await client.patch(f"/communities/{community['id']}", json={"name": "   "}, headers=headers)
     assert resp.status_code == 400

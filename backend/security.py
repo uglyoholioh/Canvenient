@@ -13,9 +13,7 @@ from fastapi import HTTPException, status
 
 load_dotenv()
 
-ACCESS_TOKEN_EXPIRE_MINUTES = int(
-    os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", str(60 * 24 * 7))
-)
+ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", str(60 * 24 * 7)))
 JWT_ALGORITHM = "HS256"
 
 
@@ -77,22 +75,14 @@ def create_access_token(user_id: int) -> str:
     payload = {
         "sub": str(user_id),
         "iat": int(now.timestamp()),
-        "exp": int(
-            (now + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)).timestamp()
-        ),
+        "exp": int((now + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)).timestamp()),
     }
     header = {"alg": JWT_ALGORITHM, "typ": "JWT"}
 
-    header_segment = _b64url_encode(
-        json.dumps(header, separators=(",", ":"), sort_keys=True).encode("utf-8")
-    )
-    payload_segment = _b64url_encode(
-        json.dumps(payload, separators=(",", ":"), sort_keys=True).encode("utf-8")
-    )
+    header_segment = _b64url_encode(json.dumps(header, separators=(",", ":"), sort_keys=True).encode("utf-8"))
+    payload_segment = _b64url_encode(json.dumps(payload, separators=(",", ":"), sort_keys=True).encode("utf-8"))
     signing_input = f"{header_segment}.{payload_segment}".encode("utf-8")
-    signature = hmac.new(
-        JWT_SECRET.encode("utf-8"), signing_input, hashlib.sha256
-    ).digest()
+    signature = hmac.new(JWT_SECRET.encode("utf-8"), signing_input, hashlib.sha256).digest()
     signature_segment = _b64url_encode(signature)
     return f"{header_segment}.{payload_segment}.{signature_segment}"
 
@@ -104,9 +94,7 @@ def decode_access_token(token: str) -> dict:
         raise _unauthorized() from exc
 
     signing_input = f"{header_segment}.{payload_segment}".encode("utf-8")
-    expected_signature = hmac.new(
-        JWT_SECRET.encode("utf-8"), signing_input, hashlib.sha256
-    ).digest()
+    expected_signature = hmac.new(JWT_SECRET.encode("utf-8"), signing_input, hashlib.sha256).digest()
 
     try:
         provided_signature = _b64url_decode(signature_segment)

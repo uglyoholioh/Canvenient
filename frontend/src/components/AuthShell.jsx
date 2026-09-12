@@ -1,58 +1,58 @@
-import { useEffect, useState } from "react"
-import { probeHealth } from "../api"
-import "./auth.css"
+import { useEffect, useState } from "react";
+import { probeHealth } from "../api";
+import "./auth.css";
 
 // Real backend state for the corner status line. Polls gently so a sidecar
 // that is still starting up resolves to "online" without user action.
 function useBackendStatus() {
-  const [status, setStatus] = useState("connecting")
+  const [status, setStatus] = useState("connecting");
 
   useEffect(() => {
-    let cancelled = false
-    let timer
+    let cancelled = false;
+    let timer;
 
     const probe = async () => {
-      const controller = new AbortController()
-      const timeout = window.setTimeout(() => controller.abort(), 2500)
+      const controller = new AbortController();
+      const timeout = window.setTimeout(() => controller.abort(), 2500);
       try {
-        const response = await probeHealth()
-        if (!cancelled) setStatus(response ? "online" : "offline")
+        const response = await probeHealth();
+        if (!cancelled) setStatus(response ? "online" : "offline");
       } catch {
-        if (!cancelled) setStatus("offline")
+        if (!cancelled) setStatus("offline");
       } finally {
-        window.clearTimeout(timeout)
+        window.clearTimeout(timeout);
       }
-      if (!cancelled) timer = window.setTimeout(probe, 5000)
-    }
+      if (!cancelled) timer = window.setTimeout(probe, 5000);
+    };
 
-    probe()
+    probe();
     return () => {
-      cancelled = true
-      window.clearTimeout(timer)
-    }
-  }, [])
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, []);
 
-  return status
+  return status;
 }
 
 // App version from the Tauri shell; absent when running in a plain browser.
 function useAppVersion() {
-  const [version, setVersion] = useState(null)
+  const [version, setVersion] = useState(null);
 
   useEffect(() => {
-    let cancelled = false
+    let cancelled = false;
     import("@tauri-apps/api/app")
       .then(({ getVersion }) => getVersion())
       .then((v) => {
-        if (!cancelled) setVersion(v)
+        if (!cancelled) setVersion(v);
       })
-      .catch(() => {})
+      .catch(() => {});
     return () => {
-      cancelled = true
-    }
-  }, [])
+      cancelled = true;
+    };
+  }, []);
 
-  return version
+  return version;
 }
 
 export function BrandMark({ compact = false }) {
@@ -75,13 +75,13 @@ export function BrandMark({ compact = false }) {
       </text>
       <circle cx="112" cy="114" r="10" fill="var(--auth-brand-dot)" />
     </svg>
-  )
+  );
 }
 
 function AuthShell({ children }) {
-  const status = useBackendStatus()
-  const version = useAppVersion()
-  const statusLabel = { connecting: "connecting", online: "online", offline: "offline" }[status]
+  const status = useBackendStatus();
+  const version = useAppVersion();
+  const statusLabel = { connecting: "connecting", online: "online", offline: "offline" }[status];
 
   return (
     <div className="auth-stage">
@@ -107,7 +107,7 @@ function AuthShell({ children }) {
 
       <main className="auth-poster">{children}</main>
     </div>
-  )
+  );
 }
 
-export default AuthShell
+export default AuthShell;

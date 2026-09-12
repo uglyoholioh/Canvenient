@@ -1,5 +1,5 @@
 // React is required by the test JSX transform.
- 
+
 import { useEffect, useRef, useState } from "react";
 import { BookOpen, Calendar, ChevronDown, Clock, Flag, Plus, Sparkles, X } from "lucide-react";
 import { createNote, createTask, getAcademicModules, parseTaskSmart } from "../api";
@@ -18,7 +18,16 @@ function handleArrowNav(event, index, scope) {
   }
 }
 
-function CustomSelect({ value, onChange, options, placeholder, icon: Icon, onEscape, propIndex, propertyScope }) {
+function CustomSelect({
+  value,
+  onChange,
+  options,
+  placeholder,
+  icon: Icon,
+  onEscape,
+  propIndex,
+  propertyScope,
+}) {
   const [isOpen, setIsOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
   const containerRef = useRef(null);
@@ -50,7 +59,10 @@ function CustomSelect({ value, onChange, options, placeholder, icon: Icon, onEsc
         className="task-property-pill property-pill"
         data-property-index={propIndex}
         aria-expanded={isOpen}
-        onClick={() => { if (isOpen) setIsOpen(false); else openMenu(); }}
+        onClick={() => {
+          if (isOpen) setIsOpen(false);
+          else openMenu();
+        }}
         onKeyDown={(event) => {
           if (event.key === "Enter" || event.key === " ") {
             event.preventDefault();
@@ -71,13 +83,22 @@ function CustomSelect({ value, onChange, options, placeholder, icon: Icon, onEsc
           }
         }}
       >
-        <span className="task-property-label">{Icon && <Icon size={12} />}{selected?.label || placeholder}</span>
+        <span className="task-property-label">
+          {Icon && <Icon size={12} />}
+          {selected?.label || placeholder}
+        </span>
         <ChevronDown size={12} />
       </button>
       {isOpen && (
         <div className="task-property-menu">
           {options.map((option, index) => (
-            <button type="button" key={option.value} className={activeIndex === index ? "is-active" : ""} onMouseEnter={() => setActiveIndex(index)} onClick={() => choose(option)}>
+            <button
+              type="button"
+              key={option.value}
+              className={activeIndex === index ? "is-active" : ""}
+              onMouseEnter={() => setActiveIndex(index)}
+              onClick={() => choose(option)}
+            >
               {option.label}
             </button>
           ))}
@@ -107,7 +128,12 @@ function DateSelect({ dateType, setDateType, customDate, setCustomDate, onEscape
   }, []);
 
   const selected = presets.find((option) => option.value === dateType);
-  const label = dateType === "custom" && customDate ? customDate : selected?.value ? selected.label : "Due Date";
+  const label =
+    dateType === "custom" && customDate
+      ? customDate
+      : selected?.value
+        ? selected.label
+        : "Due Date";
   const choose = (value) => {
     setDateType(value);
     setCustomDate("");
@@ -162,16 +188,36 @@ function DateSelect({ dateType, setDateType, customDate, setCustomDate, onEscape
 
   return (
     <div ref={containerRef} className="task-property-wrap">
-      <button type="button" className="task-property-pill property-pill" data-property-index="0" aria-expanded={isOpen} onClick={() => setIsOpen((open) => !open)} onKeyDown={handleKeyDown}>
-        <span className="task-property-label"><Calendar size={12} />{label}</span>
+      <button
+        type="button"
+        className="task-property-pill property-pill"
+        data-property-index="0"
+        aria-expanded={isOpen}
+        onClick={() => setIsOpen((open) => !open)}
+        onKeyDown={handleKeyDown}
+      >
+        <span className="task-property-label">
+          <Calendar size={12} />
+          {label}
+        </span>
         <ChevronDown size={12} />
       </button>
       {isOpen && (
         <div className="task-property-menu task-date-menu">
-          <div className="task-date-preview"><span>Type date</span><strong>{customDate || "dd/mm"}</strong></div>
+          <div className="task-date-preview">
+            <span>Type date</span>
+            <strong>{customDate || "dd/mm"}</strong>
+          </div>
           {presets.map((option, index) => (
-            <button type="button" key={option.value} className={activeIndex === index && dateType !== "custom" ? "is-active" : ""} onMouseEnter={() => setActiveIndex(index)} onClick={() => choose(option.value)}>
-              {option.label}{dateType === option.value && <span>✓</span>}
+            <button
+              type="button"
+              key={option.value}
+              className={activeIndex === index && dateType !== "custom" ? "is-active" : ""}
+              onMouseEnter={() => setActiveIndex(index)}
+              onClick={() => choose(option.value)}
+            >
+              {option.label}
+              {dateType === option.value && <span>✓</span>}
             </button>
           ))}
         </div>
@@ -226,10 +272,22 @@ export default function TaskInputBar({
   const requestedMode = availableModes.includes(normalizedMode(initialMode))
     ? normalizedMode(initialMode)
     : availableModes[0] || "task";
-  
-  const initialDueDate = initialTask ? new Date(initialTask.effective_due_at || initialTask.due_at_override || initialTask.source_due_at) : null;
-  const initialDateStr = initialDueDate && !isNaN(initialDueDate.getTime()) ? `${String(initialDueDate.getDate()).padStart(2, "0")}/${String(initialDueDate.getMonth() + 1).padStart(2, "0")}` : "";
-  const initialTimeStr = initialDueDate && !isNaN(initialDueDate.getTime()) && (initialDueDate.getHours() > 0 || initialDueDate.getMinutes() > 0) ? `${String(initialDueDate.getHours()).padStart(2, "0")}:${String(initialDueDate.getMinutes()).padStart(2, "0")}` : "";
+
+  const initialDueDate = initialTask
+    ? new Date(
+        initialTask.effective_due_at || initialTask.due_at_override || initialTask.source_due_at,
+      )
+    : null;
+  const initialDateStr =
+    initialDueDate && !isNaN(initialDueDate.getTime())
+      ? `${String(initialDueDate.getDate()).padStart(2, "0")}/${String(initialDueDate.getMonth() + 1).padStart(2, "0")}`
+      : "";
+  const initialTimeStr =
+    initialDueDate &&
+    !isNaN(initialDueDate.getTime()) &&
+    (initialDueDate.getHours() > 0 || initialDueDate.getMinutes() > 0)
+      ? `${String(initialDueDate.getHours()).padStart(2, "0")}:${String(initialDueDate.getMinutes()).padStart(2, "0")}`
+      : "";
 
   const [modules, setModules] = useState([]);
   const [inputValue, setInputValue] = useState(initialTask?.title || "");
@@ -240,7 +298,9 @@ export default function TaskInputBar({
   const [customDate, setCustomDate] = useState(initialDateStr);
   const [time, setTime] = useState(initialTimeStr);
   const [priority, setPriority] = useState(initialTask?.priority_manual || "medium");
-  const [moduleId, setModuleId] = useState(initialTask?.module_id ? String(initialTask.module_id) : "");
+  const [moduleId, setModuleId] = useState(
+    initialTask?.module_id ? String(initialTask.module_id) : "",
+  );
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [parseHint, setParseHint] = useState("");
@@ -250,7 +310,10 @@ export default function TaskInputBar({
   const cardRef = useRef(null);
 
   useEffect(() => {
-    const loadModules = () => getAcademicModules(token).then((data) => setModules((data || []).filter((module) => module.is_selected !== false))).catch(() => setModules([]));
+    const loadModules = () =>
+      getAcademicModules(token)
+        .then((data) => setModules((data || []).filter((module) => module.is_selected !== false)))
+        .catch(() => setModules([]));
     loadModules();
     window.addEventListener("academic-modules-updated", loadModules);
     return () => window.removeEventListener("academic-modules-updated", loadModules);
@@ -309,7 +372,7 @@ export default function TaskInputBar({
         const dueAt = parseDueDate(dateType, customDate, time);
         if (dueAt !== undefined) payload.due_at_override = dueAt;
         if (moduleId !== undefined) payload.module_id = moduleId ? Number(moduleId) : null;
-        
+
         if (initialTask && onSubmitTaskEdit) {
           await onSubmitTaskEdit(initialTask.id, payload);
         } else {
@@ -337,8 +400,12 @@ export default function TaskInputBar({
         const due = new Date(parsed.due_at);
         if (!isNaN(due.getTime())) {
           setDateType("custom");
-          setCustomDate(`${String(due.getDate()).padStart(2, "0")}/${String(due.getMonth() + 1).padStart(2, "0")}`);
-          setTime(`${String(due.getHours()).padStart(2, "0")}:${String(due.getMinutes()).padStart(2, "0")}`);
+          setCustomDate(
+            `${String(due.getDate()).padStart(2, "0")}/${String(due.getMonth() + 1).padStart(2, "0")}`,
+          );
+          setTime(
+            `${String(due.getHours()).padStart(2, "0")}:${String(due.getMinutes()).padStart(2, "0")}`,
+          );
         }
       }
       if (parsed.priority) setPriority(parsed.priority);
@@ -358,23 +425,36 @@ export default function TaskInputBar({
     } else if (event.key === "Escape") {
       event.preventDefault();
       event.currentTarget.blur();
-    } else if (event.key === "Enter" && event.shiftKey && !(event.metaKey || event.ctrlKey) && inputMode === "task" && inputValue.trim()) {
+    } else if (
+      event.key === "Enter" &&
+      event.shiftKey &&
+      !(event.metaKey || event.ctrlKey) &&
+      inputMode === "task" &&
+      inputValue.trim()
+    ) {
       // Smart parse: fill the form from the natural-language input. Plain
       // Enter still submits exactly as before.
       event.preventDefault();
       smartParse();
-    } else if ((event.key === "Enter" && !event.shiftKey) || ((event.metaKey || event.ctrlKey) && event.key === "Enter")) {
+    } else if (
+      (event.key === "Enter" && !event.shiftKey) ||
+      ((event.metaKey || event.ctrlKey) && event.key === "Enter")
+    ) {
       event.preventDefault();
       submit();
     } else if (
-      (event.key === "ArrowUp" || event.key === "ArrowDown")
-      && inputMode === "task"
-      && inputValue === ""
-      && onEmptyArrowKey
+      (event.key === "ArrowUp" || event.key === "ArrowDown") &&
+      inputMode === "task" &&
+      inputValue === "" &&
+      onEmptyArrowKey
     ) {
       event.preventDefault();
       onEmptyArrowKey(event.key);
-    } else if ((event.key === "ArrowRight" || event.key === "ArrowDown") && inputMode === "task" && textareaRef.current?.selectionEnd === inputValue.length) {
+    } else if (
+      (event.key === "ArrowRight" || event.key === "ArrowDown") &&
+      inputMode === "task" &&
+      textareaRef.current?.selectionEnd === inputValue.length
+    ) {
       event.preventDefault();
       focusProperty(0, cardRef);
     }
@@ -396,47 +476,77 @@ export default function TaskInputBar({
       aria-hidden={!isOpen}
       inert={isOpen ? undefined : true}
     >
-      <div ref={cardRef} className="task-input-card" role={variant === "dock" ? "dialog" : undefined} aria-modal={variant === "dock" ? false : undefined} aria-label={variant === "dock" ? "Quick capture" : undefined}>
+      <div
+        ref={cardRef}
+        className="task-input-card"
+        role={variant === "dock" ? "dialog" : undefined}
+        aria-modal={variant === "dock" ? false : undefined}
+        aria-label={variant === "dock" ? "Quick capture" : undefined}
+      >
         {variant === "dock" && (
           <header className="quick-capture-header">
             <div>
               <strong>Quick capture</strong>
               <span>Stays open after you add an item</span>
             </div>
-            <button type="button" onClick={onClose} aria-label="Close quick capture"><X size={14} /></button>
+            <button type="button" onClick={onClose} aria-label="Close quick capture">
+              <X size={14} />
+            </button>
           </header>
         )}
-        {availableModes.length > 1 && <div className="task-mode-switcher" role="tablist" aria-label="Capture type">
-          {availableModes.map((modeId) => (
-            <button
-              type="button"
-              key={modeId}
-              role="tab"
-              aria-selected={inputMode === modeId}
-              tabIndex={inputMode === modeId ? 0 : -1}
-              className={inputMode === modeId ? "is-active" : ""}
-              onClick={() => setInputMode(modeId)}
-              onKeyDown={(event) => {
-                if (!["ArrowLeft", "ArrowRight"].includes(event.key)) return;
-                event.preventDefault();
-                const currentIndex = availableModes.indexOf(inputMode);
-                const direction = event.key === "ArrowRight" ? 1 : -1;
-                setInputMode(availableModes[(currentIndex + direction + availableModes.length) % availableModes.length]);
-                requestAnimationFrame(() => event.currentTarget.parentElement?.querySelector("[aria-selected='true']")?.focus());
-              }}
-            >{modeId === "task" ? "Task" : "Note"}</button>
-          ))}
-        </div>}
+        {availableModes.length > 1 && (
+          <div className="task-mode-switcher" role="tablist" aria-label="Capture type">
+            {availableModes.map((modeId) => (
+              <button
+                type="button"
+                key={modeId}
+                role="tab"
+                aria-selected={inputMode === modeId}
+                tabIndex={inputMode === modeId ? 0 : -1}
+                className={inputMode === modeId ? "is-active" : ""}
+                onClick={() => setInputMode(modeId)}
+                onKeyDown={(event) => {
+                  if (!["ArrowLeft", "ArrowRight"].includes(event.key)) return;
+                  event.preventDefault();
+                  const currentIndex = availableModes.indexOf(inputMode);
+                  const direction = event.key === "ArrowRight" ? 1 : -1;
+                  setInputMode(
+                    availableModes[
+                      (currentIndex + direction + availableModes.length) % availableModes.length
+                    ],
+                  );
+                  requestAnimationFrame(() =>
+                    event.currentTarget.parentElement
+                      ?.querySelector("[aria-selected='true']")
+                      ?.focus(),
+                  );
+                }}
+              >
+                {modeId === "task" ? "Task" : "Note"}
+              </button>
+            ))}
+          </div>
+        )}
         {error && <div className="task-input-error">{error}</div>}
-        {parseHint && <div className="task-input-hint"><Sparkles size={11} /> {parseHint}</div>}
+        {parseHint && (
+          <div className="task-input-hint">
+            <Sparkles size={11} /> {parseHint}
+          </div>
+        )}
         <div className="task-input-main">
-          {availableModes.length > 1 && <span className={`task-mode-badge is-${inputMode}`}>{inputMode.toUpperCase()}</span>}
+          {availableModes.length > 1 && (
+            <span className={`task-mode-badge is-${inputMode}`}>{inputMode.toUpperCase()}</span>
+          )}
           <textarea
             ref={textareaRef}
             value={inputValue}
             rows={1}
             maxLength={160}
-            onChange={(event) => { setInputValue(event.target.value); if (error) setError(""); if (parseHint) setParseHint(""); }}
+            onChange={(event) => {
+              setInputValue(event.target.value);
+              if (error) setError("");
+              if (parseHint) setParseHint("");
+            }}
             onKeyDown={handleInputKeyDown}
             placeholder={inputMode === "task" ? "Short task title..." : "Capture a note title..."}
           />
@@ -451,7 +561,10 @@ export default function TaskInputBar({
                 value={description}
                 maxLength={4000}
                 rows={2}
-                onChange={(event) => { setDescription(event.target.value); if (error) setError(""); }}
+                onChange={(event) => {
+                  setDescription(event.target.value);
+                  if (error) setError("");
+                }}
                 onKeyDown={(event) => {
                   if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
                     event.preventDefault();
@@ -466,43 +579,126 @@ export default function TaskInputBar({
               />
             )}
             <div className="task-properties">
-            <DateSelect dateType={dateType} setDateType={setDateType} customDate={customDate} setCustomDate={setCustomDate} onEscape={() => textareaRef.current?.focus()} propertyScope={cardRef} />
-            <div className="task-time-pill property-pill">
-              <Clock size={12} />
-              <input data-property-index="1" value={time} onChange={handleTimeChange} onKeyDown={(event) => {
-                if (event.key === "Escape") { event.preventDefault(); if (onClose) onClose(); else textareaRef.current?.focus(); }
-                else if (event.key === "Enter" || ((event.metaKey || event.ctrlKey) && event.key === "Enter")) { event.preventDefault(); submit(); }
-                else if (event.key === "ArrowRight" && (!time || event.currentTarget.selectionEnd === time.length)) handleArrowNav(event, 1, cardRef);
-                else if (event.key === "ArrowLeft" && (!time || event.currentTarget.selectionStart === 0)) handleArrowNav(event, 1, cardRef);
-              }} aria-label="Task time (24-hour HH:MM)" placeholder="24-hour HH:MM" />
-            </div>
-            <CustomSelect icon={Flag} value={priority} onChange={setPriority} onEscape={() => textareaRef.current?.focus()} propIndex={2} propertyScope={cardRef} placeholder="Priority" options={[
-              { value: "low", label: "Low Priority" }, { value: "medium", label: "Med Priority" }, { value: "high", label: "High Priority" }, { value: "urgent", label: "Urgent" },
-            ]} />
-            <CustomSelect icon={BookOpen} value={moduleId} onChange={setModuleId} onEscape={() => textareaRef.current?.focus()} propIndex={3} propertyScope={cardRef} placeholder="Module" options={[
-              { value: "", label: "No Module" }, ...modules.map((module) => ({ value: String(module.id), label: module.module_code })),
-            ]} />
-            {!showTaskNote && <button type="button" data-property-index="4" className="task-note-toggle" onClick={() => {
-              setShowTaskNote(true);
-              requestAnimationFrame(() => noteRef.current?.focus());
-            }} onKeyDown={(event) => handleArrowNav(event, 4, cardRef)}>Add note</button>}
-            {(showCancel || onClose) && variant !== "dock" && (
+              <DateSelect
+                dateType={dateType}
+                setDateType={setDateType}
+                customDate={customDate}
+                setCustomDate={setCustomDate}
+                onEscape={() => textareaRef.current?.focus()}
+                propertyScope={cardRef}
+              />
+              <div className="task-time-pill property-pill">
+                <Clock size={12} />
+                <input
+                  data-property-index="1"
+                  value={time}
+                  onChange={handleTimeChange}
+                  onKeyDown={(event) => {
+                    if (event.key === "Escape") {
+                      event.preventDefault();
+                      if (onClose) onClose();
+                      else textareaRef.current?.focus();
+                    } else if (
+                      event.key === "Enter" ||
+                      ((event.metaKey || event.ctrlKey) && event.key === "Enter")
+                    ) {
+                      event.preventDefault();
+                      submit();
+                    } else if (
+                      event.key === "ArrowRight" &&
+                      (!time || event.currentTarget.selectionEnd === time.length)
+                    )
+                      handleArrowNav(event, 1, cardRef);
+                    else if (
+                      event.key === "ArrowLeft" &&
+                      (!time || event.currentTarget.selectionStart === 0)
+                    )
+                      handleArrowNav(event, 1, cardRef);
+                  }}
+                  aria-label="Task time (24-hour HH:MM)"
+                  placeholder="24-hour HH:MM"
+                />
+              </div>
+              <CustomSelect
+                icon={Flag}
+                value={priority}
+                onChange={setPriority}
+                onEscape={() => textareaRef.current?.focus()}
+                propIndex={2}
+                propertyScope={cardRef}
+                placeholder="Priority"
+                options={[
+                  { value: "low", label: "Low Priority" },
+                  { value: "medium", label: "Med Priority" },
+                  { value: "high", label: "High Priority" },
+                  { value: "urgent", label: "Urgent" },
+                ]}
+              />
+              <CustomSelect
+                icon={BookOpen}
+                value={moduleId}
+                onChange={setModuleId}
+                onEscape={() => textareaRef.current?.focus()}
+                propIndex={3}
+                propertyScope={cardRef}
+                placeholder="Module"
+                options={[
+                  { value: "", label: "No Module" },
+                  ...modules.map((module) => ({
+                    value: String(module.id),
+                    label: module.module_code,
+                  })),
+                ]}
+              />
+              {!showTaskNote && (
+                <button
+                  type="button"
+                  data-property-index="4"
+                  className="task-note-toggle"
+                  onClick={() => {
+                    setShowTaskNote(true);
+                    requestAnimationFrame(() => noteRef.current?.focus());
+                  }}
+                  onKeyDown={(event) => handleArrowNav(event, 4, cardRef)}
+                >
+                  Add note
+                </button>
+              )}
+              {(showCancel || onClose) && variant !== "dock" && (
+                <button
+                  type="button"
+                  className="task-cancel-button"
+                  onClick={() => {
+                    reset(false);
+                    onClose?.();
+                  }}
+                >
+                  Cancel
+                </button>
+              )}
               <button
                 type="button"
-                className="task-cancel-button"
-                onClick={() => {
-                  reset(false);
-                  onClose?.();
+                data-property-index={showTaskNote ? "4" : "5"}
+                className="task-add-button property-pill"
+                disabled={!inputValue.trim() || isSubmitting}
+                onClick={submit}
+                onKeyDown={(event) => {
+                  if (event.key === "Escape") {
+                    if (onClose) onClose();
+                    else textareaRef.current?.focus();
+                  } else if (event.key === "Enter") submit();
+                  else handleArrowNav(event, showTaskNote ? 4 : 5, cardRef);
                 }}
               >
-                Cancel
+                <Plus size={14} />
+                {isSubmitting
+                  ? initialTask
+                    ? "Saving..."
+                    : "Adding..."
+                  : initialTask
+                    ? "Save"
+                    : "Add"}
               </button>
-            )}
-            <button type="button" data-property-index={showTaskNote ? "4" : "5"} className="task-add-button property-pill" disabled={!inputValue.trim() || isSubmitting} onClick={submit} onKeyDown={(event) => {
-              if (event.key === "Escape") { if (onClose) onClose(); else textareaRef.current?.focus(); }
-              else if (event.key === "Enter") submit();
-              else handleArrowNav(event, showTaskNote ? 4 : 5, cardRef);
-            }}><Plus size={14} />{isSubmitting ? (initialTask ? "Saving..." : "Adding...") : (initialTask ? "Save" : "Add")}</button>
             </div>
           </>
         )}
@@ -520,7 +716,15 @@ export default function TaskInputBar({
                 Cancel
               </button>
             )}
-            <button type="button" className="task-add-button property-pill" disabled={!inputValue.trim() || isSubmitting} onClick={submit}><Plus size={14} />{isSubmitting ? "Adding..." : "Add note"}</button>
+            <button
+              type="button"
+              className="task-add-button property-pill"
+              disabled={!inputValue.trim() || isSubmitting}
+              onClick={submit}
+            >
+              <Plus size={14} />
+              {isSubmitting ? "Adding..." : "Add note"}
+            </button>
           </div>
         )}
       </div>

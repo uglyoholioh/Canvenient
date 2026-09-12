@@ -31,15 +31,20 @@ async def restore_database_backup(payload: RestoreRequest, current_user: Current
 
     import hashlib
     import os
+
     await db.disconnect()
     try:
         _db_file = os.environ.get("DATABASE_URL", "").split("///", 1)[-1]
+
         def _h(f):
             if not os.path.exists(f):
                 return "missing"
             with open(f, "rb") as fh:
                 return hashlib.md5(fh.read()).hexdigest()[:8]
-        print(f"[restore] target={_db_file} before_md5={_h(_db_file)} backup_md5={_h(os.path.join('backups', payload.name))}")
+
+        print(
+            f"[restore] target={_db_file} before_md5={_h(_db_file)} backup_md5={_h(os.path.join('backups', payload.name))}"
+        )
         ok = restore_database(payload.name)
         print(f"[restore] ok={ok} after_md5={_h(_db_file)}")
         if not ok:

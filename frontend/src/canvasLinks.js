@@ -9,7 +9,9 @@ export function extractCanvasLinks(html = "") {
         const href = new URL(anchor.getAttribute("href"), CANVAS_ORIGIN);
         if (!/^https?:$/.test(href.protocol)) return null;
         return { href: href.toString(), label: anchor.textContent.trim() || href.hostname };
-      } catch { return null; }
+      } catch {
+        return null;
+      }
     })
     .filter((link) => link && !seen.has(link.href) && seen.add(link.href));
 }

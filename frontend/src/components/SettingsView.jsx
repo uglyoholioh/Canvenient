@@ -25,7 +25,12 @@ import {
 } from "lucide-react";
 import { remindersEnabled, setRemindersEnabled } from "../dueReminders";
 import DashboardCustomizer from "./dashboard/DashboardCustomizer";
-import { readDashboardConfig, readDashboardLayout, saveDashboardConfig, saveDashboardLayout } from "./dashboard/dashboardConfig";
+import {
+  readDashboardConfig,
+  readDashboardLayout,
+  saveDashboardConfig,
+  saveDashboardLayout,
+} from "./dashboard/dashboardConfig";
 import {
   applyModulePalette,
   claimTelegramLink,
@@ -49,20 +54,63 @@ import {
 } from "../keyboardShortcuts";
 
 const getSidebarBehavior = () => {
-  const stored = localStorage.getItem('canvenient-sidebar-mode');
-  return ['hover', 'pinned', 'hidden'].includes(stored) ? stored : 'hover';
+  const stored = localStorage.getItem("canvenient-sidebar-mode");
+  return ["hover", "pinned", "hidden"].includes(stored) ? stored : "hover";
 };
 
 const APP_THEMES = [
-  { id: "graphite", label: "Graphite", description: "Soft monochrome", icon: Moon, swatches: ["#101113", "#1a1b1e", "#9c9da1"] },
-  { id: "dusk", label: "Dusk", description: "Smoky violet", icon: Sparkles, swatches: ["#14131a", "#211e2a", "#b7a6d8"] },
-  { id: "forest", label: "Moss", description: "Muted green", icon: Trees, swatches: ["#101512", "#1a211c", "#9fb49f"] },
-  { id: "ocean", label: "Tide", description: "Muted blue", icon: Palette, swatches: ["#0f1418", "#182126", "#9ab7c2"] },
-  { id: "light", label: "Paper", description: "Quiet light", icon: Sun, swatches: ["#f2f1ed", "#ffffff", "#66716f"] },
-  { id: "system", label: "System", description: "Follow device", icon: Monitor, swatches: ["#242528", "#e7e5df", "#8b8b8b"] },
+  {
+    id: "graphite",
+    label: "Graphite",
+    description: "Soft monochrome",
+    icon: Moon,
+    swatches: ["#101113", "#1a1b1e", "#9c9da1"],
+  },
+  {
+    id: "dusk",
+    label: "Dusk",
+    description: "Smoky violet",
+    icon: Sparkles,
+    swatches: ["#14131a", "#211e2a", "#b7a6d8"],
+  },
+  {
+    id: "forest",
+    label: "Moss",
+    description: "Muted green",
+    icon: Trees,
+    swatches: ["#101512", "#1a211c", "#9fb49f"],
+  },
+  {
+    id: "ocean",
+    label: "Tide",
+    description: "Muted blue",
+    icon: Palette,
+    swatches: ["#0f1418", "#182126", "#9ab7c2"],
+  },
+  {
+    id: "light",
+    label: "Paper",
+    description: "Quiet light",
+    icon: Sun,
+    swatches: ["#f2f1ed", "#ffffff", "#66716f"],
+  },
+  {
+    id: "system",
+    label: "System",
+    description: "Follow device",
+    icon: Monitor,
+    swatches: ["#242528", "#e7e5df", "#8b8b8b"],
+  },
 ];
 
-function ShortcutRecorder({ allowShiftOnly = false, description, label, onChange, onReset, value }) {
+function ShortcutRecorder({
+  allowShiftOnly = false,
+  description,
+  label,
+  onChange,
+  onReset,
+  value,
+}) {
   const [recording, setRecording] = useState(false);
 
   const handleKeyDown = (event) => {
@@ -79,7 +127,8 @@ function ShortcutRecorder({ allowShiftOnly = false, description, label, onChange
       return;
     }
     const next = shortcutFromKeyboardEvent(event);
-    const hasModifier = event.metaKey || event.ctrlKey || event.altKey || (allowShiftOnly && event.shiftKey);
+    const hasModifier =
+      event.metaKey || event.ctrlKey || event.altKey || (allowShiftOnly && event.shiftKey);
     if (!next || (!hasModifier && !/^F\d{1,2}$/.test(event.key))) return;
     onChange(next);
     setRecording(false);
@@ -87,7 +136,10 @@ function ShortcutRecorder({ allowShiftOnly = false, description, label, onChange
 
   return (
     <div className="settings-shortcut-row">
-      <div><strong>{label}</strong><small>{description}</small></div>
+      <div>
+        <strong>{label}</strong>
+        <small>{description}</small>
+      </div>
       <div className="settings-shortcut-actions">
         <button
           type="button"
@@ -95,8 +147,12 @@ function ShortcutRecorder({ allowShiftOnly = false, description, label, onChange
           aria-label={recording ? `Recording ${label}` : `Change ${label}`}
           onClick={() => setRecording(true)}
           onKeyDown={handleKeyDown}
-        >{recording ? "Press shortcut…" : formatShortcut(value)}</button>
-        <button type="button" className="settings-shortcut-reset" onClick={onReset}>Reset</button>
+        >
+          {recording ? "Press shortcut…" : formatShortcut(value)}
+        </button>
+        <button type="button" className="settings-shortcut-reset" onClick={onReset}>
+          Reset
+        </button>
       </div>
     </div>
   );
@@ -104,12 +160,16 @@ function ShortcutRecorder({ allowShiftOnly = false, description, label, onChange
 
 export default function SettingsView({ token, user, onUpdateUser, onReplayOnboarding }) {
   const [theme, setTheme] = useState(() => {
-    const savedTheme = localStorage.getItem('canvenient-theme') || 'graphite';
-    return savedTheme === 'dark' ? 'graphite' : savedTheme;
+    const savedTheme = localStorage.getItem("canvenient-theme") || "graphite";
+    return savedTheme === "dark" ? "graphite" : savedTheme;
   });
   const [sidebarBehavior, setSidebarBehavior] = useState(getSidebarBehavior);
-  const [sidebarWidth, setSidebarWidth] = useState(() => parseInt(localStorage.getItem('canvenient-sidebar-width') || '250', 10));
-  const [checkboxStyle, setCheckboxStyle] = useState(localStorage.getItem('canvenient-checkbox-style') || 'brackets');
+  const [sidebarWidth, setSidebarWidth] = useState(() =>
+    parseInt(localStorage.getItem("canvenient-sidebar-width") || "250", 10),
+  );
+  const [checkboxStyle, setCheckboxStyle] = useState(
+    localStorage.getItem("canvenient-checkbox-style") || "brackets",
+  );
   const [shortcutConfig, setShortcutConfig] = useState(readKeyboardShortcuts);
   const [shortcutError, setShortcutError] = useState("");
 
@@ -135,10 +195,17 @@ export default function SettingsView({ token, user, onUpdateUser, onReplayOnboar
       .catch(() => setBackups([]));
   }, [token]);
 
-  useEffect(() => { refreshBackups(); }, [refreshBackups]);
+  useEffect(() => {
+    refreshBackups();
+  }, [refreshBackups]);
 
   const handleRestoreBackup = async (name) => {
-    if (!window.confirm(`Restore the database from ${name}?\nA safety backup of the current data is taken first.`)) return;
+    if (
+      !window.confirm(
+        `Restore the database from ${name}?\nA safety backup of the current data is taken first.`,
+      )
+    )
+      return;
     setRestoringName(name);
     setBackupsMessage("");
     try {
@@ -165,7 +232,11 @@ export default function SettingsView({ token, user, onUpdateUser, onReplayOnboar
 
   const [dashboardLayout, setDashboardLayout] = useState(readDashboardLayout);
   const [dashboardConfig, setDashboardConfig] = useState(readDashboardConfig);
-  const [moduleColors, setModuleColors] = useState({ active_palette: "balanced", palettes: [], modules: [] });
+  const [moduleColors, setModuleColors] = useState({
+    active_palette: "balanced",
+    palettes: [],
+    modules: [],
+  });
   const [moduleColorsLoading, setModuleColorsLoading] = useState(true);
   const [moduleColorsSaving, setModuleColorsSaving] = useState("");
   const [moduleColorsError, setModuleColorsError] = useState("");
@@ -187,7 +258,9 @@ export default function SettingsView({ token, user, onUpdateUser, onReplayOnboar
     getTelegramLink(token)
       .then((status) => active && setTelegramStatus(status))
       .catch(() => active && setTelegramStatus({ linked: false }));
-    return () => { active = false; };
+    return () => {
+      active = false;
+    };
   }, [token]);
 
   useEffect(() => {
@@ -207,34 +280,34 @@ export default function SettingsView({ token, user, onUpdateUser, onReplayOnboar
   }, [token]);
 
   useEffect(() => {
-    if (theme === 'system') {
-      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-      document.documentElement.setAttribute('data-theme', prefersDark ? 'graphite' : 'light');
+    if (theme === "system") {
+      const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+      document.documentElement.setAttribute("data-theme", prefersDark ? "graphite" : "light");
     } else {
-      document.documentElement.setAttribute('data-theme', theme);
+      document.documentElement.setAttribute("data-theme", theme);
     }
-    localStorage.setItem('canvenient-theme', theme);
+    localStorage.setItem("canvenient-theme", theme);
   }, [theme]);
 
   const handleSidebarBehaviorChange = (e) => {
     const val = e.target.value;
     setSidebarBehavior(val);
-    localStorage.setItem('canvenient-sidebar-mode', val);
-    window.dispatchEvent(new Event('settings-updated'));
+    localStorage.setItem("canvenient-sidebar-mode", val);
+    window.dispatchEvent(new Event("settings-updated"));
   };
 
   const handleSidebarWidthChange = (e) => {
     const val = Number(e.target.value);
     setSidebarWidth(val);
-    localStorage.setItem('canvenient-sidebar-width', String(val));
-    window.dispatchEvent(new Event('settings-updated'));
+    localStorage.setItem("canvenient-sidebar-width", String(val));
+    window.dispatchEvent(new Event("settings-updated"));
   };
 
   const handleCheckboxStyleChange = (e) => {
     const val = e.target.value;
     setCheckboxStyle(val);
-    localStorage.setItem('canvenient-checkbox-style', val);
-    window.dispatchEvent(new Event('settings-updated'));
+    localStorage.setItem("canvenient-checkbox-style", val);
+    window.dispatchEvent(new Event("settings-updated"));
   };
 
   const handleDashboardLayoutChange = (layout) => {
@@ -275,12 +348,17 @@ export default function SettingsView({ token, user, onUpdateUser, onReplayOnboar
 
   const handleModuleSelection = async (moduleId) => {
     const previous = academicModules;
-    const next = previous.map((module) => module.id === moduleId ? { ...module, is_selected: !module.is_selected } : module);
+    const next = previous.map((module) =>
+      module.id === moduleId ? { ...module, is_selected: !module.is_selected } : module,
+    );
     setAcademicModules(next);
     setAcademicModulesSaving(true);
     setAcademicModulesError("");
     try {
-      const updated = await updateAcademicModuleSelection(token, next.filter((module) => module.is_selected).map((module) => module.id));
+      const updated = await updateAcademicModuleSelection(
+        token,
+        next.filter((module) => module.is_selected).map((module) => module.id),
+      );
       setAcademicModules(updated);
       window.dispatchEvent(new Event("academic-modules-updated"));
     } catch (error) {
@@ -336,11 +414,15 @@ export default function SettingsView({ token, user, onUpdateUser, onReplayOnboar
   };
 
   const saveCanvasToken = async () => {
-    const effectiveName = (profileName || user?.name || "").trim() || (user?.email ? user.email.split("@")[0] : "Student");
+    const effectiveName =
+      (profileName || user?.name || "").trim() ||
+      (user?.email ? user.email.split("@")[0] : "Student");
     setCanvasTokenSaving(true);
     setCanvasTokenMessage("");
     if (!canvasTokenDirty) {
-      setCanvasTokenMessage(user?.canvas_connected ? "Token unchanged." : "Enter a Canvas API token first.");
+      setCanvasTokenMessage(
+        user?.canvas_connected ? "Token unchanged." : "Enter a Canvas API token first.",
+      );
       setCanvasTokenSaving(false);
       return;
     }
@@ -364,7 +446,9 @@ export default function SettingsView({ token, user, onUpdateUser, onReplayOnboar
   };
 
   const disconnectCanvas = async () => {
-    const effectiveName = (profileName || user?.name || "").trim() || (user?.email ? user.email.split("@")[0] : "Student");
+    const effectiveName =
+      (profileName || user?.name || "").trim() ||
+      (user?.email ? user.email.split("@")[0] : "Student");
     setCanvasTokenSaving(true);
     setCanvasTokenMessage("");
     setCanvasTestResult(null);
@@ -421,9 +505,17 @@ export default function SettingsView({ token, user, onUpdateUser, onReplayOnboar
   };
 
   const updateShortcut = (name, value) => {
-    const duplicate = Object.entries(shortcutConfig).find(([key, shortcut]) => key !== name && typeof shortcut === "string" && shortcut === value);
+    const duplicate = Object.entries(shortcutConfig).find(
+      ([key, shortcut]) => key !== name && typeof shortcut === "string" && shortcut === value,
+    );
     if (duplicate) {
-      const labels = { tasksPanel: "Tasks panel", quickTask: "New task", quickNote: "Quick note", search: "Search", assistant: "Assistant" };
+      const labels = {
+        tasksPanel: "Tasks panel",
+        quickTask: "New task",
+        quickNote: "Quick note",
+        search: "Search",
+        assistant: "Assistant",
+      };
       setShortcutError(`${formatShortcut(value)} is already assigned to ${labels[duplicate[0]]}.`);
       return;
     }
@@ -432,17 +524,51 @@ export default function SettingsView({ token, user, onUpdateUser, onReplayOnboar
   };
 
   return (
-    <div style={{ padding: '32px', paddingBottom: '120px', maxWidth: '800px', margin: '0 auto', width: '100%', overflowY: 'auto', height: '100%' }} tabIndex={-1}>
+    <div
+      style={{
+        padding: "32px",
+        paddingBottom: "120px",
+        maxWidth: "800px",
+        margin: "0 auto",
+        width: "100%",
+        overflowY: "auto",
+        height: "100%",
+      }}
+      tabIndex={-1}
+    >
       <h1 className="settings-page-title">Settings</h1>
 
-      <section style={{ marginBottom: '40px' }}>
+      <section style={{ marginBottom: "40px" }}>
         <div className="settings-section-heading">
-          <div><User size={15} /><h2>Profile</h2></div>
+          <div>
+            <User size={15} />
+            <h2>Profile</h2>
+          </div>
           <p>Your workspace identity and account details.</p>
         </div>
-        <div style={{ backgroundColor: 'var(--surface)', border: '1px solid var(--border-strong)', borderRadius: '8px', padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        <div
+          style={{
+            backgroundColor: "var(--surface)",
+            border: "1px solid var(--border-strong)",
+            borderRadius: "8px",
+            padding: "20px",
+            display: "flex",
+            flexDirection: "column",
+            gap: "16px",
+          }}
+        >
           <div>
-            <label style={{ display: 'block', fontSize: '11px', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '6px', fontWeight: '600', letterSpacing: '0.5px' }}>
+            <label
+              style={{
+                display: "block",
+                fontSize: "11px",
+                textTransform: "uppercase",
+                color: "var(--text-muted)",
+                marginBottom: "6px",
+                fontWeight: "600",
+                letterSpacing: "0.5px",
+              }}
+            >
               Email Address
             </label>
             <input
@@ -450,16 +576,32 @@ export default function SettingsView({ token, user, onUpdateUser, onReplayOnboar
               readOnly
               value={user?.email || ""}
               className="form-input"
-              style={{ width: '100%', opacity: 0.7, cursor: 'not-allowed', backgroundColor: 'var(--surface-muted)' }}
+              style={{
+                width: "100%",
+                opacity: 0.7,
+                cursor: "not-allowed",
+                backgroundColor: "var(--surface-muted)",
+              }}
               aria-label="Email Address"
             />
           </div>
 
           <div>
-            <label htmlFor="settings-profile-name" style={{ display: 'block', fontSize: '11px', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '6px', fontWeight: '600', letterSpacing: '0.5px' }}>
+            <label
+              htmlFor="settings-profile-name"
+              style={{
+                display: "block",
+                fontSize: "11px",
+                textTransform: "uppercase",
+                color: "var(--text-muted)",
+                marginBottom: "6px",
+                fontWeight: "600",
+                letterSpacing: "0.5px",
+              }}
+            >
               Display Name
             </label>
-            <div style={{ display: 'flex', gap: '8px' }}>
+            <div style={{ display: "flex", gap: "8px" }}>
               <input
                 id="settings-profile-name"
                 type="text"
@@ -476,13 +618,17 @@ export default function SettingsView({ token, user, onUpdateUser, onReplayOnboar
                 disabled={profileSaving || !profileName.trim()}
                 onClick={saveProfile}
               >
-                {profileSaving ? 'Saving…' : 'Save Name'}
+                {profileSaving ? "Saving…" : "Save Name"}
               </button>
             </div>
           </div>
 
           {profileMessage && (
-            <p className={profileError ? "settings-colors-error" : "settings-colors-state"} role="status" style={{ margin: 0 }}>
+            <p
+              className={profileError ? "settings-colors-error" : "settings-colors-state"}
+              role="status"
+              style={{ margin: 0 }}
+            >
               {profileMessage}
             </p>
           )}
@@ -491,7 +637,10 @@ export default function SettingsView({ token, user, onUpdateUser, onReplayOnboar
 
       <section className="settings-appearance">
         <div className="settings-section-heading">
-          <div><Palette size={15} /><h2>Appearance</h2></div>
+          <div>
+            <Palette size={15} />
+            <h2>Appearance</h2>
+          </div>
           <p>Choose a calm workspace palette.</p>
         </div>
         <div className="theme-picker" role="radiogroup" aria-label="Application theme">
@@ -507,9 +656,15 @@ export default function SettingsView({ token, user, onUpdateUser, onReplayOnboar
                 onClick={() => setTheme(id)}
               >
                 <span className="theme-picker-preview" aria-hidden="true">
-                  {swatches.map((swatch) => <i key={swatch} style={{ background: swatch }} />)}
+                  {swatches.map((swatch) => (
+                    <i key={swatch} style={{ background: swatch }} />
+                  ))}
                 </span>
-                <span className="theme-picker-copy"><Icon size={15} /><strong>{label}</strong><small>{description}</small></span>
+                <span className="theme-picker-copy">
+                  <Icon size={15} />
+                  <strong>{label}</strong>
+                  <small>{description}</small>
+                </span>
               </button>
             );
           })}
@@ -518,15 +673,25 @@ export default function SettingsView({ token, user, onUpdateUser, onReplayOnboar
 
       <section className="settings-course-colors">
         <div className="settings-section-heading">
-          <div><Palette size={15} /><h2>Module colours</h2></div>
+          <div>
+            <Palette size={15} />
+            <h2>Module colours</h2>
+          </div>
           <p>One colour per module, shared by Schedule and Canvas.</p>
         </div>
 
         {moduleColorsLoading ? (
-          <div className="settings-colors-state"><Loader2 size={15} className="retro-icon-spin" />Loading modules</div>
+          <div className="settings-colors-state">
+            <Loader2 size={15} className="retro-icon-spin" />
+            Loading modules
+          </div>
         ) : (
           <div className="settings-colors-panel">
-            <div className="settings-palette-list" role="radiogroup" aria-label="Module colour palette">
+            <div
+              className="settings-palette-list"
+              role="radiogroup"
+              aria-label="Module colour palette"
+            >
               {moduleColors.palettes.map((palette) => {
                 const active = moduleColors.active_palette === palette.id;
                 const saving = moduleColorsSaving === `palette:${palette.id}`;
@@ -541,7 +706,9 @@ export default function SettingsView({ token, user, onUpdateUser, onReplayOnboar
                     onClick={() => handlePaletteChange(palette.id)}
                   >
                     <span className="settings-palette-swatches" aria-hidden="true">
-                      {palette.colors.slice(0, 5).map((color) => <i key={color} style={{ backgroundColor: color }} />)}
+                      {palette.colors.slice(0, 5).map((color) => (
+                        <i key={color} style={{ backgroundColor: color }} />
+                      ))}
                     </span>
                     <strong>{palette.name}</strong>
                     {saving && <Loader2 size={12} className="retro-icon-spin" />}
@@ -551,19 +718,33 @@ export default function SettingsView({ token, user, onUpdateUser, onReplayOnboar
             </div>
 
             <div className="settings-module-colors">
-              {moduleColors.modules.length ? moduleColors.modules.map((module) => (
-                <label key={module.module_code}>
-                  <span className="settings-module-swatch" style={{ backgroundColor: module.color }} />
-                  <span><strong>{module.module_code}</strong><small>{module.module_name}</small></span>
-                  <input
-                    type="color"
-                    value={module.color}
-                    disabled={Boolean(moduleColorsSaving)}
-                    onChange={(event) => handleModuleColorChange(module.module_code, event.target.value)}
-                    aria-label={`Change ${module.module_code} colour`}
-                  />
-                </label>
-              )) : <div className="settings-colors-empty">Import a timetable or connect Canvas to add modules.</div>}
+              {moduleColors.modules.length ? (
+                moduleColors.modules.map((module) => (
+                  <label key={module.module_code}>
+                    <span
+                      className="settings-module-swatch"
+                      style={{ backgroundColor: module.color }}
+                    />
+                    <span>
+                      <strong>{module.module_code}</strong>
+                      <small>{module.module_name}</small>
+                    </span>
+                    <input
+                      type="color"
+                      value={module.color}
+                      disabled={Boolean(moduleColorsSaving)}
+                      onChange={(event) =>
+                        handleModuleColorChange(module.module_code, event.target.value)
+                      }
+                      aria-label={`Change ${module.module_code} colour`}
+                    />
+                  </label>
+                ))
+              ) : (
+                <div className="settings-colors-empty">
+                  Import a timetable or connect Canvas to add modules.
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -572,41 +753,104 @@ export default function SettingsView({ token, user, onUpdateUser, onReplayOnboar
 
       <section className="settings-course-colors">
         <div className="settings-section-heading">
-          <div><Database size={15} /><h2>My modules</h2></div>
+          <div>
+            <Database size={15} />
+            <h2>My modules</h2>
+          </div>
           <p>Only selected modules appear when you assign a module to a task.</p>
         </div>
-        {academicModulesLoading ? <div className="settings-colors-state"><Loader2 size={15} className="retro-icon-spin" />Loading modules</div> : academicModules.length ? (
-          <div className="settings-module-colors settings-module-selection" aria-label="Select modules you are taking">
+        {academicModulesLoading ? (
+          <div className="settings-colors-state">
+            <Loader2 size={15} className="retro-icon-spin" />
+            Loading modules
+          </div>
+        ) : academicModules.length ? (
+          <div
+            className="settings-module-colors settings-module-selection"
+            aria-label="Select modules you are taking"
+          >
             {academicModules.map((module) => (
               <label key={module.id}>
-                <input type="checkbox" checked={module.is_selected} disabled={academicModulesSaving} onChange={() => handleModuleSelection(module.id)} aria-label={`Taking ${module.module_code}`} />
-                <span><strong>{module.module_code}</strong><small>{module.name}</small></span>
+                <input
+                  type="checkbox"
+                  checked={module.is_selected}
+                  disabled={academicModulesSaving}
+                  onChange={() => handleModuleSelection(module.id)}
+                  aria-label={`Taking ${module.module_code}`}
+                />
+                <span>
+                  <strong>{module.module_code}</strong>
+                  <small>{module.name}</small>
+                </span>
               </label>
             ))}
           </div>
-        ) : <div className="settings-colors-empty">Connect Canvas or import a timetable to choose your modules.</div>}
-        {academicModulesError && <div className="settings-colors-error" role="alert">{academicModulesError}</div>}
+        ) : (
+          <div className="settings-colors-empty">
+            Connect Canvas or import a timetable to choose your modules.
+          </div>
+        )}
+        {academicModulesError && (
+          <div className="settings-colors-error" role="alert">
+            {academicModulesError}
+          </div>
+        )}
       </section>
 
-      <section style={{ marginBottom: '40px' }}>
-        <h2 className="settings-section-title" style={{ marginBottom: '16px' }}>Dashboard</h2>
-        <div style={{ padding: '16px', backgroundColor: 'var(--surface)', border: '1px solid var(--border-strong)', borderRadius: '8px' }}>
-          <DashboardCustomizer layout={dashboardLayout} config={dashboardConfig} onLayoutChange={handleDashboardLayoutChange} onConfigChange={handleDashboardConfigChange} />
+      <section style={{ marginBottom: "40px" }}>
+        <h2 className="settings-section-title" style={{ marginBottom: "16px" }}>
+          Dashboard
+        </h2>
+        <div
+          style={{
+            padding: "16px",
+            backgroundColor: "var(--surface)",
+            border: "1px solid var(--border-strong)",
+            borderRadius: "8px",
+          }}
+        >
+          <DashboardCustomizer
+            layout={dashboardLayout}
+            config={dashboardConfig}
+            onLayoutChange={handleDashboardLayoutChange}
+            onConfigChange={handleDashboardConfigChange}
+          />
         </div>
       </section>
 
-      <section style={{ marginBottom: '40px' }}>
-        <h2 className="settings-section-title" style={{ marginBottom: '16px' }}>Preferences</h2>
-        
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1px', backgroundColor: 'var(--border-strong)', border: '1px solid var(--border-strong)', borderRadius: '8px', overflow: 'hidden' }}>
-          
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px', backgroundColor: 'var(--surface)' }}>
+      <section style={{ marginBottom: "40px" }}>
+        <h2 className="settings-section-title" style={{ marginBottom: "16px" }}>
+          Preferences
+        </h2>
+
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: "1px",
+            backgroundColor: "var(--border-strong)",
+            border: "1px solid var(--border-strong)",
+            borderRadius: "8px",
+            overflow: "hidden",
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              padding: "16px",
+              backgroundColor: "var(--surface)",
+            }}
+          >
             <div>
-              <div style={{ color: 'var(--text-h)', fontWeight: '500' }}>Task Checkbox Style</div>
-              <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>How checkmarks are displayed</div>
+              <div style={{ color: "var(--text-h)", fontWeight: "500" }}>Task Checkbox Style</div>
+              <div style={{ fontSize: "12px", color: "var(--text-muted)" }}>
+                How checkmarks are displayed
+              </div>
             </div>
-            <select 
-              value={checkboxStyle} 
+            <select
+              value={checkboxStyle}
               onChange={handleCheckboxStyleChange}
               className="form-input font-mono"
               tabIndex={0}
@@ -617,16 +861,35 @@ export default function SettingsView({ token, user, onUpdateUser, onReplayOnboar
             </select>
           </div>
 
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px', backgroundColor: 'var(--surface)' }}>
-            <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-              <div style={{ padding: '8px', backgroundColor: 'var(--surface-muted)', borderRadius: '4px', color: 'var(--text-muted)' }}><PanelLeft size={20} /></div>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              padding: "16px",
+              backgroundColor: "var(--surface)",
+            }}
+          >
+            <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
+              <div
+                style={{
+                  padding: "8px",
+                  backgroundColor: "var(--surface-muted)",
+                  borderRadius: "4px",
+                  color: "var(--text-muted)",
+                }}
+              >
+                <PanelLeft size={20} />
+              </div>
               <div>
-                <div style={{ color: 'var(--text-h)', fontWeight: '500' }}>Sidebar Behavior</div>
-                <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Choose how the workspace navigation expands</div>
+                <div style={{ color: "var(--text-h)", fontWeight: "500" }}>Sidebar Behavior</div>
+                <div style={{ fontSize: "12px", color: "var(--text-muted)" }}>
+                  Choose how the workspace navigation expands
+                </div>
               </div>
             </div>
-            <select 
-              value={sidebarBehavior} 
+            <select
+              value={sidebarBehavior}
               onChange={handleSidebarBehaviorChange}
               className="form-input"
               tabIndex={0}
@@ -637,32 +900,91 @@ export default function SettingsView({ token, user, onUpdateUser, onReplayOnboar
             </select>
           </div>
 
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px', backgroundColor: 'var(--surface)' }}>
-            <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-              <div style={{ padding: '8px', backgroundColor: 'var(--surface-muted)', borderRadius: '4px', color: 'var(--text-muted)' }}><MoveHorizontal size={20} /></div>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              padding: "16px",
+              backgroundColor: "var(--surface)",
+            }}
+          >
+            <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
+              <div
+                style={{
+                  padding: "8px",
+                  backgroundColor: "var(--surface-muted)",
+                  borderRadius: "4px",
+                  color: "var(--text-muted)",
+                }}
+              >
+                <MoveHorizontal size={20} />
+              </div>
               <div>
-                <div style={{ color: 'var(--text-h)', fontWeight: '500' }}>Expanded Sidebar Width</div>
-                <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Width used while pinned or hovered</div>
+                <div style={{ color: "var(--text-h)", fontWeight: "500" }}>
+                  Expanded Sidebar Width
+                </div>
+                <div style={{ fontSize: "12px", color: "var(--text-muted)" }}>
+                  Width used while pinned or hovered
+                </div>
               </div>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <input type="range" min="190" max="420" step="10" value={sidebarWidth} onChange={handleSidebarWidthChange} aria-label="Expanded sidebar width" />
-              <span style={{ width: '48px', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', fontSize: '11px', textAlign: 'right' }}>{sidebarWidth}px</span>
+            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+              <input
+                type="range"
+                min="190"
+                max="420"
+                step="10"
+                value={sidebarWidth}
+                onChange={handleSidebarWidthChange}
+                aria-label="Expanded sidebar width"
+              />
+              <span
+                style={{
+                  width: "48px",
+                  color: "var(--text-muted)",
+                  fontFamily: "var(--font-mono)",
+                  fontSize: "11px",
+                  textAlign: "right",
+                }}
+              >
+                {sidebarWidth}px
+              </span>
             </div>
           </div>
 
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px', backgroundColor: 'var(--surface)', borderTop: '1px solid var(--border)' }}>
-            <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-              <div style={{ padding: '8px', backgroundColor: 'var(--surface-muted)', borderRadius: '4px', color: 'var(--text-muted)' }}><Bell size={20} /></div>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              padding: "16px",
+              backgroundColor: "var(--surface)",
+              borderTop: "1px solid var(--border)",
+            }}
+          >
+            <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
+              <div
+                style={{
+                  padding: "8px",
+                  backgroundColor: "var(--surface-muted)",
+                  borderRadius: "4px",
+                  color: "var(--text-muted)",
+                }}
+              >
+                <Bell size={20} />
+              </div>
               <div>
-                <div style={{ color: 'var(--text-h)', fontWeight: '500' }}>Due date reminders</div>
-                <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Get a system notification when a task is due within 24 hours</div>
+                <div style={{ color: "var(--text-h)", fontWeight: "500" }}>Due date reminders</div>
+                <div style={{ fontSize: "12px", color: "var(--text-muted)" }}>
+                  Get a system notification when a task is due within 24 hours
+                </div>
               </div>
             </div>
             <select
-              value={dueRemindersOn ? 'on' : 'off'}
+              value={dueRemindersOn ? "on" : "off"}
               onChange={(e) => {
-                const enabled = e.target.value === 'on';
+                const enabled = e.target.value === "on";
                 setRemindersEnabled(enabled);
                 setDueRemindersOn(enabled);
               }}
@@ -675,99 +997,234 @@ export default function SettingsView({ token, user, onUpdateUser, onReplayOnboar
             </select>
           </div>
 
-          <div style={{ padding: '16px', backgroundColor: 'var(--surface)', borderTop: '1px solid var(--border)' }}>
-            <div style={{ display: 'flex', gap: '12px', alignItems: 'center', marginBottom: '10px' }}>
-              <div style={{ padding: '8px', backgroundColor: 'var(--surface-muted)', borderRadius: '4px', color: 'var(--text-muted)' }}><HardDriveDownload size={20} /></div>
+          <div
+            style={{
+              padding: "16px",
+              backgroundColor: "var(--surface)",
+              borderTop: "1px solid var(--border)",
+            }}
+          >
+            <div
+              style={{ display: "flex", gap: "12px", alignItems: "center", marginBottom: "10px" }}
+            >
+              <div
+                style={{
+                  padding: "8px",
+                  backgroundColor: "var(--surface-muted)",
+                  borderRadius: "4px",
+                  color: "var(--text-muted)",
+                }}
+              >
+                <HardDriveDownload size={20} />
+              </div>
               <div>
-                <div style={{ color: 'var(--text-h)', fontWeight: '500' }}>Database backups</div>
-                <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Automatic launch backups; restoring keeps a safety copy of the current data first.</div>
+                <div style={{ color: "var(--text-h)", fontWeight: "500" }}>Database backups</div>
+                <div style={{ fontSize: "12px", color: "var(--text-muted)" }}>
+                  Automatic launch backups; restoring keeps a safety copy of the current data first.
+                </div>
               </div>
             </div>
             {backups.length === 0 ? (
-              <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>No backups yet — one is created each time the app starts.</div>
+              <div style={{ fontSize: "12px", color: "var(--text-muted)" }}>
+                No backups yet — one is created each time the app starts.
+              </div>
             ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginBottom: '10px' }}>
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "4px",
+                  marginBottom: "10px",
+                }}
+              >
                 {backups.slice(0, 5).map((backup) => (
-                  <div key={backup.name} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 10px', borderRadius: '6px', backgroundColor: 'var(--surface-muted)' }}>
-                    <span style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'var(--text)' }}>
-                      {backup.name.replace(/\.db$/, '')} · {(backup.size_bytes / 1024 / 1024).toFixed(1)} MB
+                  <div
+                    key={backup.name}
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      padding: "6px 10px",
+                      borderRadius: "6px",
+                      backgroundColor: "var(--surface-muted)",
+                    }}
+                  >
+                    <span
+                      style={{
+                        fontFamily: "var(--font-mono)",
+                        fontSize: "11px",
+                        color: "var(--text)",
+                      }}
+                    >
+                      {backup.name.replace(/\.db$/, "")} ·{" "}
+                      {(backup.size_bytes / 1024 / 1024).toFixed(1)} MB
                     </span>
                     <button
                       type="button"
                       className="secondary-button"
                       disabled={restoringName !== ""}
                       onClick={() => handleRestoreBackup(backup.name)}
-                      style={{ fontSize: '11px', gap: '4px', flexShrink: 0 }}
+                      style={{ fontSize: "11px", gap: "4px", flexShrink: 0 }}
                     >
-                      {restoringName === backup.name ? <Loader2 size={12} className="retro-icon-spin" /> : <RotateCcw size={12} />}
+                      {restoringName === backup.name ? (
+                        <Loader2 size={12} className="retro-icon-spin" />
+                      ) : (
+                        <RotateCcw size={12} />
+                      )}
                       Restore
                     </button>
                   </div>
                 ))}
               </div>
             )}
-            {backupsMessage && <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '8px' }}>{backupsMessage}</div>}
+            {backupsMessage && (
+              <div style={{ fontSize: "12px", color: "var(--text-muted)", marginTop: "8px" }}>
+                {backupsMessage}
+              </div>
+            )}
           </div>
-
         </div>
       </section>
 
       <section className="settings-shortcuts-section">
         <div className="settings-section-heading">
-          <div><Keyboard size={15} /><h2>Keyboard shortcuts</h2></div>
+          <div>
+            <Keyboard size={15} />
+            <h2>Keyboard shortcuts</h2>
+          </div>
           <p>Click a shortcut, then press the replacement. Changes apply immediately.</p>
         </div>
         <div className="settings-shortcuts-panel">
-          <ShortcutRecorder allowShiftOnly label="Tasks panel" description="Toggle the full Tasks panel from anywhere" value={shortcutConfig.tasksPanel} onChange={(value) => updateShortcut("tasksPanel", value)} onReset={() => updateShortcut("tasksPanel", DEFAULT_KEYBOARD_SHORTCUTS.tasksPanel)} />
-          <ShortcutRecorder label="New task" description="Open the Tasks panel and focus its composer" value={shortcutConfig.quickTask} onChange={(value) => updateShortcut("quickTask", value)} onReset={() => updateShortcut("quickTask", DEFAULT_KEYBOARD_SHORTCUTS.quickTask)} />
-          <ShortcutRecorder label="Quick note" description="Open the note capture dock" value={shortcutConfig.quickNote} onChange={(value) => updateShortcut("quickNote", value)} onReset={() => updateShortcut("quickNote", DEFAULT_KEYBOARD_SHORTCUTS.quickNote)} />
-          <ShortcutRecorder label="Search" description="Open workspace search" value={shortcutConfig.search} onChange={(value) => updateShortcut("search", value)} onReset={() => updateShortcut("search", DEFAULT_KEYBOARD_SHORTCUTS.search)} />
-          <ShortcutRecorder label="Assistant" description="Toggle the AI assistant pane" value={shortcutConfig.assistant} onChange={(value) => updateShortcut("assistant", value)} onReset={() => updateShortcut("assistant", DEFAULT_KEYBOARD_SHORTCUTS.assistant)} />
+          <ShortcutRecorder
+            allowShiftOnly
+            label="Tasks panel"
+            description="Toggle the full Tasks panel from anywhere"
+            value={shortcutConfig.tasksPanel}
+            onChange={(value) => updateShortcut("tasksPanel", value)}
+            onReset={() => updateShortcut("tasksPanel", DEFAULT_KEYBOARD_SHORTCUTS.tasksPanel)}
+          />
+          <ShortcutRecorder
+            label="New task"
+            description="Open the Tasks panel and focus its composer"
+            value={shortcutConfig.quickTask}
+            onChange={(value) => updateShortcut("quickTask", value)}
+            onReset={() => updateShortcut("quickTask", DEFAULT_KEYBOARD_SHORTCUTS.quickTask)}
+          />
+          <ShortcutRecorder
+            label="Quick note"
+            description="Open the note capture dock"
+            value={shortcutConfig.quickNote}
+            onChange={(value) => updateShortcut("quickNote", value)}
+            onReset={() => updateShortcut("quickNote", DEFAULT_KEYBOARD_SHORTCUTS.quickNote)}
+          />
+          <ShortcutRecorder
+            label="Search"
+            description="Open workspace search"
+            value={shortcutConfig.search}
+            onChange={(value) => updateShortcut("search", value)}
+            onReset={() => updateShortcut("search", DEFAULT_KEYBOARD_SHORTCUTS.search)}
+          />
+          <ShortcutRecorder
+            label="Assistant"
+            description="Toggle the AI assistant pane"
+            value={shortcutConfig.assistant}
+            onChange={(value) => updateShortcut("assistant", value)}
+            onReset={() => updateShortcut("assistant", DEFAULT_KEYBOARD_SHORTCUTS.assistant)}
+          />
         </div>
-        {shortcutError && <div className="settings-shortcut-error" role="alert">{shortcutError}</div>}
+        {shortcutError && (
+          <div className="settings-shortcut-error" role="alert">
+            {shortcutError}
+          </div>
+        )}
         <p className="settings-shortcut-footnote">The system-wide show/hide shortcut remains ⌘J.</p>
       </section>
 
-      <section style={{ marginBottom: '40px' }}>
-        <h2 className="settings-section-title" style={{ marginBottom: '16px' }}>Integrations</h2>
-        
+      <section style={{ marginBottom: "40px" }}>
+        <h2 className="settings-section-title" style={{ marginBottom: "16px" }}>
+          Integrations
+        </h2>
+
         {/* Canvas LMS */}
-        <div style={{ backgroundColor: 'var(--surface)', padding: '20px', borderRadius: '8px', border: '1px solid var(--border-strong)', marginBottom: '20px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <div style={{ padding: '8px', backgroundColor: 'var(--surface-muted)', borderRadius: '4px', color: 'var(--text-h)', border: '1px solid var(--border)' }}>
+        <div
+          style={{
+            backgroundColor: "var(--surface)",
+            padding: "20px",
+            borderRadius: "8px",
+            border: "1px solid var(--border-strong)",
+            marginBottom: "20px",
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "flex-start",
+              marginBottom: "16px",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+              <div
+                style={{
+                  padding: "8px",
+                  backgroundColor: "var(--surface-muted)",
+                  borderRadius: "4px",
+                  color: "var(--text-h)",
+                  border: "1px solid var(--border)",
+                }}
+              >
                 <Database size={20} />
               </div>
               <div>
-                <div style={{ fontWeight: '600', color: 'var(--text-h)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div
+                  style={{
+                    fontWeight: "600",
+                    color: "var(--text-h)",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "8px",
+                  }}
+                >
                   <span>Canvas LMS Sync</span>
                   <span
                     style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '4px',
-                      fontSize: '11px',
-                      padding: '2px 8px',
-                      borderRadius: '12px',
-                      backgroundColor: user?.canvas_connected ? 'var(--success-bg)' : 'var(--surface-muted)',
-                      color: user?.canvas_connected ? 'var(--success)' : 'var(--text-muted)',
-                      border: `1px solid ${user?.canvas_connected ? 'var(--success)' : 'var(--border)'}`,
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "4px",
+                      fontSize: "11px",
+                      padding: "2px 8px",
+                      borderRadius: "12px",
+                      backgroundColor: user?.canvas_connected
+                        ? "var(--success-bg)"
+                        : "var(--surface-muted)",
+                      color: user?.canvas_connected ? "var(--success)" : "var(--text-muted)",
+                      border: `1px solid ${user?.canvas_connected ? "var(--success)" : "var(--border)"}`,
                     }}
                   >
-                    <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: user?.canvas_connected ? 'var(--success)' : 'var(--text-muted)' }} />
-                    {user?.canvas_connected ? 'Connected' : 'Not Connected'}
+                    <span
+                      style={{
+                        width: "6px",
+                        height: "6px",
+                        borderRadius: "50%",
+                        backgroundColor: user?.canvas_connected
+                          ? "var(--success)"
+                          : "var(--text-muted)",
+                      }}
+                    />
+                    {user?.canvas_connected ? "Connected" : "Not Connected"}
                   </span>
                 </div>
-                <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>
-                  Automatically sync course modules, assignments, deadlines, and files into your workspace.
+                <div style={{ fontSize: "12px", color: "var(--text-muted)", marginTop: "2px" }}>
+                  Automatically sync course modules, assignments, deadlines, and files into your
+                  workspace.
                 </div>
               </div>
             </div>
           </div>
-          
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            <div style={{ display: 'flex', gap: '8px' }}>
-              <div style={{ position: 'relative', flex: 1 }}>
+
+          <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+            <div style={{ display: "flex", gap: "8px" }}>
+              <div style={{ position: "relative", flex: 1 }}>
                 <input
                   type={showCanvasToken ? "text" : "password"}
                   placeholder={
@@ -776,13 +1233,13 @@ export default function SettingsView({ token, user, onUpdateUser, onReplayOnboar
                       : "Canvas API Token..."
                   }
                   value={canvasToken}
-                  onChange={e => {
+                  onChange={(e) => {
                     setCanvasToken(e.target.value);
                     setCanvasTokenDirty(true);
                     setCanvasTestResult(null);
                   }}
                   className="form-input"
-                  style={{ width: '100%', paddingRight: '36px' }}
+                  style={{ width: "100%", paddingRight: "36px" }}
                   tabIndex={0}
                   aria-label="Canvas API Token"
                 />
@@ -790,17 +1247,17 @@ export default function SettingsView({ token, user, onUpdateUser, onReplayOnboar
                   type="button"
                   onClick={() => setShowCanvasToken(!showCanvasToken)}
                   style={{
-                    position: 'absolute',
-                    right: '8px',
-                    top: '50%',
-                    transform: 'translateY(-50%)',
-                    background: 'none',
-                    border: 'none',
-                    color: 'var(--text-muted)',
-                    cursor: 'pointer',
-                    padding: '4px',
-                    display: 'flex',
-                    alignItems: 'center',
+                    position: "absolute",
+                    right: "8px",
+                    top: "50%",
+                    transform: "translateY(-50%)",
+                    background: "none",
+                    border: "none",
+                    color: "var(--text-muted)",
+                    cursor: "pointer",
+                    padding: "4px",
+                    display: "flex",
+                    alignItems: "center",
                   }}
                   title={showCanvasToken ? "Hide token" : "Show token"}
                 >
@@ -813,20 +1270,24 @@ export default function SettingsView({ token, user, onUpdateUser, onReplayOnboar
                 onClick={handleTestCanvasConnection}
                 disabled={canvasTokenTesting || !canvasToken.trim()}
                 className="secondary-button"
-                style={{ fontSize: '12px', fontWeight: '500', flexShrink: 0 }}
+                style={{ fontSize: "12px", fontWeight: "500", flexShrink: 0 }}
               >
-                {canvasTokenTesting ? <Loader2 size={13} className="retro-icon-spin" /> : <Key size={13} />}
+                {canvasTokenTesting ? (
+                  <Loader2 size={13} className="retro-icon-spin" />
+                ) : (
+                  <Key size={13} />
+                )}
                 <span>Test</span>
               </button>
 
-              <button 
+              <button
                 type="button"
-                tabIndex={0} 
+                tabIndex={0}
                 disabled={canvasTokenSaving}
                 className="primary-button"
                 onClick={saveCanvasToken}
               >
-                {canvasTokenSaving ? 'Saving…' : 'Save'}
+                {canvasTokenSaving ? "Saving…" : "Save"}
               </button>
 
               {user?.canvas_connected && (
@@ -835,7 +1296,7 @@ export default function SettingsView({ token, user, onUpdateUser, onReplayOnboar
                   className="secondary-button"
                   disabled={canvasTokenSaving}
                   onClick={disconnectCanvas}
-                  style={{ color: 'var(--error)', flexShrink: 0 }}
+                  style={{ color: "var(--error)", flexShrink: 0 }}
                 >
                   Disconnect
                 </button>
@@ -845,100 +1306,161 @@ export default function SettingsView({ token, user, onUpdateUser, onReplayOnboar
             {canvasTestResult && (
               <div
                 style={{
-                  padding: '8px 12px',
-                  borderRadius: '4px',
-                  fontSize: '12px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  backgroundColor: canvasTestResult.valid ? 'var(--success-bg)' : 'var(--error-bg)',
-                  color: canvasTestResult.valid ? 'var(--success)' : 'var(--error)',
-                  border: `1px solid ${canvasTestResult.valid ? 'var(--success)' : 'var(--error)'}`,
+                  padding: "8px 12px",
+                  borderRadius: "4px",
+                  fontSize: "12px",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
+                  backgroundColor: canvasTestResult.valid ? "var(--success-bg)" : "var(--error-bg)",
+                  color: canvasTestResult.valid ? "var(--success)" : "var(--error)",
+                  border: `1px solid ${canvasTestResult.valid ? "var(--success)" : "var(--error)"}`,
                 }}
               >
                 {canvasTestResult.valid ? <CheckCircle2 size={14} /> : <AlertCircle size={14} />}
                 <span>
                   {canvasTestResult.valid
-                    ? `Canvas token is valid (Connected as ${canvasTestResult.name || 'Active User'})`
-                    : canvasTestResult.error || 'Invalid token'}
+                    ? `Canvas token is valid (Connected as ${canvasTestResult.name || "Active User"})`
+                    : canvasTestResult.error || "Invalid token"}
                 </span>
               </div>
             )}
 
-            {canvasTokenMessage && <p className="settings-colors-error" role="status" style={{ margin: 0 }}>{canvasTokenMessage}</p>}
+            {canvasTokenMessage && (
+              <p className="settings-colors-error" role="status" style={{ margin: 0 }}>
+                {canvasTokenMessage}
+              </p>
+            )}
 
             <div
               style={{
-                backgroundColor: 'var(--surface-muted)',
-                borderRadius: '6px',
-                padding: '12px 14px',
-                fontSize: '12px',
-                color: 'var(--text)',
-                lineHeight: '1.6',
-                border: '1px solid var(--border)',
+                backgroundColor: "var(--surface-muted)",
+                borderRadius: "6px",
+                padding: "12px 14px",
+                fontSize: "12px",
+                color: "var(--text)",
+                lineHeight: "1.6",
+                border: "1px solid var(--border)",
               }}
             >
-              <div style={{ fontWeight: '600', color: 'var(--text-h)', marginBottom: '4px' }}>How to obtain a Canvas API token:</div>
-              <ol style={{ margin: 0, paddingLeft: '18px', color: 'var(--text-muted)' }}>
-                <li>Log in to <a href="https://canvas.nus.edu.sg" target="_blank" rel="noreferrer" style={{ color: 'var(--accent)' }}>Canvas (canvas.nus.edu.sg) <ExternalLink size={10} style={{ display: 'inline' }} /></a></li>
-                <li>Go to <strong>Account</strong> in the sidebar → <strong>Settings</strong></li>
-                <li>Scroll down to <strong>Approved Integrations</strong> and click <strong>+ New Access Token</strong></li>
-                <li>Set a purpose label (e.g. <em>Canvenient</em>) and copy the generated token above</li>
+              <div style={{ fontWeight: "600", color: "var(--text-h)", marginBottom: "4px" }}>
+                How to obtain a Canvas API token:
+              </div>
+              <ol style={{ margin: 0, paddingLeft: "18px", color: "var(--text-muted)" }}>
+                <li>
+                  Log in to{" "}
+                  <a
+                    href="https://canvas.nus.edu.sg"
+                    target="_blank"
+                    rel="noreferrer"
+                    style={{ color: "var(--accent)" }}
+                  >
+                    Canvas (canvas.nus.edu.sg){" "}
+                    <ExternalLink size={10} style={{ display: "inline" }} />
+                  </a>
+                </li>
+                <li>
+                  Go to <strong>Account</strong> in the sidebar → <strong>Settings</strong>
+                </li>
+                <li>
+                  Scroll down to <strong>Approved Integrations</strong> and click{" "}
+                  <strong>+ New Access Token</strong>
+                </li>
+                <li>
+                  Set a purpose label (e.g. <em>Canvenient</em>) and copy the generated token above
+                </li>
               </ol>
             </div>
           </div>
         </div>
 
         {/* Telegram Bot */}
-        <div style={{ backgroundColor: 'var(--surface)', padding: '20px', borderRadius: '8px', border: '1px solid var(--border-strong)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
-            <div style={{ padding: '8px', backgroundColor: 'var(--surface-muted)', borderRadius: '4px', color: 'var(--text-h)', border: '1px solid var(--border)' }}>
+        <div
+          style={{
+            backgroundColor: "var(--surface)",
+            padding: "20px",
+            borderRadius: "8px",
+            border: "1px solid var(--border-strong)",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "16px" }}>
+            <div
+              style={{
+                padding: "8px",
+                backgroundColor: "var(--surface-muted)",
+                borderRadius: "4px",
+                color: "var(--text-h)",
+                border: "1px solid var(--border)",
+              }}
+            >
               <Send size={20} />
             </div>
             <div>
-              <div style={{ fontWeight: '600', color: 'var(--text-h)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <div
+                style={{
+                  fontWeight: "600",
+                  color: "var(--text-h)",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
+                }}
+              >
                 <span>Telegram Bot Integration</span>
                 <span
                   style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '4px',
-                    fontSize: '11px',
-                    padding: '2px 8px',
-                    borderRadius: '12px',
-                    backgroundColor: telegramStatus?.linked ? 'var(--success-bg)' : 'var(--surface-muted)',
-                    color: telegramStatus?.linked ? 'var(--success)' : 'var(--text-muted)',
-                    border: `1px solid ${telegramStatus?.linked ? 'var(--success)' : 'var(--border)'}`,
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "4px",
+                    fontSize: "11px",
+                    padding: "2px 8px",
+                    borderRadius: "12px",
+                    backgroundColor: telegramStatus?.linked
+                      ? "var(--success-bg)"
+                      : "var(--surface-muted)",
+                    color: telegramStatus?.linked ? "var(--success)" : "var(--text-muted)",
+                    border: `1px solid ${telegramStatus?.linked ? "var(--success)" : "var(--border)"}`,
                   }}
                 >
-                  <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: telegramStatus?.linked ? 'var(--success)' : 'var(--text-muted)' }} />
-                  {telegramStatus?.linked ? 'Connected' : 'Not Connected'}
+                  <span
+                    style={{
+                      width: "6px",
+                      height: "6px",
+                      borderRadius: "50%",
+                      backgroundColor: telegramStatus?.linked
+                        ? "var(--success)"
+                        : "var(--text-muted)",
+                    }}
+                  />
+                  {telegramStatus?.linked ? "Connected" : "Not Connected"}
                 </span>
               </div>
-              <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>
+              <div style={{ fontSize: "12px", color: "var(--text-muted)", marginTop: "2px" }}>
                 Receive daily study briefings and task reminders directly in Telegram.
               </div>
             </div>
           </div>
 
           {telegramStatus?.linked ? (
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <span style={{ fontSize: '13px', color: 'var(--text)' }}>
-                Linked to Telegram chat ID: <code style={{ fontFamily: 'var(--font-mono)' }}>{telegramStatus.telegram_chat_id}</code>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <span style={{ fontSize: "13px", color: "var(--text)" }}>
+                Linked to Telegram chat ID:{" "}
+                <code style={{ fontFamily: "var(--font-mono)" }}>
+                  {telegramStatus.telegram_chat_id}
+                </code>
               </span>
               <button
                 type="button"
                 className="secondary-button"
                 disabled={telegramUpdating}
                 onClick={handleTelegramUnlink}
-                style={{ color: 'var(--error)', flexShrink: 0 }}
+                style={{ color: "var(--error)", flexShrink: 0 }}
               >
-                {telegramUpdating ? 'Disconnecting…' : 'Disconnect Telegram'}
+                {telegramUpdating ? "Disconnecting…" : "Disconnect Telegram"}
               </button>
             </div>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              <div style={{ display: 'flex', gap: '8px' }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+              <div style={{ display: "flex", gap: "8px" }}>
                 <input
                   type="text"
                   placeholder="Telegram link code..."
@@ -954,16 +1476,20 @@ export default function SettingsView({ token, user, onUpdateUser, onReplayOnboar
                   disabled={telegramUpdating || !telegramCode.trim()}
                   onClick={handleTelegramClaim}
                 >
-                  {telegramUpdating ? 'Connecting…' : 'Connect'}
+                  {telegramUpdating ? "Connecting…" : "Connect"}
                 </button>
               </div>
-              <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: 0 }}>
+              <p style={{ fontSize: "12px", color: "var(--text-muted)", margin: 0 }}>
                 To get a link code, message <code>/link</code> to the Canvenient Telegram bot.
               </p>
             </div>
           )}
           {telegramMessage && (
-            <p className={telegramError ? "settings-colors-error" : "settings-colors-state"} style={{ marginTop: '10px', marginBottom: 0 }} role="status">
+            <p
+              className={telegramError ? "settings-colors-error" : "settings-colors-state"}
+              style={{ marginTop: "10px", marginBottom: 0 }}
+              role="status"
+            >
               {telegramMessage}
             </p>
           )}
@@ -971,29 +1497,49 @@ export default function SettingsView({ token, user, onUpdateUser, onReplayOnboar
       </section>
 
       {/* Setup Walkthrough */}
-      <section style={{ marginBottom: '40px' }}>
-        <h2 className="settings-section-title" style={{ marginBottom: '16px' }}>Workspace Setup</h2>
-        <div style={{ backgroundColor: 'var(--surface)', padding: '20px', borderRadius: '8px', border: '1px solid var(--border-strong)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <section style={{ marginBottom: "40px" }}>
+        <h2 className="settings-section-title" style={{ marginBottom: "16px" }}>
+          Workspace Setup
+        </h2>
+        <div
+          style={{
+            backgroundColor: "var(--surface)",
+            padding: "20px",
+            borderRadius: "8px",
+            border: "1px solid var(--border-strong)",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
+        >
           <div>
-            <div style={{ fontWeight: '600', color: 'var(--text-h)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <div
+              style={{
+                fontWeight: "600",
+                color: "var(--text-h)",
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+              }}
+            >
               <Sparkles size={16} />
               <span>Onboarding Setup</span>
             </div>
-            <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>
-              Rerun the step-by-step onboarding walkthrough to reconfigure your profile, Canvas API key, and appearance.
+            <div style={{ fontSize: "12px", color: "var(--text-muted)", marginTop: "2px" }}>
+              Rerun the step-by-step onboarding walkthrough to reconfigure your profile, Canvas API
+              key, and appearance.
             </div>
           </div>
           <button
             type="button"
             className="secondary-button"
             onClick={onReplayOnboarding}
-            style={{ padding: '8px 16px', fontWeight: '500', flexShrink: 0 }}
+            style={{ padding: "8px 16px", fontWeight: "500", flexShrink: 0 }}
           >
             Replay Setup
           </button>
         </div>
       </section>
-
     </div>
   );
 }

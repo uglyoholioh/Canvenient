@@ -333,12 +333,12 @@ async def chat_turn(user, messages: list[dict], attachment: dict | None = None) 
     sections = [f"CONTEXT (JSON):\n{json.dumps(context, default=str)}"]
     if attachment_block:
         sections.append(
-            f"ATTACHED {attachment_block['type'].upper()} — \"{attachment_block['label']}\":\n"
-            f"{attachment_block['text']}"
+            f'ATTACHED {attachment_block["type"].upper()} — "{attachment_block["label"]}":\n{attachment_block["text"]}'
         )
-    sections.append("Conversation:\n" + "\n".join(
-        f"{'Student' if m['role'] == 'user' else 'You'}: {m['parts'][0]['text']}" for m in history
-    ))
+    sections.append(
+        "Conversation:\n"
+        + "\n".join(f"{'Student' if m['role'] == 'user' else 'You'}: {m['parts'][0]['text']}" for m in history)
+    )
 
     raw = await generate_json(CHAT_SYSTEM, "\n\n".join(sections), CHAT_SCHEMA, extra_parts)
     return _sanitize_chat(raw, context)
@@ -384,9 +384,7 @@ async def build_brief_text(user_id: int) -> str:
     )
     if not row:
         return "Your day — (profile unavailable)"
-    user = UserSummary(
-        id=row["id"], email=row["email"], name=row["name"] or "", canvas_token=row["canvas_token"] or ""
-    )
+    user = UserSummary(id=row["id"], email=row["email"], name=row["name"] or "", canvas_token=row["canvas_token"] or "")
     facts = await day_context(user)
     lines = [f"Your day — {facts['today']}", ""]
 
@@ -439,7 +437,9 @@ async def _cache_get(user_id: int, key: str, max_age_minutes: int) -> dict | Non
         synced = row["synced_at"]
         if hasattr(synced, "tzinfo") and synced.tzinfo is None:
             synced = synced.replace(tzinfo=datetime.now().astimezone().tzinfo)
-        if synced and datetime.now(synced.tzinfo if synced.tzinfo else None) - synced > timedelta(minutes=max_age_minutes):
+        if synced and datetime.now(synced.tzinfo if synced.tzinfo else None) - synced > timedelta(
+            minutes=max_age_minutes
+        ):
             return None
         payload = row["payload"]
         return json.loads(payload) if isinstance(payload, str) else payload

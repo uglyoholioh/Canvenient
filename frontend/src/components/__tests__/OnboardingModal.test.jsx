@@ -18,10 +18,16 @@ describe("OnboardingModal", () => {
     Object.defineProperty(window, "localStorage", {
       configurable: true,
       value: {
-        clear: vi.fn(() => { store = {}; }),
+        clear: vi.fn(() => {
+          store = {};
+        }),
         getItem: vi.fn((key) => store[key] || null),
-        setItem: vi.fn((key, val) => { store[key] = String(val); }),
-        removeItem: vi.fn((key) => { delete store[key]; }),
+        setItem: vi.fn((key, val) => {
+          store[key] = String(val);
+        }),
+        removeItem: vi.fn((key) => {
+          delete store[key];
+        }),
       },
     });
   });
@@ -32,7 +38,7 @@ describe("OnboardingModal", () => {
         token="test-token"
         user={{ id: 1, name: "", email: "user@test.com" }}
         isOpen={false}
-      />
+      />,
     );
     expect(container.firstChild).toBeNull();
   });
@@ -57,7 +63,7 @@ describe("OnboardingModal", () => {
         isOpen={true}
         onComplete={onComplete}
         onClose={onClose}
-      />
+      />,
     );
 
     // Step 1: Identity — name is prefilled from the email prefix, so the
@@ -134,7 +140,7 @@ describe("OnboardingModal", () => {
         user={{ id: 2, name: "Jamie", email: "jamie@example.com" }}
         isOpen={true}
         onComplete={onComplete}
-      />
+      />,
     );
 
     // Already has name, click continue

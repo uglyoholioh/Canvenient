@@ -31,7 +31,10 @@ export function shortcutFromKeyboardEvent(event) {
 
 export function normalizeShortcut(value, fallback = "") {
   if (typeof value !== "string" || !value.trim()) return fallback;
-  const parts = value.split("+").map((part) => part.trim()).filter(Boolean);
+  const parts = value
+    .split("+")
+    .map((part) => part.trim())
+    .filter(Boolean);
   const key = normalizeKey(parts.find((part) => !MODIFIER_ORDER.includes(part)) || "");
   const modifiers = MODIFIER_ORDER.filter((modifier) => parts.includes(modifier));
   return key ? [...modifiers, key].join("+") : fallback;
@@ -44,7 +47,10 @@ export function readKeyboardShortcuts() {
       quickTask: normalizeShortcut(stored.quickTask, DEFAULT_KEYBOARD_SHORTCUTS.quickTask),
       quickNote: normalizeShortcut(stored.quickNote, DEFAULT_KEYBOARD_SHORTCUTS.quickNote),
       search: normalizeShortcut(stored.search, DEFAULT_KEYBOARD_SHORTCUTS.search),
-      tasksPanel: normalizeShortcut(stored.tasksPanel || stored.browseCapture, DEFAULT_KEYBOARD_SHORTCUTS.tasksPanel),
+      tasksPanel: normalizeShortcut(
+        stored.tasksPanel || stored.browseCapture,
+        DEFAULT_KEYBOARD_SHORTCUTS.tasksPanel,
+      ),
       assistant: normalizeShortcut(stored.assistant, DEFAULT_KEYBOARD_SHORTCUTS.assistant),
     };
   } catch {
@@ -68,16 +74,23 @@ export function matchesShortcut(event, shortcut) {
 
 export function formatShortcut(shortcut) {
   const values = normalizeShortcut(shortcut).split("+").filter(Boolean);
-  return values.map((value) => ({
-    Meta: "⌘",
-    Control: "⌃",
-    Alt: "⌥",
-    Shift: "⇧",
-    Space: "Space",
-    Escape: "Esc",
-  }[value] || value)).join("");
+  return values
+    .map(
+      (value) =>
+        ({
+          Meta: "⌘",
+          Control: "⌃",
+          Alt: "⌥",
+          Shift: "⇧",
+          Space: "Space",
+          Escape: "Esc",
+        })[value] || value,
+    )
+    .join("");
 }
 
 export function isEditableShortcutTarget(target) {
-  return Boolean(target?.closest?.("input, textarea, select, [contenteditable='true'], [role='textbox']"));
+  return Boolean(
+    target?.closest?.("input, textarea, select, [contenteditable='true'], [role='textbox']"),
+  );
 }

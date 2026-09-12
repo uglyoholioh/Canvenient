@@ -1,16 +1,18 @@
 // Shared pure helpers for the Canvas views.
 
 export function stripHtml(v = "") {
-  const n = document.createElement("div"); n.innerHTML = v; return n.textContent || "";
+  const n = document.createElement("div");
+  n.innerHTML = v;
+  return n.textContent || "";
 }
 
 export function getFileType(name = "") {
   const ext = name.split(".").pop().toLowerCase();
   if (["pdf"].includes(ext)) return "pdf";
-  if (["png","jpg","jpeg","gif","webp","svg","bmp"].includes(ext)) return "img";
-  if (["mp4","mov","avi","webm","mkv"].includes(ext)) return "vid";
-  if (["doc","docx","ppt","pptx","xls","xlsx","txt","md"].includes(ext)) return "doc";
-  if (["zip","tar","gz","rar","7z"].includes(ext)) return "zip";
+  if (["png", "jpg", "jpeg", "gif", "webp", "svg", "bmp"].includes(ext)) return "img";
+  if (["mp4", "mov", "avi", "webm", "mkv"].includes(ext)) return "vid";
+  if (["doc", "docx", "ppt", "pptx", "xls", "xlsx", "txt", "md"].includes(ext)) return "doc";
+  if (["zip", "tar", "gz", "rar", "7z"].includes(ext)) return "zip";
   return "other";
 }
 
@@ -23,7 +25,8 @@ export function formatSize(b) {
 
 export function relDate(str) {
   if (!str) return "";
-  const d = new Date(str), now = new Date();
+  const d = new Date(str),
+    now = new Date();
   const diffDays = Math.floor((now - d) / 86400000);
   if (diffDays === 0) return "Today";
   if (diffDays === 1) return "Yesterday";
@@ -33,7 +36,8 @@ export function relDate(str) {
 
 export function dueLabel(str) {
   if (!str) return "No due date";
-  const d = new Date(str), now = new Date();
+  const d = new Date(str),
+    now = new Date();
   const diff = d - now;
   if (diff < 0) return "Past due";
   const hrs = Math.floor(diff / 3600000);

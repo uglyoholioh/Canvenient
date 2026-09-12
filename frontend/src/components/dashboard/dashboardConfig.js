@@ -43,7 +43,9 @@ export const DEFAULT_DASHBOARD_CONFIG = {
 };
 
 export function threeColumnDashboardConfig(config = DEFAULT_DASHBOARD_CONFIG) {
-  const hidden = (config.hidden || []).filter((id) => !["tasks", "schedule", "canvas", "isb"].includes(id));
+  const hidden = (config.hidden || []).filter(
+    (id) => !["tasks", "schedule", "canvas", "isb"].includes(id),
+  );
   if (!hidden.includes("notes")) {
     hidden.push("notes");
   }
@@ -55,7 +57,6 @@ export function threeColumnDashboardConfig(config = DEFAULT_DASHBOARD_CONFIG) {
     tracks: { ...DEFAULT_DASHBOARD_TRACKS },
   };
 }
-
 
 export function readDashboardLayout() {
   const stored = localStorage.getItem("canvenient-dashboard-layout");
@@ -73,17 +74,25 @@ export function readDashboardConfig() {
   try {
     const stored = JSON.parse(raw);
     const validIds = DASHBOARD_MODULES.map((module) => module.id);
-    const storedOrder = Array.isArray(stored.order) ? stored.order.filter((id) => validIds.includes(id)) : [];
-    const storedHidden = Array.isArray(stored.hidden) ? stored.hidden.filter((id) => validIds.includes(id)) : [];
-    
-    const missing = validIds.filter((id) => !storedOrder.includes(id) && !storedHidden.includes(id));
+    const storedOrder = Array.isArray(stored.order)
+      ? stored.order.filter((id) => validIds.includes(id))
+      : [];
+    const storedHidden = Array.isArray(stored.hidden)
+      ? stored.hidden.filter((id) => validIds.includes(id))
+      : [];
+
+    const missing = validIds.filter(
+      (id) => !storedOrder.includes(id) && !storedHidden.includes(id),
+    );
     const missingOrder = missing.filter((id) => DEFAULT_DASHBOARD_CONFIG.order.includes(id));
     const missingHidden = missing.filter((id) => DEFAULT_DASHBOARD_CONFIG.hidden.includes(id));
 
-    const sizes = Object.fromEntries(validIds.map((id) => [
-      id,
-      normalizeDashboardSize(stored.sizes?.[id], DEFAULT_DASHBOARD_SIZES[id]),
-    ]));
+    const sizes = Object.fromEntries(
+      validIds.map((id) => [
+        id,
+        normalizeDashboardSize(stored.sizes?.[id], DEFAULT_DASHBOARD_SIZES[id]),
+      ]),
+    );
     return {
       order: [...storedOrder, ...missingOrder],
       hidden: [...storedHidden, ...missingHidden],
@@ -103,17 +112,22 @@ export function normalizeDashboardTracks(tracks) {
     ? tracks.rows.map(Number).filter((value) => Number.isFinite(value) && value > 0)
     : [];
 
-  let columns = (rawColumns.length === 3 || rawColumns.length === 4) ? rawColumns : [...DEFAULT_DASHBOARD_TRACKS.columns];
+  let columns =
+    rawColumns.length === 3 || rawColumns.length === 4
+      ? rawColumns
+      : [...DEFAULT_DASHBOARD_TRACKS.columns];
   const rows = rawRows.length > 0 ? rawRows : [...DEFAULT_DASHBOARD_TRACKS.rows];
 
   const snapToFraction = 12;
   const colTotal = columns.reduce((s, v) => s + v, 0);
-  const snappedColumns = columns.map((value) => Math.round((value / colTotal) * snapToFraction) / snapToFraction);
+  const snappedColumns = columns.map(
+    (value) => Math.round((value / colTotal) * snapToFraction) / snapToFraction,
+  );
   const sum = snappedColumns.reduce((a, b) => a + b, 0);
   if (Math.abs(sum - 1) > 0.001) {
     const diff = Math.round((1 - sum) * snapToFraction);
     const maxIdx = snappedColumns.indexOf(Math.max(...snappedColumns));
-    snappedColumns[maxIdx] += (diff / snapToFraction);
+    snappedColumns[maxIdx] += diff / snapToFraction;
   }
 
   return {
@@ -121,7 +135,6 @@ export function normalizeDashboardTracks(tracks) {
     rows: rows,
   };
 }
-
 
 export function normalizeDashboardSize(size, fallback = { columns: 1, rows: 1 }) {
   const candidate = typeof size === "string" ? LEGACY_DASHBOARD_SIZES[size] : size;

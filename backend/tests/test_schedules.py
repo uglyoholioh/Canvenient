@@ -16,15 +16,33 @@ async def test_import_nusmods_timetable(client: AsyncClient, auth, monkeypatch):
         return {
             "moduleCode": "CS2040S",
             "title": "Data Structures and Algorithms",
-            "semesterData": [{
-                "semester": 1,
-                "examDate": "2026-11-24T01:00:00.000Z",
-                "examDuration": 120,
-                "timetable": [
-                    {"classNo": "1", "lessonType": "Lecture", "day": "Monday", "startTime": "1000", "endTime": "1200", "venue": "LT19", "weeks": [2, 3]},
-                    {"classNo": "2", "lessonType": "Tutorial", "day": "Wednesday", "startTime": "1400", "endTime": "1500", "venue": "COM1-0201", "weeks": [2]},
-                ],
-            }],
+            "semesterData": [
+                {
+                    "semester": 1,
+                    "examDate": "2026-11-24T01:00:00.000Z",
+                    "examDuration": 120,
+                    "timetable": [
+                        {
+                            "classNo": "1",
+                            "lessonType": "Lecture",
+                            "day": "Monday",
+                            "startTime": "1000",
+                            "endTime": "1200",
+                            "venue": "LT19",
+                            "weeks": [2, 3],
+                        },
+                        {
+                            "classNo": "2",
+                            "lessonType": "Tutorial",
+                            "day": "Wednesday",
+                            "startTime": "1400",
+                            "endTime": "1500",
+                            "venue": "COM1-0201",
+                            "weeks": [2],
+                        },
+                    ],
+                }
+            ],
         }
 
     monkeypatch.setattr(schedule_routes, "fetch_nusmods_module", fake_module)
@@ -224,11 +242,13 @@ async def test_class_context_links_tasks_notes_and_files_to_one_occurrence(clien
     assert rec_file.json()["is_recurring"] is True
 
     # Both specific and recurring items appear in context
-    context2 = (await client.get(
-        f"/schedule/classes/{class_id}/context",
-        params={"occurrence_date": "2026-09-03"},
-        headers=headers,
-    )).json()
+    context2 = (
+        await client.get(
+            f"/schedule/classes/{class_id}/context",
+            params={"occurrence_date": "2026-09-03"},
+            headers=headers,
+        )
+    ).json()
     assert len(context2["tasks"]) == 2
     assert len(context2["notes"]) == 2
     assert len(context2["files"]) == 2

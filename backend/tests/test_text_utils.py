@@ -8,10 +8,10 @@ def test_strip_html_basic_tags():
 
 def test_strip_html_links_and_formatting():
     html_input = (
-        '<p>Submit your completed activity &amp; budget proposal as<span>&nbsp;</span>'
-        '<strong>a PDF file</strong><span>&nbsp;here. N</span>ame file as&nbsp;'
-        '<strong>Student ID_MMMYY_Proposal<span>&nbsp;</span></strong>'
-        '<span>e.g. A0123456B_Sep23_Proposal.</span></p>'
+        "<p>Submit your completed activity &amp; budget proposal as<span>&nbsp;</span>"
+        "<strong>a PDF file</strong><span>&nbsp;here. N</span>ame file as&nbsp;"
+        "<strong>Student ID_MMMYY_Proposal<span>&nbsp;</span></strong>"
+        "<span>e.g. A0123456B_Sep23_Proposal.</span></p>"
     )
     expected = (
         "Submit your completed activity & budget proposal as a PDF file here. "

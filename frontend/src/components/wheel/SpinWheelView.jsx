@@ -24,12 +24,7 @@ import WheelCanvas from "./WheelCanvas";
 import SplitFlapDecider from "./SplitFlapDecider";
 import ReelDecider from "./ReelDecider";
 import CardDeckDecider from "./CardDeckDecider";
-import {
-  loadWheelData,
-  saveWheelData,
-  resetWheelPreset,
-  WHEEL_PALETTE,
-} from "./wheelDefaults";
+import { loadWheelData, saveWheelData, resetWheelPreset, WHEEL_PALETTE } from "./wheelDefaults";
 import { getAcademicModules, getCanvasCourses } from "../../api";
 
 export default function SpinWheelView({ token, onNavigate }) {
@@ -54,10 +49,13 @@ export default function SpinWheelView({ token, onNavigate }) {
   const syncTimerRef = useRef(null);
   const respinTimerRef = useRef(null);
 
-  useEffect(() => () => {
-    clearTimeout(syncTimerRef.current);
-    clearTimeout(respinTimerRef.current);
-  }, []);
+  useEffect(
+    () => () => {
+      clearTimeout(syncTimerRef.current);
+      clearTimeout(respinTimerRef.current);
+    },
+    [],
+  );
 
   // Active wheel object
   const activeWheel = useMemo(() => {
@@ -99,7 +97,9 @@ export default function SpinWheelView({ token, onNavigate }) {
   const updateActiveWheel = (mutator) => {
     commitWheelData((prev) => ({
       ...prev,
-      wheels: prev.wheels.map((wheel) => (wheel.id === prev.activeWheelId ? mutator(wheel) : wheel)),
+      wheels: prev.wheels.map((wheel) =>
+        wheel.id === prev.activeWheelId ? mutator(wheel) : wheel,
+      ),
     }));
   };
 
@@ -150,7 +150,7 @@ export default function SpinWheelView({ token, onNavigate }) {
     updateActiveWheel((wheel) => ({
       ...wheel,
       items: wheel.items.map((item) =>
-        item.id === itemId ? { ...item, enabled: item.enabled === false ? true : false } : item
+        item.id === itemId ? { ...item, enabled: item.enabled === false ? true : false } : item,
       ),
     }));
   };
@@ -218,7 +218,9 @@ export default function SpinWheelView({ token, onNavigate }) {
 
     updateActiveWheel((wheel) => ({
       ...wheel,
-      items: wheel.items.map((item) => (item.id === editingItemId ? { ...item, label: trimmed } : item)),
+      items: wheel.items.map((item) =>
+        item.id === editingItemId ? { ...item, label: trimmed } : item,
+      ),
     }));
 
     setEditingItemId(null);
@@ -529,9 +531,15 @@ export default function SpinWheelView({ token, onNavigate }) {
                   gap: "6px",
                 }}
               >
-                {isFood && <Utensils size={14} color={isActive ? "var(--accent)" : "currentColor"} />}
-                {isModule && <BookOpen size={14} color={isActive ? "var(--accent)" : "currentColor"} />}
-                {!isFood && !isModule && <Dices size={14} color={isActive ? "var(--accent)" : "currentColor"} />}
+                {isFood && (
+                  <Utensils size={14} color={isActive ? "var(--accent)" : "currentColor"} />
+                )}
+                {isModule && (
+                  <BookOpen size={14} color={isActive ? "var(--accent)" : "currentColor"} />
+                )}
+                {!isFood && !isModule && (
+                  <Dices size={14} color={isActive ? "var(--accent)" : "currentColor"} />
+                )}
                 <span>{wheel.name}</span>
                 <span
                   style={{
@@ -765,9 +773,7 @@ export default function SpinWheelView({ token, onNavigate }) {
               onClick={handleSpinStart}
               disabled={isSpinning || activeItems.length === 0}
               style={{
-                background: isSpinning
-                  ? "var(--surface-muted)"
-                  : "var(--accent, #38bdf8)",
+                background: isSpinning ? "var(--surface-muted)" : "var(--accent, #38bdf8)",
                 color: isSpinning ? "var(--text-muted)" : "#090a0d",
                 border: "none",
                 borderRadius: "8px",
@@ -829,7 +835,17 @@ export default function SpinWheelView({ token, onNavigate }) {
               marginTop: "8px",
             }}
           >
-            Tip: Press <kbd style={{ padding: "1px 4px", background: "var(--surface-muted)", borderRadius: "3px" }}>Space</kbd> or click the center hub to spin
+            Tip: Press{" "}
+            <kbd
+              style={{
+                padding: "1px 4px",
+                background: "var(--surface-muted)",
+                borderRadius: "3px",
+              }}
+            >
+              Space
+            </kbd>{" "}
+            or click the center hub to spin
           </span>
 
           {/* Winner Callout Banner */}
@@ -850,8 +866,18 @@ export default function SpinWheelView({ token, onNavigate }) {
                 animation: "fadeSlideIn 0.2s ease",
               }}
             >
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <span style={{ fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.05em", color: "var(--accent, #38bdf8)", fontWeight: 600 }}>
+              <div
+                style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}
+              >
+                <span
+                  style={{
+                    fontSize: "11px",
+                    textTransform: "uppercase",
+                    letterSpacing: "0.05em",
+                    color: "var(--accent, #38bdf8)",
+                    fontWeight: 600,
+                  }}
+                >
                   Wheel Selected
                 </span>
                 <button
@@ -1077,7 +1103,9 @@ export default function SpinWheelView({ token, onNavigate }) {
                 type="submit"
                 disabled={!newOptionText.trim() || isSpinning}
                 style={{
-                  background: newOptionText.trim() ? "var(--accent, #38bdf8)" : "var(--surface-muted)",
+                  background: newOptionText.trim()
+                    ? "var(--accent, #38bdf8)"
+                    : "var(--surface-muted)",
                   color: newOptionText.trim() ? "#090a0d" : "var(--text-muted)",
                   border: "none",
                   borderRadius: "6px",

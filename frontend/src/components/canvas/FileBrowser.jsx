@@ -1,8 +1,20 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import {
-  ChevronDown, ChevronRight, Download, ExternalLink, File, FileText, FileVideo, Folder,
-  FolderOpen, Image, Loader2,
-  Maximize2, Minimize2, Search, X,
+  ChevronDown,
+  ChevronRight,
+  Download,
+  ExternalLink,
+  File,
+  FileText,
+  FileVideo,
+  Folder,
+  FolderOpen,
+  Image,
+  Loader2,
+  Maximize2,
+  Minimize2,
+  Search,
+  X,
 } from "lucide-react";
 import { fetchCanvasFileContent, downloadCanvasFile, getCanvasFolders } from "../../api";
 import PdfViewer from "../PdfViewer";
@@ -19,9 +31,12 @@ function resolvePreviewType(file) {
 export function FileTypeIcon({ name, size = 13 }) {
   const type = getFileType(name);
   const iconMap = {
-    pdf: <FileText size={size} />, img: <Image size={size} />,
-    vid: <FileVideo size={size} />, doc: <FileText size={size} />,
-    zip: <File size={size} />, other: <File size={size} />,
+    pdf: <FileText size={size} />,
+    img: <Image size={size} />,
+    vid: <FileVideo size={size} />,
+    doc: <FileText size={size} />,
+    zip: <File size={size} />,
+    other: <File size={size} />,
   };
   return <span className={`cv-file-type-icon type-${type}`}>{iconMap[type]}</span>;
 }
@@ -41,17 +56,28 @@ export function FileBrowser({ token, courseId, allFiles }) {
 
   const previewType = resolvePreviewType(selectedFile);
 
-  const handleDownload = useCallback(async (file) => {
-    if (!file || downloadingId) return;
-    setDownloadingId(file.id);
-    try {
-      await downloadCanvasFile(token, file.id, file.display_name || file.filename || "canvas-file");
-    } catch (error) {
-      window.dispatchEvent(new CustomEvent("canvenient-toast", { detail: { message: error.message || "Download failed." } }));
-    } finally {
-      setDownloadingId(null);
-    }
-  }, [downloadingId, token]);
+  const handleDownload = useCallback(
+    async (file) => {
+      if (!file || downloadingId) return;
+      setDownloadingId(file.id);
+      try {
+        await downloadCanvasFile(
+          token,
+          file.id,
+          file.display_name || file.filename || "canvas-file",
+        );
+      } catch (error) {
+        window.dispatchEvent(
+          new CustomEvent("canvenient-toast", {
+            detail: { message: error.message || "Download failed." },
+          }),
+        );
+      } finally {
+        setDownloadingId(null);
+      }
+    },
+    [downloadingId, token],
+  );
 
   const selectFile = useCallback((file) => {
     setSelectedFile(file);
@@ -107,12 +133,12 @@ export function FileBrowser({ token, courseId, allFiles }) {
     setSelectedFile(null);
     setIsPdfFocus(false);
     getCanvasFolders(token, courseId)
-      .then(data => {
+      .then((data) => {
         if (!canceled) {
           const list = data || [];
           setRawFolders(list);
           // Auto expand root folders
-          const rootIds = list.filter(f => !f.parent_folder_id).map(f => f.id);
+          const rootIds = list.filter((f) => !f.parent_folder_id).map((f) => f.id);
           setExpandedFolderIds(new Set(rootIds));
           if (list.length > 0) {
             setSelectedFolderId(rootIds[0] || list[0].id);
@@ -120,13 +146,17 @@ export function FileBrowser({ token, courseId, allFiles }) {
         }
       })
       .catch(() => {})
-      .finally(() => { if (!canceled) setLoading(false); });
-    return () => { canceled = true; };
+      .finally(() => {
+        if (!canceled) setLoading(false);
+      });
+    return () => {
+      canceled = true;
+    };
   }, [courseId, token]);
 
   const toggleFolderExpand = (folderId, e) => {
     e.stopPropagation();
-    setExpandedFolderIds(prev => {
+    setExpandedFolderIds((prev) => {
       const next = new Set(prev);
       if (next.has(folderId)) next.delete(folderId);
       else next.add(folderId);
@@ -136,7 +166,7 @@ export function FileBrowser({ token, courseId, allFiles }) {
 
   // Build folder hierarchy
   const folderTree = useMemo(() => {
-    const map = new Map((rawFolders || []).map(f => [f.id, { ...f, children: [] }]));
+    const map = new Map((rawFolders || []).map((f) => [f.id, { ...f, children: [] }]));
     const roots = [];
     for (const f of map.values()) {
       if (f.parent_folder_id && map.has(f.parent_folder_id)) {
@@ -146,8 +176,8 @@ export function FileBrowser({ token, courseId, allFiles }) {
       }
     }
     const sortNodes = (nodes) => {
-      nodes.sort((a,b) => a.name.localeCompare(b.name));
-      nodes.forEach(n => sortNodes(n.children));
+      nodes.sort((a, b) => a.name.localeCompare(b.name));
+      nodes.forEach((n) => sortNodes(n.children));
     };
     sortNodes(roots);
     return roots;
@@ -155,12 +185,12 @@ export function FileBrowser({ token, courseId, allFiles }) {
 
   // Current folder and breadcrumb
   const currentFolder = useMemo(() => {
-    return (rawFolders || []).find(f => f.id === selectedFolderId);
+    return (rawFolders || []).find((f) => f.id === selectedFolderId);
   }, [rawFolders, selectedFolderId]);
 
   const breadcrumbs = useMemo(() => {
     if (!selectedFolderId || !rawFolders.length) return [];
-    const map = new Map(rawFolders.map(f => [f.id, f]));
+    const map = new Map(rawFolders.map((f) => [f.id, f]));
     const crumbs = [];
     let cur = map.get(selectedFolderId);
     while (cur) {
@@ -178,7 +208,7 @@ export function FileBrowser({ token, courseId, allFiles }) {
     const pathFor = (folder) => {
       if (paths.has(folder.id)) return paths.get(folder.id);
       const parent = folder.parent_folder_id ? byId.get(folder.parent_folder_id) : null;
-      const path = parent ? `${pathFor(parent)} ${folder.name || ""}` : (folder.name || "");
+      const path = parent ? `${pathFor(parent)} ${folder.name || ""}` : folder.name || "";
       paths.set(folder.id, path);
       return path;
     };
@@ -188,20 +218,22 @@ export function FileBrowser({ token, courseId, allFiles }) {
 
   // Filtered & sorted files
   const displayedFiles = useMemo(() => {
-    let list = (allFiles || []).filter(f => selectedFolderId === null || f.folder_id === selectedFolderId);
+    let list = (allFiles || []).filter(
+      (f) => selectedFolderId === null || f.folder_id === selectedFolderId,
+    );
     if (search.trim()) {
       const q = search.toLowerCase();
       // Search across ALL files if user entered a query!
-      list = (allFiles || []).filter(f => {
+      list = (allFiles || []).filter((f) => {
         if ((f.display_name || f.filename || "").toLowerCase().includes(q)) return true;
         const folderPath = folderPaths.get(f.folder_id);
         return Boolean(folderPath && folderPath.toLowerCase().includes(q));
       });
     }
     if (typeFilter !== "all") {
-      list = list.filter(f => getFileType(f.display_name || f.filename || "") === typeFilter);
+      list = list.filter((f) => getFileType(f.display_name || f.filename || "") === typeFilter);
     }
-    return [...list].sort((a,b) => {
+    return [...list].sort((a, b) => {
       if (sort === "date") return new Date(b.updated_at || 0) - new Date(a.updated_at || 0);
       if (sort === "size") return (b.size || 0) - (a.size || 0);
       return (a.display_name || a.filename || "").localeCompare(b.display_name || b.filename || "");
@@ -228,7 +260,13 @@ export function FileBrowser({ token, courseId, allFiles }) {
             className={`cv-ftree-arrow ${hasChildren ? "" : "is-empty"}`}
             onClick={(e) => hasChildren && toggleFolderExpand(node.id, e)}
           >
-            {hasChildren ? (isExpanded ? <ChevronDown size={11} /> : <ChevronRight size={11} />) : null}
+            {hasChildren ? (
+              isExpanded ? (
+                <ChevronDown size={11} />
+              ) : (
+                <ChevronRight size={11} />
+              )
+            ) : null}
           </span>
           <span className="cv-ftree-icon">
             {isSelected || isExpanded ? <FolderOpen size={13} /> : <Folder size={13} />}
@@ -238,7 +276,7 @@ export function FileBrowser({ token, courseId, allFiles }) {
         </div>
         {hasChildren && isExpanded && (
           <div className="cv-ftree-children">
-            {node.children.map(child => renderFolderNode(child, depth + 1))}
+            {node.children.map((child) => renderFolderNode(child, depth + 1))}
           </div>
         )}
       </div>
@@ -253,18 +291,27 @@ export function FileBrowser({ token, courseId, allFiles }) {
           <Search size={13} style={{ color: "var(--text-muted)", flexShrink: 0 }} />
           <input
             type="text"
-            placeholder={selectedFolderId ? `Search in ${currentFolder?.name || 'folder'} or all files...` : "Search all files..."}
+            placeholder={
+              selectedFolderId
+                ? `Search in ${currentFolder?.name || "folder"} or all files...`
+                : "Search all files..."
+            }
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
           {search && (
-            <button type="button" className="cv-btn-icon" onClick={() => setSearch("")} title="Clear search">
+            <button
+              type="button"
+              className="cv-btn-icon"
+              onClick={() => setSearch("")}
+              title="Clear search"
+            >
               <X size={12} />
             </button>
           )}
         </div>
         <div className="cv-files-filter-group">
-          {["all", "pdf", "doc", "img", "vid", "zip"].map(t => (
+          {["all", "pdf", "doc", "img", "vid", "zip"].map((t) => (
             <button
               key={t}
               type="button"
@@ -275,7 +322,7 @@ export function FileBrowser({ token, courseId, allFiles }) {
             </button>
           ))}
           <span className="cv-filter-divider" />
-          <select className="cv-sort-select" value={sort} onChange={e => setSort(e.target.value)}>
+          <select className="cv-sort-select" value={sort} onChange={(e) => setSort(e.target.value)}>
             <option value="name">Name (A–Z)</option>
             <option value="date">Recently updated</option>
             <option value="size">File size</option>
@@ -299,11 +346,13 @@ export function FileBrowser({ token, courseId, allFiles }) {
           </div>
           <div className="cv-ftree-list">
             {loading ? (
-              <div className="cv-loading-state"><Loader2 className="retro-icon-spin" size={13} /> Loading…</div>
+              <div className="cv-loading-state">
+                <Loader2 className="retro-icon-spin" size={13} /> Loading…
+              </div>
             ) : folderTree.length === 0 ? (
               <div className="cv-empty-note">No folders</div>
             ) : (
-              folderTree.map(root => renderFolderNode(root, 0))
+              folderTree.map((root) => renderFolderNode(root, 0))
             )}
           </div>
         </aside>
@@ -316,7 +365,10 @@ export function FileBrowser({ token, courseId, allFiles }) {
               <button
                 type="button"
                 className={`cv-crumb ${selectedFolderId === null ? "is-current" : ""}`}
-                onClick={() => { setSelectedFolderId(null); setSearch(""); }}
+                onClick={() => {
+                  setSelectedFolderId(null);
+                  setSearch("");
+                }}
               >
                 All Files
               </button>
@@ -328,7 +380,12 @@ export function FileBrowser({ token, courseId, allFiles }) {
                     <button
                       type="button"
                       className={`cv-crumb ${isLast ? "is-current" : ""}`}
-                      onClick={() => { if (!isLast) { setSelectedFolderId(crumb.id); setSearch(""); } }}
+                      onClick={() => {
+                        if (!isLast) {
+                          setSelectedFolderId(crumb.id);
+                          setSearch("");
+                        }
+                      }}
                     >
                       {crumb.name}
                     </button>
@@ -358,7 +415,7 @@ export function FileBrowser({ token, courseId, allFiles }) {
                   </tr>
                 </thead>
                 <tbody>
-                  {displayedFiles.map(file => {
+                  {displayedFiles.map((file) => {
                     const name = file.display_name || file.filename || "Untitled";
                     const isSelected = selectedFile?.id === file.id;
                     return (
@@ -369,20 +426,26 @@ export function FileBrowser({ token, courseId, allFiles }) {
                       >
                         <td className="cv-file-col-name">
                           <FileTypeIcon name={name} />
-                          <span className="cv-file-name-text" title={name}>{name}</span>
+                          <span className="cv-file-name-text" title={name}>
+                            {name}
+                          </span>
                         </td>
                         <td className="cv-file-col-date">
                           {file.updated_at ? relDate(file.updated_at) : "—"}
                         </td>
                         <td className="cv-file-col-size">{formatSize(file.size)}</td>
-                        <td className="cv-file-col-actions" onClick={e => e.stopPropagation()}>
+                        <td className="cv-file-col-actions" onClick={(e) => e.stopPropagation()}>
                           <button
                             type="button"
                             className="cv-btn-icon"
                             title="Download"
                             onClick={() => handleDownload(file)}
                           >
-                            {downloadingId === file.id ? <Loader2 size={13} className="retro-icon-spin" /> : <Download size={13} />}
+                            {downloadingId === file.id ? (
+                              <Loader2 size={13} className="retro-icon-spin" />
+                            ) : (
+                              <Download size={13} />
+                            )}
                           </button>
                           <a
                             href={file.external_url || file.url}
@@ -407,7 +470,10 @@ export function FileBrowser({ token, courseId, allFiles }) {
         {selectedFile && (
           <aside className="cv-file-preview-aside">
             <div className="cv-preview-header">
-              <span className="cv-preview-title" title={selectedFile.display_name || selectedFile.filename}>
+              <span
+                className="cv-preview-title"
+                title={selectedFile.display_name || selectedFile.filename}
+              >
                 {selectedFile.display_name || selectedFile.filename}
               </span>
               <div className="cv-preview-actions">
@@ -428,7 +494,11 @@ export function FileBrowser({ token, courseId, allFiles }) {
                   title="Download"
                   onClick={() => handleDownload(selectedFile)}
                 >
-                  {downloadingId === selectedFile.id ? <Loader2 size={13} className="retro-icon-spin" /> : <Download size={13} />}
+                  {downloadingId === selectedFile.id ? (
+                    <Loader2 size={13} className="retro-icon-spin" />
+                  ) : (
+                    <Download size={13} />
+                  )}
                 </button>
                 <a
                   href={selectedFile.external_url || selectedFile.url}
@@ -439,7 +509,15 @@ export function FileBrowser({ token, courseId, allFiles }) {
                 >
                   <ExternalLink size={13} />
                 </a>
-                <button type="button" className="cv-btn-icon" onClick={() => { setIsPdfFocus(false); selectFile(null); }} title="Close Preview">
+                <button
+                  type="button"
+                  className="cv-btn-icon"
+                  onClick={() => {
+                    setIsPdfFocus(false);
+                    selectFile(null);
+                  }}
+                  title="Close Preview"
+                >
                   <X size={13} />
                 </button>
               </div>
@@ -454,7 +532,10 @@ export function FileBrowser({ token, courseId, allFiles }) {
                 />
               ) : previewType === "img" ? (
                 previewImageSrc ? (
-                  <img src={previewImageSrc} alt={selectedFile.display_name || selectedFile.filename} />
+                  <img
+                    src={previewImageSrc}
+                    alt={selectedFile.display_name || selectedFile.filename}
+                  />
                 ) : (
                   <div className="cv-preview-fallback">
                     <Loader2 className="retro-icon-spin" size={16} />
@@ -463,18 +544,41 @@ export function FileBrowser({ token, courseId, allFiles }) {
                 )
               ) : (
                 <div className="cv-preview-fallback">
-                  <FileTypeIcon name={selectedFile.display_name || selectedFile.filename || ""} size={26} />
+                  <FileTypeIcon
+                    name={selectedFile.display_name || selectedFile.filename || ""}
+                    size={26}
+                  />
                   <span>Preview not available directly.</span>
-                  <a href={selectedFile.external_url || selectedFile.url} target="_blank" rel="noreferrer" className="cv-link-accent">
+                  <a
+                    href={selectedFile.external_url || selectedFile.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="cv-link-accent"
+                  >
                     Open in Canvas ↗
                   </a>
                 </div>
               )}
             </div>
             <div className="cv-preview-meta">
-              <div><span>Size:</span> <strong>{formatSize(selectedFile.size)}</strong></div>
-              <div><span>Type:</span> <strong>{(selectedFile.display_name || selectedFile.filename || "").split(".").pop().toUpperCase()}</strong></div>
-              {selectedFile.updated_at && <div><span>Modified:</span> <strong>{new Date(selectedFile.updated_at).toLocaleDateString()}</strong></div>}
+              <div>
+                <span>Size:</span> <strong>{formatSize(selectedFile.size)}</strong>
+              </div>
+              <div>
+                <span>Type:</span>{" "}
+                <strong>
+                  {(selectedFile.display_name || selectedFile.filename || "")
+                    .split(".")
+                    .pop()
+                    .toUpperCase()}
+                </strong>
+              </div>
+              {selectedFile.updated_at && (
+                <div>
+                  <span>Modified:</span>{" "}
+                  <strong>{new Date(selectedFile.updated_at).toLocaleDateString()}</strong>
+                </div>
+              )}
             </div>
           </aside>
         )}

@@ -24,7 +24,12 @@ export default function NotesModule({ token, onOpenNote, refreshKey = 0 }) {
         <span className="notes-widget-count">
           {loading ? "—" : notes.length} note{notes.length !== 1 ? "s" : ""}
         </span>
-        <button type="button" className="notes-widget-new-btn" onClick={addNote} aria-label="New note">
+        <button
+          type="button"
+          className="notes-widget-new-btn"
+          onClick={addNote}
+          aria-label="New note"
+        >
           <FilePlus2 size={13} />
           New
         </button>
@@ -42,11 +47,16 @@ export default function NotesModule({ token, onOpenNote, refreshKey = 0 }) {
               key={note.id}
               onClick={() => onOpenNote(note)}
             >
-              <span className="notes-widget-glyph" aria-hidden="true">#</span>
+              <span className="notes-widget-glyph" aria-hidden="true">
+                #
+              </span>
               <span className="notes-widget-title">{note.title || "Untitled"}</span>
               {note.updated_at && (
                 <span className="notes-widget-date">
-                  {new Date(note.updated_at).toLocaleDateString([], { month: "short", day: "numeric" })}
+                  {new Date(note.updated_at).toLocaleDateString([], {
+                    month: "short",
+                    day: "numeric",
+                  })}
                 </span>
               )}
             </button>
@@ -56,4 +66,3 @@ export default function NotesModule({ token, onOpenNote, refreshKey = 0 }) {
     </div>
   );
 }
-

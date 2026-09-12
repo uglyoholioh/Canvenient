@@ -1,8 +1,11 @@
-const fs = require('fs');
-let code = fs.readFileSync('src/components/__tests__/TaskView.test.jsx', 'utf8');
+const fs = require("fs");
+let code = fs.readFileSync("src/components/__tests__/TaskView.test.jsx", "utf8");
 
 // Replace title selector
-code = code.replace(/screen\.getByLabelText\("Short task title\.\.\."\)/g, 'screen.getByPlaceholderText("Short task title...")');
+code = code.replace(
+  /screen\.getByLabelText\("Short task title\.\.\."\)/g,
+  'screen.getByPlaceholderText("Short task title...")',
+);
 
 // Replace Edit First task button logic
 // Actually, it uses getByRole("button", { name: "Edit First task" }) which is still there!
@@ -10,7 +13,7 @@ code = code.replace(/screen\.getByLabelText\("Short task title\.\.\."\)/g, 'scre
 // Rewrite "edits title, note, due date, priority, and module in one save"
 code = code.replace(
   /it\("edits title, note, due date, priority, and module in one save"[\s\S]*?(?=it\("clears an edited due date and time)/,
-`it("edits title, note, due date, priority, and module in one save", async () => {
+  `it("edits title, note, due date, priority, and module in one save", async () => {
     const user = userEvent.setup();
     const onTasksChanged = vi.fn();
     window.addEventListener("canvenient-tasks-changed", onTasksChanged);
@@ -87,13 +90,13 @@ code = code.replace(
     window.removeEventListener("canvenient-tasks-changed", onTasksChanged);
   });
 
-  `
+  `,
 );
 
 // Rewrite "clears an edited due date and time to a null override"
 code = code.replace(
   /it\("clears an edited due date and time to a null override"[\s\S]*?(?=it\("orders pending tasks by effective deadline)/,
-`it("clears an edited due date and time to a null override", async () => {
+  `it("clears an edited due date and time to a null override", async () => {
     updateTask.mockResolvedValue({ id: 1, title: "First task", status: "todo", due_at_override: null, effective_due_at: null });
     render(<TaskView token="token" />);
 
@@ -112,10 +115,13 @@ code = code.replace(
     await waitFor(() => expect(updateTask).toHaveBeenCalledWith("token", 1, expect.objectContaining({ due_at_override: null })));
   });
 
-  `
+  `,
 );
 
 // We should also replace the old "Edit task title" in "opens the inline editor when the edit button is clicked"
-code = code.replace(/screen\.getByPlaceholderText\("Short task title\.\.\."\)/g, 'screen.getByPlaceholderText("Short task title...")');
+code = code.replace(
+  /screen\.getByPlaceholderText\("Short task title\.\.\."\)/g,
+  'screen.getByPlaceholderText("Short task title...")',
+);
 
-fs.writeFileSync('src/components/__tests__/TaskView.test.jsx', code);
+fs.writeFileSync("src/components/__tests__/TaskView.test.jsx", code);

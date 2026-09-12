@@ -1,6 +1,6 @@
-const fs = require('fs');
+const fs = require("fs");
 
-let content = fs.readFileSync('src/api.js', 'utf8');
+let content = fs.readFileSync("src/api.js", "utf8");
 
 const oldGetVenueInfo = `export function getVenueInformation(token, { academicYear, semester } = {}) {
   const params = new URLSearchParams();
@@ -53,4 +53,4 @@ const newGetVenueLoc = `export async function getVenueLocations(token) {
 
 content = content.replace(oldGetVenueLoc, newGetVenueLoc);
 
-fs.writeFileSync('src/api.js', content);
+fs.writeFileSync("src/api.js", content);

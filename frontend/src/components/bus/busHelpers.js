@@ -1,15 +1,15 @@
 // Shared constants and pure helpers for the Campus Bus module.
 
-export const STOP_STORAGE_KEY       = "canvenient-isb-stop";
-export const FROM_STORAGE_KEY       = "canvenient-isb-from";
-export const TO_STORAGE_KEY         = "canvenient-isb-to";
+export const STOP_STORAGE_KEY = "canvenient-isb-stop";
+export const FROM_STORAGE_KEY = "canvenient-isb-from";
+export const TO_STORAGE_KEY = "canvenient-isb-to";
 export const FAVOURITES_STORAGE_KEY = "canvenient-isb-favourites";
-export const STOPS_CACHE_KEY        = "canvenient-isb-stops-cache";
-export const ARRIVALS_PREFIX        = "canvenient-isb-arrivals-cache:";
-export const DEFAULT_STOP_ID        = "COM3";
-export const STOPS_TTL_MS           = 24 * 60 * 60 * 1000;
-export const ARRIVALS_TTL_MS        = 60 * 1000;
-export const REFRESH_INTERVAL_S     = 20;
+export const STOPS_CACHE_KEY = "canvenient-isb-stops-cache";
+export const ARRIVALS_PREFIX = "canvenient-isb-arrivals-cache:";
+export const DEFAULT_STOP_ID = "COM3";
+export const STOPS_TTL_MS = 24 * 60 * 60 * 1000;
+export const ARRIVALS_TTL_MS = 60 * 1000;
+export const REFRESH_INTERVAL_S = 20;
 
 // Popular campus spots for 1-click route planning shortcuts
 export const QUICK_POPULAR_PLACES = [
@@ -22,16 +22,16 @@ export const QUICK_POPULAR_PLACES = [
 
 // ── Schedule-aware venue → stop hints ────────────────────────────────────────
 const VENUE_STOP_HINTS = [
-  { pattern: /^(COM\d|AS6|I3)/i,                       stopText: "COM3"      },
-  { pattern: /^AS[1-5]/i,                               stopText: "LT13"      },
-  { pattern: /^(E[1-9]A?|EA\d?|LT[7-9](?!\d)|LT10)/i, stopText: "LT13A"     },
-  { pattern: /^(UTown|ERC|CAPT|RC\d?|Cinnamon)/i,       stopText: "UTown"     },
-  { pattern: /^BIZ/i,                                   stopText: "BIZ 2"     },
-  { pattern: /^(S\d|LT2\d|YIH)/i,                      stopText: "Opp YIH"   },
-  { pattern: /^(MD|NUH|CRC)/i,                          stopText: "MD 1"      },
-  { pattern: /^PGP/i,                                   stopText: "PGP"       },
-  { pattern: /^YST/i,                                   stopText: "YST"       },
-  { pattern: /^(MPSH|SRC|LT19|LT20)/i,                  stopText: "Opp TCOMS" },
+  { pattern: /^(COM\d|AS6|I3)/i, stopText: "COM3" },
+  { pattern: /^AS[1-5]/i, stopText: "LT13" },
+  { pattern: /^(E[1-9]A?|EA\d?|LT[7-9](?!\d)|LT10)/i, stopText: "LT13A" },
+  { pattern: /^(UTown|ERC|CAPT|RC\d?|Cinnamon)/i, stopText: "UTown" },
+  { pattern: /^BIZ/i, stopText: "BIZ 2" },
+  { pattern: /^(S\d|LT2\d|YIH)/i, stopText: "Opp YIH" },
+  { pattern: /^(MD|NUH|CRC)/i, stopText: "MD 1" },
+  { pattern: /^PGP/i, stopText: "PGP" },
+  { pattern: /^YST/i, stopText: "YST" },
+  { pattern: /^(MPSH|SRC|LT19|LT20)/i, stopText: "Opp TCOMS" },
 ];
 
 export function venueToStop(venue) {
@@ -75,45 +75,57 @@ export function readFavourites() {
   try {
     const stored = JSON.parse(localStorage.getItem(FAVOURITES_STORAGE_KEY) || "[]");
     return Array.isArray(stored) ? stored.filter((s) => typeof s === "string") : [];
-  } catch { return []; }
+  } catch {
+    return [];
+  }
 }
 
 export function readCache(key, maxAgeMs) {
   try {
     const cached = JSON.parse(localStorage.getItem(key) || "null");
-    if (!cached || !Number.isFinite(cached.cachedAt) || Date.now() - cached.cachedAt > maxAgeMs) return null;
+    if (!cached || !Number.isFinite(cached.cachedAt) || Date.now() - cached.cachedAt > maxAgeMs)
+      return null;
     return cached.value ?? null;
-  } catch { return null; }
+  } catch {
+    return null;
+  }
 }
 
 export function writeCache(key, value) {
   try {
     localStorage.setItem(key, JSON.stringify({ cachedAt: Date.now(), value }));
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
 }
 
 // ── Geo helpers ──────────────────────────────────────────────────────────────
 export function distanceInMetres(origin, stop) {
-  if (!origin || !Number.isFinite(stop.latitude) || !Number.isFinite(stop.longitude)) return Infinity;
+  if (!origin || !Number.isFinite(stop.latitude) || !Number.isFinite(stop.longitude))
+    return Infinity;
   const rad = (v) => (v * Math.PI) / 180;
   const dLat = rad(stop.latitude - origin.latitude);
   const dLon = rad(stop.longitude - origin.longitude);
-  const lat  = rad(origin.latitude);
+  const lat = rad(origin.latitude);
   const sLat = rad(stop.latitude);
   const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat) * Math.cos(sLat) * Math.sin(dLon / 2) ** 2;
   return 6371000 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
 // ── Stop helpers ─────────────────────────────────────────────────────────────
-export function stopLabel(stop) { return stop?.name || stop?.short_name || stop?.id || ""; }
-export function normalise(value) { return String(value).trim().replace(/\s+/g, " ").toLocaleLowerCase(); }
+export function stopLabel(stop) {
+  return stop?.name || stop?.short_name || stop?.id || "";
+}
+export function normalise(value) {
+  return String(value).trim().replace(/\s+/g, " ").toLocaleLowerCase();
+}
 
 export function findStop(value, stops) {
   const n = normalise(value);
   if (!n) return null;
-  return stops.find((s) =>
-    [s.id, s.name, s.short_name].some((c) => normalise(c || "") === n),
-  ) ?? null;
+  return (
+    stops.find((s) => [s.id, s.name, s.short_name].some((c) => normalise(c || "") === n)) ?? null
+  );
 }
 
 export function resolvePlace(value, places) {

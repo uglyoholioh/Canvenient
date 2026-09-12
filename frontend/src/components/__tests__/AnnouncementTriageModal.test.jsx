@@ -115,12 +115,15 @@ describe("AnnouncementTriageModal", () => {
     fireEvent.keyDown(window, { key: "t" });
 
     await waitFor(() => {
-      expect(createTask).toHaveBeenCalledWith("test-token", expect.objectContaining({
-        title: "[Announcement] Week 3 Tutorial Briefing",
-        module_id: 10,
-        source_type: "canvas",
-        priority_manual: "high",
-      }));
+      expect(createTask).toHaveBeenCalledWith(
+        "test-token",
+        expect.objectContaining({
+          title: "[Announcement] Week 3 Tutorial Briefing",
+          module_id: 10,
+          source_type: "canvas",
+          priority_manual: "high",
+        }),
+      );
     });
 
     expect(await screen.findByRole("button", { name: /added to tasks/i })).toBeInTheDocument();

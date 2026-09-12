@@ -83,6 +83,7 @@ async def test_CAT_11_cross_user_isolation(client: AsyncClient, auth):
 
     # Create a second user (User B)
     from conftest import TEST_PASSWORD, unique_email
+
     email_b = unique_email()
     reg_b = await client.post("/auth/register", json={"email": email_b, "password": TEST_PASSWORD})
     token_b = reg_b.json()["access_token"]
@@ -98,4 +99,5 @@ async def test_CAT_11_cross_user_isolation(client: AsyncClient, auth):
 
     # Cleanup User B
     from database import db
+
     await db.execute("DELETE FROM users WHERE id = :id", values={"id": user_b_id})

@@ -24,7 +24,7 @@ const RulerSlider = ({ value, onChange }) => {
       } else if (internalValueRef.current !== value) {
         scrollRef.current.scrollTo({
           left: (value - 1) * 8,
-          behavior: 'smooth'
+          behavior: "smooth",
         });
         internalValueRef.current = value;
       }
@@ -37,7 +37,7 @@ const RulerSlider = ({ value, onChange }) => {
     let newValue = Math.round(scrollLeft / 8) + 1;
     if (newValue < 1) newValue = 1;
     if (newValue > 120) newValue = 120;
-    
+
     if (newValue !== internalValueRef.current) {
       internalValueRef.current = newValue;
       onChange(newValue);
@@ -55,7 +55,7 @@ const RulerSlider = ({ value, onChange }) => {
       if (!isDragging || !scrollRef.current) return;
       e.preventDefault();
       const x = e.pageX;
-      const walk = (startXRef.current - x); 
+      const walk = startXRef.current - x;
       scrollRef.current.scrollLeft = startScrollLeftRef.current + walk;
     };
 
@@ -64,95 +64,114 @@ const RulerSlider = ({ value, onChange }) => {
     };
 
     if (isDragging) {
-      window.addEventListener('pointermove', handlePointerMove, { passive: false });
-      window.addEventListener('pointerup', handlePointerUp);
+      window.addEventListener("pointermove", handlePointerMove, { passive: false });
+      window.addEventListener("pointerup", handlePointerUp);
       return () => {
-        window.removeEventListener('pointermove', handlePointerMove);
-        window.removeEventListener('pointerup', handlePointerUp);
+        window.removeEventListener("pointermove", handlePointerMove);
+        window.removeEventListener("pointerup", handlePointerUp);
       };
     }
   }, [isDragging]);
 
   return (
-    <div style={{ position: 'relative', width: '100%', height: '56px', userSelect: 'none', margin: '8px 0' }}>
+    <div
+      style={{
+        position: "relative",
+        width: "100%",
+        height: "56px",
+        userSelect: "none",
+        margin: "8px 0",
+      }}
+    >
       <style>{`
         .ruler-scroll-container::-webkit-scrollbar {
           display: none;
         }
       `}</style>
       {/* Center indicator */}
-      <div style={{
-        position: 'absolute',
-        left: '50%',
-        top: '16px',
-        bottom: 0,
-        width: '2px',
-        marginLeft: '-1px',
-        backgroundColor: 'var(--accent)',
-        zIndex: 2,
-        borderRadius: '2px'
-      }} />
-      
+      <div
+        style={{
+          position: "absolute",
+          left: "50%",
+          top: "16px",
+          bottom: 0,
+          width: "2px",
+          marginLeft: "-1px",
+          backgroundColor: "var(--accent)",
+          zIndex: 2,
+          borderRadius: "2px",
+        }}
+      />
+
       {/* Scrollable area */}
-      <div 
+      <div
         className="ruler-scroll-container"
         ref={scrollRef}
         onScroll={handleScroll}
         onPointerDown={handlePointerDown}
         style={{
-          overflowX: 'auto',
-          overflowY: 'hidden',
-          scrollbarWidth: 'none', 
-          msOverflowStyle: 'none', 
-          scrollSnapType: isDragging ? 'none' : 'x mandatory',
-          width: '100%',
-          height: '100%',
-          display: 'flex',
-          alignItems: 'center',
-          cursor: isDragging ? 'grabbing' : 'grab'
+          overflowX: "auto",
+          overflowY: "hidden",
+          scrollbarWidth: "none",
+          msOverflowStyle: "none",
+          scrollSnapType: isDragging ? "none" : "x mandatory",
+          width: "100%",
+          height: "100%",
+          display: "flex",
+          alignItems: "center",
+          cursor: isDragging ? "grabbing" : "grab",
         }}
       >
-        <div style={{ 
-          display: 'flex', 
-          padding: '0 calc(50% - 4px)',
-          height: '100%',
-          alignItems: 'flex-end',
-          paddingBottom: '4px'
-        }}>
+        <div
+          style={{
+            display: "flex",
+            padding: "0 calc(50% - 4px)",
+            height: "100%",
+            alignItems: "flex-end",
+            paddingBottom: "4px",
+          }}
+        >
           {Array.from({ length: 120 }).map((_, i) => {
             const min = i + 1;
             const isTen = min % 10 === 0;
             const isFive = min % 5 === 0;
             return (
-              <div key={min} style={{
-                width: '8px',
-                height: '100%',
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'flex-end',
-                alignItems: 'center',
-                flexShrink: 0,
-                position: 'relative',
-                scrollSnapAlign: 'center'
-              }}>
+              <div
+                key={min}
+                style={{
+                  width: "8px",
+                  height: "100%",
+                  display: "flex",
+                  flexDirection: "column",
+                  justifyContent: "flex-end",
+                  alignItems: "center",
+                  flexShrink: 0,
+                  position: "relative",
+                  scrollSnapAlign: "center",
+                }}
+              >
                 {isTen && (
-                  <span style={{
-                    position: 'absolute',
-                    top: '2px',
-                    fontSize: '10px',
-                    fontWeight: 500,
-                    color: 'var(--color-mac-muted)',
-                    fontVariantNumeric: 'tabular-nums',
-                  }}>
+                  <span
+                    style={{
+                      position: "absolute",
+                      top: "2px",
+                      fontSize: "10px",
+                      fontWeight: 500,
+                      color: "var(--color-mac-muted)",
+                      fontVariantNumeric: "tabular-nums",
+                    }}
+                  >
                     {min}
                   </span>
                 )}
-                <div style={{
-                  width: '1px',
-                  height: isTen ? '16px' : (isFive ? '12px' : '6px'),
-                  backgroundColor: 'var(--color-mac-divider, #ccc)',
-                  marginTop: 'auto'
-                }} />
+                <div
+                  style={{
+                    width: "1px",
+                    height: isTen ? "16px" : isFive ? "12px" : "6px",
+                    backgroundColor: "var(--color-mac-divider, #ccc)",
+                    marginTop: "auto",
+                  }}
+                />
               </div>
             );
           })}
@@ -161,7 +180,6 @@ const RulerSlider = ({ value, onChange }) => {
     </div>
   );
 };
-
 
 export default function StudyTimerModule({ token }) {
   const [isOpen, setIsOpen] = useState(false);
@@ -214,7 +232,7 @@ export default function StudyTimerModule({ token }) {
   }, [token]);
 
   const completeRef = useRef(null);
-  
+
   useEffect(() => {
     if (isRunning) {
       timerRef.current = window.setInterval(() => {
@@ -245,7 +263,7 @@ export default function StudyTimerModule({ token }) {
         setActiveSession(session);
       } catch {
         // Fallback local
-        setActiveSession({ id: 'local', title: 'Deep Focus', planned_minutes: durationMinutes });
+        setActiveSession({ id: "local", title: "Deep Focus", planned_minutes: durationMinutes });
       }
     }
     setIsRunning(true);
@@ -263,7 +281,7 @@ export default function StudyTimerModule({ token }) {
     setActiveSession(null);
     setRemainingSeconds(durationMinutes * 60);
 
-    if (sessionToCancel && sessionToCancel.id !== 'local') {
+    if (sessionToCancel && sessionToCancel.id !== "local") {
       try {
         await cancelStudySession(token, sessionToCancel.id);
       } catch {
@@ -281,7 +299,7 @@ export default function StudyTimerModule({ token }) {
     setRemainingSeconds(durationMinutes * 60);
     setIsOpen(false);
 
-    if (sessionToComplete && sessionToComplete.id !== 'local') {
+    if (sessionToComplete && sessionToComplete.id !== "local") {
       try {
         const elapsed = durationMinutes * 60 - currentRemaining;
         await completeStudySession(token, sessionToComplete.id, {
@@ -310,57 +328,61 @@ export default function StudyTimerModule({ token }) {
   };
 
   return (
-    <div style={{ position: 'relative' }} ref={popoverRef}>
-      <button 
+    <div style={{ position: "relative" }} ref={popoverRef}>
+      <button
         type="button"
         className="mac-toolbar-action"
-        style={{ 
-          width: 'auto', 
-          padding: '0 8px', 
-          gap: '6px', 
-          color: isRunning ? 'var(--text-h)' : 'var(--color-mac-muted)',
-          background: isRunning ? 'var(--color-mac-control-hover)' : 'var(--color-mac-control)',
-          fontWeight: isRunning ? 600 : 500
+        style={{
+          width: "auto",
+          padding: "0 8px",
+          gap: "6px",
+          color: isRunning ? "var(--text-h)" : "var(--color-mac-muted)",
+          background: isRunning ? "var(--color-mac-control-hover)" : "var(--color-mac-control)",
+          fontWeight: isRunning ? 600 : 500,
         }}
         onClick={() => setIsOpen(!isOpen)}
         title="Pomodoro Timer"
       >
         <Timer size={13} />
-        <span style={{ fontVariantNumeric: 'tabular-nums', fontSize: '12px' }}>
+        <span style={{ fontVariantNumeric: "tabular-nums", fontSize: "12px" }}>
           {formatTime(remainingSeconds)}
         </span>
       </button>
 
       {isOpen && (
-        <div style={{
-          position: 'absolute',
-          top: '100%',
-          right: 0,
-          marginTop: '6px',
-          width: '200px',
-          background: 'var(--color-mac-panel)',
-          border: '1px solid var(--color-mac-divider)',
-          borderRadius: '8px',
-          boxShadow: '0 4px 14px 0 var(--color-mac-shadow)',
-          padding: '12px',
-          zIndex: 100,
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '12px'
-        }}>
-          <div style={{ textAlign: 'center' }}>
-            <div style={{ 
-              fontSize: '36px', 
-              fontWeight: 200, 
-              fontVariantNumeric: 'tabular-nums', 
-              letterSpacing: '-0.04em',
-              color: 'var(--text-h)',
-              lineHeight: 1
-            }}>
+        <div
+          style={{
+            position: "absolute",
+            top: "100%",
+            right: 0,
+            marginTop: "6px",
+            width: "200px",
+            background: "var(--color-mac-panel)",
+            border: "1px solid var(--color-mac-divider)",
+            borderRadius: "8px",
+            boxShadow: "0 4px 14px 0 var(--color-mac-shadow)",
+            padding: "12px",
+            zIndex: 100,
+            display: "flex",
+            flexDirection: "column",
+            gap: "12px",
+          }}
+        >
+          <div style={{ textAlign: "center" }}>
+            <div
+              style={{
+                fontSize: "36px",
+                fontWeight: 200,
+                fontVariantNumeric: "tabular-nums",
+                letterSpacing: "-0.04em",
+                color: "var(--text-h)",
+                lineHeight: 1,
+              }}
+            >
               {formatTime(remainingSeconds)}
             </div>
             {activeSession && (
-              <div style={{ fontSize: '11px', color: 'var(--color-mac-muted)', marginTop: '4px' }}>
+              <div style={{ fontSize: "11px", color: "var(--color-mac-muted)", marginTop: "4px" }}>
                 Deep Focus
               </div>
             )}
@@ -368,39 +390,36 @@ export default function StudyTimerModule({ token }) {
 
           {!isRunning && !activeSession ? (
             <>
-              <RulerSlider 
-                value={durationMinutes} 
-                onChange={handlePreset} 
-              />
-              <button 
-                className="mac-toolbar-action is-primary" 
-                style={{ width: '100%', height: '28px', justifyContent: 'center' }}
+              <RulerSlider value={durationMinutes} onChange={handlePreset} />
+              <button
+                className="mac-toolbar-action is-primary"
+                style={{ width: "100%", height: "28px", justifyContent: "center" }}
                 onClick={handleStart}
               >
                 Start
               </button>
             </>
           ) : (
-            <div style={{ display: 'flex', gap: '6px' }}>
-              <button 
-                className="mac-toolbar-action" 
-                style={{ flex: 1, height: '28px' }}
+            <div style={{ display: "flex", gap: "6px" }}>
+              <button
+                className="mac-toolbar-action"
+                style={{ flex: 1, height: "28px" }}
                 onClick={isRunning ? handlePause : handleStart}
                 title={isRunning ? "Pause" : "Resume"}
               >
                 {isRunning ? <Pause size={14} /> : <Play size={14} />}
               </button>
-              <button 
-                className="mac-toolbar-action" 
-                style={{ flex: 1, height: '28px' }}
+              <button
+                className="mac-toolbar-action"
+                style={{ flex: 1, height: "28px" }}
                 onClick={handleComplete}
                 title="Finish & Save"
               >
                 <Check size={14} />
               </button>
-              <button 
-                className="mac-toolbar-action" 
-                style={{ flex: 1, height: '28px', color: '#ef4444' }}
+              <button
+                className="mac-toolbar-action"
+                style={{ flex: 1, height: "28px", color: "#ef4444" }}
                 onClick={handleReset}
                 title="Cancel"
               >

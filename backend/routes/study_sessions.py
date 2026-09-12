@@ -95,9 +95,7 @@ async def create_study_session(payload: StudySessionCreate, current_user: Curren
 
 
 @router.patch("/{session_id}/complete", response_model=StudySessionOut)
-async def complete_study_session(
-    session_id: int, payload: StudySessionFinish, current_user: CurrentUser
-):
+async def complete_study_session(session_id: int, payload: StudySessionFinish, current_user: CurrentUser):
     session = await fetch_session(session_id, current_user.id)
     if session["status"] != "active":
         raise HTTPException(status_code=409, detail="Only an active session can be completed.")
@@ -194,9 +192,7 @@ async def get_study_summary(current_user: CurrentUser):
                 break
             streak += 1
             expected -= timedelta(days=1)
-    return StudySummary(
-        **dict(totals), current_streak=streak, by_module=[dict(row) for row in modules]
-    )
+    return StudySummary(**dict(totals), current_streak=streak, by_module=[dict(row) for row in modules])
 
 
 @router.get("/leaderboard", response_model=list[LeaderboardEntry])

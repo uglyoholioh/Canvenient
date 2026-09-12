@@ -25,12 +25,14 @@ function parseTrackPixels(value) {
 
 function snapColumns(columns, snapToFraction = 12) {
   const colTotal = columns.reduce((s, v) => s + v, 0);
-  const snapped = columns.map((value) => Math.round((value / colTotal) * snapToFraction) / snapToFraction);
+  const snapped = columns.map(
+    (value) => Math.round((value / colTotal) * snapToFraction) / snapToFraction,
+  );
   const sum = snapped.reduce((a, b) => a + b, 0);
   if (Math.abs(sum - 1) > 0.001) {
     const diff = Math.round((1 - sum) * snapToFraction);
     const maxIdx = snapped.indexOf(Math.max(...snapped));
-    snapped[maxIdx] += (diff / snapToFraction);
+    snapped[maxIdx] += diff / snapToFraction;
   }
   return snapped;
 }
@@ -106,7 +108,7 @@ export default function ModuleCard({
     const defaultButtonTop = cardRect.bottom - buttonHeight - buttonMargin;
 
     const items = body.querySelectorAll(
-      ".task-module-item, .task-module-next-line, .task-module-new-entry, .schedule-timeline-item, .schedule-module-message, .canvas-compact-row, .canvas-module-section, .module-list-item, button:not(.module-view-full), a, input, textarea"
+      ".task-module-item, .task-module-next-line, .task-module-new-entry, .schedule-timeline-item, .schedule-module-message, .canvas-compact-row, .canvas-module-section, .module-list-item, button:not(.module-view-full), a, input, textarea",
     );
 
     let maxBottom = 0;
@@ -159,21 +161,28 @@ export default function ModuleCard({
     };
   }, [onViewFull, updateButtonPosition, children]);
 
-  const setCardRef = React.useCallback((element) => {
-    localCardRef.current = element;
-    cardRef?.(element);
-  }, [cardRef]);
+  const setCardRef = React.useCallback(
+    (element) => {
+      localCardRef.current = element;
+      cardRef?.(element);
+    },
+    [cardRef],
+  );
 
   const enterCard = () => {
-    const firstControl = localCardRef.current?.querySelector(
-      ".dashboard-module-body button:not([disabled]), .dashboard-module-body input:not([disabled]), .dashboard-module-body textarea:not([disabled]), .dashboard-module-body select:not([disabled])",
-    ) || localCardRef.current?.querySelector(".module-view-full:not([disabled])");
+    const firstControl =
+      localCardRef.current?.querySelector(
+        ".dashboard-module-body button:not([disabled]), .dashboard-module-body input:not([disabled]), .dashboard-module-body textarea:not([disabled]), .dashboard-module-body select:not([disabled])",
+      ) || localCardRef.current?.querySelector(".module-view-full:not([disabled])");
     firstControl?.focus();
   };
 
   const handleBrowseKeyDown = (event) => {
     const browsingCard = event.target === event.currentTarget;
-    if (browsingCard && ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) {
+    if (
+      browsingCard &&
+      ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)
+    ) {
       event.preventDefault();
       onBrowseMove?.(event.key);
       return;
@@ -200,13 +209,18 @@ export default function ModuleCard({
     }
   };
 
-  React.useEffect(() => () => {
-    resizeSession.current?.cleanup?.();
-    moveSession.current?.cleanup?.();
-    document.body.classList.remove("is-resizing-dashboard-card");
-    document.body.classList.remove("is-moving-dashboard-card");
-    RESIZE_HANDLES.forEach((handle) => document.body.classList.remove(`is-resizing-${handle.direction}`));
-  }, []);
+  React.useEffect(
+    () => () => {
+      resizeSession.current?.cleanup?.();
+      moveSession.current?.cleanup?.();
+      document.body.classList.remove("is-resizing-dashboard-card");
+      document.body.classList.remove("is-moving-dashboard-card");
+      RESIZE_HANDLES.forEach((handle) =>
+        document.body.classList.remove(`is-resizing-${handle.direction}`),
+      );
+    },
+    [],
+  );
 
   const finishResize = (commit) => {
     const session = resizeSession.current;
@@ -223,14 +237,16 @@ export default function ModuleCard({
   const calculateTracks = (session, clientX, clientY) => {
     const deltaX = clientX - session.startX;
     const deltaY = clientY - session.startY;
-    const columns = session.columnBoundary === null
-      ? [...session.columns]
-      : moveTrackBoundary(session.columns, session.columnBoundary, deltaX, MIN_COLUMN_PIXELS);
-    const rows = session.rowBoundary === null
-      ? [...session.rows]
-      : session.direction.includes("s")
-        ? resizeTrackEnd(session.rows, session.rowBoundary, deltaY, MIN_ROW_PIXELS)
-        : moveTrackBoundary(session.rows, session.rowBoundary, deltaY, MIN_ROW_PIXELS);
+    const columns =
+      session.columnBoundary === null
+        ? [...session.columns]
+        : moveTrackBoundary(session.columns, session.columnBoundary, deltaX, MIN_COLUMN_PIXELS);
+    const rows =
+      session.rowBoundary === null
+        ? [...session.rows]
+        : session.direction.includes("s")
+          ? resizeTrackEnd(session.rows, session.rowBoundary, deltaY, MIN_ROW_PIXELS)
+          : moveTrackBoundary(session.rows, session.rowBoundary, deltaY, MIN_ROW_PIXELS);
     return {
       columns: snapColumns(columns),
       rows,
@@ -265,8 +281,16 @@ export default function ModuleCard({
     const columnEnd = nearestBoundary(cardRight - gridRect.left, columns);
     const rowStart = nearestBoundary(cardRect.top - gridRect.top, rows);
     const rowEnd = nearestBoundary(cardBottom - gridRect.top, rows);
-    const columnBoundary = direction.includes("w") ? columnStart : direction.includes("e") ? columnEnd : null;
-    const rowBoundary = direction.includes("n") ? rowStart : direction.includes("s") ? rowEnd : null;
+    const columnBoundary = direction.includes("w")
+      ? columnStart
+      : direction.includes("e")
+        ? columnEnd
+        : null;
+    const rowBoundary = direction.includes("n")
+      ? rowStart
+      : direction.includes("s")
+        ? rowEnd
+        : null;
 
     const handleMouseMove = (moveEvent) => {
       moveEvent.preventDefault();
@@ -315,9 +339,23 @@ export default function ModuleCard({
     const columns = parseTrackPixels(gridStyle.gridTemplateColumns);
     const rows = parseTrackPixels(gridStyle.gridTemplateRows);
     if (columns.length < 3 || rows.length === 0) return;
-    const horizontalDelta = event.key === "ArrowLeft" ? -KEYBOARD_RESIZE_STEP : event.key === "ArrowRight" ? KEYBOARD_RESIZE_STEP : 0;
-    const verticalDelta = event.key === "ArrowUp" ? -KEYBOARD_RESIZE_STEP : event.key === "ArrowDown" ? KEYBOARD_RESIZE_STEP : 0;
-    if ((!horizontalDelta || !/[ew]/.test(direction)) && (!verticalDelta || !/[ns]/.test(direction))) return;
+    const horizontalDelta =
+      event.key === "ArrowLeft"
+        ? -KEYBOARD_RESIZE_STEP
+        : event.key === "ArrowRight"
+          ? KEYBOARD_RESIZE_STEP
+          : 0;
+    const verticalDelta =
+      event.key === "ArrowUp"
+        ? -KEYBOARD_RESIZE_STEP
+        : event.key === "ArrowDown"
+          ? KEYBOARD_RESIZE_STEP
+          : 0;
+    if (
+      (!horizontalDelta || !/[ew]/.test(direction)) &&
+      (!verticalDelta || !/[ns]/.test(direction))
+    )
+      return;
     event.preventDefault();
     event.stopPropagation();
     const cardRight = cardRect.right ?? cardRect.left + cardRect.width;
@@ -329,10 +367,14 @@ export default function ModuleCard({
       rows,
       columnBoundary: direction.includes("w")
         ? nearestBoundary(cardRect.left - gridRect.left, columns)
-        : direction.includes("e") ? nearestBoundary(cardRight - gridRect.left, columns) : null,
+        : direction.includes("e")
+          ? nearestBoundary(cardRight - gridRect.left, columns)
+          : null,
       rowBoundary: direction.includes("n")
         ? nearestBoundary(cardRect.top - gridRect.top, rows)
-        : direction.includes("s") ? nearestBoundary(cardBottom - gridRect.top, rows) : null,
+        : direction.includes("s")
+          ? nearestBoundary(cardBottom - gridRect.top, rows)
+          : null,
       direction,
     };
     onResizeCommit?.(calculateTracks(session, horizontalDelta, verticalDelta));
@@ -350,9 +392,10 @@ export default function ModuleCard({
     const cardRect = card?.getBoundingClientRect();
     const columns = gridStyle ? parseTrackPixels(gridStyle.gridTemplateColumns) : [];
     const rows = gridStyle ? parseTrackPixels(gridStyle.gridTemplateRows) : [];
-    const cardBottom = cardRect ? cardRect.bottom ?? cardRect.top + cardRect.height : 0;
+    const cardBottom = cardRect ? (cardRect.bottom ?? cardRect.top + cardRect.height) : 0;
     const rowStart = cardRect && gridRect ? nearestBoundary(cardRect.top - gridRect.top, rows) : 0;
-    const rowEnd = cardRect && gridRect ? nearestBoundary(cardBottom - gridRect.top, rows) : rows.length;
+    const rowEnd =
+      cardRect && gridRect ? nearestBoundary(cardBottom - gridRect.top, rows) : rows.length;
     const canSlideVertically = columns.length >= 3 && rowStart > 0 && rowEnd < rows.length;
 
     const handleMouseMove = (moveEvent) => {
@@ -365,7 +408,8 @@ export default function ModuleCard({
       if (!session.started && distance < 5) return;
       if (!session.started) {
         session.started = true;
-        session.mode = session.canSlideVertically && Math.abs(deltaY) >= Math.abs(deltaX) ? "slide" : "reorder";
+        session.mode =
+          session.canSlideVertically && Math.abs(deltaY) >= Math.abs(deltaX) ? "slide" : "reorder";
         if (session.mode === "slide") {
           document.body.classList.add("is-resizing-dashboard-card", "is-resizing-s");
           setResizing(true);
@@ -392,7 +436,9 @@ export default function ModuleCard({
         return;
       }
 
-      const targetCard = document.elementFromPoint(moveEvent.clientX, moveEvent.clientY)?.closest?.(".dashboard-module");
+      const targetCard = document
+        .elementFromPoint(moveEvent.clientX, moveEvent.clientY)
+        ?.closest?.(".dashboard-module");
       if (session.targetCard !== targetCard) {
         session.targetCard?.classList.remove("is-drop-target");
         session.targetCard = targetCard?.dataset.module === moduleId ? null : targetCard;
@@ -489,10 +535,18 @@ export default function ModuleCard({
             title={`Drag vertically to move ${title} within its column, or across another card to reorder.`}
             onMouseDown={beginMove}
             onKeyDown={(event) => {
-              if (event.key === "ArrowLeft") { event.preventDefault(); onMove?.(-1); }
-              if (event.key === "ArrowRight") { event.preventDefault(); onMove?.(1); }
+              if (event.key === "ArrowLeft") {
+                event.preventDefault();
+                onMove?.(-1);
+              }
+              if (event.key === "ArrowRight") {
+                event.preventDefault();
+                onMove?.(1);
+              }
             }}
-          ><span /></div>
+          >
+            <span />
+          </div>
           {RESIZE_HANDLES.map((handle) => (
             <button
               type="button"

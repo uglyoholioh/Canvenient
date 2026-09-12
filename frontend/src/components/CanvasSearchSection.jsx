@@ -1,23 +1,36 @@
 import { useState, useMemo, useCallback } from "react";
-import { Search, X, FileText, Image, FileVideo, File, Download, ExternalLink, Loader2 } from "lucide-react";
+import {
+  Search,
+  X,
+  FileText,
+  Image,
+  FileVideo,
+  File,
+  Download,
+  ExternalLink,
+  Loader2,
+} from "lucide-react";
 import { downloadCanvasFile } from "../api";
 
 function getFileType(name = "") {
   const ext = name.split(".").pop().toLowerCase();
   if (["pdf"].includes(ext)) return "pdf";
-  if (["png","jpg","jpeg","gif","webp","svg","bmp"].includes(ext)) return "img";
-  if (["mp4","mov","avi","webm","mkv"].includes(ext)) return "vid";
-  if (["doc","docx","ppt","pptx","xls","xlsx","txt","md"].includes(ext)) return "doc";
-  if (["zip","tar","gz","rar","7z"].includes(ext)) return "zip";
+  if (["png", "jpg", "jpeg", "gif", "webp", "svg", "bmp"].includes(ext)) return "img";
+  if (["mp4", "mov", "avi", "webm", "mkv"].includes(ext)) return "vid";
+  if (["doc", "docx", "ppt", "pptx", "xls", "xlsx", "txt", "md"].includes(ext)) return "doc";
+  if (["zip", "tar", "gz", "rar", "7z"].includes(ext)) return "zip";
   return "other";
 }
 
 function FileTypeIcon({ name, size = 13 }) {
   const type = getFileType(name);
   const iconMap = {
-    pdf: <FileText size={size} />, img: <Image size={size} />,
-    vid: <FileVideo size={size} />, doc: <FileText size={size} />,
-    zip: <File size={size} />, other: <File size={size} />,
+    pdf: <FileText size={size} />,
+    img: <Image size={size} />,
+    vid: <FileVideo size={size} />,
+    doc: <FileText size={size} />,
+    zip: <File size={size} />,
+    other: <File size={size} />,
   };
   return <span className={`cv-file-type-icon type-${type}`}>{iconMap[type]}</span>;
 }
@@ -31,7 +44,8 @@ function formatSize(b) {
 
 function relDate(str) {
   if (!str) return "";
-  const d = new Date(str), now = new Date();
+  const d = new Date(str),
+    now = new Date();
   const diffDays = Math.floor((now - d) / 86400000);
   if (diffDays === 0) return "Today";
   if (diffDays === 1) return "Yesterday";
@@ -52,17 +66,28 @@ export default function CanvasSearchSection({
 
   // Mirrored Canvas URLs expire within minutes, so downloads go through the
   // backend content proxy like the Files tab does.
-  const handleDownload = useCallback(async (file) => {
-    if (!file || downloadingId) return;
-    setDownloadingId(file.id);
-    try {
-      await downloadCanvasFile(token, file.id, file.display_name || file.filename || "canvas-file");
-    } catch (error) {
-      window.dispatchEvent(new CustomEvent("canvenient-toast", { detail: { message: error.message || "Download failed." } }));
-    } finally {
-      setDownloadingId(null);
-    }
-  }, [downloadingId, token]);
+  const handleDownload = useCallback(
+    async (file) => {
+      if (!file || downloadingId) return;
+      setDownloadingId(file.id);
+      try {
+        await downloadCanvasFile(
+          token,
+          file.id,
+          file.display_name || file.filename || "canvas-file",
+        );
+      } catch (error) {
+        window.dispatchEvent(
+          new CustomEvent("canvenient-toast", {
+            detail: { message: error.message || "Download failed." },
+          }),
+        );
+      } finally {
+        setDownloadingId(null);
+      }
+    },
+    [downloadingId, token],
+  );
 
   // Flatten all files with course info
   const allIndexedFiles = useMemo(() => {
@@ -93,9 +118,9 @@ export default function CanvasSearchSection({
 
     // Check if any token matches a course code
     const courseCodeTokens = new Set(
-      displayedCourses.map(c => (c.course_code || "").toLowerCase())
+      displayedCourses.map((c) => (c.course_code || "").toLowerCase()),
     );
-    const targetCourseToken = rawTokens.find(t => courseCodeTokens.has(t));
+    const targetCourseToken = rawTokens.find((t) => courseCodeTokens.has(t));
 
     // Handle "week 5" or "w5" patterns
     const normalizedTokens = [];
@@ -162,13 +187,16 @@ export default function CanvasSearchSection({
       }
     }
 
-      scored.sort((a, b) => b.score - a.score || new Date(b.file.updated_at || 0) - new Date(a.file.updated_at || 0));
-      return scored.slice(0, 60).map(s => s.file);
-    }, [query, allIndexedFiles, selectedCourseId, displayedCourses, activeType]);
+    scored.sort(
+      (a, b) =>
+        b.score - a.score || new Date(b.file.updated_at || 0) - new Date(a.file.updated_at || 0),
+    );
+    return scored.slice(0, 60).map((s) => s.file);
+  }, [query, allIndexedFiles, selectedCourseId, displayedCourses, activeType]);
 
   const quickPills = useMemo(() => {
     if (selectedCourseId === "all") {
-      return displayedCourses.map(c => ({
+      return displayedCourses.map((c) => ({
         label: c.course_code,
         query: `${c.course_code} `,
       }));
@@ -189,7 +217,10 @@ export default function CanvasSearchSection({
           <Search size={13} />
           <span>Quick Resource Search</span>
           <span className="cv-search-scope-badge">
-            {selectedCourseId === "all" ? "All Modules" : displayedCourses.find(c => String(c.id) === String(selectedCourseId))?.course_code || "Module"}
+            {selectedCourseId === "all"
+              ? "All Modules"
+              : displayedCourses.find((c) => String(c.id) === String(selectedCourseId))
+                  ?.course_code || "Module"}
           </span>
         </div>
         {query && (
@@ -231,12 +262,16 @@ export default function CanvasSearchSection({
         <div className="cv-search-toolbar">
           <div className="cv-search-chips">
             <span className="cv-search-chip-label">Suggestions:</span>
-            {quickPills.map(p => (
+            {quickPills.map((p) => (
               <button
                 key={p.label}
                 type="button"
                 className="cv-search-chip"
-                onClick={() => setQuery(prev => (prev.includes(p.query.trim()) ? prev : `${prev} ${p.query}`.trim()))}
+                onClick={() =>
+                  setQuery((prev) =>
+                    prev.includes(p.query.trim()) ? prev : `${prev} ${p.query}`.trim(),
+                  )
+                }
               >
                 + {p.label}
               </button>
@@ -244,7 +279,7 @@ export default function CanvasSearchSection({
           </div>
 
           <div className="cv-search-type-filters">
-            {["all", "pdf", "doc", "img", "zip"].map(t => (
+            {["all", "pdf", "doc", "img", "zip"].map((t) => (
               <button
                 key={t}
                 type="button"
@@ -262,11 +297,13 @@ export default function CanvasSearchSection({
           <div className="cv-search-results-pane">
             {searchResults.length === 0 ? (
               <div className="cv-search-empty">
-                No files found matching "<strong>{query}</strong>". Try searching by module code (e.g. {displayedCourses[0]?.course_code || 'CS2040'}), week number, or file keywords.
+                No files found matching "<strong>{query}</strong>". Try searching by module code
+                (e.g. {displayedCourses[0]?.course_code || "CS2040"}), week number, or file
+                keywords.
               </div>
             ) : (
               <div className="cv-search-results-list">
-                {searchResults.map(file => {
+                {searchResults.map((file) => {
                   const name = file.display_name || file.filename || "Untitled";
                   return (
                     <div
@@ -299,14 +336,21 @@ export default function CanvasSearchSection({
                           {file.updated_at && <span>{relDate(file.updated_at)}</span>}
                         </div>
                       </div>
-                      <div className="cv-search-result-actions" onClick={e => e.stopPropagation()}>
+                      <div
+                        className="cv-search-result-actions"
+                        onClick={(e) => e.stopPropagation()}
+                      >
                         <button
                           type="button"
                           className="cv-btn-icon"
                           title="Download"
                           onClick={() => handleDownload(file)}
                         >
-                          {downloadingId === file.id ? <Loader2 size={13} className="retro-icon-spin" /> : <Download size={13} />}
+                          {downloadingId === file.id ? (
+                            <Loader2 size={13} className="retro-icon-spin" />
+                          ) : (
+                            <Download size={13} />
+                          )}
                         </button>
                         <a
                           href={file.external_url || file.url}

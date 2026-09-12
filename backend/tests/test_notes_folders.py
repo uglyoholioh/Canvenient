@@ -76,9 +76,7 @@ async def test_note_ownership_is_isolated(client: AsyncClient, auth):
     token, _, _ = auth
     headers = auth_headers(token)
 
-    note = (
-        await client.post("/notes", json={"title": "Private", "content": "secret"}, headers=headers)
-    ).json()
+    note = (await client.post("/notes", json={"title": "Private", "content": "secret"}, headers=headers)).json()
 
     other_email = unique_email()
     reg = await client.post("/auth/register", json={"email": other_email, "password": TEST_PASSWORD})

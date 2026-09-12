@@ -1,5 +1,5 @@
 // React is required by the test JSX transform.
- 
+
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CalendarClock, Check, Pencil, Trash2 } from "lucide-react";
 import { createTask, getAcademicModules, getTasks, TASKS_CACHE_KEY, updateTask } from "../../api";
@@ -22,7 +22,10 @@ function getCachedTasks() {
 function taskDueDate(task) {
   const raw = task.effective_due_at || task.due_at_override || task.source_due_at;
   if (!raw) return null;
-  const normalized = typeof raw === "string" && !raw.endsWith("Z") && !/[+-]\d{2}:\d{2}$/.test(raw) ? `${raw.replace(" ", "T")}Z` : raw;
+  const normalized =
+    typeof raw === "string" && !raw.endsWith("Z") && !/[+-]\d{2}:\d{2}$/.test(raw)
+      ? `${raw.replace(" ", "T")}Z`
+      : raw;
   const date = new Date(normalized);
   return Number.isNaN(date.getTime()) ? null : date;
 }
@@ -59,11 +62,19 @@ export default function TasksModule({ token, refreshKey = 0 }) {
   const [error, setError] = useState("");
   const [actionError, setActionError] = useState("");
   const [checkboxStyle, setCheckboxStyle] = useState(() => {
-    try { return localStorage.getItem("canvenient-checkbox-style") || "icon"; } catch { return "icon"; }
+    try {
+      return localStorage.getItem("canvenient-checkbox-style") || "icon";
+    } catch {
+      return "icon";
+    }
   });
   useEffect(() => {
     const updateSettings = () => {
-      try { setCheckboxStyle(localStorage.getItem("canvenient-checkbox-style") || "icon"); } catch { /* test envs */ }
+      try {
+        setCheckboxStyle(localStorage.getItem("canvenient-checkbox-style") || "icon");
+      } catch {
+        /* test envs */
+      }
     };
     window.addEventListener("settings-updated", updateSettings);
     return () => window.removeEventListener("settings-updated", updateSettings);
@@ -75,7 +86,10 @@ export default function TasksModule({ token, refreshKey = 0 }) {
 
   useEffect(() => {
     getTasks(token)
-      .then((data) => { setTasks((data || []).filter((task) => task.status !== "done")); setError(""); })
+      .then((data) => {
+        setTasks((data || []).filter((task) => task.status !== "done"));
+        setError("");
+      })
       .catch((loadError) => setError(loadError.message || "Could not load tasks."));
     getAcademicModules(token)
       .then((data) => setModules(data || []))
@@ -83,7 +97,7 @@ export default function TasksModule({ token, refreshKey = 0 }) {
 
     const handleRestored = (event) => {
       if (event.detail) {
-        setTasks((current) => [...current.filter(t => t.id !== event.detail.id), event.detail]);
+        setTasks((current) => [...current.filter((t) => t.id !== event.detail.id), event.detail]);
       }
     };
     window.addEventListener("canvenient-task-restored", handleRestored);
@@ -92,7 +106,8 @@ export default function TasksModule({ token, refreshKey = 0 }) {
 
   const visibleTasks = useMemo(() => {
     const now = new Date();
-    const todayEnd = new Date(now); todayEnd.setHours(23, 59, 59, 999);
+    const todayEnd = new Date(now);
+    todayEnd.setHours(23, 59, 59, 999);
     const filtered = tasks.filter((task) => {
       const due = taskDueDate(task);
       if (filter === "today") return due && due >= now && due <= todayEnd;
@@ -110,23 +125,26 @@ export default function TasksModule({ token, refreshKey = 0 }) {
     requestAnimationFrame(() => newDraftInputRef.current?.focus());
   }, []);
 
-  const handleCreateInlineTask = useCallback(async (title) => {
-    const trimmed = title.trim();
-    if (!trimmed) return;
-    try {
-      setActionError("");
-      const created = await createTask(token, {
-        title: trimmed,
-        status: "todo",
-        priority_manual: filter === "priority" ? "high" : "medium",
-      });
-      setTasks((current) => sortByDueTime([...current, created]));
-      window.dispatchEvent(new CustomEvent("canvenient-task-created", { detail: created }));
-      notifyTasksChanged();
-    } catch (err) {
-      setActionError(err.message || "Could not create task.");
-    }
-  }, [filter, token]);
+  const handleCreateInlineTask = useCallback(
+    async (title) => {
+      const trimmed = title.trim();
+      if (!trimmed) return;
+      try {
+        setActionError("");
+        const created = await createTask(token, {
+          title: trimmed,
+          status: "todo",
+          priority_manual: filter === "priority" ? "high" : "medium",
+        });
+        setTasks((current) => sortByDueTime([...current, created]));
+        window.dispatchEvent(new CustomEvent("canvenient-task-created", { detail: created }));
+        notifyTasksChanged();
+      } catch (err) {
+        setActionError(err.message || "Could not create task.");
+      }
+    },
+    [filter, token],
+  );
 
   const handleNewDraftKeyDown = async (event) => {
     if (event.key === "Enter") {
@@ -193,7 +211,9 @@ export default function TasksModule({ token, refreshKey = 0 }) {
         title: draftTitle.trim(),
         due_at_override: draftDue ? new Date(draftDue).toISOString() : null,
       });
-      setTasks((current) => sortByDueTime(current.map((item) => item.id === task.id ? updated : item)));
+      setTasks((current) =>
+        sortByDueTime(current.map((item) => (item.id === task.id ? updated : item))),
+      );
       setExpandedId(null);
       requestAnimationFrame(() => taskButtonRefs.current[task.id]?.focus());
       notifyTasksChanged();
@@ -218,13 +238,20 @@ export default function TasksModule({ token, refreshKey = 0 }) {
     const currentIndex = filters.indexOf(currentFilter);
     const next = filters[(currentIndex + direction + filters.length) % filters.length];
     setFilter(next);
-    requestAnimationFrame(() => filterTabsRef.current?.querySelector(`[data-task-filter="${next}"]`)?.focus());
+    requestAnimationFrame(() =>
+      filterTabsRef.current?.querySelector(`[data-task-filter="${next}"]`)?.focus(),
+    );
   };
 
   return (
     <div className="tasks-module">
       <div className="tasks-module-controls">
-        <div ref={filterTabsRef} className="module-filter-tabs" role="tablist" aria-label="Task filters">
+        <div
+          ref={filterTabsRef}
+          className="module-filter-tabs"
+          role="tablist"
+          aria-label="Task filters"
+        >
           {["all", "today", "overdue", "priority"].map((value) => (
             <button
               type="button"
@@ -236,10 +263,28 @@ export default function TasksModule({ token, refreshKey = 0 }) {
               className={filter === value ? "is-active" : ""}
               onClick={() => setFilter(value)}
               onKeyDown={(event) => {
-                if (event.key === "ArrowRight" || event.key === "ArrowDown") { event.preventDefault(); moveFilter(value, 1); }
-                if (event.key === "ArrowLeft" || event.key === "ArrowUp") { event.preventDefault(); moveFilter(value, -1); }
-                if (event.key === "Home") { event.preventDefault(); setFilter("all"); requestAnimationFrame(() => filterTabsRef.current?.querySelector('[data-task-filter="all"]')?.focus()); }
-                if (event.key === "End") { event.preventDefault(); setFilter("priority"); requestAnimationFrame(() => filterTabsRef.current?.querySelector('[data-task-filter="priority"]')?.focus()); }
+                if (event.key === "ArrowRight" || event.key === "ArrowDown") {
+                  event.preventDefault();
+                  moveFilter(value, 1);
+                }
+                if (event.key === "ArrowLeft" || event.key === "ArrowUp") {
+                  event.preventDefault();
+                  moveFilter(value, -1);
+                }
+                if (event.key === "Home") {
+                  event.preventDefault();
+                  setFilter("all");
+                  requestAnimationFrame(() =>
+                    filterTabsRef.current?.querySelector('[data-task-filter="all"]')?.focus(),
+                  );
+                }
+                if (event.key === "End") {
+                  event.preventDefault();
+                  setFilter("priority");
+                  requestAnimationFrame(() =>
+                    filterTabsRef.current?.querySelector('[data-task-filter="priority"]')?.focus(),
+                  );
+                }
               }}
             >
               {value}
@@ -247,7 +292,11 @@ export default function TasksModule({ token, refreshKey = 0 }) {
           ))}
         </div>
       </div>
-      {actionError && <div className="module-error" role="alert">{actionError}</div>}
+      {actionError && (
+        <div className="module-error" role="alert">
+          {actionError}
+        </div>
+      )}
       {error ? (
         <div className="module-error">{error}</div>
       ) : (
@@ -275,16 +324,34 @@ export default function TasksModule({ token, refreshKey = 0 }) {
                     style={{ backgroundColor: taskModuleColor }}
                   />
                 )}
-                <button type="button" className="module-task-check" onClick={() => complete(task)} aria-label={`Complete ${task.title}`}>
-                  {checkboxStyle === "brackets" ? "[ ]" : checkboxStyle === "circle" ? "( )" : (
+                <button
+                  type="button"
+                  className="module-task-check"
+                  onClick={() => complete(task)}
+                  aria-label={`Complete ${task.title}`}
+                >
+                  {checkboxStyle === "brackets" ? (
+                    "[ ]"
+                  ) : checkboxStyle === "circle" ? (
+                    "( )"
+                  ) : (
                     <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true">
-                      <rect x="1.75" y="1.75" width="12.5" height="12.5" rx="4" className="module-task-check-box" />
+                      <rect
+                        x="1.75"
+                        y="1.75"
+                        width="12.5"
+                        height="12.5"
+                        rx="4"
+                        className="module-task-check-box"
+                      />
                       <path d="M4.9 8.3l2.1 2.1 4.3-4.7" className="module-task-check-tick" />
                     </svg>
                   )}
                 </button>
                 <button
-                  ref={(element) => { taskButtonRefs.current[task.id] = element; }}
+                  ref={(element) => {
+                    taskButtonRefs.current[task.id] = element;
+                  }}
                   type="button"
                   className="module-item-main"
                   aria-expanded={expandedId === task.id}
@@ -321,9 +388,16 @@ export default function TasksModule({ token, refreshKey = 0 }) {
                   <form
                     id={`task-editor-${task.id}`}
                     className="task-inline-editor"
-                    onSubmit={(event) => { event.preventDefault(); save(task); }}
+                    onSubmit={(event) => {
+                      event.preventDefault();
+                      save(task);
+                    }}
                     onKeyDown={(event) => {
-                      if (event.key === "Escape") { event.preventDefault(); setExpandedId(null); requestAnimationFrame(() => taskButtonRefs.current[task.id]?.focus()); }
+                      if (event.key === "Escape") {
+                        event.preventDefault();
+                        setExpandedId(null);
+                        requestAnimationFrame(() => taskButtonRefs.current[task.id]?.focus());
+                      }
                     }}
                   >
                     <input
@@ -340,10 +414,27 @@ export default function TasksModule({ token, refreshKey = 0 }) {
                       aria-label="Due date"
                     />
                     <div className="task-inline-actions">
-                      <button type="submit" disabled={!draftTitle.trim()}><Check size={13} />Save</button>
-                      <button type="button" onClick={() => complete(task)}><Check size={13} />Complete</button>
-                      <button type="button" onClick={() => setDraftDue(localInputValue(new Date(Date.now() + 86400000)))}><CalendarClock size={13} />Tomorrow</button>
-                      <button type="button" className="is-danger" onClick={() => remove(task)}><Trash2 size={13} />Delete</button>
+                      <button type="submit" disabled={!draftTitle.trim()}>
+                        <Check size={13} />
+                        Save
+                      </button>
+                      <button type="button" onClick={() => complete(task)}>
+                        <Check size={13} />
+                        Complete
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setDraftDue(localInputValue(new Date(Date.now() + 86400000)))
+                        }
+                      >
+                        <CalendarClock size={13} />
+                        Tomorrow
+                      </button>
+                      <button type="button" className="is-danger" onClick={() => remove(task)}>
+                        <Trash2 size={13} />
+                        Delete
+                      </button>
                     </div>
                   </form>
                 )}
@@ -354,9 +445,20 @@ export default function TasksModule({ token, refreshKey = 0 }) {
           {isDraftingNew ? (
             <div className="task-module-item task-module-new-entry is-active">
               <span className="module-task-check placeholder" aria-hidden="true">
-                {checkboxStyle === "brackets" ? "[ ]" : checkboxStyle === "circle" ? "( )" : (
+                {checkboxStyle === "brackets" ? (
+                  "[ ]"
+                ) : checkboxStyle === "circle" ? (
+                  "( )"
+                ) : (
                   <svg viewBox="0 0 16 16" width="15" height="15">
-                    <rect x="1.75" y="1.75" width="12.5" height="12.5" rx="4" className="module-task-check-box" />
+                    <rect
+                      x="1.75"
+                      y="1.75"
+                      width="12.5"
+                      height="12.5"
+                      rx="4"
+                      className="module-task-check-box"
+                    />
                     <path d="M4.9 8.3l2.1 2.1 4.3-4.7" className="module-task-check-tick" />
                   </svg>
                 )}
@@ -389,15 +491,28 @@ export default function TasksModule({ token, refreshKey = 0 }) {
               aria-label="Add task"
             >
               <span className="module-task-check placeholder" aria-hidden="true">
-                {checkboxStyle === "brackets" ? "[ ]" : checkboxStyle === "circle" ? "( )" : (
+                {checkboxStyle === "brackets" ? (
+                  "[ ]"
+                ) : checkboxStyle === "circle" ? (
+                  "( )"
+                ) : (
                   <svg viewBox="0 0 16 16" width="15" height="15">
-                    <rect x="1.75" y="1.75" width="12.5" height="12.5" rx="4" className="module-task-check-box" />
+                    <rect
+                      x="1.75"
+                      y="1.75"
+                      width="12.5"
+                      height="12.5"
+                      rx="4"
+                      className="module-task-check-box"
+                    />
                     <path d="M4.9 8.3l2.1 2.1 4.3-4.7" className="module-task-check-tick" />
                   </svg>
                 )}
               </span>
               <span className="task-next-line-prompt">
-                {visibleTasks.length === 0 ? "No tasks in this view. Click to add a task..." : "New task..."}
+                {visibleTasks.length === 0
+                  ? "No tasks in this view. Click to add a task..."
+                  : "New task..."}
               </span>
             </div>
           )}

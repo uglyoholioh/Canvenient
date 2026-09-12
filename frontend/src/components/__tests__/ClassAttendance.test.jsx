@@ -14,7 +14,11 @@ vi.mock("../../api", () => ({
 }));
 
 function localDateKey(date) {
-  return [date.getFullYear(), String(date.getMonth() + 1).padStart(2, "0"), String(date.getDate()).padStart(2, "0")].join("-");
+  return [
+    date.getFullYear(),
+    String(date.getMonth() + 1).padStart(2, "0"),
+    String(date.getDate()).padStart(2, "0"),
+  ].join("-");
 }
 
 const TODAY = localDateKey(new Date());
@@ -81,7 +85,16 @@ describe("class attendance", () => {
   it("scheduleItemsForDate exposes the effective attend_in_person from the backend", () => {
     const schedule = {
       classes: [
-        { id: 1, module_code: "CS2103", lesson_type: "Tutorial", class_no: "1", class_date: TODAY, start_time: "14:00:00", end_time: "15:00:00", attend_in_person: false },
+        {
+          id: 1,
+          module_code: "CS2103",
+          lesson_type: "Tutorial",
+          class_no: "1",
+          class_date: TODAY,
+          start_time: "14:00:00",
+          end_time: "15:00:00",
+          attend_in_person: false,
+        },
       ],
       exams: [],
       events: [],
@@ -97,7 +110,9 @@ describe("class attendance", () => {
 
     const block = await screen.findByText("CS2040S").then((el) => el.closest("article"));
     expect(block).toHaveClass("is-not-attending");
-    expect(block.getAttribute("title") || block.getAttribute("aria-label")).toContain("not attending");
+    expect(block.getAttribute("title") || block.getAttribute("aria-label")).toContain(
+      "not attending",
+    );
   });
 
   it("applies attendance to the selected date by default", async () => {
@@ -107,7 +122,10 @@ describe("class attendance", () => {
     fireEvent.click(notAttending);
 
     await waitFor(() => expect(updateClass).toHaveBeenCalledTimes(1));
-    expect(updateClass).toHaveBeenCalledWith("token", 1, { attend_in_person: false, occurrence_date: TODAY });
+    expect(updateClass).toHaveBeenCalledWith("token", 1, {
+      attend_in_person: false,
+      occurrence_date: TODAY,
+    });
   });
 
   it("re-applies the current status to the whole series when scope changes", async () => {
@@ -160,7 +178,15 @@ describe("class attendance", () => {
 
     fireEvent.click(await screen.findByRole("radio", { name: /not attending/i }));
 
-    await waitFor(() => expect(screen.getByRole("radio", { name: /not attending/i })).toHaveAttribute("aria-checked", "true"));
-    expect(screen.getByRole("radio", { name: /in person/i })).toHaveAttribute("aria-checked", "false");
+    await waitFor(() =>
+      expect(screen.getByRole("radio", { name: /not attending/i })).toHaveAttribute(
+        "aria-checked",
+        "true",
+      ),
+    );
+    expect(screen.getByRole("radio", { name: /in person/i })).toHaveAttribute(
+      "aria-checked",
+      "false",
+    );
   });
 });

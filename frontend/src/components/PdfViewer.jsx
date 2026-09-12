@@ -1,7 +1,20 @@
 // React is required by the test JSX transform.
- 
+
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { AlertTriangle, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Loader2, Minus, Plus, RotateCw, Search, Sparkles, X } from "lucide-react";
+import {
+  AlertTriangle,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  ChevronUp,
+  Loader2,
+  Minus,
+  Plus,
+  RotateCw,
+  Search,
+  Sparkles,
+  X,
+} from "lucide-react";
 import { fetchCanvasFileContent } from "../api";
 import { useAssistant } from "./AssistantContext";
 
@@ -117,13 +130,16 @@ export default function PdfViewer({ token, fileId, name = "", externalUrl = "" }
   const searchInputRef = useRef(null);
   const scrollSaveAtRef = useRef(0);
 
-  const gotoPage = useCallback((page) => {
-    const clamped = Math.min(Math.max(1, page), numPages || 1);
-    const div = pageDivsRef.current.get(clamped);
-    if (div && typeof div.scrollIntoView === "function") div.scrollIntoView({ block: "start" });
-    setCurrentPage(clamped);
-    setPageInput(String(clamped));
-  }, [numPages]);
+  const gotoPage = useCallback(
+    (page) => {
+      const clamped = Math.min(Math.max(1, page), numPages || 1);
+      const div = pageDivsRef.current.get(clamped);
+      if (div && typeof div.scrollIntoView === "function") div.scrollIntoView({ block: "start" });
+      setCurrentPage(clamped);
+      setPageInput(String(clamped));
+    },
+    [numPages],
+  );
 
   // The pages are painted onto canvases with no text layer, so searching means
   // extracting the text items pdf.js exposes per page. Item rectangles come
@@ -148,57 +164,63 @@ export default function PdfViewer({ token, fileId, name = "", externalUrl = "" }
     return { text, items };
   }, []);
 
-  const runSearch = useCallback(async (rawQuery) => {
-    const doc = docRef.current;
-    const query = rawQuery.trim().toLowerCase();
-    if (!doc || !query) {
-      setSearchStatus("idle");
-      setSearchMatches([]);
-      setActiveMatch(-1);
-      return;
-    }
-    setSearchStatus("extracting");
-    try {
-      const cache = textCacheRef.current;
-      for (let n = 1; n <= doc.numPages; n += 1) {
-        if (!cache.has(n)) cache.set(n, await extractPageText(doc, n));
+  const runSearch = useCallback(
+    async (rawQuery) => {
+      const doc = docRef.current;
+      const query = rawQuery.trim().toLowerCase();
+      if (!doc || !query) {
+        setSearchStatus("idle");
+        setSearchMatches([]);
+        setActiveMatch(-1);
+        return;
       }
-      const matches = [];
-      for (let n = 1; n <= doc.numPages; n += 1) {
-        const { text, items } = cache.get(n);
-        const lower = text.toLowerCase();
-        let from = 0;
-        for (;;) {
-          const start = lower.indexOf(query, from);
-          if (start === -1) break;
-          const end = start + query.length;
-          matches.push({
-            page: n,
-            segments: items
-              .filter((item) => item.start < end && item.start + item.str.length > start)
-              .map((item) => item.rect),
-          });
-          from = start + query.length;
+      setSearchStatus("extracting");
+      try {
+        const cache = textCacheRef.current;
+        for (let n = 1; n <= doc.numPages; n += 1) {
+          if (!cache.has(n)) cache.set(n, await extractPageText(doc, n));
         }
+        const matches = [];
+        for (let n = 1; n <= doc.numPages; n += 1) {
+          const { text, items } = cache.get(n);
+          const lower = text.toLowerCase();
+          let from = 0;
+          for (;;) {
+            const start = lower.indexOf(query, from);
+            if (start === -1) break;
+            const end = start + query.length;
+            matches.push({
+              page: n,
+              segments: items
+                .filter((item) => item.start < end && item.start + item.str.length > start)
+                .map((item) => item.rect),
+            });
+            from = start + query.length;
+          }
+        }
+        setSearchStatus("done");
+        setSearchMatches(matches);
+        setActiveMatch(matches.length ? 0 : -1);
+        if (matches.length) gotoPage(matches[0].page);
+      } catch {
+        // Extraction can fail on damaged documents; search degrades to no-op.
+        setSearchStatus("idle");
+        setSearchMatches([]);
+        setActiveMatch(-1);
       }
-      setSearchStatus("done");
-      setSearchMatches(matches);
-      setActiveMatch(matches.length ? 0 : -1);
-      if (matches.length) gotoPage(matches[0].page);
-    } catch {
-      // Extraction can fail on damaged documents; search degrades to no-op.
-      setSearchStatus("idle");
-      setSearchMatches([]);
-      setActiveMatch(-1);
-    }
-  }, [extractPageText, gotoPage]);
+    },
+    [extractPageText, gotoPage],
+  );
 
-  const stepMatch = useCallback((direction) => {
-    if (!searchMatches.length) return;
-    const next = (activeMatch + direction + searchMatches.length) % searchMatches.length;
-    setActiveMatch(next);
-    gotoPage(searchMatches[next].page);
-  }, [activeMatch, gotoPage, searchMatches]);
+  const stepMatch = useCallback(
+    (direction) => {
+      if (!searchMatches.length) return;
+      const next = (activeMatch + direction + searchMatches.length) % searchMatches.length;
+      setActiveMatch(next);
+      gotoPage(searchMatches[next].page);
+    },
+    [activeMatch, gotoPage, searchMatches],
+  );
 
   const closeSearch = useCallback(() => {
     setSearchOpen(false);
@@ -336,7 +358,7 @@ export default function PdfViewer({ token, fileId, name = "", externalUrl = "" }
     return Math.max(MIN_SCALE, (containerWidth - 40) / rotatedWidth);
   }, [baseDims, containerWidth, rotation]);
 
-  const scale = zoomMode === "fit" ? fitScale ?? 1 : zoomMode;
+  const scale = zoomMode === "fit" ? (fitScale ?? 1) : zoomMode;
 
   const pageInfos = useMemo(() => {
     if (!baseDims || !baseDims.length) return [];
@@ -566,25 +588,28 @@ export default function PdfViewer({ token, fileId, name = "", externalUrl = "" }
     else setPageInput(String(currentPage));
   }, [currentPage, gotoPage, pageInput]);
 
-  const handleKeyDown = useCallback((event) => {
-    if (event.target instanceof HTMLInputElement) return;
-    if (event.key === "ArrowRight" || event.key === "PageDown") {
-      event.preventDefault();
-      gotoPage(currentPage + 1);
-    } else if (event.key === "ArrowLeft" || event.key === "PageUp") {
-      event.preventDefault();
-      gotoPage(currentPage - 1);
-    } else if (event.key === "+" || event.key === "=") {
-      event.preventDefault();
-      zoomIn();
-    } else if (event.key === "-") {
-      event.preventDefault();
-      zoomOut();
-    } else if (event.key === "0") {
-      event.preventDefault();
-      applyLayoutChange(() => setZoomMode("fit"));
-    }
-  }, [applyLayoutChange, currentPage, gotoPage, zoomIn, zoomOut]);
+  const handleKeyDown = useCallback(
+    (event) => {
+      if (event.target instanceof HTMLInputElement) return;
+      if (event.key === "ArrowRight" || event.key === "PageDown") {
+        event.preventDefault();
+        gotoPage(currentPage + 1);
+      } else if (event.key === "ArrowLeft" || event.key === "PageUp") {
+        event.preventDefault();
+        gotoPage(currentPage - 1);
+      } else if (event.key === "+" || event.key === "=") {
+        event.preventDefault();
+        zoomIn();
+      } else if (event.key === "-") {
+        event.preventDefault();
+        zoomOut();
+      } else if (event.key === "0") {
+        event.preventDefault();
+        applyLayoutChange(() => setZoomMode("fit"));
+      }
+    },
+    [applyLayoutChange, currentPage, gotoPage, zoomIn, zoomOut],
+  );
 
   if (status === "error") {
     return (
@@ -593,9 +618,17 @@ export default function PdfViewer({ token, fileId, name = "", externalUrl = "" }
           <AlertTriangle size={18} />
           <span>{error}</span>
           <div className="cv-pdf-status-actions">
-            <button type="button" className="cv-btn-link" onClick={() => setReloadKey((key) => key + 1)}>Try again</button>
+            <button
+              type="button"
+              className="cv-btn-link"
+              onClick={() => setReloadKey((key) => key + 1)}
+            >
+              Try again
+            </button>
             {externalUrl && (
-              <a href={externalUrl} target="_blank" rel="noreferrer" className="cv-link-accent">Open in Canvas ↗</a>
+              <a href={externalUrl} target="_blank" rel="noreferrer" className="cv-link-accent">
+                Open in Canvas ↗
+              </a>
             )}
           </div>
         </div>
@@ -615,10 +648,23 @@ export default function PdfViewer({ token, fileId, name = "", externalUrl = "" }
   }
 
   return (
-    <div className="cv-pdf-viewer" role="region" aria-label={`PDF viewer: ${name}`} tabIndex={0} onKeyDown={handleKeyDown}>
+    <div
+      className="cv-pdf-viewer"
+      role="region"
+      aria-label={`PDF viewer: ${name}`}
+      tabIndex={0}
+      onKeyDown={handleKeyDown}
+    >
       <div className="cv-pdf-toolbar">
         <div className="cv-pdf-toolbar-group">
-          <button type="button" className="cv-btn-icon" onClick={() => gotoPage(currentPage - 1)} disabled={currentPage <= 1} title="Previous page" aria-label="Previous page">
+          <button
+            type="button"
+            className="cv-btn-icon"
+            onClick={() => gotoPage(currentPage - 1)}
+            disabled={currentPage <= 1}
+            title="Previous page"
+            aria-label="Previous page"
+          >
             <ChevronLeft size={13} />
           </button>
           <span className="cv-pdf-page-indicator">
@@ -627,33 +673,73 @@ export default function PdfViewer({ token, fileId, name = "", externalUrl = "" }
               value={pageInput}
               onChange={(event) => setPageInput(event.target.value.replace(/[^0-9]/g, ""))}
               onBlur={commitPageInput}
-              onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); commitPageInput(); event.target.blur(); } }}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  event.preventDefault();
+                  commitPageInput();
+                  event.target.blur();
+                }
+              }}
               aria-label="Go to page"
             />
             <span>/ {numPages}</span>
           </span>
-          <button type="button" className="cv-btn-icon" onClick={() => gotoPage(currentPage + 1)} disabled={currentPage >= numPages} title="Next page" aria-label="Next page">
+          <button
+            type="button"
+            className="cv-btn-icon"
+            onClick={() => gotoPage(currentPage + 1)}
+            disabled={currentPage >= numPages}
+            title="Next page"
+            aria-label="Next page"
+          >
             <ChevronRight size={13} />
           </button>
         </div>
         <span className="cv-pdf-toolbar-sep" />
         <div className="cv-pdf-toolbar-group">
-          <button type="button" className="cv-btn-icon" onClick={zoomOut} disabled={scale <= MIN_SCALE + 0.001} title="Zoom out" aria-label="Zoom out">
+          <button
+            type="button"
+            className="cv-btn-icon"
+            onClick={zoomOut}
+            disabled={scale <= MIN_SCALE + 0.001}
+            title="Zoom out"
+            aria-label="Zoom out"
+          >
             <Minus size={13} />
           </button>
-          <button type="button" className="cv-pdf-zoom-label" onClick={() => applyLayoutChange(() => setZoomMode("fit"))} title="Fit to width">
+          <button
+            type="button"
+            className="cv-pdf-zoom-label"
+            onClick={() => applyLayoutChange(() => setZoomMode("fit"))}
+            title="Fit to width"
+          >
             {Math.round(scale * 100)}%
           </button>
-          <button type="button" className="cv-btn-icon" onClick={zoomIn} disabled={scale >= MAX_SCALE - 0.001} title="Zoom in" aria-label="Zoom in">
+          <button
+            type="button"
+            className="cv-btn-icon"
+            onClick={zoomIn}
+            disabled={scale >= MAX_SCALE - 0.001}
+            title="Zoom in"
+            aria-label="Zoom in"
+          >
             <Plus size={13} />
           </button>
-          <button type="button" className="cv-btn-icon" onClick={rotate} title="Rotate clockwise" aria-label="Rotate clockwise">
+          <button
+            type="button"
+            className="cv-btn-icon"
+            onClick={rotate}
+            title="Rotate clockwise"
+            aria-label="Rotate clockwise"
+          >
             <RotateCw size={13} />
           </button>
           <button
             type="button"
             className="cv-btn-icon"
-            onClick={() => openAssistant({ attachment: { type: "file", id: Number(fileId), label: name } })}
+            onClick={() =>
+              openAssistant({ attachment: { type: "file", id: Number(fileId), label: name } })
+            }
             title="Ask the assistant about this PDF"
             aria-label="Ask the assistant about this PDF"
           >
@@ -691,18 +777,44 @@ export default function PdfViewer({ token, fileId, name = "", externalUrl = "" }
                       : ""}
                 </span>
               </div>
-              <button type="button" className="cv-btn-icon" onClick={() => stepMatch(-1)} disabled={!searchMatches.length} title="Previous match" aria-label="Previous match">
+              <button
+                type="button"
+                className="cv-btn-icon"
+                onClick={() => stepMatch(-1)}
+                disabled={!searchMatches.length}
+                title="Previous match"
+                aria-label="Previous match"
+              >
                 <ChevronUp size={13} />
               </button>
-              <button type="button" className="cv-btn-icon" onClick={() => stepMatch(1)} disabled={!searchMatches.length} title="Next match" aria-label="Next match">
+              <button
+                type="button"
+                className="cv-btn-icon"
+                onClick={() => stepMatch(1)}
+                disabled={!searchMatches.length}
+                title="Next match"
+                aria-label="Next match"
+              >
                 <ChevronDown size={13} />
               </button>
-              <button type="button" className="cv-btn-icon" onClick={closeSearch} title="Close search" aria-label="Close search">
+              <button
+                type="button"
+                className="cv-btn-icon"
+                onClick={closeSearch}
+                title="Close search"
+                aria-label="Close search"
+              >
                 <X size={13} />
               </button>
             </>
           ) : (
-            <button type="button" className="cv-btn-icon" onClick={() => setSearchOpen(true)} title="Search in document (⌘F)" aria-label="Search in document">
+            <button
+              type="button"
+              className="cv-btn-icon"
+              onClick={() => setSearchOpen(true)}
+              title="Search in document (⌘F)"
+              aria-label="Search in document"
+            >
               <Search size={13} />
             </button>
           )}
