@@ -19,6 +19,9 @@ struct CampusView: View {
             }
             .themedForm()
             .navigationTitle("Campus")
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) { SidebarToggle() }
+            }
         }
     }
 }

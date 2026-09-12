@@ -6,15 +6,9 @@ struct RootView: View {
     @AppStorage(Theme.modeKey) private var themeMode = ThemeMode.graphite.rawValue
 
     var body: some View {
-        Group {
-            switch appState.session {
-            case .unknown:
-                ProgressView("Connecting…")
-            case .loggedOut:
-                LoginView()
-            case .loggedIn:
-                tabs
-            }
+        ZStack(alignment: .topLeading) {
+            tabs
+            SidebarDrawer()
         }
         .animation(.easeInOut(duration: 0.2), value: appState.session)
         .preferredColorScheme(.dark)
@@ -36,20 +30,7 @@ struct RootView: View {
             Tab("Campus", systemImage: "bus", value: .campus) {
                 CampusView()
             }
-            Tab("Modules", systemImage: "book", value: .modules) {
-                ModulesView()
-            }
-            .tabPlacement(.sidebarOnly)
-            Tab("Wheel", systemImage: "smallcircle.filled.circle", value: .wheel) {
-                WheelView(showsDone: false)
-            }
-            .tabPlacement(.sidebarOnly)
-            Tab("Settings", systemImage: "gearshape", value: .settings) {
-                SettingsView(showsDone: false)
-            }
-            .tabPlacement(.sidebarOnly)
         }
-        .tabViewStyle(.sidebarAdaptable)
         .tint(Theme.accent)
     }
 }

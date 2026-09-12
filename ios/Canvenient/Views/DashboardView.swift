@@ -32,6 +32,9 @@ struct DashboardView: View {
             .navigationTitle("Today")
             .navigationBarTitleDisplayMode(.inline)
             .tint(Theme.accent)
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) { SidebarToggle() }
+            }
             .task { await refresh() }
             .onReceive(timer) { clock = $0; Task { await refreshBus() } }
             .refreshable { await refresh() }
@@ -72,7 +75,7 @@ struct DashboardView: View {
                         .font(.caption)
                         .foregroundStyle(Theme.textMuted)
                     if focus.start > clock {
-                        Text(relatives(focus.start))
+                        Text(Format.countdown(until: focus.start, now: clock))
                             .font(.caption)
                             .foregroundStyle(Theme.warning)
                     } else {
@@ -206,13 +209,13 @@ struct DashboardView: View {
                                 .frame(width: 30)
                                 .foregroundStyle(Theme.text)
                             if let first = etas.first {
-                                Text(first == 0 ? "Now" : "\(first) min")
+                                Text(Format.eta(first, now: clock))
                                     .font(.callout.weight(.medium))
                                     .foregroundStyle(Theme.text)
                             }
                             Spacer()
                             if etas.count > 1 {
-                                Text("then \(etas.dropFirst().map(String.init).joined(separator: ", "))")
+                                Text("then \(Format.etaList(etas, now: clock))")
                                     .font(.caption)
                                     .foregroundStyle(Theme.textMuted)
                             }
@@ -244,13 +247,6 @@ struct DashboardView: View {
         return String(format: "%02d:%02d", components.hour ?? 0, components.minute ?? 0)
     }
 
-    private func relatives(_ date: Date) -> String {
-        let minutes = Int(date.timeIntervalSince(clock) / 60)
-        if minutes >= 60 {
-            return "In \(minutes / 60) h \(minutes % 60) min"
-        }
-        return "In \(max(minutes, 0)) min"
-    }
 }
 
 /// Desktop-style widget card: quiet surface, hairline border, section label.

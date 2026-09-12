@@ -149,7 +149,7 @@ struct BusView: View {
                 .frame(width: 40, height: 28)
                 .background(serviceTone(service.service), in: RoundedRectangle(cornerRadius: 8))
             if let first = etas.first {
-                Text(first == 0 ? "Now" : "\(first) min")
+                Text(Format.eta(first))
                     .font(.title3)
                     .fontWeight(.semibold)
                     .foregroundStyle(first <= 3 ? Color.orange : Color.primary)
@@ -157,7 +157,7 @@ struct BusView: View {
                 Text("—").foregroundStyle(.secondary)
             }
             if etas.count > 1 {
-                Text("then \(etas.dropFirst().map { "\($0)" }.joined(separator: ", ")) min")
+                Text("then \(Format.etaList(etas))")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }

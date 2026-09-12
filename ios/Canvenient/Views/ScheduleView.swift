@@ -7,7 +7,6 @@ struct ScheduleView: View {
 
     @State private var selectedDay = SGTime.startOfDay(Date())
     @State private var showingImport = false
-    @State private var showingSettings = false
     @State private var detailItem: ScheduleEngine.Item?
     @State private var clock = Date()
 
@@ -46,20 +45,14 @@ struct ScheduleView: View {
             .toolbarColorScheme(.dark, for: .navigationBar)
             .toolbar {
                 ToolbarItemGroup(placement: .topBarLeading) {
+                    SidebarToggle()
                     Button { showingImport = true } label: {
                         Label("Import", systemImage: "square.and.arrow.down")
                     }
                     .tint(Theme.accent)
                 }
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button { showingSettings = true } label: {
-                        Label("Settings", systemImage: "gearshape")
-                    }
-                    .tint(Theme.accent)
-                }
             }
             .sheet(isPresented: $showingImport) { ImportSheet() }
-            .sheet(isPresented: $showingSettings) { SettingsView() }
             .sheet(item: $detailItem) { item in
                 ClassDetailSheet(item: item)
                     .preferredColorScheme(.dark)

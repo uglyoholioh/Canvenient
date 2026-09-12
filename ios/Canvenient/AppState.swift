@@ -17,6 +17,7 @@ final class AppState: ObservableObject {
 
     @Published var session: Session = .unknown
     @Published var selectedTab: Tab = .dashboard
+    @Published var sidebarOpen = false
     @Published var user: UserPublic?
     @Published var schedule = ScheduleResponse.empty
     @Published var scheduleLoaded = false

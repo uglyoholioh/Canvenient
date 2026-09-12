@@ -18,6 +18,7 @@ struct TasksView: View {
             .navigationTitle("Tasks")
             .tint(Theme.accent)
             .toolbar {
+                ToolbarItem(placement: .topBarLeading) { SidebarToggle() }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button { showingComposer = true } label: {
                         Label("New task", systemImage: "plus")

@@ -12,6 +12,9 @@ settings:
     SWIFT_VERSION: "5.0"
     CODE_SIGN_STYLE: Automatic
     DEVELOPMENT_TEAM: 7AL4TS8C25
+    MARKETING_VERSION: "0.2.0"
+    CURRENT_PROJECT_VERSION: "dee7a66"
+
 targets:
   Canvenient:
     type: application
