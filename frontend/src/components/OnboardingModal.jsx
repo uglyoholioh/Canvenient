@@ -19,6 +19,7 @@ import {
   X,
 } from "lucide-react";
 import { updateProfile, validateCanvasToken } from "../api";
+import "./onboarding.css";
 
 const THEMES = [
   { id: "graphite", label: "Graphite", description: "Soft monochrome", icon: Moon, swatches: ["#101113", "#1a1b1e", "#9c9da1"] },
@@ -38,7 +39,11 @@ export default function OnboardingModal({
   canDismiss = false,
 }) {
   const [step, setStep] = useState(1);
-  const [name, setName] = useState(() => user?.name || "");
+  // Prefill from the email prefix so Continue is never a dead end; the
+  // suggestion stays editable and profile-name semantics are unchanged.
+  const [name, setName] = useState(
+    () => user?.name || (user?.email ? user.email.split("@")[0] : "")
+  );
   // The raw Canvas token is never sent back to the client; the field starts
   // empty and only carries a value when entered during onboarding.
   const [canvasToken, setCanvasToken] = useState("");
@@ -134,6 +139,9 @@ export default function OnboardingModal({
     >
       <div
         className="onboarding-card"
+        onKeyDown={(e) => {
+          if (e.key === "Escape" && canDismiss) onClose?.();
+        }}
         style={{
           width: "100%",
           maxWidth: "520px",
@@ -154,6 +162,7 @@ export default function OnboardingModal({
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
+            gap: "12px",
           }}
         >
           <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
@@ -179,21 +188,37 @@ export default function OnboardingModal({
               Step {step} of 4: {step === 1 ? "Identity" : step === 2 ? "Canvas LMS" : step === 3 ? "Appearance" : "Ready"}
             </span>
           </div>
-          {canDismiss && onClose && (
-            <button
-              type="button"
-              onClick={onClose}
-              className="mac-toolbar-button"
-              aria-label="Close setup"
-              style={{ padding: "4px" }}
-            >
-              <X size={15} />
-            </button>
-          )}
+          <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
+            <div style={{ display: "flex", gap: "4px" }} aria-hidden="true">
+              {[1, 2, 3, 4].map((n) => (
+                <span
+                  key={n}
+                  style={{
+                    width: "18px",
+                    height: "2px",
+                    borderRadius: "1px",
+                    backgroundColor: n <= step ? "var(--accent)" : "var(--border)",
+                    transition: "background-color 140ms ease",
+                  }}
+                />
+              ))}
+            </div>
+            {canDismiss && onClose && (
+              <button
+                type="button"
+                onClick={onClose}
+                className="mac-toolbar-button"
+                aria-label="Close setup"
+                style={{ padding: "4px" }}
+              >
+                <X size={15} />
+              </button>
+            )}
+          </div>
         </div>
 
-        {/* Modal content body */}
-        <div style={{ padding: "28px 24px" }}>
+        {/* Modal content body — keyed by step so each change re-runs the fade */}
+        <div key={step} className="onboarding-step" style={{ padding: "28px 24px" }}>
           {/* STEP 1: Profile Name */}
           {step === 1 && (
             <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
@@ -278,6 +303,9 @@ export default function OnboardingModal({
                         setCanvasToken(e.target.value);
                         setTokenResult(null);
                       }}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && canvasToken.trim()) setStep(3);
+                      }}
                       placeholder="Paste token here (optional)"
                       className="form-input"
                       style={{ width: "100%", paddingRight: "36px", fontSize: "13px" }}
@@ -307,17 +335,8 @@ export default function OnboardingModal({
                     type="button"
                     onClick={handleTestToken}
                     disabled={testingToken || !canvasToken.trim()}
-                    className="mac-toolbar-button"
-                    style={{
-                      padding: "8px 14px",
-                      border: "1px solid var(--border-strong)",
-                      borderRadius: "4px",
-                      fontSize: "12px",
-                      fontWeight: "500",
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "6px",
-                    }}
+                    className="secondary-button"
+                    style={{ fontSize: "12px", fontWeight: "500", flexShrink: 0 }}
                   >
                     {testingToken ? <Loader2 size={13} className="retro-icon-spin" /> : <Key size={13} />}
                     <span>Test</span>
@@ -581,15 +600,8 @@ export default function OnboardingModal({
             <button
               type="button"
               onClick={() => setStep((s) => s - 1)}
-              className="mac-toolbar-button"
-              style={{
-                padding: "8px 14px",
-                borderRadius: "4px",
-                fontSize: "13px",
-                display: "flex",
-                alignItems: "center",
-                gap: "6px",
-              }}
+              className="secondary-button"
+              style={{ fontSize: "13px", flexShrink: 0 }}
             >
               <ArrowLeft size={14} />
               <span>Back</span>
@@ -603,13 +615,8 @@ export default function OnboardingModal({
               <button
                 type="button"
                 onClick={() => setStep(3)}
-                className="mac-toolbar-button"
-                style={{
-                  padding: "8px 14px",
-                  borderRadius: "4px",
-                  fontSize: "13px",
-                  color: "var(--text-muted)",
-                }}
+                className="secondary-button"
+                style={{ fontSize: "13px", color: "var(--text-muted)", flexShrink: 0 }}
               >
                 Skip for now
               </button>

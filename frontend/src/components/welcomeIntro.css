@@ -1,0 +1,22 @@
+/* First-run welcome overlay. The brand mark keeps its auth-poster serif but
+ * sized down for the panel; the only motion is a single panel fade. */
+.welcome-intro-panel {
+  animation: welcome-intro-in 160ms ease;
+}
+
+.welcome-intro .auth-brand-mark {
+  width: 64px;
+  margin: 0;
+  animation: none;
+}
+
+@keyframes welcome-intro-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .welcome-intro-panel {
+    animation: none;
+  }
+}

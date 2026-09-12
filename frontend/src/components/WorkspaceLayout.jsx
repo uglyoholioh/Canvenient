@@ -5,9 +5,10 @@ import TaskView from "./TaskView";
 import TaskInputBar from "./TaskInputBar";
 import GlobalTasksPanel from "./GlobalTasksPanel";
 import Omnibar from "./Omnibar";
-import AssistantPane from "./AssistantPane";
 import OnboardingModal from "./OnboardingModal";
+import WelcomeIntro from "./WelcomeIntro";
 import Dashboard from "./Dashboard";
+import AssistantPane from "./AssistantPane";
 import CanvasDrawer from "./drawers/CanvasDrawer";
 import StudyTimerModule from "./dashboard/StudyTimerModule";
 import { runDueReminderCycle } from "../dueReminders";
@@ -112,19 +113,30 @@ export default function WorkspaceLayout({ token, user, onLogout, onUpdateUser })
   const tasksPanelReturnFocus = useRef(null);
   const quickCaptureReturnFocus = useRef(null);
   
-  const [isOnboardingOpen, setIsOnboardingOpen] = useState(() => {
-    if (!user) return false;
-    const completed = user.id ? localStorage.getItem(`canvenient_onboarding_completed_${user.id}`) === "true" : false;
-    return !user.name || !completed;
-  });
+  const hasCompletedOnboarding = (u) =>
+    Boolean(u?.id) && localStorage.getItem(`canvenient_onboarding_completed_${u.id}`) === "true";
+  const needsOnboarding = (u) => Boolean(u) && (!u?.name || !hasCompletedOnboarding(u));
+  const hasSeenIntro = (u) =>
+    Boolean(u?.id) && localStorage.getItem(`canvenient_intro_completed_${u.id}`) === "true";
 
-  // Open onboarding when the signed-in user has no name yet (adjust-during-render
-  // pattern; avoids a cascading setState effect).
+  // First sign-in shows the skippable welcome intro, then setup onboarding.
+  const [isIntroOpen, setIsIntroOpen] = useState(() => Boolean(user) && !hasSeenIntro(user));
+  const [isOnboardingOpen, setIsOnboardingOpen] = useState(
+    () => Boolean(user) && hasSeenIntro(user) && needsOnboarding(user)
+  );
+
+  // Reopen onboarding when the signed-in user has no name yet and no intro is
+  // showing (adjust-during-render pattern; avoids a cascading setState effect).
   const [onboardingUserKey, setOnboardingUserKey] = useState(null);
-  if (user?.id && !user?.name && onboardingUserKey !== user.id) {
+  if (user?.id && !user?.name && !isIntroOpen && onboardingUserKey !== user.id) {
     setOnboardingUserKey(user.id);
     setIsOnboardingOpen(true);
   }
+
+  const handleIntroDone = useCallback(() => {
+    setIsIntroOpen(false);
+    if (needsOnboarding(user)) setIsOnboardingOpen(true);
+  }, [user]);
 
   // Due-date reminders: check shortly after launch and every 15 minutes.
   useEffect(() => {
@@ -211,6 +223,7 @@ export default function WorkspaceLayout({ token, user, onLogout, onUpdateUser })
       setActiveTab("canvas");
     }
   }, [setActiveTab]);
+
 
   useEffect(() => {
     localStorage.setItem("canvenient-active-view", activeTab);
@@ -563,9 +576,22 @@ export default function WorkspaceLayout({ token, user, onLogout, onUpdateUser })
           setActiveTab('tasks');
         } else if (type === 'canvas_resource') {
           setGlobalCanvasItem(item);
+        } else if (type === 'ai') {
+          openAssistant({ query: item.title });
         }
         setIsOmnibarOpen(false);
       }} />}
+
+      {assistant.isOpen && (
+        <AssistantPane
+          token={token}
+          initialQuery={assistant.query}
+          attachment={assistant.attachment}
+          initialSend={assistant.initialSend}
+          onClose={closeAssistant}
+          onOpenResource={openAssistantResource}
+        />
+      )}
       
       {globalCanvasItem && <CanvasDrawer item={globalCanvasItem} token={token} onClose={() => setGlobalCanvasItem(null)} />}
       
@@ -585,6 +611,8 @@ export default function WorkspaceLayout({ token, user, onLogout, onUpdateUser })
           </section>
         </div>
       )}
+
+      {isIntroOpen && <WelcomeIntro user={user} onDone={handleIntroDone} />}
 
       <OnboardingModal
         token={token}

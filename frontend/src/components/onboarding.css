@@ -1,0 +1,15 @@
+/* Setup wizard step change: a single quiet fade, no movement. */
+.onboarding-step {
+  animation: onboarding-step-in 140ms ease;
+}
+
+@keyframes onboarding-step-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .onboarding-step {
+    animation: none;
+  }
+}

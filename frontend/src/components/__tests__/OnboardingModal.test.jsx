@@ -60,12 +60,16 @@ describe("OnboardingModal", () => {
       />
     );
 
-    // Step 1: Identity
+    // Step 1: Identity — name is prefilled from the email prefix, so the
+    // flow never dead-ends on a disabled button.
     expect(screen.getByText("Welcome to Canvenient")).toBeInTheDocument();
     const continueBtn = screen.getByRole("button", { name: /continue/i });
-    expect(continueBtn).toBeDisabled();
-
     const nameInput = screen.getByLabelText(/your name/i);
+    expect(nameInput).toHaveValue("alex");
+    expect(continueBtn).not.toBeDisabled();
+
+    await user.clear(nameInput);
+    expect(continueBtn).toBeDisabled();
     await user.type(nameInput, "Alex Tan");
     expect(continueBtn).not.toBeDisabled();
     await user.click(continueBtn);

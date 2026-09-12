@@ -694,10 +694,10 @@ export default function SettingsView({ token, user, onUpdateUser, onReplayOnboar
                     </span>
                     <button
                       type="button"
-                      className="mac-toolbar-button"
+                      className="secondary-button"
                       disabled={restoringName !== ""}
                       onClick={() => handleRestoreBackup(backup.name)}
-                      style={{ color: 'var(--text)', fontSize: '11px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                      style={{ fontSize: '11px', gap: '4px', flexShrink: 0 }}
                     >
                       {restoringName === backup.name ? <Loader2 size={12} className="retro-icon-spin" /> : <RotateCcw size={12} />}
                       Restore
@@ -811,17 +811,8 @@ export default function SettingsView({ token, user, onUpdateUser, onReplayOnboar
                 type="button"
                 onClick={handleTestCanvasConnection}
                 disabled={canvasTokenTesting || !canvasToken.trim()}
-                className="mac-toolbar-button"
-                style={{
-                  padding: '8px 14px',
-                  border: '1px solid var(--border-strong)',
-                  borderRadius: '4px',
-                  fontSize: '12px',
-                  fontWeight: '500',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                }}
+                className="secondary-button"
+                style={{ fontSize: '12px', fontWeight: '500', flexShrink: 0 }}
               >
                 {canvasTokenTesting ? <Loader2 size={13} className="retro-icon-spin" /> : <Key size={13} />}
                 <span>Test</span>
@@ -840,10 +831,10 @@ export default function SettingsView({ token, user, onUpdateUser, onReplayOnboar
               {user?.canvas_connected && (
                 <button
                   type="button"
-                  className="mac-toolbar-button"
+                  className="secondary-button"
                   disabled={canvasTokenSaving}
                   onClick={disconnectCanvas}
-                  style={{ color: 'var(--error)', border: '1px solid var(--border)' }}
+                  style={{ color: 'var(--error)', flexShrink: 0 }}
                 >
                   Disconnect
                 </button>
@@ -936,10 +927,10 @@ export default function SettingsView({ token, user, onUpdateUser, onReplayOnboar
               </span>
               <button
                 type="button"
-                className="mac-toolbar-button"
+                className="secondary-button"
                 disabled={telegramUpdating}
                 onClick={handleTelegramUnlink}
-                style={{ color: 'var(--error)', border: '1px solid var(--border)' }}
+                style={{ color: 'var(--error)', flexShrink: 0 }}
               >
                 {telegramUpdating ? 'Disconnecting…' : 'Disconnect Telegram'}
               </button>
@@ -993,9 +984,9 @@ export default function SettingsView({ token, user, onUpdateUser, onReplayOnboar
           </div>
           <button
             type="button"
-            className="mac-toolbar-button"
+            className="secondary-button"
             onClick={onReplayOnboarding}
-            style={{ padding: '8px 16px', borderRadius: '4px', border: '1px solid var(--border-strong)', fontWeight: '500' }}
+            style={{ padding: '8px 16px', fontWeight: '500', flexShrink: 0 }}
           >
             Replay Setup
           </button>

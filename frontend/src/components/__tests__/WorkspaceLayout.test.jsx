@@ -23,13 +23,16 @@ vi.mock("../../api", () => ({
 
 describe("WorkspaceLayout", () => {
   beforeEach(() => {
+    // Store-backed mock; the intro-completed flag is preset because the
+    // first-run WelcomeIntro overlay otherwise mounts and swallows Escape.
+    const store = { canvenient_intro_completed_1: "true" };
     Object.defineProperty(window, "localStorage", {
       configurable: true,
       value: {
-        clear: vi.fn(),
-        getItem: vi.fn(() => null),
-        removeItem: vi.fn(),
-        setItem: vi.fn(),
+        clear: vi.fn(() => { for (const key of Object.keys(store)) delete store[key]; }),
+        getItem: vi.fn((key) => store[key] ?? null),
+        removeItem: vi.fn((key) => { delete store[key]; }),
+        setItem: vi.fn((key, val) => { store[key] = String(val); }),
       },
     });
   });
