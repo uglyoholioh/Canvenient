@@ -27,7 +27,7 @@ struct SidebarDrawer: View {
                 .ignoresSafeArea(edges: .vertical)
                 .offset(x: appState.sidebarOpen ? 0 : -width - 8)
         }
-        .animation(.easeOut(duration: 0.22), value: appState.sidebarOpen)
+        .animation(.spring(response: 0.32, dampingFraction: 0.86), value: appState.sidebarOpen)
     }
 
     private var panel: some View {
@@ -36,8 +36,23 @@ struct SidebarDrawer: View {
                 .font(.system(size: 17, weight: .semibold))
                 .foregroundStyle(Theme.textH)
                 .padding(.top, 68)
-                .padding(.bottom, 18)
+                .padding(.bottom, 2)
                 .padding(.horizontal, 18)
+            if let email = appState.user?.email {
+                Text(email)
+                    .font(.caption)
+                    .foregroundStyle(Theme.textMuted)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+                    .padding(.bottom, 14)
+                    .padding(.horizontal, 18)
+            } else {
+                Text("Companion to the macOS workbench")
+                    .font(.caption)
+                    .foregroundStyle(Theme.textMuted)
+                    .padding(.bottom, 14)
+                    .padding(.horizontal, 18)
+            }
 
             section("Menu")
             item("Today", systemImage: "square.grid.2x2", tab: .dashboard)

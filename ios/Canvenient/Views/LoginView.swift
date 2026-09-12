@@ -18,6 +18,7 @@ struct LoginView: View {
     @State private var busy = false
     @State private var errorMessage: String?
     @State private var showingServerSheet = false
+    @State private var shakeAttempts: CGFloat = 0
     @FocusState private var focusedField: Field?
 
     enum Field { case email, password, name }
@@ -88,8 +89,10 @@ struct LoginView: View {
                             .submitLabel(.done)
                             .focused($focusedField, equals: .name)
                             .onSubmit { submit() }
+                            .transition(.move(edge: .top).combined(with: .opacity))
                     }
                 }
+                .animation(.spring(response: 0.32, dampingFraction: 0.85), value: mode)
 
                 Button {
                     submit()
@@ -112,13 +115,16 @@ struct LoginView: View {
                             .strokeBorder(Theme.accent, lineWidth: 1)
                     )
                     .foregroundStyle(Theme.accent)
+                    .opacity(canSubmit ? 1 : 0.45)
+                    .animation(.easeInOut(duration: 0.2), value: canSubmit)
                 }
-                .disabled(busy || email.isEmpty || password.isEmpty)
+                .disabled(!canSubmit)
 
                 if let errorMessage {
                     Text(errorMessage)
                         .font(.callout)
                         .foregroundStyle(Theme.error)
+                        .transition(.move(edge: .top).combined(with: .opacity))
                 }
 
                 Button {
@@ -141,6 +147,7 @@ struct LoginView: View {
                 }
                 .buttonStyle(.plain)
             }
+            .modifier(ShakeEffect(animatableData: shakeAttempts))
 
             Spacer()
             VStack(alignment: .leading, spacing: 8) {
@@ -154,8 +161,12 @@ struct LoginView: View {
                     .foregroundStyle(Theme.textMuted)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.bottom, 6)
+            .padding(.bottom, 34)
         }
+    }
+
+    private var canSubmit: Bool {
+        !busy && !email.isEmpty && !password.isEmpty
     }
 
     private func authField(_ placeholder: String, text: Binding<String>, secure: Bool = false) -> some View {
@@ -192,6 +203,10 @@ struct LoginView: View {
                 }
             } catch {
                 errorMessage = error.localizedDescription
+                // Shake the form so the failure is felt, not just read.
+                withAnimation(.easeOut(duration: 0.45)) {
+                    shakeAttempts += 1
+                }
             }
         }
     }

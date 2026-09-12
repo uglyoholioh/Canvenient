@@ -362,12 +362,18 @@ final class AppState: ObservableObject {
 
     func setTaskDone(_ task: TaskOut, done: Bool) async {
         guard let index = tasks.firstIndex(where: { $0.id == task.id }) else { return }
-        tasks[index].status = done ? "done" : "todo"
+        // Animated so the row visibly travels between the pending section
+        // and Completed instead of snapping.
+        withAnimation(.spring(response: 0.4, dampingFraction: 0.85)) {
+            tasks[index].status = done ? "done" : "todo"
+        }
         do {
             _ = try await api.updateTask(task.id, payload: ["status": done ? "done" : "todo"])
         } catch {
             if case APIError.unauthorized = error {
-                tasks[index].status = task.status
+                withAnimation(.spring(response: 0.4, dampingFraction: 0.85)) {
+                    tasks[index].status = task.status
+                }
                 return
             }
             // Offline: the optimistic state stands and the write queues.
@@ -382,14 +388,12 @@ final class AppState: ObservableObject {
             }
             offline = true
         }
-        if done {
-            try? await Task.sleep(nanoseconds: 900_000_000)
-            tasks.removeAll { $0.id == task.id }
-        }
     }
 
     func deleteTask(_ task: TaskOut) async {
-        tasks.removeAll { $0.id == task.id }
+        withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
+            tasks.removeAll { $0.id == task.id }
+        }
         do {
             try await api.deleteTask(task.id)
         } catch {

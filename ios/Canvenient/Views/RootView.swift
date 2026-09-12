@@ -27,17 +27,25 @@ struct RootView: View {
         ZStack {
             Theme.bg.ignoresSafeArea()
             BrandMark()
+                .scaleEffect(0.96)
+                .opacity(0.6)
+                .animation(.easeOut(duration: 0.45).repeatForever(autoreverses: true), value: splashPulse)
         }
+        .onAppear { splashPulse.toggle() }
     }
+
+    @State private var splashPulse = false
 
     private var mainChrome: some View {
         ZStack(alignment: .topLeading) {
             VStack(spacing: 0) {
                 if appState.offline {
                     offlineBanner
+                        .transition(.move(edge: .top).combined(with: .opacity))
                 }
                 tabs
             }
+            .animation(.spring(response: 0.35, dampingFraction: 0.85), value: appState.offline)
             SidebarDrawer()
         }
         .fullScreenCover(item: $appState.overlay) { destination in
@@ -79,7 +87,7 @@ struct RootView: View {
 
     private var tabs: some View {
         TabView(selection: $appState.selectedTab) {
-            Tab("Today", systemImage: "square.grid.2x2", value: .dashboard) {
+            Tab("Today", systemImage: "sun.max", value: .dashboard) {
                 DashboardView()
             }
             Tab("Schedule", systemImage: "calendar", value: .schedule) {

@@ -41,6 +41,11 @@ struct TasksView: View {
             }
     }
 
+    private var completedTasks: [TaskOut] {
+        appState.tasks.filter(\.isDone)
+            .sorted { ($0.effectiveDueAt ?? .distantFuture) < ($1.effectiveDueAt ?? .distantFuture) }
+    }
+
     private var taskList: some View {
         List {
             ForEach(taskSections, id: \.title) { section in
@@ -48,12 +53,16 @@ struct TasksView: View {
                     Section(section.title) {
                         ForEach(section.tasks) { task in
                             TaskRow(task: task) {
-                                Task {
-                                    if UserDefaults.standard.object(forKey: Preferences.hapticsEnabled) as? Bool ?? true {
-                                        UINotificationFeedbackGenerator().notificationOccurred(.success)
-                                    }
-                                    await appState.setTaskDone(task, done: true)
+                                toggleDone(task)
+                            }
+                            .swipeActions(edge: .leading, allowsFullSwipe: true) {
+                                Button {
+                                    toggleDone(task)
+                                } label: {
+                                    Label(task.isDone ? "Reopen" : "Done",
+                                          systemImage: task.isDone ? "arrow.uturn.backward" : "checkmark")
                                 }
+                                .tint(task.isDone ? Theme.info : Theme.success)
                             }
                         }
                         .onDelete { offsets in
@@ -80,19 +89,39 @@ struct TasksView: View {
             ("This week", pending.filter { let due = $0.effectiveDueAt; return due != nil && due! >= todayEnd && due! < weekEnd }),
             ("Later", pending.filter { let due = $0.effectiveDueAt; return due != nil && due! >= weekEnd }),
             ("No due date", pending.filter { $0.effectiveDueAt == nil }),
+            ("Completed", completedTasks),
         ]
     }
 
+    private func toggleDone(_ task: TaskOut) {
+        if Preferences.bool(Preferences.hapticsEnabled, default: true) {
+            if task.isDone {
+                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            } else {
+                UINotificationFeedbackGenerator().notificationOccurred(.success)
+            }
+        }
+        Task { await appState.setTaskDone(task, done: !task.isDone) }
+    }
+
     private var emptyState: some View {
-        VStack(spacing: 12) {
+        VStack(spacing: 14) {
             Spacer()
-            Image(systemName: "checklist")
-                .font(.system(size: 44))
-                .foregroundStyle(Theme.textMuted)
-            Text(appState.tasksLoaded ? "No pending tasks" : "Loading tasks…")
-                .foregroundStyle(Theme.textMuted)
-            Button("New task") { showingComposer = true }
-                .buttonStyle(AccentFilledButtonStyle())
+            if appState.tasksLoaded {
+                ContentUnavailableView {
+                    Label("All clear", systemImage: "checkmark.circle")
+                } description: {
+                    Text("Nothing pending. Add an assignment or a chore and it'll show up here.")
+                } actions: {
+                    Button("New task") { showingComposer = true }
+                        .buttonStyle(AccentFilledButtonStyle())
+                        .padding(.top, 6)
+                }
+            } else {
+                ProgressView()
+                Text("Loading tasks…")
+                    .foregroundStyle(Theme.textMuted)
+            }
             Spacer()
         }
         .frame(maxWidth: .infinity)
@@ -103,27 +132,34 @@ struct TaskRow: View {
     let task: TaskOut
     let onComplete: () -> Void
 
+    private var isDone: Bool { task.isDone }
+    private var isOverdue: Bool {
+        !isDone && (task.effectiveDueAt ?? .distantFuture) < Date()
+    }
+
     var body: some View {
         HStack(spacing: 12) {
             Button(action: onComplete) {
-                Image(systemName: "circle")
+                Image(systemName: isDone ? "checkmark.circle.fill" : "circle")
                     .font(.title3)
-                    .foregroundStyle(Theme.accent)
+                    .foregroundStyle(isDone ? Theme.success : Theme.accent)
+                    .symbolEffect(.bounce, value: isDone)
+                    .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
             VStack(alignment: .leading, spacing: 3) {
                 Text(task.title)
                     .lineLimit(2)
+                    .strikethrough(isDone)
+                    .foregroundStyle(isDone ? Theme.textMuted : Theme.textH)
                 HStack(spacing: 6) {
                     if let due = task.effectiveDueAt {
-                        Label(relativeDue(due), systemImage: dueOverdueIcon(due))
+                        Label(relativeDue(due), systemImage: isOverdue ? "exclamationmark.circle" : "clock")
                             .font(.caption)
-                            .foregroundStyle(due < Date() ? Theme.error : Theme.textMuted)
+                            .foregroundStyle(isOverdue ? Theme.error : Theme.textMuted)
                     }
                     if let moduleCode = task.module_code {
-                        Text(moduleCode)
-                            .font(.caption2)
-                            .foregroundStyle(.secondary)
+                        moduleChip(moduleCode)
                     }
                     if task.group_id != nil {
                         Image(systemName: "person.2")
@@ -143,8 +179,19 @@ struct TaskRow: View {
                 }
             }
             Spacer(minLength: 0)
-            priorityDot
+            if !isDone { priorityDot }
         }
+        .padding(.vertical, 1)
+    }
+
+    /// Palette-tinted module tag so rows from the same course read as a set.
+    private func moduleChip(_ code: String) -> some View {
+        Text(code)
+            .font(.caption2.weight(.semibold))
+            .padding(.horizontal, 6)
+            .padding(.vertical, 2)
+            .background(moduleColor.opacity(0.16), in: Capsule())
+            .foregroundStyle(moduleColor)
     }
 
     @ViewBuilder
@@ -166,14 +213,20 @@ struct TaskRow: View {
         ModulePalette.color(moduleColor: task.module_color, fallback: task.module_code)
     }
 
-    private func dueOverdueIcon(_ due: Date) -> String {
-        due < Date() ? "exclamationmark.circle" : "clock"
-    }
-
     private func relativeDue(_ due: Date) -> String {
+        if isOverdue {
+            let formatter = RelativeDateTimeFormatter()
+            formatter.unitsStyle = .abbreviated
+            return "Overdue · \(formatter.localizedString(for: due, relativeTo: Date()))"
+        }
+        // Same-day deadlines read as clock times ("2:32 PM"); anything past
+        // today reads relative ("in 4 days").
+        if SGTime.calendar.isDate(due, inSameDayAs: Date()) {
+            return due.formatted(date: .omitted, time: .shortened)
+        }
         let formatter = RelativeDateTimeFormatter()
         formatter.unitsStyle = .abbreviated
-        return due < Date() ? "Overdue · \(formatter.localizedString(for: due, relativeTo: Date()))" : formatter.localizedString(for: due, relativeTo: Date())
+        return formatter.localizedString(for: due, relativeTo: Date())
     }
 }
 
@@ -190,6 +243,7 @@ struct TaskComposer: View {
     @State private var moduleId: Int?
     @State private var busy = false
     @State private var errorMessage: String?
+    @FocusState private var titleFocused: Bool
 
     enum DuePreset: String, CaseIterable, Identifiable {
         case none = "None"
@@ -202,8 +256,9 @@ struct TaskComposer: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section("Task") {
+                Section {
                     TextField("What needs doing?", text: $title, axis: .vertical)
+                        .focused($titleFocused)
                     Picker("Priority", selection: $priority) {
                         Text("Low").tag("low")
                         Text("Medium").tag("medium")
@@ -219,7 +274,7 @@ struct TaskComposer: View {
                         }
                     }
                 }
-                Section("Due") {
+                Section {
                     Picker("When", selection: $duePreset) {
                         ForEach(DuePreset.allCases) { preset in
                             Text(preset.rawValue).tag(preset)
@@ -251,6 +306,7 @@ struct TaskComposer: View {
                         appState.modules = modules.filter { $0.is_selected ?? true }
                     }
                 }
+                titleFocused = true
             }
         }
     }
@@ -279,6 +335,9 @@ struct TaskComposer: View {
             }
             do {
                 try await appState.createTask(payload)
+                if Preferences.bool(Preferences.hapticsEnabled, default: true) {
+                    UINotificationFeedbackGenerator().notificationOccurred(.success)
+                }
                 dismiss()
             } catch {
                 errorMessage = error.localizedDescription

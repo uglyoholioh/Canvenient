@@ -6,6 +6,7 @@ struct ScheduleView: View {
     @EnvironmentObject private var appState: AppState
 
     @State private var selectedDay = SGTime.startOfDay(Date())
+    @State private var weekAnchor = SGTime.startOfDay(Date())
     @State private var showingImport = false
     @State private var detailItem: ScheduleEngine.Item?
     @State private var clock = Date()
@@ -16,25 +17,31 @@ struct ScheduleView: View {
         ScheduleEngine.items(for: appState.schedule, on: selectedDay)
     }
 
+    private var isOnToday: Bool {
+        SGTime.dateKey(selectedDay) == SGTime.dateKey(Date())
+    }
+
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
-                WeekStrip(selectedDay: $selectedDay)
-                    .padding(.top, 4)
+                if let week = appState.academicWeek {
+                    SectionLabel(text: week.formatted)
+                        .padding(.top, 6)
+                }
+                WeekStrip(selectedDay: $selectedDay, weekAnchor: $weekAnchor)
+                    .padding(.top, 8)
                     .padding(.bottom, 10)
                 if dayItems.isEmpty {
                     emptyState
                 } else {
                     List {
-                        if let week = appState.academicWeek {
-                            SectionLabel(text: week.formatted)
-                        }
                         ForEach(dayItems) { item in
                             ScheduleCard(item: item, now: clock)
                                 .onTapGesture { detailItem = item }
                         }
                     }
                     .listStyle(.plain)
+                    .animation(.spring(response: 0.35, dampingFraction: 0.85), value: selectedDay)
                 }
             }
             .background(Theme.bg)
@@ -51,6 +58,17 @@ struct ScheduleView: View {
                     }
                     .tint(Theme.accent)
                 }
+                ToolbarItemGroup(placement: .topBarTrailing) {
+                    if !isOnToday {
+                        Button("Today") {
+                            withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
+                                selectedDay = SGTime.startOfDay(Date())
+                                weekAnchor = selectedDay
+                            }
+                        }
+                        .tint(Theme.accent)
+                    }
+                }
             }
             .sheet(isPresented: $showingImport) { ImportSheet() }
             .sheet(item: $detailItem) { item in
@@ -64,16 +82,26 @@ struct ScheduleView: View {
     }
 
     private var emptyState: some View {
-        VStack(spacing: 12) {
+        VStack(spacing: 14) {
             Spacer()
-            Image(systemName: "calendar.badge.plus")
-                .font(.system(size: 44))
-                .foregroundStyle(Theme.textMuted)
-            Text(appState.scheduleLoaded ? "Nothing scheduled for this day" : "Loading your timetable…")
-                .foregroundStyle(Theme.textMuted)
-            if appState.scheduleLoaded && appState.schedule.classes.isEmpty {
-                Button("Import from NUSMods") { showingImport = true }
-                    .buttonStyle(AccentFilledButtonStyle())
+            if appState.scheduleLoaded {
+                ContentUnavailableView {
+                    Label("Nothing scheduled", systemImage: "calendar")
+                } description: {
+                    Text(appState.schedule.classes.isEmpty
+                         ? "Import your NUSMods timetable and your week fills in."
+                         : "This day is free. Pick another day from the strip above.")
+                } actions: {
+                    if appState.schedule.classes.isEmpty {
+                        Button("Import from NUSMods") { showingImport = true }
+                            .buttonStyle(AccentFilledButtonStyle())
+                            .padding(.top, 6)
+                    }
+                }
+            } else {
+                ProgressView()
+                Text("Loading your timetable…")
+                    .foregroundStyle(Theme.textMuted)
             }
             Spacer()
         }
@@ -83,34 +111,89 @@ struct ScheduleView: View {
 
 // MARK: - Week day selector
 
+/// Seven-day strip with week paging. Selected day gets a raised capsule;
+/// today keeps an accent dot so it stays findable from any week.
 struct WeekStrip: View {
     @Binding var selectedDay: Date
+    @Binding var weekAnchor: Date
+
+    private var days: [Date] { (0..<7).map { SGTime.addDays(weekAnchor, $0) } }
+    private var selectedInsideWindow: Bool {
+        days.contains { SGTime.dateKey($0) == SGTime.dateKey(selectedDay) }
+    }
 
     var body: some View {
-        let days = (0..<7).map { SGTime.addDays(Date(), $0) }
         HStack(spacing: 6) {
-            ForEach(days, id: \.self) { day in
-                let isSelected = SGTime.dateKey(day) == SGTime.dateKey(selectedDay)
-                Button {
-                    selectedDay = day
-                } label: {
-                    VStack(spacing: 2) {
-                        Text(dayOfWeekLabel(day))
-                            .font(.caption2)
-                            .fontWeight(.medium)
-                            .foregroundStyle(isSelected ? Theme.textH : Theme.textMuted)
-                        Text("\(SGTime.calendar.component(.day, from: day))")
-                            .font(.headline)
-                            .fontWeight(isSelected ? .bold : .regular)
-                            .foregroundStyle(isSelected ? Theme.accent : Theme.text)
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 8)
+            stripButton("chevron.left") {
+                withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
+                    weekAnchor = SGTime.addDays(weekAnchor, -7)
                 }
-                .buttonStyle(.plain)
+            }
+            ForEach(days, id: \.self) { day in
+                dayCell(day)
+            }
+            stripButton("chevron.right") {
+                withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
+                    weekAnchor = SGTime.addDays(weekAnchor, 7)
+                }
             }
         }
-        .padding(.horizontal, 16)
+        .padding(.horizontal, 12)
+        .onChange(of: selectedDay) { _, newDay in
+            // A day picked from outside this window (e.g. the Today button)
+            // pulls the window along with it.
+            guard !selectedInsideWindow else { return }
+            let shifted = SGTime.addDays(newDay, -Int(SGTime.jsWeekday(newDay)))
+            weekAnchor = shifted
+        }
+    }
+
+    private func stripButton(_ icon: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: icon)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(Theme.textMuted)
+                .frame(width: 22, height: 40)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func dayCell(_ day: Date) -> some View {
+        let isSelected = SGTime.dateKey(day) == SGTime.dateKey(selectedDay)
+        let isToday = SGTime.dateKey(day) == SGTime.dateKey(Date())
+        return Button {
+            withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                selectedDay = day
+            }
+        } label: {
+            VStack(spacing: 3) {
+                Text(dayOfWeekLabel(day))
+                    .font(.caption2.weight(.medium))
+                    .foregroundStyle(isSelected ? Theme.textH : Theme.textMuted)
+                Text("\(SGTime.calendar.component(.day, from: day))")
+                    .font(.headline)
+                    .fontWeight(isSelected ? .bold : .regular)
+                    .foregroundStyle(isSelected ? Theme.textH : Theme.text)
+                Circle()
+                    .fill(isToday ? Theme.accent : .clear)
+                    .frame(width: 4, height: 4)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 7)
+            .background {
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .fill(isSelected ? Theme.surfaceWarm : .clear)
+                    .overlay {
+                        if isSelected {
+                            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                .strokeBorder(Theme.borderStrong, lineWidth: 1)
+                        }
+                    }
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
     }
 
     private func dayOfWeekLabel(_ day: Date) -> String {
@@ -131,56 +214,73 @@ struct ScheduleCard: View {
         ModulePalette.color(moduleColor: item.colorHex, fallback: item.moduleCode ?? item.title)
     }
 
+    /// 0…1 through the lesson, for the live progress bar on the current one.
+    private var progress: Double {
+        let total = item.end.timeIntervalSince(item.start)
+        guard total > 0 else { return 1 }
+        return min(max(now.timeIntervalSince(item.start) / total, 0), 1)
+    }
+
     var body: some View {
-        HStack(spacing: 0) {
-            VStack(alignment: .leading, spacing: 4) {
-                HStack(spacing: 6) {
-                    Circle()
-                        .fill(isCurrent ? Theme.accentGold : moduleColor)
-                        .frame(width: 8, height: 8)
-                    Text(item.title)
-                        .font(.system(size: 15, weight: .semibold))
-                        .foregroundStyle(Theme.textH)
-                    if let classNo = item.classNo {
-                        Text(classNo)
-                            .font(.caption2)
-                            .padding(.horizontal, 5)
-                            .padding(.vertical, 2)
-                            .background(Theme.surfaceHover, in: RoundedRectangle(cornerRadius: 4))
-                            .foregroundStyle(Theme.text)
-                    }
-                    statusBadge
-                    Spacer(minLength: 0)
-                    Text(timeString(item.start))
-                        .font(.system(size: 13, weight: .medium).monospacedDigit())
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 6) {
+                Circle()
+                    .fill(isCurrent ? Theme.accentGold : moduleColor)
+                    .frame(width: 8, height: 8)
+                Text(item.title)
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(Theme.textH)
+                if let classNo = item.classNo {
+                    Text(classNo)
+                        .font(.caption2)
+                        .padding(.horizontal, 5)
+                        .padding(.vertical, 2)
+                        .background(Theme.surfaceHover, in: RoundedRectangle(cornerRadius: 4))
                         .foregroundStyle(Theme.text)
-                    Text("–")
-                        .font(.caption)
-                        .foregroundStyle(Theme.textMuted)
-                    Text(timeString(item.end))
-                        .font(.system(size: 13).monospacedDigit())
-                        .foregroundStyle(Theme.textMuted)
                 }
-                HStack(spacing: 8) {
-                    Text(item.subtitle)
-                        .font(.caption)
-                        .foregroundStyle(Theme.textMuted)
-                    Label(item.venue, systemImage: "mappin")
-                        .font(.caption)
-                        .foregroundStyle(Theme.textMuted)
-                        .lineLimit(1)
-                    if !item.attendInPerson {
-                        Text("Online")
-                            .font(.caption)
-                            .foregroundStyle(Theme.info)
-                    }
-                    Spacer(minLength: 0)
-                }
+                statusBadge
+                Spacer(minLength: 0)
+                Text(timeString(item.start))
+                    .font(.system(size: 13, weight: .medium).monospacedDigit())
+                    .foregroundStyle(Theme.text)
+                Text("–")
+                    .font(.caption)
+                    .foregroundStyle(Theme.textMuted)
+                Text(timeString(item.end))
+                    .font(.system(size: 13).monospacedDigit())
+                    .foregroundStyle(Theme.textMuted)
             }
-            .padding(.leading, 12)
-            .padding(.vertical, 12)
-            .padding(.trailing, 12)
+            HStack(spacing: 8) {
+                Text(item.subtitle)
+                    .font(.caption)
+                    .foregroundStyle(Theme.textMuted)
+                Label(item.venue, systemImage: "mappin")
+                    .font(.caption)
+                    .foregroundStyle(Theme.textMuted)
+                    .lineLimit(1)
+                if !item.attendInPerson {
+                    Text("Online")
+                        .font(.caption)
+                        .foregroundStyle(Theme.info)
+                }
+                Spacer(minLength: 0)
+            }
+            if isCurrent {
+                GeometryReader { geo in
+                    ZStack(alignment: .leading) {
+                        Capsule().fill(Theme.surfaceHover)
+                        Capsule()
+                            .fill(Theme.accentGold)
+                            .frame(width: geo.size.width * progress)
+                    }
+                }
+                .frame(height: 3)
+                .animation(.linear(duration: 0.4), value: progress)
+            }
         }
+        .padding(.leading, 12)
+        .padding(.vertical, 12)
+        .padding(.trailing, 12)
         .listRowBackground(isCurrent ? Theme.surfaceWarm : nil)
         .opacity(isPast ? 0.55 : 1)
     }

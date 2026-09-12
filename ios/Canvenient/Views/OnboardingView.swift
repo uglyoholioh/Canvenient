@@ -232,6 +232,7 @@ struct ConnectionTester: View {
             }
             .buttonStyle(.plain)
             .disabled(status == .testing)
+            .animation(.spring(response: 0.32, dampingFraction: 0.85), value: status)
 
             Button("Use a different server") { onEditServer() }
                 .font(.caption)
