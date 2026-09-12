@@ -8,7 +8,6 @@ struct ScheduleView: View {
     @State private var selectedDay = SGTime.startOfDay(Date())
     @State private var showingImport = false
     @State private var showingSettings = false
-    @State private var showingWheel = false
     @State private var detailItem: ScheduleEngine.Item?
     @State private var clock = Date()
 
@@ -60,10 +59,6 @@ struct ScheduleView: View {
                 }
             }
             .sheet(isPresented: $showingImport) { ImportSheet() }
-            .sheet(isPresented: $showingWheel) {
-                WheelView()
-                    .preferredColorScheme(.dark)
-            }
             .sheet(isPresented: $showingSettings) { SettingsView() }
             .sheet(item: $detailItem) { item in
                 ClassDetailSheet(item: item)

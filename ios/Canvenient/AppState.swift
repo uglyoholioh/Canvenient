@@ -12,11 +12,11 @@ final class AppState: ObservableObject {
     }
 
     enum Tab: Hashable {
-        case home, schedule, tasks, modules, campus
+        case dashboard, schedule, tasks, campus, modules, wheel, settings
     }
 
     @Published var session: Session = .unknown
-    @Published var selectedTab: Tab = .home
+    @Published var selectedTab: Tab = .dashboard
     @Published var user: UserPublic?
     @Published var schedule = ScheduleResponse.empty
     @Published var scheduleLoaded = false

@@ -29,7 +29,7 @@ struct DashboardView: View {
                 .padding(.bottom, 24)
             }
             .background(Theme.bg)
-            .navigationTitle("Dashboard")
+            .navigationTitle("Today")
             .navigationBarTitleDisplayMode(.inline)
             .tint(Theme.accent)
             .task { await refresh() }

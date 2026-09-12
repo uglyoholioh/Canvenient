@@ -133,6 +133,7 @@ final class WheelStore: ObservableObject {
 }
 
 struct WheelView: View {
+    var showsDone = true
     @Environment(\.dismiss) private var dismiss
     @StateObject private var store = WheelStore()
     @State private var newOption = ""
@@ -148,8 +149,10 @@ struct WheelView: View {
             .navigationTitle("Wheel")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { dismiss() }.tint(Theme.accent)
+                if showsDone {
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button("Done") { dismiss() }.tint(Theme.accent)
+                    }
                 }
             }
         }
