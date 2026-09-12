@@ -2,7 +2,9 @@ import SwiftUI
 import CanvenientKit
 
 struct ModulesView: View {
+    var showsDone = false
     @EnvironmentObject private var appState: AppState
+    @Environment(\.dismiss) private var dismiss
 
     @State private var errorMessage: String?
 
@@ -20,6 +22,13 @@ struct ModulesView: View {
             .navigationTitle("Modules")
             .tint(Theme.accent)
             .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                if showsDone {
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button("Done") { dismiss() }.tint(Theme.accent)
+                    }
+                }
+            }
             .task { await loadModules() }
             .refreshable { await appState.refreshModules(force: true) }
         }

@@ -46,12 +46,12 @@ struct SidebarDrawer: View {
             item("Campus", systemImage: "bus", tab: .campus)
 
             section("Library")
-            item("Modules", systemImage: "book", tab: .modules)
-            item("Wheel", systemImage: "smallcircle.filled.circle", tab: .wheel)
+            overlayItem("Modules", systemImage: "book", destination: .modules)
+            overlayItem("Wheel", systemImage: "smallcircle.filled.circle", destination: .wheel)
 
             Spacer(minLength: 12)
             section("Preferences")
-            item("Settings", systemImage: "gearshape", tab: .settings)
+            overlayItem("Settings", systemImage: "gearshape", destination: .settings)
                 .padding(.bottom, 28)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -82,8 +82,34 @@ struct SidebarDrawer: View {
                 Spacer(minLength: 0)
             }
             .padding(.horizontal, 18)
-            .padding(.vertical, 10)
+            .padding(.vertical, 12)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .contentShape(Rectangle())
             .background(selected ? Theme.surfaceWarm : Color.clear)
+        }
+        .buttonStyle(.plain)
+    }
+
+    /// Library destinations aren't tabs — they present full screen.
+    private func overlayItem(_ label: String, systemImage: String,
+                             destination: AppState.OverlayDestination) -> some View {
+        Button {
+            appState.overlay = destination
+            close()
+        } label: {
+            HStack(spacing: 12) {
+                Image(systemName: systemImage)
+                    .frame(width: 20)
+                    .foregroundStyle(Theme.textMuted)
+                Text(label)
+                    .font(.system(size: 15))
+                    .foregroundStyle(Theme.text)
+                Spacer(minLength: 0)
+            }
+            .padding(.horizontal, 18)
+            .padding(.vertical, 12)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
     }

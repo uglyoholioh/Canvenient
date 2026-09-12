@@ -12,12 +12,20 @@ final class AppState: ObservableObject {
     }
 
     enum Tab: Hashable {
-        case dashboard, schedule, tasks, campus, modules, wheel, settings
+        case dashboard, schedule, tasks, campus
+    }
+
+    /// Drawer-only destinations (Modules/Wheel/Settings) present as full
+    /// screens — the bottom TabView only hosts the four anchors.
+    enum OverlayDestination: String, Identifiable {
+        case modules, wheel, settings
+        var id: String { rawValue }
     }
 
     @Published var session: Session = .unknown
     @Published var selectedTab: Tab = .dashboard
     @Published var sidebarOpen = false
+    @Published var overlay: OverlayDestination?
     @Published var user: UserPublic?
     @Published var schedule = ScheduleResponse.empty
     @Published var scheduleLoaded = false

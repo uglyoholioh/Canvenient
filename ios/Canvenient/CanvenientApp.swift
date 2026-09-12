@@ -21,7 +21,7 @@ struct CanvenientApp: App {
                     case "schedule": appState.selectedTab = .schedule
                     case "tasks": appState.selectedTab = .tasks
                     case "bus", "venues", "campus": appState.selectedTab = .campus
-                    case "modules": appState.selectedTab = .modules
+                    case "modules": appState.overlay = .modules
                     default: break
                     }
                     appState.refreshLiveActivity()
