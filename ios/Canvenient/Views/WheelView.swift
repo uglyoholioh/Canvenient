@@ -206,12 +206,16 @@ struct WheelView: View {
                 store.spin()
             } label: {
                 Text(store.spinning ? "Spinning…" : "Spin")
-                    .fontWeight(.bold)
                     .frame(maxWidth: .infinity)
             }
-            .buttonStyle(.borderedProminent)
+            .buttonStyle(AccentFilledButtonStyle())
             .disabled(store.spinning || store.enabledItems.isEmpty)
             .padding(.horizontal, 24)
+            if store.enabledItems.isEmpty {
+                Text("Add options below, then spin.")
+                    .font(.caption)
+                    .foregroundStyle(Theme.textMuted)
+            }
             if let winner = store.winner {
                 Button("Exclude & spin again") {
                     store.toggle(winner)

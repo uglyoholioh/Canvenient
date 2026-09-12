@@ -7,10 +7,13 @@ struct DashboardView: View {
     @EnvironmentObject private var appState: AppState
 
     @AppStorage("canvenient.isb.stop") private var selectedStop = "COM3"
+    @AppStorage("canvenient.isb.favourites") private var favouritesRaw = ""
     @AppStorage("canvenient.setupPromptDismissed") private var setupDismissed = false
     @State private var arrivals: BusArrivalsResponse?
+    @State private var stops: [BusStop] = []
     @State private var clock = Date()
     @State private var showingImport = false
+    @State private var showingBus = false
 
     private let timer = Timer.publish(every: 30, on: .main, in: .common).autoconnect()
 
@@ -41,10 +44,24 @@ struct DashboardView: View {
                 ToolbarItem(placement: .topBarLeading) { SidebarToggle() }
             }
             .sheet(isPresented: $showingImport) { ImportSheet() }
-            .task { await refresh() }
+            .sheet(isPresented: $showingBus) {
+                NavigationStack { BusView(showsDone: true) }
+                    .preferredColorScheme(.dark)
+            }
+            .task {
+                await refresh()
+                await loadStops()
+            }
             .onReceive(timer) { clock = $0; Task { await refreshBus() } }
-            .refreshable { await refresh() }
-            .onChange(of: selectedStop) { _, _ in Task { await refreshBus() } }
+            .refreshable {
+                await refresh()
+                await loadStops()
+            }
+            .onChange(of: selectedStop) { _, newValue in
+                // The bus widget reads its stop from the shared suite.
+                SharedStore.defaults.set(newValue, forKey: SharedStore.isbStopKey)
+                Task { await refreshBus() }
+            }
         }
     }
 
@@ -266,41 +283,116 @@ struct DashboardView: View {
 
     // MARK: Campus bus
 
+    private var favourites: [String] {
+        FavouriteStops.list(favouritesRaw)
+    }
+
+    private func stopName(_ id: String) -> String {
+        stops.first { $0.id == id }?.short_name ?? id
+    }
+
+    private func loadStops() async {
+        guard stops.isEmpty else { return }
+        stops = (try? await appState.api.busStops()) ?? []
+    }
+
+    /// Full ISB experience on Today: switch stop inline, favourite it, and
+    /// reach every stop without detouring through the Campus tab.
     private var busWidget: some View {
-        WidgetCard(title: "ISB · \(selectedStop)", systemImage: "bus") {
-            let services = arrivals?.arrivals.prefix(3) ?? []
-            if services.isEmpty {
-                Text("Timings unavailable right now")
-                    .foregroundStyle(Theme.textMuted)
-                    .font(.callout)
-            } else {
-                VStack(spacing: 8) {
-                    ForEach(Array(services), id: \.service) { service in
-                        let etas = service.minutes.compactMap { $0 }
-                        HStack(spacing: 8) {
-                            Text(service.service)
-                                .font(.caption.bold())
-                                .frame(width: 30)
-                                .foregroundStyle(Theme.text)
-                            if let first = etas.first {
-                                Text(Format.eta(first, now: clock))
-                                    .font(.callout.weight(.medium))
+        WidgetCard(title: "ISB", systemImage: "bus") {
+            VStack(alignment: .leading, spacing: 10) {
+                HStack(spacing: 8) {
+                    stopMenu
+                    Spacer()
+                    favouriteButton
+                }
+                let services = arrivals?.arrivals.prefix(3) ?? []
+                if services.isEmpty {
+                    Text("Timings unavailable right now")
+                        .foregroundStyle(Theme.textMuted)
+                        .font(.callout)
+                } else {
+                    VStack(spacing: 8) {
+                        ForEach(Array(services), id: \.service) { service in
+                            let etas = service.minutes.compactMap { $0 }
+                            HStack(spacing: 8) {
+                                Text(service.service)
+                                    .font(.caption.bold())
+                                    .frame(width: 30)
                                     .foregroundStyle(Theme.text)
-                            }
-                            Spacer()
-                            if etas.count > 1 {
-                                Text("then \(Format.etaList(etas, now: clock))")
-                                    .font(.caption)
-                                    .foregroundStyle(Theme.textMuted)
+                                if let first = etas.first {
+                                    Text(Format.eta(first, now: clock))
+                                        .font(.callout.weight(.medium))
+                                        .foregroundStyle(Theme.text)
+                                }
+                                Spacer()
+                                if etas.count > 1 {
+                                    Text("then \(Format.etaList(etas, now: clock))")
+                                        .font(.caption)
+                                        .foregroundStyle(Theme.textMuted)
+                                }
                             }
                         }
                     }
                 }
             }
         } footer: {
-            Button("Open bus times") { appState.selectedTab = .campus }
-                .font(.caption)
+            HStack {
+                Button("All stops & search") { showingBus = true }
+                Spacer()
+                Text("Auto-refreshes")
+                    .font(.caption2)
+                    .foregroundStyle(Theme.textMuted)
+            }
         }
+    }
+
+    private var stopMenu: some View {
+        Menu {
+            if !favourites.isEmpty {
+                Section("Favourites") {
+                    ForEach(favourites, id: \.self) { stopId in
+                        Button {
+                            selectedStop = stopId
+                        } label: {
+                            Label(stopName(stopId),
+                                  systemImage: stopId == selectedStop ? "checkmark" : "star.fill")
+                        }
+                    }
+                }
+            }
+            Section("All stops") {
+                ForEach(stops) { stop in
+                    Button {
+                        selectedStop = stop.id
+                    } label: {
+                        Label(stopName(stop.id),
+                              systemImage: stop.id == selectedStop ? "checkmark" : "circle")
+                    }
+                }
+            }
+        } label: {
+            HStack(spacing: 6) {
+                Text(stopName(selectedStop))
+                    .font(.headline)
+                    .foregroundStyle(Theme.textH)
+                Image(systemName: "chevron.up.down")
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(Theme.textMuted)
+            }
+        }
+    }
+
+    private var favouriteButton: some View {
+        Button {
+            favouritesRaw = FavouriteStops.toggled(selectedStop, in: favouritesRaw)
+        } label: {
+            Image(systemName: FavouriteStops.contains(selectedStop, in: favouritesRaw) ? "star.fill" : "star")
+                .font(.callout)
+                .foregroundStyle(Theme.accentGold)
+                .padding(6)
+        }
+        .buttonStyle(.plain)
     }
 
     // MARK: Venues

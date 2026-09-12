@@ -88,6 +88,53 @@ extension View {
     }
 }
 
+/// Favourite ISB stops live as a CSV string in app storage (shared with
+/// BusView and the Today card) so no schema or sync is needed.
+enum FavouriteStops {
+    static func list(_ raw: String) -> [String] {
+        raw.split(separator: ",").map(String.init)
+    }
+
+    static func contains(_ stop: String, in raw: String) -> Bool {
+        list(raw).contains(stop)
+    }
+
+    static func toggled(_ stop: String, in raw: String) -> String {
+        var stops = list(raw)
+        if let index = stops.firstIndex(of: stop) {
+            stops.remove(at: index)
+        } else {
+            stops.append(stop)
+        }
+        return stops.joined(separator: ",")
+    }
+}
+
+/// Horizontal shake used to flag a failed sign-in. Drive `animatableData`
+/// with an attempt counter inside `withAnimation` — the sine curve turns the
+/// interpolation into the shake.
+struct ShakeEffect: GeometryEffect {
+    var travel: CGFloat = 7
+    var shakesPerUnit: CGFloat = 3
+    var animatableData: CGFloat
+
+    func effectValue(size: CGSize) -> ProjectionTransform {
+        let x = travel * sin(animatableData * .pi * shakesPerUnit * 2)
+        return ProjectionTransform(CGAffineTransform(translationX: x, y: 0))
+    }
+}
+
+/// Press feedback for tappable cards and rows: a slight shrink toward the
+/// finger, the way the system's contexts do it.
+struct PressableCardStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.98 : 1)
+            .opacity(configuration.isPressed ? 0.85 : 1)
+            .animation(.spring(response: 0.28, dampingFraction: 0.8), value: configuration.isPressed)
+    }
+}
+
 /// Small-caps section label used across the desktop's modules.
 struct SectionLabel: View {
     let text: String

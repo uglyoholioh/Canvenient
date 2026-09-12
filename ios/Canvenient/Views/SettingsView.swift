@@ -1,5 +1,6 @@
 import SwiftUI
 import ActivityKit
+import UserNotifications
 import CanvenientKit
 
 struct SettingsView: View {
@@ -13,7 +14,6 @@ struct SettingsView: View {
     @AppStorage(Preferences.liveActivityEnabled) private var liveActivityEnabled = true
     @AppStorage(Preferences.classRemindersEnabled) private var classRemindersEnabled = true
     @AppStorage(Preferences.taskRemindersEnabled) private var taskRemindersEnabled = true
-    @AppStorage("canvenient.isb.stop") private var defaultStop = "COM3"
 
     @State private var serverURL = ""
     @State private var canvasToken = ""
@@ -22,112 +22,22 @@ struct SettingsView: View {
     @State private var confirmingSignOut = false
     @State private var activitiesAllowed = ActivityAuthorizationInfo().areActivitiesEnabled
     @State private var activityCount = 0
+    @State private var notificationsAllowed: Bool?
+    @State private var testingConnection = false
+    @State private var connectionReached: Bool?
 
     var body: some View {
         NavigationStack {
             Form {
-                Section {
-                    Picker("Theme", selection: $themeMode) {
-                        ForEach(ThemeMode.allCases) { mode in
-                            themeLabel(mode).tag(mode.rawValue)
-                        }
-                    }
-                } header: {
-                    Text("Appearance")
-                } footer: {
-                    Text("Matches the desktop app's dark themes. Graphite is monochrome.")
-                }
-
-                Section("Preferences") {
-                    Toggle("ISB auto-refresh (20 s)", isOn: $isbAutoRefresh)
-                    Toggle("Haptics on wheel spin", isOn: $hapticsEnabled)
-                    TextField("Default ISB stop", text: $defaultStop)
-                        .textInputAutocapitalization(.never)
-                }
-
-                Section {
-                    Toggle("Class reminders (15 min before)", isOn: $classRemindersEnabled)
-                    Toggle("Task reminders (1 h before)", isOn: $taskRemindersEnabled)
-                } header: {
-                    Text("Notifications")
-                } footer: {
-                    Text("Scheduled on device from your timetable and tasks for the coming week. Turning a toggle on asks for permission once.")
-                }
-
-                Section {
-                    LabeledContent("Allowed by system", value: activitiesAllowed ? "Yes" : "No")
-                    LabeledContent("Currently active", value: activityCount > 0 ? "Yes" : "No")
-                    Toggle("Show next-class activity", isOn: $liveActivityEnabled)
-                    Button("Refresh now") {
-                        Task { await LiveActivityController.shared.refreshNow() }
-                    }
-                    Button("Start demo activity") {
-                        Task { await LiveActivityController.shared.startPreview() }
-                    }
-                } header: {
-                    Text("Live Activity")
-                } footer: {
-                    Text("Shows your current or next class with the venue, the next ISB bus, a timetable peek and Get Directions / Open Schedule shortcuts. It updates when you open the app.")
-                }
-
-                Section {
-                    SecureField("Paste Canvas API token", text: $canvasToken)
-                        .textInputAutocapitalization(.never)
-                        .autocorrectionDisabled()
-                    Button {
-                        saveCanvasToken()
-                    } label: {
-                        HStack {
-                            Spacer()
-                            if savingCanvasToken {
-                                ProgressView()
-                            } else {
-                                Text(canvasTokenSaved ? "Saved ✓" : "Connect Canvas")
-                            }
-                            Spacer()
-                        }
-                    }
-                    .disabled(savingCanvasToken || canvasToken.trimmingCharacters(in: .whitespaces).isEmpty)
-                } header: {
-                    Text("Canvas")
-                } footer: {
-                    Text("Links the Modules tab to Canvas LMS for assignments and announcements. Create a token in Canvas → Account → Settings → Approved Integrations → New Access Token.")
-                }
-
-                Section("Account") {
-                    LabeledContent("Signed in", value: appState.user?.email ?? "—")
-                    Button("Refresh data") {
-                        Task { await appState.refreshAll() }
-                    }
-                    Button("Sign out", role: .destructive) {
-                        confirmingSignOut = true
-                    }
-                    .confirmationDialog("Sign out?", isPresented: $confirmingSignOut, titleVisibility: .visible) {
-                        Button("Sign out", role: .destructive) {
-                            appState.signOut()
-                            dismiss()
-                        }
-                    } message: {
-                        Text("Cached data on this device is cleared. You can sign back in anytime.")
-                    }
-                }
-
-                Section("Server") {
-                    TextField("Server URL", text: $serverURL)
-                        .keyboardType(.URL)
-                        .textInputAutocapitalization(.never)
-                        .autocorrectionDisabled()
-                    Button("Apply & reload") {
-                        appState.updateServerURL(serverURL.trimmingCharacters(in: .whitespaces))
-                        Task { await appState.bootstrap() }
-                        dismiss()
-                    }
-                }
-
-                Section("About") {
-                    LabeledContent("Version", value: appVersion)
-                    LabeledContent("Academic week", value: appState.academicWeek?.label ?? "—")
-                }
+                accountSection
+                canvasSection
+                notificationsSection
+                liveActivitySection
+                campusSection
+                wheelSection
+                appearanceSection
+                serverSection
+                aboutSection
             }
             .themedForm()
             .navigationTitle("Settings")
@@ -143,10 +53,7 @@ struct SettingsView: View {
                 serverURL = appState.serverURL
                 activityCount = Activity<ClassActivityAttributes>.activities.count
                 canvasTokenSaved = appState.user?.canvas_token_set ?? false
-            }
-            .onChange(of: defaultStop) { _, newValue in
-                // The bus widget reads its stop from the shared suite.
-                SharedStore.defaults.set(newValue, forKey: SharedStore.isbStopKey)
+                refreshNotificationStatus()
             }
             .onChange(of: themeMode) { _, newValue in
                 SharedStore.defaults.set(newValue, forKey: Theme.modeKey)
@@ -160,6 +67,183 @@ struct SettingsView: View {
         }
     }
 
+    // MARK: Sections — grouped by feature, account first
+
+    private var accountSection: some View {
+        Section("Account") {
+            LabeledContent("Signed in", value: appState.user?.email ?? "—")
+            Button("Sign out", role: .destructive) {
+                confirmingSignOut = true
+            }
+            .confirmationDialog("Sign out?", isPresented: $confirmingSignOut, titleVisibility: .visible) {
+                Button("Sign out", role: .destructive) {
+                    appState.signOut()
+                    dismiss()
+                }
+            } message: {
+                Text("Cached data on this device is cleared. You can sign back in anytime.")
+            }
+        }
+    }
+
+    private var canvasSection: some View {
+        Section {
+            LabeledContent("Status", value: canvasTokenSaved ? "Connected ✓" : "Not connected")
+            SecureField("Paste Canvas API token", text: $canvasToken)
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
+            Button {
+                saveCanvasToken()
+            } label: {
+                HStack {
+                    Spacer()
+                    if savingCanvasToken {
+                        ProgressView()
+                    } else {
+                        Text(canvasTokenSaved ? "Update token" : "Connect Canvas")
+                    }
+                    Spacer()
+                }
+            }
+            .disabled(savingCanvasToken || canvasToken.trimmingCharacters(in: .whitespaces).isEmpty)
+        } header: {
+            Text("Canvas")
+        } footer: {
+            Text("Links the Modules screen to Canvas LMS for courses and assignments. Create a token in Canvas → Account → Settings → Approved Integrations → New Access Token.")
+        }
+    }
+
+    private var notificationsSection: some View {
+        Section {
+            Toggle("Class reminders (15 min before)", isOn: $classRemindersEnabled)
+            Toggle("Task reminders (1 h before)", isOn: $taskRemindersEnabled)
+            if let notificationsAllowed {
+                LabeledContent("Allowed by system",
+                               value: notificationsAllowed ? "Yes" : "No")
+            }
+        } header: {
+            Text("Notifications")
+        } footer: {
+            Text("Scheduled on device from your timetable and tasks for the coming week. Turning a toggle on asks for permission once.")
+        }
+    }
+
+    private var liveActivitySection: some View {
+        Section {
+            LabeledContent("Allowed by system", value: activitiesAllowed ? "Yes" : "No")
+            LabeledContent("Currently active", value: activityCount > 0 ? "Yes" : "No")
+            Toggle("Show next-class activity", isOn: $liveActivityEnabled)
+            Button("Refresh now") {
+                Task { await LiveActivityController.shared.refreshNow() }
+            }
+            Button("Start demo activity") {
+                Task { await LiveActivityController.shared.startPreview() }
+            }
+        } header: {
+            Text("Live Activity")
+        } footer: {
+            Text("Shows your current or next class with the venue, the next ISB bus, a timetable peek and Get Directions / Open Schedule shortcuts. It updates when you open the app.")
+        }
+    }
+
+    private var campusSection: some View {
+        Section {
+            Toggle("ISB auto-refresh (20 s)", isOn: $isbAutoRefresh)
+        } header: {
+            Text("Campus")
+        } footer: {
+            Text("Bus arrivals refresh every 20 s while a bus screen is open. Pick stops and favourites right on the Today card.")
+        }
+    }
+
+    private var wheelSection: some View {
+        Section {
+            Toggle("Haptics on wheel spin", isOn: $hapticsEnabled)
+        } header: {
+            Text("Wheel")
+        }
+    }
+
+    private var appearanceSection: some View {
+        Section {
+            Picker("Theme", selection: $themeMode) {
+                ForEach(ThemeMode.allCases) { mode in
+                    themeLabel(mode).tag(mode.rawValue)
+                }
+            }
+        } header: {
+            Text("Appearance")
+        } footer: {
+            Text("Matches the desktop app's dark themes. Graphite is monochrome.")
+        }
+    }
+
+    private var serverSection: some View {
+        Section {
+            TextField("Server URL", text: $serverURL)
+                .keyboardType(.URL)
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
+            Button {
+                testConnection()
+            } label: {
+                HStack {
+                    Text("Test connection")
+                    Spacer()
+                    if testingConnection { ProgressView() }
+                }
+            }
+            .disabled(testingConnection)
+            if let connectionReached {
+                Label(connectionReached ? "Server reachable" : "No response — is Tailscale connected?",
+                      systemImage: connectionReached ? "checkmark.circle" : "exclamationmark.triangle")
+                    .foregroundStyle(connectionReached ? Theme.success : Theme.warning)
+                    .font(.callout)
+            }
+            Button("Apply & reload") {
+                appState.updateServerURL(serverURL.trimmingCharacters(in: .whitespaces))
+                Task { await appState.bootstrap() }
+                dismiss()
+            }
+            Button("Refresh data") {
+                Task { await appState.refreshAll() }
+            }
+        } header: {
+            Text("Server & data")
+        } footer: {
+            Text("The app talks to your hosted backend over Tailscale. Applying a new URL signs nothing out — it just retargets the client and reloads.")
+        }
+    }
+
+    private var aboutSection: some View {
+        Section("About") {
+            LabeledContent("Version", value: appVersion)
+            LabeledContent("Academic week", value: appState.academicWeek?.label ?? "—")
+        }
+    }
+
+    // MARK: Helpers
+
+    private func refreshNotificationStatus() {
+        UNUserNotificationCenter.current().getNotificationSettings { settings in
+            let allowed = settings.authorizationStatus == .authorized
+                || settings.authorizationStatus == .provisional
+            Task { @MainActor in
+                notificationsAllowed = allowed
+            }
+        }
+    }
+
+    private func testConnection() {
+        testingConnection = true
+        connectionReached = nil
+        Task {
+            let reached = await appState.checkConnection()
+            connectionReached = reached
+            testingConnection = false
+        }
+    }
+
     private func handleReminderToggle(enabled: Bool, otherEnabled: Bool) {
         Task { @MainActor in
             if enabled {
@@ -170,6 +254,7 @@ struct SettingsView: View {
             } else if !otherEnabled {
                 ReminderScheduler.removeAll()
             }
+            refreshNotificationStatus()
         }
     }
 

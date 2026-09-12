@@ -2,7 +2,9 @@ import SwiftUI
 import CanvenientKit
 
 struct BusView: View {
+    var showsDone = false
     @EnvironmentObject private var appState: AppState
+    @Environment(\.dismiss) private var dismiss
 
     @AppStorage("canvenient.isb.stop") private var selectedStop = "COM3"
     @AppStorage("canvenient.isb.favourites") private var favouritesRaw = ""
@@ -50,27 +52,16 @@ struct BusView: View {
                     }
                 }
             }
-            Section("All stops") {
+            Section {
                 ForEach(filteredStops) { stop in
-                    Button {
-                        selectedStop = stop.id
-                    } label: {
-                        HStack {
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(stop.short_name ?? stop.id)
-                                    .fontWeight(stop.id == selectedStop ? .semibold : .regular)
-                                if let name = stop.name,
-                                   name != stop.short_name, name != stop.id {
-                                    Text(name).font(.caption).foregroundStyle(Theme.textMuted)
-                                }
-                            }
-                            Spacer()
-                            if stop.id == selectedStop {
-                                Image(systemName: "checkmark").foregroundStyle(Color.accentColor)
-                            }
-                        }
-                    }
+                    stopRow(stop)
                 }
+            } header: {
+                Text("All stops")
+            } footer: {
+                Text(favourites.isEmpty
+                     ? "Swipe a stop to favourite it; favourites appear first on the Today card."
+                     : "Swipe a stop to favourite or unfavourite it.")
             }
         }
         .listStyle(.insetGrouped)
@@ -78,15 +69,62 @@ struct BusView: View {
         .navigationTitle("Bus")
         .tint(Theme.accent)
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            if showsDone {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") { dismiss() }
+                }
+            }
+        }
         .refreshable { await loadArrivals() }
         .task {
             await loadStops()
             startAutoRefresh()
         }
-        .onChange(of: selectedStop) { _, _ in
+        .onChange(of: selectedStop) { _, newValue in
+            // The widget reads its stop from the shared suite.
+            SharedStore.defaults.set(newValue, forKey: SharedStore.isbStopKey)
             Task { await loadArrivals() }
         }
         .onDisappear { refreshTimer?.invalidate() }
+    }
+
+    private func stopRow(_ stop: BusStop) -> some View {
+        let isFavourite = FavouriteStops.contains(stop.id, in: favouritesRaw)
+        let isSelected = stop.id == selectedStop
+        return Button {
+            selectedStop = stop.id
+        } label: {
+            HStack {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(stop.short_name ?? stop.id)
+                        .fontWeight(isSelected ? .semibold : .regular)
+                    if let name = stop.name,
+                       name != stop.short_name, name != stop.id {
+                        Text(name).font(.caption).foregroundStyle(Theme.textMuted)
+                    }
+                }
+                Spacer()
+                if isFavourite {
+                    Image(systemName: "star.fill")
+                        .font(.caption)
+                        .foregroundStyle(Theme.accentGold)
+                }
+                if isSelected {
+                    Image(systemName: "checkmark")
+                        .foregroundStyle(Color.accentColor)
+                }
+            }
+        }
+        .swipeActions(edge: .leading) {
+            Button {
+                favouritesRaw = FavouriteStops.toggled(stop.id, in: favouritesRaw)
+            } label: {
+                Label(isFavourite ? "Unfavourite" : "Favourite",
+                      systemImage: isFavourite ? "star.slash" : "star.fill")
+            }
+            .tint(Theme.accentGold)
+        }
     }
 
     private func favouriteRow(_ stopId: String) -> some View {

@@ -6,15 +6,21 @@ struct ModulesView: View {
     @EnvironmentObject private var appState: AppState
     @Environment(\.dismiss) private var dismiss
 
+    @State private var loading = false
+    @State private var didLoad = false
     @State private var errorMessage: String?
 
     var body: some View {
         NavigationStack {
             Group {
-                if !appState.modulesLoaded {
-                    emptyState
-                } else if appState.modules.isEmpty {
-                    emptyState
+                if appState.modules.isEmpty {
+                    if loading && !didLoad {
+                        loadingState
+                    } else if let errorMessage {
+                        errorState
+                    } else {
+                        emptyState
+                    }
                 } else {
                     moduleList
                 }
@@ -29,22 +35,61 @@ struct ModulesView: View {
                     }
                 }
             }
-            .task { await loadModules() }
-            .refreshable { await appState.refreshModules(force: true) }
+            .task { await load() }
+            .refreshable { await load() }
+        }
+    }
+
+    /// Local loading/error state drives this screen — the app-wide
+    /// `modulesLoaded` flag only flips after a bootstrap refresh, so gating
+    /// on it here stranded the tab on "Loading…" when the server was down
+    /// at launch.
+    private func load() async {
+        guard !loading else { return }
+        loading = true
+        errorMessage = nil
+        if let modules = await appState.academicModulesOfflineAware() {
+            appState.modules = modules
+            appState.modulesLoaded = true
+            // Assignment counts come with the Canvas sync; fetch them here
+            // too so the first open shows them without a pull-to-refresh.
+            if let all = try? await appState.api.canvasAssignments() {
+                appState.assignments = Dictionary(grouping: all, by: { $0.course_code ?? "" })
+            }
+        } else {
+            errorMessage = "The server couldn't be reached. Check that Tailscale is connected, then retry."
+        }
+        didLoad = true
+        loading = false
+    }
+
+    private var loadingState: some View {
+        ContentUnavailableView {
+            Label("Loading modules…", systemImage: "book.closed")
+        } actions: {
+            ProgressView()
+        }
+    }
+
+    private var errorState: some View {
+        ContentUnavailableView {
+            Label("Couldn't load modules", systemImage: "wifi.exclamationmark")
+        } description: {
+            Text(errorMessage ?? "")
+        } actions: {
+            Button("Retry") { Task { await load() } }
+                .buttonStyle(AccentFilledButtonStyle())
         }
     }
 
     private var moduleList: some View {
         List {
-            if let errorMessage {
-                Section { Text(errorMessage).foregroundStyle(Theme.error).font(.callout) }
-            }
             Section {
                 ForEach(appState.modules) { module in
                     NavigationLink {
                         ModuleAssignmentsView(module: module,
                                               assignments: appState.assignments[module.module_code] ?? [],
-                                              loading: !appState.modulesLoaded)
+                                              loading: loading)
                     } label: {
                         HStack(spacing: 12) {
                             Circle()
@@ -58,9 +103,7 @@ struct ModulesView: View {
                                 }
                             }
                             Spacer()
-                            if !appState.modulesLoaded {
-                                ProgressView()
-                            } else if let count = appState.assignments[module.module_code]?.count {
+                            if let count = appState.assignments[module.module_code]?.count {
                                 Text("\(count)")
                                     .font(.caption)
                                     .foregroundStyle(.secondary)
@@ -79,27 +122,12 @@ struct ModulesView: View {
 
     private var emptyState: some View {
         ContentUnavailableView {
-            Label(!appState.modulesLoaded && errorMessage == nil ? "Loading modules…" : "No modules yet", systemImage: "book.closed")
+            Label("No modules yet", systemImage: "book.closed")
         } description: {
-            if !(!appState.modulesLoaded && errorMessage == nil) {
-                Text("Add your Canvas token in Settings and your Canvas courses will appear here, with assignments from Canvas LMS.")
-            }
+            Text("Connect Canvas and your courses — with their assignments — will appear here.")
         } actions: {
-            if errorMessage != nil {
-                Button("Retry") { Task { await loadModules() } }
-                    .buttonStyle(AccentFilledButtonStyle())
-            } else if !appState.modulesLoaded && errorMessage == nil {
-                ProgressView()
-            }
-        }
-    }
-
-    private func loadModules() async {
-        errorMessage = nil
-        if let modules = await appState.academicModulesOfflineAware() {
-            appState.modules = modules
-        } else {
-            errorMessage = "Could not reach the server. Tailscale connected?"
+            Button("Connect Canvas") { appState.overlay = .settings }
+                .buttonStyle(AccentFilledButtonStyle())
         }
     }
 }
