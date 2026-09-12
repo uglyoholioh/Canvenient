@@ -12,6 +12,8 @@ import AssistantBriefCard from "./dashboard/AssistantBriefCard";
 import StudyTimerModule from "./dashboard/StudyTimerModule";
 import WheelModule from "./dashboard/WheelModule";
 import { DEFAULT_DASHBOARD_CONFIG, readDashboardConfig, readDashboardLayout, saveDashboardConfig, saveDashboardLayout, threeColumnDashboardConfig } from "./dashboard/dashboardConfig";
+import { getSchedule, getTasks } from "../api";
+import { dashboardAgendaItems, getAcademicWeek } from "./scheduleUtils";
 import { useQuickCapture } from "./QuickCaptureContext";
 import { WorkspaceToolbarContext } from "./WorkspaceToolbarContext";
 import { useContext } from "react";
@@ -33,12 +35,50 @@ export default function Dashboard({ token, user, onNavigate }) {
   const [activeModuleId, setActiveModuleId] = useState("tasks");
   const [viewportHeight, setViewportHeight] = useState(() => window.innerHeight);
   const moduleRefs = useRef(new Map());
+  const [now, setNow] = useState(() => new Date());
+  const [schedule, setSchedule] = useState(null);
+  const [tasks, setTasks] = useState([]);
 
   useEffect(() => {
     const updateViewportHeight = () => setViewportHeight(window.innerHeight);
     window.addEventListener("resize", updateViewportHeight);
     return () => window.removeEventListener("resize", updateViewportHeight);
   }, []);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(new Date()), 30000);
+    return () => window.clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    if (!token) return undefined;
+    let cancelled = false;
+    Promise.allSettled([getSchedule(token), getTasks(token)]).then(([scheduleResult, taskResult]) => {
+      if (cancelled) return;
+      setSchedule(scheduleResult.status === "fulfilled" && scheduleResult.value
+        ? scheduleResult.value
+        : { classes: [], exams: [], events: [] });
+      setTasks(taskResult.status === "fulfilled" ? taskResult.value || [] : []);
+    });
+    return () => { cancelled = true; };
+  }, [token, taskRefreshKey]);
+
+  const hero = useMemo(() => {
+    const dayStart = new Date(now);
+    dayStart.setHours(0, 0, 0, 0);
+    const agenda = schedule ? dashboardAgendaItems(schedule, tasks, dayStart) : [];
+    const remaining = agenda.filter((item) => item.end >= now);
+    const dateLabel = now.toLocaleDateString([], { weekday: "long", day: "numeric", month: "long" });
+    const weekLabel = getAcademicWeek(now)?.label;
+    const metaParts = [];
+    if (weekLabel) metaParts.push(weekLabel);
+    if (remaining.length > 0) metaParts.push(`${remaining.length} left today`);
+    return {
+      dateLabel,
+      meta: metaParts.join(" · ") || "Nothing scheduled — enjoy the calm",
+      next: remaining[0] || null,
+    };
+  }, [schedule, tasks, now]);
 
   useEffect(() => {
     const layoutKey = "canvenient-dashboard-three-column-layout";
@@ -112,7 +152,7 @@ export default function Dashboard({ token, user, onNavigate }) {
     canvas: {
       title: "Canvas",
       onViewFull: () => onNavigate("canvas"),
-      body: <CanvasModule token={token} enabled={Boolean(user?.canvas_connected)} onOpenItem={setActiveCanvasItem} />,
+      body: <CanvasModule token={token} enabled={Boolean(user?.canvas_connected)} onOpenItem={setActiveCanvasItem} onNavigate={onNavigate} />,
     },
     notes: {
       title: "Notes",
@@ -276,18 +316,61 @@ export default function Dashboard({ token, user, onNavigate }) {
 
   const gridTracks = previewTracks || config.tracks;
 
-  const totalRequestedRowHeight = gridTracks.rows.reduce((sum, value) => sum + value, 0) || 1;
-  const availableGridHeight = Math.max(gridTracks.rows.length * 96, Math.min(gridTracks.rows.length * 400, viewportHeight - 120));
+  // Persisted track weights can be extremely bottom-heavy (e.g. [220, 520]);
+  // cap the visual ratio so sparse cards don't stretch into voids. Stored
+  // config is untouched — this only affects rendering.
+  const balancedRows = useMemo(() => {
+    const rows = gridTracks.rows;
+    if (!rows || rows.length < 2) return rows;
+    const min = Math.min(...rows);
+    return rows.map((value) => Math.min(value, min * 1.5));
+  }, [gridTracks.rows]);
+
+  const totalRequestedRowHeight = balancedRows.reduce((sum, value) => sum + value, 0) || 1;
+  const availableGridHeight = Math.max(balancedRows.length * 96, Math.min(balancedRows.length * 400, viewportHeight - 120));
   const rowScale = availableGridHeight / totalRequestedRowHeight;
+
+  const formatNextTime = (date) => {
+    const sameDay = date.toDateString() === now.toDateString();
+    const time = date.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+    if (sameDay) return time;
+    const day = date.toLocaleDateString([], { weekday: "short", day: "numeric", month: "short" });
+    return `${day} · ${time}`;
+  };
 
   return (
     <div className="dashboard-page">
       <div className="dashboard-scroll">
+        <header className="dashboard-hero">
+          <div className="dashboard-hero-date">
+            <h1>{hero.dateLabel}</h1>
+            <p>{hero.meta}</p>
+          </div>
+          {hero.next && (
+            <button
+              type="button"
+              className="dashboard-hero-next"
+              onClick={() => onNavigate(hero.next.destination || "schedule")}
+              title="Open the schedule"
+            >
+              <span
+                className="dashboard-hero-next-dot"
+                style={hero.next.color ? { background: hero.next.color } : undefined}
+                aria-hidden="true"
+              />
+              <span className="dashboard-hero-next-copy">
+                <small>Up next</small>
+                <strong>{hero.next.title}</strong>
+                <span>{formatNextTime(new Date(hero.next.start))}{hero.next.venue ? ` · ${hero.next.venue}` : ""}</span>
+              </span>
+            </button>
+          )}
+        </header>
         <div
           className={`dashboard-grid is-${layout} ${isEditingLayout ? "is-layout-editing" : ""}`}
           style={{
             "--dashboard-column-tracks": gridTracks.columns.map((value) => `${value}fr`).join(" "),
-            "--dashboard-row-tracks": gridTracks.rows.map((value) => `${Math.max(72, Math.round(value * rowScale))}px`).join(" "),
+            "--dashboard-row-tracks": balancedRows.map((value) => `${Math.max(72, Math.round(value * rowScale))}px`).join(" "),
           }}
         >
           {visibleModules.map(renderModule)}

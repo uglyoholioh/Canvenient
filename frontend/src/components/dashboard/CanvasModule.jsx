@@ -39,7 +39,7 @@ function formatSyncTime(date) {
   return date.toLocaleDateString([], { month: "short", day: "numeric" });
 }
 
-export default function CanvasModule({ token, enabled, onOpenItem }) {
+export default function CanvasModule({ token, enabled, onOpenItem, onNavigate }) {
   const [assignments, setAssignments] = useState(() => getCachedData("canvenient.cache.assignments", []));
   const [announcements, setAnnouncements] = useState(() => getCachedData("canvenient.cache.announcements", []));
   const [lastSyncedAt, setLastSyncedAt] = useState(() => {
@@ -179,7 +179,12 @@ export default function CanvasModule({ token, enabled, onOpenItem }) {
   })();
   const hasCachedContent = (assignments && assignments.length > 0) || (announcements && announcements.length > 0);
 
-  if (!enabled) return <div className="module-empty">Add your Canvas token in Settings to see deadlines and updates.</div>;
+  if (!enabled) return (
+    <div className="module-empty canvas-module-unconfigured">
+      <p>Connect Canvas to see deadlines and announcements here.</p>
+      <button type="button" onClick={() => onNavigate?.("settings")}>Connect Canvas</button>
+    </div>
+  );
   if (!hasCachedContent && !hasCachedStore && refreshing) {
     return <div className="module-empty"><Loader2 className="retro-icon-spin" size={14} /> Loading Canvas...</div>;
   }

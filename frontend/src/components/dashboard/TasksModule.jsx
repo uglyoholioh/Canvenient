@@ -58,6 +58,16 @@ export default function TasksModule({ token, refreshKey = 0 }) {
   const [draftDue, setDraftDue] = useState("");
   const [error, setError] = useState("");
   const [actionError, setActionError] = useState("");
+  const [checkboxStyle, setCheckboxStyle] = useState(() => {
+    try { return localStorage.getItem("canvenient-checkbox-style") || "icon"; } catch { return "icon"; }
+  });
+  useEffect(() => {
+    const updateSettings = () => {
+      try { setCheckboxStyle(localStorage.getItem("canvenient-checkbox-style") || "icon"); } catch { /* test envs */ }
+    };
+    window.addEventListener("settings-updated", updateSettings);
+    return () => window.removeEventListener("settings-updated", updateSettings);
+  }, []);
   const titleInputRef = useRef(null);
   const newDraftInputRef = useRef(null);
   const taskButtonRefs = useRef({});
@@ -265,7 +275,14 @@ export default function TasksModule({ token, refreshKey = 0 }) {
                     style={{ backgroundColor: taskModuleColor }}
                   />
                 )}
-                <button type="button" className="module-task-check" onClick={() => complete(task)} aria-label={`Complete ${task.title}`}>[ ]</button>
+                <button type="button" className="module-task-check" onClick={() => complete(task)} aria-label={`Complete ${task.title}`}>
+                  {checkboxStyle === "brackets" ? "[ ]" : checkboxStyle === "circle" ? "( )" : (
+                    <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true">
+                      <rect x="1.75" y="1.75" width="12.5" height="12.5" rx="4" className="module-task-check-box" />
+                      <path d="M4.9 8.3l2.1 2.1 4.3-4.7" className="module-task-check-tick" />
+                    </svg>
+                  )}
+                </button>
                 <button
                   ref={(element) => { taskButtonRefs.current[task.id] = element; }}
                   type="button"
@@ -336,7 +353,14 @@ export default function TasksModule({ token, refreshKey = 0 }) {
 
           {isDraftingNew ? (
             <div className="task-module-item task-module-new-entry is-active">
-              <span className="module-task-check placeholder" aria-hidden="true">[ ]</span>
+              <span className="module-task-check placeholder" aria-hidden="true">
+                {checkboxStyle === "brackets" ? "[ ]" : checkboxStyle === "circle" ? "( )" : (
+                  <svg viewBox="0 0 16 16" width="15" height="15">
+                    <rect x="1.75" y="1.75" width="12.5" height="12.5" rx="4" className="module-task-check-box" />
+                    <path d="M4.9 8.3l2.1 2.1 4.3-4.7" className="module-task-check-tick" />
+                  </svg>
+                )}
+              </span>
               <input
                 ref={newDraftInputRef}
                 type="text"
@@ -364,7 +388,14 @@ export default function TasksModule({ token, refreshKey = 0 }) {
               }}
               aria-label="Add task"
             >
-              <span className="module-task-check placeholder" aria-hidden="true">[ ]</span>
+              <span className="module-task-check placeholder" aria-hidden="true">
+                {checkboxStyle === "brackets" ? "[ ]" : checkboxStyle === "circle" ? "( )" : (
+                  <svg viewBox="0 0 16 16" width="15" height="15">
+                    <rect x="1.75" y="1.75" width="12.5" height="12.5" rx="4" className="module-task-check-box" />
+                    <path d="M4.9 8.3l2.1 2.1 4.3-4.7" className="module-task-check-tick" />
+                  </svg>
+                )}
+              </span>
               <span className="task-next-line-prompt">
                 {visibleTasks.length === 0 ? "No tasks in this view. Click to add a task..." : "New task..."}
               </span>
