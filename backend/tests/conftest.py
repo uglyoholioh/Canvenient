@@ -5,13 +5,17 @@ Uses SQLite test database via DATABASE_URL override.
 
 import os
 import sys
+import tempfile
 import uuid
 
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
 
-# Set test database URL before importing database module
-TEST_DB_URL = os.getenv("TEST_DATABASE_URL", "sqlite+aiosqlite:///./test.db")
+# Set test database URL before importing database module. The default is a
+# unique temp dir per run so concurrent or interleaved pytest invocations can
+# never collide on the same database file; TEST_DATABASE_URL still overrides.
+TEST_DB_DIR = tempfile.mkdtemp(prefix="canvenient-test-db-")
+TEST_DB_URL = os.getenv("TEST_DATABASE_URL", f"sqlite+aiosqlite:///{TEST_DB_DIR}/test.db")
 os.environ["DATABASE_URL"] = TEST_DB_URL
 os.environ["JWT_SECRET"] = os.getenv("JWT_SECRET", "test-secret-key-for-orbital-ci")
 WEBHOOK_SECRET = "test-telegram-webhook-secret"
