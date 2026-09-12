@@ -176,13 +176,20 @@ public final class APIClient {
 
     // MARK: Venue finder
 
-    public func freeVenues(query: String? = nil, minFreeMinutes: Int? = nil) async throws -> VenueAvailabilityResponse {
+    public func freeVenues(query: String? = nil, minFreeMinutes: Int? = nil,
+                           day: String? = nil, time: String? = nil,
+                           latitude: Double? = nil, longitude: Double? = nil,
+                           sort: String? = nil, includeOccupied: Bool = false) async throws -> VenueAvailabilityResponse {
         var queryItems: [String: String] = [
-            "only_free": "true",
-            "sort": "duration",
+            "only_free": includeOccupied ? "false" : "true",
         ]
         if let query, !query.isEmpty { queryItems["query"] = query }
         if let minFreeMinutes { queryItems["min_free_minutes"] = String(minFreeMinutes) }
+        if let day { queryItems["day"] = day }
+        if let time { queryItems["time"] = time }
+        if let latitude { queryItems["lat"] = String(latitude) }
+        if let longitude { queryItems["lon"] = String(longitude) }
+        if let sort { queryItems["sort"] = sort }
         return try await request("/venues/availability", query: queryItems)
     }
 

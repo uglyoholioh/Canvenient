@@ -135,6 +135,34 @@ public struct TaskOut: Codable, Equatable, Identifiable {
     }
 
     public var isDone: Bool { status == "done" }
+
+    public init(id: Int, title: String, description: String? = nil, status: String? = nil,
+                priority_manual: String? = nil, recommended_priority: String? = nil,
+                source_due_at: String? = nil, due_at_override: String? = nil, external_url: String? = nil,
+                module_id: Int? = nil, module_code: String? = nil, module_name: String? = nil,
+                module_color: String? = nil, class_summary: String? = nil, class_relation: String? = nil,
+                group_id: Int? = nil, group_name: String? = nil, completed_at: String? = nil,
+                created_at: String? = nil) {
+        self.id = id
+        self.title = title
+        self.description = description
+        self.status = status
+        self.priority_manual = priority_manual
+        self.recommended_priority = recommended_priority
+        self.source_due_at = source_due_at
+        self.due_at_override = due_at_override
+        self.external_url = external_url
+        self.module_id = module_id
+        self.module_code = module_code
+        self.module_name = module_name
+        self.module_color = module_color
+        self.class_summary = class_summary
+        self.class_relation = class_relation
+        self.group_id = group_id
+        self.group_name = group_name
+        self.completed_at = completed_at
+        self.created_at = created_at
+    }
 }
 
 public struct TaskCreate: Codable {
@@ -206,6 +234,18 @@ public struct VenueAvailabilityResponse: Codable {
     public var results: [VenueFreeRoom]
 }
 
+/// One class booked into a venue, as served by /venues/availability
+/// (flat NUSMods venueInformation shape).
+public struct VenueLesson: Codable, Equatable, Identifiable {
+    public var moduleCode: String?
+    public var lessonType: String?
+    public var classNo: String?
+    public var startTime: String?
+    public var endTime: String?
+
+    public var id: String { "\(moduleCode ?? "?")-\(lessonType ?? "?")-\(startTime ?? "?")" }
+}
+
 public struct VenueFreeRoom: Codable, Equatable, Identifiable {
     public var venue_code: String
     public var room_name: String?
@@ -220,8 +260,17 @@ public struct VenueFreeRoom: Codable, Equatable, Identifiable {
     public var is_free: Bool?
     public var free_until: String?
     public var free_minutes: Int?
+    public var current_lesson: VenueLesson?
+    public var next_lesson: VenueLesson?
+    public var slots: [String: String]?
+    public var classes_count: Int?
 
     public var id: String { venue_code }
+
+    /// "vacant" / "occupied" per half-hour slot key ("0800"…"2130").
+    public func slotStatus(_ key: String) -> String {
+        slots?[key] ?? "vacant"
+    }
 }
 
 // MARK: - Canvas (Modules tab)
