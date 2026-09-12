@@ -11,6 +11,8 @@ struct SettingsView: View {
     @AppStorage(Preferences.isbAutoRefresh) private var isbAutoRefresh = true
     @AppStorage(Preferences.hapticsEnabled) private var hapticsEnabled = true
     @AppStorage(Preferences.liveActivityEnabled) private var liveActivityEnabled = true
+    @AppStorage(Preferences.classRemindersEnabled) private var classRemindersEnabled = true
+    @AppStorage(Preferences.taskRemindersEnabled) private var taskRemindersEnabled = true
     @AppStorage("canvenient.isb.stop") private var defaultStop = "COM3"
 
     @State private var serverURL = ""
@@ -41,6 +43,15 @@ struct SettingsView: View {
                     Toggle("Haptics on wheel spin", isOn: $hapticsEnabled)
                     TextField("Default ISB stop", text: $defaultStop)
                         .textInputAutocapitalization(.never)
+                }
+
+                Section {
+                    Toggle("Class reminders (15 min before)", isOn: $classRemindersEnabled)
+                    Toggle("Task reminders (1 h before)", isOn: $taskRemindersEnabled)
+                } header: {
+                    Text("Notifications")
+                } footer: {
+                    Text("Scheduled on device from your timetable and tasks for the coming week. Turning a toggle on asks for permission once.")
                 }
 
                 Section {
@@ -132,6 +143,32 @@ struct SettingsView: View {
                 serverURL = appState.serverURL
                 activityCount = Activity<ClassActivityAttributes>.activities.count
                 canvasTokenSaved = appState.user?.canvas_token_set ?? false
+            }
+            .onChange(of: defaultStop) { _, newValue in
+                // The bus widget reads its stop from the shared suite.
+                SharedStore.defaults.set(newValue, forKey: SharedStore.isbStopKey)
+            }
+            .onChange(of: themeMode) { _, newValue in
+                SharedStore.defaults.set(newValue, forKey: Theme.modeKey)
+            }
+            .onChange(of: classRemindersEnabled) { _, enabled in
+                handleReminderToggle(enabled: enabled, otherEnabled: taskRemindersEnabled)
+            }
+            .onChange(of: taskRemindersEnabled) { _, enabled in
+                handleReminderToggle(enabled: enabled, otherEnabled: classRemindersEnabled)
+            }
+        }
+    }
+
+    private func handleReminderToggle(enabled: Bool, otherEnabled: Bool) {
+        Task { @MainActor in
+            if enabled {
+                if otherEnabled {
+                    await ReminderScheduler.requestAuthorization()
+                }
+                ReminderScheduler.regenerate(schedule: appState.schedule, tasks: appState.tasks)
+            } else if !otherEnabled {
+                ReminderScheduler.removeAll()
             }
         }
     }

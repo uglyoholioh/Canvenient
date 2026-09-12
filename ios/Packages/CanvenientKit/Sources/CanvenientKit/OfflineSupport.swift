@@ -1,7 +1,10 @@
 import Foundation
 
 /// Disk cache of the last successful API responses, so the app remains
-/// useful without a connection to the hosted backend (e.g. Tailscale off).
+/// useful without a connection to the hosted backend (e.g. Tailscale off)
+/// and home-screen widgets can render without talking to the server. Lives
+/// in the app-group container when available so the widget extension can
+/// read the same snapshots.
 public final class OfflineCache {
     public static let shared = OfflineCache()
 
@@ -10,8 +13,21 @@ public final class OfflineCache {
     private let decoder = JSONDecoder()
 
     private init() {
-        let support = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
-        directory = support?.appendingPathComponent("offline-cache", isDirectory: true)
+        if let group = SharedStore.containerURL {
+            let target = group.appendingPathComponent("offline-cache", isDirectory: true)
+            // One-time migration from the pre-app-group location so a fresh
+            // build doesn't lose the cache an earlier version filled.
+            if !FileManager.default.fileExists(atPath: target.path),
+               let legacy = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first?
+                   .appendingPathComponent("offline-cache", isDirectory: true),
+               FileManager.default.fileExists(atPath: legacy.path) {
+                try? FileManager.default.moveItem(at: legacy, to: target)
+            }
+            directory = target
+        } else {
+            directory = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first?
+                .appendingPathComponent("offline-cache", isDirectory: true)
+        }
         if let directory {
             try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         }
@@ -24,6 +40,7 @@ public final class OfflineCache {
     public func save<T: Encodable>(_ value: T, key: String) {
         guard let url = url(forKey: key), let data = try? encoder.encode(value) else { return }
         try? data.write(to: url, options: .atomic)
+        SharedStore.lastSyncDate = Date()
     }
 
     public func load<T: Decodable>(_ type: T.Type, key: String) -> T? {

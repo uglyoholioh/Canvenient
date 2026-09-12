@@ -51,11 +51,15 @@ final class AppState: ObservableObject {
         let baseURL = UserDefaults.standard.string(forKey: "serverURL") ?? "https://olisdesktop.tail7ecaad.ts.net"
         api = APIClient(baseURL: baseURL, tokenProvider: { nil })
         api.tokenProvider = { [weak self] in self?.token }
+        // Widgets (and a fresh install of the app) read the server location
+        // from the shared suite; keep it mirrored from day one.
+        SharedStore.defaults.set(baseURL, forKey: SharedStore.serverURLKey)
     }
 
     func updateServerURL(_ url: String) {
         serverURL = url
         api = APIClient(baseURL: url, tokenProvider: { [weak self] in self?.token })
+        SharedStore.defaults.set(url, forKey: SharedStore.serverURLKey)
     }
 
     private func storeToken(_ newToken: String?) {
@@ -103,6 +107,9 @@ final class AppState: ObservableObject {
         user = response.user
         session = .loggedIn
         await refreshAll()
+        // Ask right after a successful sign-in, when the reason for the
+        // prompt is obvious — reminders are pointless without authorization.
+        await ReminderScheduler.requestAuthorization()
     }
 
     func signUp(email: String, password: String, name: String?) async throws {
@@ -111,6 +118,7 @@ final class AppState: ObservableObject {
         user = response.user
         session = .loggedIn
         await refreshAll()
+        await ReminderScheduler.requestAuthorization()
     }
 
     func signOut() {
@@ -125,6 +133,7 @@ final class AppState: ObservableObject {
         assignments = [:]
         offline = false
         sidebarOpen = false
+        ReminderScheduler.removeAll()
         OfflineCache.shared.clear()
         session = .loggedOut
         Task { await LiveActivityController.shared.endAll() }
@@ -189,6 +198,7 @@ final class AppState: ObservableObject {
             scheduleLoaded = true
             offline = false
             OfflineCache.shared.save(schedule, key: "schedule")
+            ReminderScheduler.regenerate(schedule: schedule, tasks: tasks)
             await LiveActivityController.shared.sync(schedule: schedule, client: api)
         } catch {
             if schedule.classes.isEmpty,
@@ -200,12 +210,16 @@ final class AppState: ObservableObject {
         }
     }
 
-    func refreshTasks() async {
+    func refreshTasks(skipQueueDrain: Bool = false) async {
         do {
             tasks = try await api.tasks()
             tasksLoaded = true
             offline = false
             OfflineCache.shared.save(tasks, key: "tasks")
+            ReminderScheduler.regenerate(schedule: schedule, tasks: tasks)
+            if !skipQueueDrain {
+                await drainTaskQueue()
+            }
         } catch {
             if tasks.isEmpty,
                let cached: [TaskOut] = OfflineCache.shared.load([TaskOut].self, key: "tasks") {
@@ -214,6 +228,62 @@ final class AppState: ObservableObject {
             }
             tasksLoaded = tasksLoaded
         }
+    }
+
+    /// Replays writes queued while offline, in order, after a successful
+    /// sync. Stops at the first unreachable call so partially-replayed
+    /// queues resume in order next time; 404s on delete/complete are
+    /// treated as success (the task is gone on the server anyway).
+    private func drainTaskQueue() async {
+        let ops = TaskMutationQueue.shared.all
+        guard !ops.isEmpty else { return }
+        var drainedAny = false
+        for op in ops {
+            do {
+                switch op.kind {
+                case .create:
+                    guard let payload = op.payload else {
+                        TaskMutationQueue.shared.remove(id: op.id)
+                        continue
+                    }
+                    let created = try await api.createTask(payload)
+                    if op.markDone {
+                        _ = try? await api.updateTask(created.id, payload: ["status": "done"])
+                    }
+                case .complete:
+                    if let id = op.taskId {
+                        _ = try await api.updateTask(id, payload: ["status": op.markDone ? "done" : "todo"])
+                    }
+                case .delete:
+                    if let id = op.taskId {
+                        try await api.deleteTask(id)
+                    }
+                }
+                TaskMutationQueue.shared.remove(id: op.id)
+                drainedAny = true
+            } catch {
+                if case APIError.unauthorized = error {
+                    // Session died while ops waited; sign-out clears the
+                    // queue, so just stop here until that resolves.
+                    return
+                }
+                if op.kind != .create, isNotFound(error) {
+                    TaskMutationQueue.shared.remove(id: op.id)
+                    continue
+                }
+                offline = true
+                return
+            }
+        }
+        if drainedAny {
+            // Re-sync so locally-mirrored rows pick up their real server ids.
+            await refreshTasks(skipQueueDrain: true)
+        }
+    }
+
+    private func isNotFound(_ error: Error) -> Bool {
+        if case APIError.server(let message) = error, message.contains("404") { return true }
+        return false
     }
 
     /// Arrivals: hosted backend first, then the public relay straight from
@@ -270,8 +340,24 @@ final class AppState: ObservableObject {
     // MARK: Tasks
 
     func createTask(_ payload: TaskCreate) async throws {
-        _ = try await api.createTask(payload)
-        await refreshTasks()
+        do {
+            _ = try await api.createTask(payload)
+            await refreshTasks()
+        } catch {
+            if case APIError.unauthorized = error { throw error }
+            // Offline: keep the row visible under a phantom id and queue
+            // the create for replay when the backend is reachable again.
+            let localId = TaskMutationQueue.shared.nextLocalTaskId()
+            TaskMutationQueue.shared.enqueue(QueuedTaskOp(kind: .create, localId: localId, payload: payload))
+            tasks.insert(phantomTask(from: payload, id: localId), at: 0)
+            offline = true
+        }
+    }
+
+    private func phantomTask(from payload: TaskCreate, id: Int) -> TaskOut {
+        TaskOut(id: id, title: payload.title, description: payload.description,
+                status: "todo", priority_manual: payload.priority_manual,
+                due_at_override: payload.due_at_override, module_id: payload.module_id)
     }
 
     func setTaskDone(_ task: TaskOut, done: Bool) async {
@@ -280,7 +366,21 @@ final class AppState: ObservableObject {
         do {
             _ = try await api.updateTask(task.id, payload: ["status": done ? "done" : "todo"])
         } catch {
-            tasks[index].status = task.status
+            if case APIError.unauthorized = error {
+                tasks[index].status = task.status
+                return
+            }
+            // Offline: the optimistic state stands and the write queues.
+            // A phantom task's queued create is updated in place so replay
+            // produces one correctly-done task, not two ops on a row the
+            // server has never seen.
+            if task.id < 0, var op = TaskMutationQueue.shared.opWithLocalId(task.id) {
+                op.markDone = done
+                TaskMutationQueue.shared.update(op)
+            } else if task.id >= 0 {
+                TaskMutationQueue.shared.enqueue(QueuedTaskOp(kind: .complete, taskId: task.id, markDone: done))
+            }
+            offline = true
         }
         if done {
             try? await Task.sleep(nanoseconds: 900_000_000)
@@ -290,7 +390,17 @@ final class AppState: ObservableObject {
 
     func deleteTask(_ task: TaskOut) async {
         tasks.removeAll { $0.id == task.id }
-        try? await api.deleteTask(task.id)
+        do {
+            try await api.deleteTask(task.id)
+        } catch {
+            if case APIError.unauthorized = error { return }
+            if task.id < 0 {
+                // Never existed server-side: just drop the queued create.
+                TaskMutationQueue.shared.removeCreate(localId: task.id)
+            } else {
+                TaskMutationQueue.shared.enqueue(QueuedTaskOp(kind: .delete, taskId: task.id))
+            }
+        }
     }
 
     // MARK: Live activity entry points

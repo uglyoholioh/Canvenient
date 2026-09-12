@@ -7,8 +7,10 @@ struct DashboardView: View {
     @EnvironmentObject private var appState: AppState
 
     @AppStorage("canvenient.isb.stop") private var selectedStop = "COM3"
+    @AppStorage("canvenient.setupPromptDismissed") private var setupDismissed = false
     @State private var arrivals: BusArrivalsResponse?
     @State private var clock = Date()
+    @State private var showingImport = false
 
     private let timer = Timer.publish(every: 30, on: .main, in: .common).autoconnect()
 
@@ -18,6 +20,9 @@ struct DashboardView: View {
                 VStack(alignment: .leading, spacing: 12) {
                     if let week = appState.academicWeek {
                         SectionLabel(text: week.formatted)
+                    }
+                    if showsSetupPrompt {
+                        setupCard
                     }
                     upNextWidget
                     todayWidget
@@ -35,11 +40,80 @@ struct DashboardView: View {
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) { SidebarToggle() }
             }
+            .sheet(isPresented: $showingImport) { ImportSheet() }
             .task { await refresh() }
             .onReceive(timer) { clock = $0; Task { await refreshBus() } }
             .refreshable { await refresh() }
             .onChange(of: selectedStop) { _, _ in Task { await refreshBus() } }
         }
+    }
+
+    /// First-run hand-off: a brand-new account lands on an empty app, so
+    /// point at the two setup steps that make it useful. Dismissible; it
+    /// also disappears on its own once a timetable exists.
+    private var showsSetupPrompt: Bool {
+        !setupDismissed && appState.scheduleLoaded && appState.schedule.classes.isEmpty
+    }
+
+    private var setupCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 6) {
+                Image(systemName: "wand.and.stars")
+                    .font(.caption)
+                    .foregroundStyle(Theme.textMuted)
+                Text("Let's set things up")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(Theme.textH)
+                Spacer()
+                Button {
+                    setupDismissed = true
+                } label: {
+                    Image(systemName: "xmark")
+                        .font(.caption)
+                        .foregroundStyle(Theme.textMuted)
+                        .padding(4)
+                }
+                .buttonStyle(.plain)
+            }
+            Text("No timetable yet. Import it from NUSMods and the Today view fills itself in; connect Canvas to pull in modules and assignments.")
+                .font(.callout)
+                .foregroundStyle(Theme.textMuted)
+            HStack(spacing: 10) {
+                Button {
+                    showingImport = true
+                } label: {
+                    Text("Import timetable")
+                        .font(.callout.weight(.semibold))
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 8)
+                        .background(Theme.accent.opacity(0.16),
+                                    in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                .strokeBorder(Theme.accent, lineWidth: 1)
+                        )
+                        .foregroundStyle(Theme.accent)
+                }
+                .buttonStyle(.plain)
+                Button {
+                    appState.overlay = .settings
+                } label: {
+                    Text("Connect Canvas")
+                        .font(.callout.weight(.semibold))
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 8)
+                        .background(Theme.surface, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                .strokeBorder(Theme.borderStrong, lineWidth: 1)
+                        )
+                        .foregroundStyle(Theme.text)
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(14)
+        .themeCard()
     }
 
     private func refresh() async {

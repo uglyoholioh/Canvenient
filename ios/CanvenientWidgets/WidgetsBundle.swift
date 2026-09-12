@@ -7,6 +7,9 @@ import CanvenientKit
 struct CanvenientWidgetsBundle: WidgetBundle {
     var body: some Widget {
         ClassLiveActivity()
+        NextClassWidget()
+        TasksWidget()
+        BusWidget()
     }
 }
 

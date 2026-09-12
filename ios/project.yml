@@ -32,6 +32,11 @@ targets:
         PRODUCT_NAME: Canvenient
         TARGETED_DEVICE_FAMILY: "1"
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+    entitlements:
+      path: Canvenient.entitlements
+      properties:
+        com.apple.security.application-groups:
+          - group.com.oli.canvenient.shared
     info:
       path: Canvenient/Info.plist
       properties:
@@ -63,6 +68,11 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.oli.canvenient.ios.widgets
         PRODUCT_NAME: CanvenientWidgets
         SKIP_INSTALL: true
+    entitlements:
+      path: CanvenientWidgets.entitlements
+      properties:
+        com.apple.security.application-groups:
+          - group.com.oli.canvenient.shared
     info:
       path: CanvenientWidgets/Info.plist
       properties:

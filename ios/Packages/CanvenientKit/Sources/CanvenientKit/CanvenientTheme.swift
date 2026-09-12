@@ -43,9 +43,21 @@ public struct ThemePalette {
 public enum Theme {
     public static let modeKey = "theme"
 
+    /// App writes its own defaults first, shared suite second (so widgets and
+    /// a re-installed app can pick the theme up); getter prefers the local
+    /// value and falls back to the mirrored one.
     public static var mode: ThemeMode {
-        get { ThemeMode(rawValue: UserDefaults.standard.string(forKey: modeKey) ?? "") ?? .graphite }
-        set { UserDefaults.standard.set(newValue.rawValue, forKey: modeKey) }
+        get {
+            if let raw = UserDefaults.standard.string(forKey: modeKey),
+               let mode = ThemeMode(rawValue: raw) { return mode }
+            if let raw = SharedStore.defaults.string(forKey: modeKey),
+               let mode = ThemeMode(rawValue: raw) { return mode }
+            return .graphite
+        }
+        set {
+            UserDefaults.standard.set(newValue.rawValue, forKey: modeKey)
+            SharedStore.defaults.set(newValue.rawValue, forKey: modeKey)
+        }
     }
 
     static var current: ThemePalette { palettes[mode] ?? palettes[.graphite]! }
@@ -122,6 +134,8 @@ public enum Preferences {
     public static let isbAutoRefresh = "isbAutoRefresh"
     public static let hapticsEnabled = "hapticsEnabled"
     public static let liveActivityEnabled = "liveActivityEnabled"
+    public static let classRemindersEnabled = "classRemindersEnabled"
+    public static let taskRemindersEnabled = "taskRemindersEnabled"
 
     /// Reads a boolean preference; unset keys return the supplied default.
     public static func bool(_ key: String, default defaultValue: Bool) -> Bool {

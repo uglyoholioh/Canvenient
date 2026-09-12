@@ -56,7 +56,7 @@ struct RootView: View {
         HStack(spacing: 8) {
             Image(systemName: "wifi.slash")
                 .font(.caption)
-            Text("Offline — showing last synced data")
+            Text(bannerText)
                 .font(.caption)
                 .fontWeight(.medium)
             Spacer()
@@ -68,6 +68,13 @@ struct RootView: View {
         .overlay(alignment: .bottom) {
             Rectangle().fill(Theme.borderStrong).frame(height: 1)
         }
+    }
+
+    private var bannerText: String {
+        if let synced = SharedStore.lastSyncDate {
+            return "Offline — last synced \(synced.formatted(date: .omitted, time: .shortened))"
+        }
+        return "Offline — showing last synced data"
     }
 
     private var tabs: some View {

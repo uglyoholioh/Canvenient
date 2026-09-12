@@ -9,6 +9,7 @@ struct CanvenientApp: App {
 
     init() {
         BackgroundRefresh.registerHandler()
+        ReminderScheduler.installForegroundPresenter()
     }
 
     var body: some Scene {
