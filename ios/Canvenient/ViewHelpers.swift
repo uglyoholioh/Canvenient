@@ -44,10 +44,8 @@ struct SectionLabel: View {
     let text: String
 
     var body: some View {
-        Text(text.uppercased())
-            .font(.caption2)
-            .fontWeight(.semibold)
-            .kerning(0.08)
+        Text(text)
+            .font(.subheadline)
             .foregroundStyle(Theme.textMuted)
     }
 }

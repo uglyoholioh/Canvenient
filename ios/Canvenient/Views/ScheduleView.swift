@@ -27,20 +27,16 @@ struct ScheduleView: View {
                 if dayItems.isEmpty {
                     emptyState
                 } else {
-                    ScrollView {
-                        VStack(alignment: .leading, spacing: 10) {
-                            if let week = appState.academicWeek {
-                                SectionLabel(text: week.formatted)
-                                    .padding(.horizontal, 16)
-                            }
-                            ForEach(dayItems) { item in
-                                ScheduleCard(item: item, now: clock)
-                                    .onTapGesture { detailItem = item }
-                            }
+                    List {
+                        if let week = appState.academicWeek {
+                            SectionLabel(text: week.formatted)
                         }
-                        .padding(.horizontal, 16)
-                        .padding(.bottom, 24)
+                        ForEach(dayItems) { item in
+                            ScheduleCard(item: item, now: clock)
+                                .onTapGesture { detailItem = item }
+                        }
                     }
+                    .listStyle(.plain)
                 }
             }
             .background(Theme.bg)
@@ -118,18 +114,11 @@ struct WeekStrip: View {
                             .foregroundStyle(isSelected ? Theme.textH : Theme.textMuted)
                         Text("\(SGTime.calendar.component(.day, from: day))")
                             .font(.headline)
-                            .foregroundStyle(isSelected ? Theme.textH : Theme.text)
+                            .fontWeight(isSelected ? .bold : .regular)
+                            .foregroundStyle(isSelected ? Theme.accent : Theme.text)
                     }
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 8)
-                    .background(
-                        isSelected ? Theme.accent.opacity(0.22) : Theme.surface,
-                        in: RoundedRectangle(cornerRadius: 8, style: .continuous)
-                    )
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 8, style: .continuous)
-                            .strokeBorder(isSelected ? Theme.accent : Theme.border, lineWidth: 1)
-                    )
                 }
                 .buttonStyle(.plain)
             }
@@ -167,8 +156,7 @@ struct ScheduleCard: View {
                         .foregroundStyle(Theme.textH)
                     if let classNo = item.classNo {
                         Text(classNo)
-                            .font(.system(size: 10, weight: .semibold))
-                            .kerning(0.04)
+                            .font(.caption2)
                             .padding(.horizontal, 5)
                             .padding(.vertical, 2)
                             .background(Theme.surfaceHover, in: RoundedRectangle(cornerRadius: 4))
@@ -187,18 +175,16 @@ struct ScheduleCard: View {
                         .foregroundStyle(Theme.textMuted)
                 }
                 HStack(spacing: 8) {
-                    Text(item.subtitle.uppercased())
-                        .font(.system(size: 10, weight: .semibold))
-                        .kerning(0.08)
+                    Text(item.subtitle)
+                        .font(.caption)
                         .foregroundStyle(Theme.textMuted)
                     Label(item.venue, systemImage: "mappin")
-                        .font(.system(size: 11))
+                        .font(.caption)
                         .foregroundStyle(Theme.textMuted)
                         .lineLimit(1)
                     if !item.attendInPerson {
-                        Text("ONLINE")
-                            .font(.system(size: 9, weight: .bold))
-                            .kerning(0.08)
+                        Text("Online")
+                            .font(.caption)
                             .foregroundStyle(Theme.info)
                     }
                     Spacer(minLength: 0)
@@ -208,7 +194,7 @@ struct ScheduleCard: View {
             .padding(.vertical, 12)
             .padding(.trailing, 12)
         }
-        .themeCard(fill: isCurrent ? Theme.surfaceWarm : Theme.surface)
+        .listRowBackground(isCurrent ? Theme.surfaceWarm : nil)
         .opacity(isPast ? 0.55 : 1)
     }
 
@@ -216,16 +202,14 @@ struct ScheduleCard: View {
     private var statusBadge: some View {
         if isCurrent {
             HStack(spacing: 4) {
-                Circle().fill(Theme.accentGold).frame(width: 5, height: 5)
-                Text("NOW")
-                    .font(.system(size: 9, weight: .bold))
-                    .kerning(0.08)
+                Image(systemName: "clock.fill").font(.caption2)
+                Text("Now")
+                    .font(.caption)
             }
             .foregroundStyle(Theme.accentGold)
         } else if !isPast, item.start.timeIntervalSince(now) <= 90 * 60 {
-            Text("SOON")
-                .font(.system(size: 9, weight: .bold))
-                .kerning(0.08)
+            Text("Soon")
+                .font(.caption)
                 .foregroundStyle(Theme.warning)
         }
     }
@@ -300,7 +284,7 @@ struct ClassDetailSheet: View {
                     }
                 }
             }
-            .themedForm()
+            .listStyle(.insetGrouped)
             .navigationTitle(item.kind == .exam ? "Exam" : "Class")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -385,7 +369,7 @@ struct ImportSheet: View {
                     }
                 }
             }
-            .themedForm()
+            .listStyle(.insetGrouped)
             .navigationTitle("Import timetable")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

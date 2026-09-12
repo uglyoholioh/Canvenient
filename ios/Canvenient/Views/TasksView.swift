@@ -60,7 +60,7 @@ struct TasksView: View {
                 }
             }
         }
-        .themedForm()
+        .listStyle(.insetGrouped)
     }
 
     private var taskSections: [(title: String, tasks: [TaskOut])] {
@@ -141,19 +141,18 @@ struct TaskRow: View {
         }
     }
 
+    @ViewBuilder
     private var priorityDot: some View {
         let priority = task.priority_manual ?? "medium"
-        return Circle()
-            .fill(priorityColor(priority))
-            .frame(width: 8, height: 8)
-    }
-
-    private func priorityColor(_ priority: String) -> Color {
         switch priority {
-        case "urgent": return Theme.error
-        case "high": return Theme.warning
-        case "low": return Theme.textMuted
-        default: return Theme.info
+        case "urgent":
+            Image(systemName: "exclamationmark.3").foregroundStyle(Theme.error).font(.caption)
+        case "high":
+            Image(systemName: "exclamationmark.2").foregroundStyle(Theme.warning).font(.caption)
+        case "low":
+            Image(systemName: "arrow.down").foregroundStyle(Theme.textMuted).font(.caption)
+        default:
+            EmptyView()
         }
     }
 

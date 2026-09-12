@@ -266,10 +266,8 @@ struct WidgetCard<Content: View, Footer: View>: View {
                 Image(systemName: systemImage)
                     .font(.caption)
                     .foregroundStyle(Theme.textMuted)
-                Text(title.uppercased())
-                    .font(.caption2)
-                    .fontWeight(.semibold)
-                    .kerning(0.08)
+                Text(title)
+                    .font(.subheadline)
                     .foregroundStyle(Theme.textMuted)
                 Spacer()
             }

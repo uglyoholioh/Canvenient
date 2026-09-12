@@ -68,7 +68,7 @@ struct VenuesView: View {
                 }
             }
         }
-        .themedForm()
+        .listStyle(.insetGrouped)
     }
 
     private func errorView(_ message: String) -> some View {

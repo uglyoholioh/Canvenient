@@ -62,12 +62,10 @@ struct ModulesView: View {
             } header: {
                 Text("Courses")
             } footer: {
-                Text(appState.modulesFromCanvas
-                     ? "Sourced from Canvas through your Canvenient backend. Tap a course for its upcoming assignments."
-                     : "Taken from your timetable. Add your Canvas token in Settings to pull in assignments, announcements and grades.")
+                Text("Sourced from Canvas via your Canvas token. Tap a course for its upcoming assignments.")
             }
         }
-        .themedForm()
+        .listStyle(.insetGrouped)
     }
 
     private var emptyState: some View {
@@ -75,7 +73,7 @@ struct ModulesView: View {
             Label(!appState.modulesLoaded && errorMessage == nil ? "Loading modules…" : "No modules yet", systemImage: "book.closed")
         } description: {
             if !(!appState.modulesLoaded && errorMessage == nil) {
-                Text("Canvas courses sync from the desktop app (Settings › Canvas token).")
+                Text("Add your Canvas token in Settings and your Canvas courses will appear here, with assignments from Canvas LMS.")
             }
         } actions: {
             if errorMessage != nil {

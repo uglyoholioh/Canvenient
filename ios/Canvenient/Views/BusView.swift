@@ -73,7 +73,7 @@ struct BusView: View {
                 }
             }
         }
-        .themedForm()
+        .listStyle(.insetGrouped)
         .searchable(text: $searchText, prompt: "Search stops")
         .navigationTitle("Bus")
         .tint(Theme.accent)

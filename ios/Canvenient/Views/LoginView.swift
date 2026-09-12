@@ -88,9 +88,8 @@ struct LoginView: View {
                         showingServerSheet = true
                     } label: {
                         HStack {
-                            Text("SERVER")
-                                .font(.system(size: 10, weight: .semibold))
-                                .kerning(0.08)
+                            Text("Server")
+                                .font(.caption)
                                 .foregroundStyle(Theme.textMuted)
                             Spacer()
                             Text(appState.serverURL.replacingOccurrences(of: "https://", with: ""))
@@ -107,9 +106,8 @@ struct LoginView: View {
                 }
 
                 Spacer()
-                Text("CANVENIENT FOR IPHONE · COMPANION TO THE MACOS WORKBENCH")
-                    .font(.system(size: 9.5, weight: .medium).monospaced())
-                    .kerning(0.08)
+                Text("Canvenient for iPhone · Companion to the macOS workbench")
+                    .font(.caption)
                     .foregroundStyle(Theme.textMuted)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.bottom, 6)

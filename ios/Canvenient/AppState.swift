@@ -126,16 +126,11 @@ final class AppState: ObservableObject {
     func refreshModules(force: Bool = false) async {
         if modulesLoaded && !force { return }
         do {
-            let canvasModules = try await api.academicModules()
-            if canvasModules.isEmpty {
-                // No Canvas courses (no token, or none selected): still show
-                // the courses the timetable knows about.
-                modules = Self.timetableModules(from: schedule)
-                modulesFromCanvas = false
-            } else {
-                modules = canvasModules
-                modulesFromCanvas = true
-            }
+            // Canvas is the source of truth, exactly like the desktop:
+            // GET /academic-modules syncs the caller's Canvas courses into
+            // academic_modules using the Canvas token stored server-side.
+            modules = try await api.academicModules()
+            modulesFromCanvas = true
             if let allAssignments = try? await api.canvasAssignments() {
                 assignments = Dictionary(grouping: allAssignments, by: { $0.course_code ?? "" })
             }
@@ -143,22 +138,6 @@ final class AppState: ObservableObject {
         } catch {
             modulesLoaded = modulesLoaded // Keep state trigger
         }
-    }
-
-    /// Derive courses from timetable rows when Canvas offers nothing.
-    static func timetableModules(from schedule: ScheduleResponse) -> [AcademicModule] {
-        var seen: [String: AcademicModule] = [:]
-        for klass in schedule.classes {
-            guard seen[klass.module_code] == nil else { continue }
-            seen[klass.module_code] = AcademicModule(
-                id: -1 - seen.count,
-                module_code: klass.module_code,
-                name: klass.module_name,
-                color: klass.module_color,
-                is_selected: true
-            )
-        }
-        return Array(seen.values)
     }
 
     func updateCanvasToken(_ token: String) async throws {

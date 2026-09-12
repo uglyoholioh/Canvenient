@@ -149,9 +149,8 @@ struct LockScreenClassCard: View {
                             .font(.headline)
                             .bold()
                             .foregroundStyle(Theme.textH)
-                        Text(context.attributes.lessonType.uppercased())
-                            .font(.system(size: 10, weight: .semibold))
-                            .kerning(0.08)
+                        Text(context.attributes.lessonType)
+                            .font(.caption)
                             .foregroundStyle(Theme.textMuted)
                     }
                 }
