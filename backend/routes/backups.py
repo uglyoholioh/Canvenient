@@ -1,9 +1,12 @@
 """Backup listing and restore endpoints for the local database."""
 
+import hashlib
+from pathlib import Path
+
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
-from backup import backup_database, list_backups, restore_database
+from backup import backup_database, backup_dir_for, list_backups, restore_database
 from database import db
 from dependencies import CurrentUser
 from migrations import run_migrations
@@ -29,24 +32,25 @@ async def restore_database_backup(payload: RestoreRequest, current_user: Current
     if safety_copy is None:
         raise HTTPException(status_code=409, detail="No live database to restore from.")
 
-    import hashlib
-    import os
-
     await db.disconnect()
     try:
-        _db_file = os.environ.get("DATABASE_URL", "").split("///", 1)[-1]
+        # Integrity logging covers only files inside the backups directory
+        # (same containment rule restore_database enforces): the
+        # request-supplied name is reduced to a bare filename, resolved, and
+        # required to sit inside the backup dir before it is ever opened.
+        backup_dir = backup_dir_for()
+        backup_file = None
+        integrity = "unavailable"
+        if backup_dir is not None:
+            candidate = (backup_dir / Path(payload.name).name).resolve()
+            if candidate.parent == backup_dir.resolve() and candidate.is_file():
+                backup_file = candidate
+                with open(candidate, "rb") as fh:
+                    integrity = hashlib.sha256(fh.read()).hexdigest()[:8]
 
-        def _h(f):
-            if not os.path.exists(f):
-                return "missing"
-            with open(f, "rb") as fh:
-                return hashlib.md5(fh.read()).hexdigest()[:8]
-
-        print(
-            f"[restore] target={_db_file} before_md5={_h(_db_file)} backup_md5={_h(os.path.join('backups', payload.name))}"
-        )
+        print(f"[restore] backup={backup_file or 'unavailable'} integrity={integrity}")
         ok = restore_database(payload.name)
-        print(f"[restore] ok={ok} after_md5={_h(_db_file)}")
+        print(f"[restore] ok={ok}")
         if not ok:
             raise HTTPException(status_code=404, detail="Backup not found.")
         await db.connect()

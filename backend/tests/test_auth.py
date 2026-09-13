@@ -44,7 +44,8 @@ async def test_login_success(client: AsyncClient, auth):
 async def test_login_invalid_password_fails(client: AsyncClient, auth):
     """Test logging in with wrong password returns 401 unauthorized."""
     _, _, email = auth
-    resp = await client.post("/auth/login", json={"email": email, "password": "WrongPassword123!"})
+    wrong_password = TEST_PASSWORD + "-wrong"
+    resp = await client.post("/auth/login", json={"email": email, "password": wrong_password})
     assert resp.status_code == 401
 
 

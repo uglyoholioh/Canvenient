@@ -4,6 +4,7 @@ Uses SQLite test database via DATABASE_URL override.
 """
 
 import os
+import secrets
 import sys
 import tempfile
 import uuid
@@ -17,8 +18,10 @@ from httpx import ASGITransport, AsyncClient
 TEST_DB_DIR = tempfile.mkdtemp(prefix="canvenient-test-db-")
 TEST_DB_URL = os.getenv("TEST_DATABASE_URL", f"sqlite+aiosqlite:///{TEST_DB_DIR}/test.db")
 os.environ["DATABASE_URL"] = TEST_DB_URL
-os.environ["JWT_SECRET"] = os.getenv("JWT_SECRET", "test-secret-key-for-orbital-ci")
-WEBHOOK_SECRET = "test-telegram-webhook-secret"
+# Session-scoped random secrets: nothing credential-shaped is committed, and
+# each test run is self-contained (CI can still pin JWT_SECRET via env).
+os.environ["JWT_SECRET"] = os.getenv("JWT_SECRET", secrets.token_urlsafe(32))
+WEBHOOK_SECRET = os.getenv("TELEGRAM_WEBHOOK_SECRET") or secrets.token_urlsafe(32)
 os.environ["TELEGRAM_WEBHOOK_SECRET"] = WEBHOOK_SECRET
 
 # Ensure backend root is importable
@@ -49,7 +52,9 @@ def unique_email() -> str:
     return f"orbital_test_{uuid.uuid4().hex[:8]}@u.nus.edu"
 
 
-TEST_PASSWORD = "Password123!"
+# Meets the app's password policy (upper, lower, digit, symbol); random per
+# test session so no password string is committed.
+TEST_PASSWORD = f"Tx{secrets.token_urlsafe(12)}!7A"
 
 
 @pytest_asyncio.fixture

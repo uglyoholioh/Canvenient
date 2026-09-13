@@ -1,5 +1,7 @@
 import asyncio
 import json
+import os
+import secrets
 from datetime import datetime, timedelta
 
 import bcrypt
@@ -11,9 +13,10 @@ async def create_demo_data():
     await db.connect()
     print("Connected to the database.")
 
-    # 1. Create User
+    # 1. Create User. The demo password is never committed: set DEMO_PASSWORD
+    # to choose one, otherwise a random one is generated and printed below.
     email = "demo@canvenient.app"
-    password = "password123"
+    password = os.getenv("DEMO_PASSWORD") or secrets.token_urlsafe(12)
     hashed_password = bcrypt.hashpw(password.encode(), bcrypt.gensalt())
 
     user = await db.fetch_one("SELECT * FROM users WHERE email = :email", {"email": email})
@@ -184,7 +187,7 @@ async def create_demo_data():
     )
 
     await db.disconnect()
-    print("Done! Demo data is ready. You can log in with demo@canvenient.app / password123")
+    print(f"Done! Demo data is ready. You can log in with {email} / {password}")
 
 
 if __name__ == "__main__":
