@@ -19,7 +19,7 @@ serde_json = "1.0"
 serde = { version = "1.0", features = ["derive"] }
 reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "json"] }
 base64 = "0.22"
-tauri = { version = "1.8.1", features = [ "notification-all", "dialog-all", "window-all", "shell-execute", "shell-sidecar", "global-shortcut"] }
+tauri = { version = "1.8.1", features = [ "notification-all", "dialog-all", "window-all", "shell-execute", "shell-sidecar", "global-shortcut", "system-tray", "icon-png"] }
 
 [target.'cfg(target_os = "macos")'.dependencies]
 cocoa = "0.24"

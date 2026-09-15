@@ -14,8 +14,74 @@ use std::{
 use tauri::{
     api::process::{Command, CommandChild, CommandEvent},
     AboutMetadata, CustomMenuItem, GlobalShortcutManager, Manager, Menu, MenuItem,
-    PhysicalPosition, PhysicalSize, State, Submenu, WindowEvent,
+    PhysicalPosition, PhysicalSize, State, Submenu, SystemTray, SystemTrayEvent,
+    SystemTrayMenu, SystemTrayMenuItem, WindowEvent,
 };
+
+const TRAY_PANEL_LABEL: &str = "tray-panel";
+const TRAY_CHIP_LABEL: &str = "tray-chip";
+const TRAY_PANEL_WIDTH: f64 = 320.0;
+const TRAY_PANEL_HEIGHT: f64 = 520.0;
+
+struct AlarmActive(Mutex<bool>);
+
+fn tray_menu() -> SystemTrayMenu {
+    SystemTrayMenu::new()
+        .add_item(CustomMenuItem::new("tray-open", "Open Canvenient"))
+        .add_item(CustomMenuItem::new("tray-focus", "Start Focus (25 min)"))
+        .add_native_item(SystemTrayMenuItem::Separator)
+        .add_item(CustomMenuItem::new("tray-quit", "Quit Canvenient"))
+}
+
+// Shows the tray panel anchored under the tray icon (clamped to stay on
+// screen horizontally).
+fn show_tray_panel_at(app: &tauri::AppHandle, icon_x: f64, icon_y: f64, icon_h: f64) {
+    if let Some(panel) = app.get_window(TRAY_PANEL_LABEL) {
+        let _ = panel.set_position(PhysicalPosition::new(
+            (icon_x - TRAY_PANEL_WIDTH / 2.0).round() as i32,
+            (icon_y + icon_h + 6.0).round() as i32,
+        ));
+        let _ = panel.show();
+        let _ = panel.set_focus();
+    }
+}
+
+fn toggle_tray_panel(app: &tauri::AppHandle) {
+    if let Some(panel) = app.get_window(TRAY_PANEL_LABEL) {
+        let visible = panel.is_visible().unwrap_or(false);
+        if visible {
+            let _ = panel.hide();
+        } else {
+            let _ = panel.show();
+            let _ = panel.set_focus();
+        }
+    }
+}
+
+#[tauri::command]
+fn set_tray_title(app: tauri::AppHandle, title: String) {
+    let _ = app.tray_handle().set_title(&title);
+}
+
+#[tauri::command]
+fn set_alarm_active(app: tauri::AppHandle, active: bool) {
+    if let Ok(mut flag) = app.state::<AlarmActive>().0.lock() {
+        *flag = active;
+    }
+}
+
+#[tauri::command]
+fn open_tray_panel(app: tauri::AppHandle) {
+    if let Some(panel) = app.get_window(TRAY_PANEL_LABEL) {
+        let _ = panel.show();
+        let _ = panel.set_focus();
+    }
+}
+
+#[tauri::command]
+fn hide_window(window: tauri::Window) {
+    let _ = window.hide();
+}
 
 // Remote-API mode performs API calls on the Rust side: macOS 26's WebKit
 // withholds cross-origin fetch responses from Tauri v1's custom-scheme
@@ -331,15 +397,53 @@ fn main() {
         .enable_macos_default_menu(false)
         .manage(BackendProcess(Mutex::new(None)))
         .manage(PendingCalendarFiles(Mutex::new(startup_calendar_files)))
+        .manage(AlarmActive(Mutex::new(false)))
+        .system_tray(SystemTray::new().with_menu(tray_menu()))
+        .on_system_tray_event(|app, event| match event {
+            SystemTrayEvent::LeftClick { position, size, .. } => {
+                show_tray_panel_at(app, position.x, position.y, size.height);
+            }
+            SystemTrayEvent::MenuItemClick { id, .. } => match id.as_str() {
+                "tray-open" => {
+                    if let Some(window) = app.get_window("main") {
+                        let _ = window.show();
+                        let _ = window.set_focus();
+                    }
+                }
+                "tray-focus" => {
+                    if let Some(panel) = app.get_window(TRAY_PANEL_LABEL) {
+                        let _ = panel.show();
+                        let _ = panel.set_focus();
+                    }
+                    if let Some(panel) = app.get_window(TRAY_PANEL_LABEL) {
+                        let _ = panel.emit("tray-start-focus", ());
+                    }
+                }
+                "tray-quit" => {
+                    app.exit(0);
+                }
+                _ => {}
+            },
+            _ => {}
+        })
         .invoke_handler(tauri::generate_handler![
             read_calendar_file,
             take_pending_calendar_files,
             remote_api_base_url,
-            remote_http
+            remote_http,
+            set_tray_title,
+            set_alarm_active,
+            open_tray_panel,
+            hide_window
         ])
         .setup(|app| {
             #[cfg(target_os = "macos")]
             install_open_file_handler(&app.handle());
+
+            // The tray shows the app icon; the countdown title is set from
+            // the webview while a focus timer runs.
+            let icon = tauri::Icon::Raw(include_bytes!("../icons/32x32.png").to_vec());
+            let _ = app.tray_handle().set_icon(icon);
 
             let config_dir = app
                 .path_resolver()
@@ -427,6 +531,24 @@ fn main() {
             let _ = event.window().emit("menu-action", event.menu_item_id().to_string());
         })
         .on_window_event(|event| {
+            // The tray panel hides itself on blur — unless an alarm is
+            // waiting for interaction, in which case it must stay visible.
+            if event.window().label() == TRAY_PANEL_LABEL {
+                if let WindowEvent::Focused(false) = event.event() {
+                    let alarm_active = event
+                        .window()
+                        .app_handle()
+                        .state::<AlarmActive>()
+                        .0
+                        .lock()
+                        .map(|flag| *flag)
+                        .unwrap_or(false);
+                    if !alarm_active {
+                        let _ = event.window().hide();
+                    }
+                }
+                return;
+            }
             if event.window().label() != "main" {
                 return;
             }

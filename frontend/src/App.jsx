@@ -5,6 +5,8 @@ import LoginForm from "./components/LoginForm";
 import AuthShell, { BrandMark } from "./components/AuthShell";
 import WorkspaceLayout from "./components/WorkspaceLayout";
 import GlobalToast from "./components/GlobalToast";
+import TrayPanel from "./tray/TrayPanel";
+import TrayChip from "./tray/TrayChip";
 import "./components/auth.css";
 
 import {
@@ -15,6 +17,17 @@ import {
   persistUser,
   getCurrentUser,
 } from "./api";
+
+// The tray panel and floating chip run in their own windows and render
+// outside the auth/workspace shell entirely — they read the stored token
+// directly and degrade to cached/empty data when signed out.
+const TRAY_ROUTE = window.location.hash.split("?")[0];
+
+function Root() {
+  if (TRAY_ROUTE === "#/tray") return <TrayPanel />;
+  if (TRAY_ROUTE === "#/tray-chip") return <TrayChip />;
+  return <App />;
+}
 
 function App() {
   const [token, setToken] = useState(() => getStoredToken());
@@ -138,4 +151,4 @@ function App() {
   );
 }
 
-export default App;
+export default Root;

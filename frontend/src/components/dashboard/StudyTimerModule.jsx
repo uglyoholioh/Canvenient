@@ -227,24 +227,28 @@ export default function StudyTimerModule({ token }) {
 
   // Restore a run that survived a restart, and flush any sessions that were
   // queued while the backend was unreachable. A restored run whose planned
-  // time already passed while the app was closed is logged at once.
+  // time already passed while the app was closed is logged at once. Deferred
+  // to a timeout so state updates happen outside the effect body.
   useEffect(() => {
     flushQueue(createFocusSession, token).catch(() => {});
-    const restored = loadRunning();
-    if (!restored?.startedAt) return;
-    const elapsed = Math.round((Date.now() - new Date(restored.startedAt).getTime()) / 1000);
-    const planned = restored.plannedMinutes || 25;
-    setDurationMinutes(planned);
-    setHasSession(true);
-    if (elapsed >= planned * 60) {
-      clearRunning();
-      setRemainingSeconds(0);
-      persistSession({ startedAt: restored.startedAt, plannedMinutes: planned, elapsedSeconds: planned * 60 });
-      return;
-    }
-    setRemainingSeconds(planned * 60 - elapsed);
-    startedAtRef.current = new Date(restored.startedAt).getTime();
-    setIsRunning(true);
+    const restoreTimer = window.setTimeout(() => {
+      const restored = loadRunning();
+      if (!restored?.startedAt) return;
+      const elapsed = Math.round((Date.now() - new Date(restored.startedAt).getTime()) / 1000);
+      const planned = restored.plannedMinutes || 25;
+      setDurationMinutes(planned);
+      setHasSession(true);
+      if (elapsed >= planned * 60) {
+        clearRunning();
+        setRemainingSeconds(0);
+        persistSession({ startedAt: restored.startedAt, plannedMinutes: planned, elapsedSeconds: planned * 60 });
+        return;
+      }
+      setRemainingSeconds(planned * 60 - elapsed);
+      startedAtRef.current = new Date(restored.startedAt).getTime();
+      setIsRunning(true);
+    }, 0);
+    return () => window.clearTimeout(restoreTimer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 

@@ -13109,3 +13109,240 @@ select.form-input {
   background: var(--surface-muted);
   font-weight: 600;
 }
+
+/* ─── Tray panel & floating chip (menu bar companion) ─── */
+
+.tray-panel {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 14px 16px;
+  background: var(--bg, var(--primary));
+  color: var(--text);
+  font-family: var(--font-sans);
+  overflow: hidden;
+  box-sizing: border-box;
+  user-select: none;
+}
+
+.tray-panel.is-alarm {
+  outline: 2px solid var(--text-h);
+  outline-offset: -2px;
+}
+
+.tray-offline {
+  font-size: 11px;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 6px;
+}
+
+.tray-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.tray-heading {
+  margin: 0;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.tray-row {
+  margin: 0;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.tray-row strong {
+  color: var(--text-h);
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tray-row span {
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.tray-row.is-muted {
+  color: var(--text-muted);
+}
+
+.tray-row .is-overdue {
+  color: var(--error);
+}
+
+.tray-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.tray-timer {
+  margin-top: auto;
+  align-items: center;
+  gap: 10px;
+  border-top: 1px solid var(--border);
+  padding-top: 12px;
+}
+
+.tray-countdown {
+  font-size: 52px;
+  font-weight: 200;
+  letter-spacing: -0.04em;
+  line-height: 1;
+  color: var(--text-h);
+  font-variant-numeric: tabular-nums;
+}
+
+.tray-minutes {
+  width: 72px;
+  padding: 4px 8px;
+  font: inherit;
+  font-size: 13px;
+  color: var(--text-h);
+  background: transparent;
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  text-align: center;
+}
+
+.tray-presets {
+  display: flex;
+  gap: 6px;
+}
+
+.tray-preset {
+  min-width: 40px;
+  padding: 4px 8px;
+  font: inherit;
+  font-size: 12px;
+  color: var(--text);
+  background: var(--surface-muted);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.tray-preset:hover,
+.tray-button:hover,
+.tray-link:hover {
+  border-color: var(--border-strong);
+}
+
+.tray-controls {
+  display: flex;
+  gap: 6px;
+}
+
+.tray-button {
+  padding: 5px 12px;
+  font: inherit;
+  font-size: 12px;
+  color: var(--text);
+  background: var(--surface-muted);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.tray-button.is-primary {
+  color: var(--text-inverse);
+  background: var(--text-h);
+  border-color: var(--text-h);
+  font-weight: 600;
+}
+
+.tray-button.is-danger {
+  color: var(--error);
+}
+
+.tray-stop {
+  margin-top: 2px;
+}
+
+.tray-sound {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.tray-sound select {
+  font: inherit;
+  font-size: 11px;
+  color: var(--text);
+  background: var(--surface-muted);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 2px 6px;
+}
+
+.tray-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  border-top: 1px solid var(--border);
+  padding-top: 10px;
+  font-size: 11px;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.tray-footer-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.tray-link {
+  padding: 2px 4px;
+  font: inherit;
+  font-size: 11px;
+  color: var(--text);
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.tray-chip {
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg, var(--primary));
+  color: var(--text-h);
+  font-family: var(--font-sans);
+  font-size: 20px;
+  font-weight: 300;
+  font-variant-numeric: tabular-nums;
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  cursor: grab;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+}
