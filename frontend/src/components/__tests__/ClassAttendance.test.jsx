@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { getClassContext, getCanvasCalendarEvents, getSchedule, updateClass } from "../../api";
+import { getClassContext, getSchedule, updateClass } from "../../api";
 import ClassContextDrawer from "../drawers/ClassContextDrawer";
 import Schedule from "../Schedule";
 import { scheduleItemsForDate } from "../scheduleUtils";
