@@ -144,6 +144,11 @@ class TestLegacyCopyMigration:
         await seed_study_session(user_id, status="completed", ended="2026-09-15 10:00:00")
         await seed_study_session(user_id, status="cancelled", ended="2026-09-15 11:00:00")
 
+        # Other test files may have already applied the whole MIGRATIONS list;
+        # reset just this entry's marker so the copy runs now, against rows
+        # seeded after that earlier run. Mirrors a real upgrade, where the
+        # migration sees sessions that already exist.
+        await db.execute(query="DELETE FROM _migrations WHERE name = '0003_focus_sessions_legacy_copy'")
         applied = await run_migrations()
         assert "0003_focus_sessions_legacy_copy" in applied
 
@@ -155,9 +160,9 @@ class TestLegacyCopyMigration:
         assert rows[0]["actual_seconds"] == 1500
         assert rows[0]["client_id"].startswith("legacy-")
 
-        # Re-running copies nothing new.
+        # Re-running copies nothing new (marker + NOT EXISTS guard).
         applied_again = await run_migrations()
-        assert "0003_focus_sessions_legacy_copy" not in applied_again
+        assert applied_again == []
         rows_again = await db.fetch_all(
             query="SELECT * FROM focus_sessions WHERE user_id = :user_id AND source = 'legacy'",
             values={"user_id": user_id},
