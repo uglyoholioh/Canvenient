@@ -481,6 +481,114 @@ async def list_canvas_assignments(
     return flat_list
 
 
+CALENDAR_EVENTS_LOOKBACK_DAYS = 14
+CALENDAR_EVENTS_LOOKAHEAD_DAYS = 180
+
+
+async def fetch_canvas_calendar_events(
+    client: httpx.AsyncClient, headers: dict, courses: list[dict[str, Any]]
+) -> list[dict[str, Any]]:
+    """Date-only Canvas calendar items (quizzes, midterms, review sessions).
+
+    Raises on HTTP errors so the route can fall back to cache; an empty but
+    successful response is a real result, not an error. Events carrying a
+    linked assignment are skipped — the assignments sync already covers them.
+    """
+    context_by_course = {f"course_{c['id']}": c for c in courses}
+    now = datetime.now(timezone.utc)
+    params = [("context_codes[]", code) for code in context_by_course]
+    params.extend(
+        [
+            ("type", "event"),
+            ("start_date", (now - timedelta(days=CALENDAR_EVENTS_LOOKBACK_DAYS)).date().isoformat()),
+            ("end_date", (now + timedelta(days=CALENDAR_EVENTS_LOOKAHEAD_DAYS)).date().isoformat()),
+            ("per_page", "100"),
+        ]
+    )
+
+    response = await client.get(
+        "https://canvas.nus.edu.sg/api/v1/calendar_events",
+        headers=headers,
+        params=params,
+        timeout=5.0,
+    )
+    response.raise_for_status()
+    events = response.json()
+
+    if not isinstance(events, list):
+        return []
+
+    result = []
+    for event in events:
+        if not isinstance(event, dict) or event.get("workflow_state") == "deleted":
+            continue
+        if event.get("assignment"):
+            continue
+        event_id = event.get("id")
+        if event_id is None:
+            continue
+        context_code = event.get("context_code") or ""
+        course = context_by_course.get(context_code, {})
+        course_id = course.get("id")
+        result.append(
+            {
+                "id": event_id,
+                "course_id": course_id,
+                "course_code": course.get("course_code"),
+                "course_name": course.get("name") or course.get("course_code"),
+                "title": event.get("title") or "Untitled event",
+                "start_at": event.get("start_at"),
+                "end_at": event.get("end_at"),
+                "all_day": bool(event.get("all_day")),
+                "location": event.get("location_name") or "",
+                "external_url": event.get("html_url")
+                or (
+                    f"https://canvas.nus.edu.sg/courses/{course_id}/calendar_events/{event_id}"
+                    if course_id
+                    else None
+                ),
+                "description": event.get("description", "") or "",
+            }
+        )
+
+    result.sort(key=lambda x: x["start_at"] or "9999-12-31T23:59:59Z")
+    return result
+
+
+@router.get("/calendar-events", response_model=list[dict[str, Any]])
+async def list_canvas_calendar_events(
+    current_user: CurrentUser,
+    force_refresh: bool = Query(False),
+):
+    """Canvas calendar items the assignments sync misses. Read-only
+    projection from Canvas — nothing here writes to the user's own data."""
+    token = current_user.canvas_token
+    if not token:
+        return []
+
+    if not force_refresh:
+        cached_data, synced_at = await get_canvas_cache(current_user.id, "calendar_events")
+        if cached_data is not None and is_cache_fresh(synced_at):
+            return cached_data
+
+    courses = await list_canvas_courses(current_user, force_refresh=force_refresh)
+    if not courses:
+        stale_data, _ = await get_canvas_cache(current_user.id, "calendar_events")
+        return stale_data if stale_data is not None else []
+
+    headers = {"Authorization": f"Bearer {token}"}
+
+    try:
+        async with httpx.AsyncClient() as client:
+            flat_list = await fetch_canvas_calendar_events(client, headers, courses)
+    except Exception:
+        stale_data, _ = await get_canvas_cache(current_user.id, "calendar_events")
+        return stale_data if stale_data is not None else []
+
+    await save_canvas_cache(current_user.id, "calendar_events", flat_list)
+    return flat_list
+
+
 @router.get("/assignments/{assignment_id}", response_model=dict[str, Any])
 async def get_canvas_assignment(
     assignment_id: int,
