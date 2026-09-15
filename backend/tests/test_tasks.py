@@ -125,3 +125,102 @@ async def test_create_canvas_task_strips_html_description(client: AsyncClient, a
     assert "<span>" not in data["description"]
     assert "Attached here are the Assignment 1 files." in data["description"]
     assert "BT2102-Assignment1.pdf" in data["description"]
+
+
+async def test_recurring_task_roundtrip(client: AsyncClient, auth):
+    """Repeat fields survive create and read."""
+    token, _, _ = auth
+    resp = await client.post(
+        "/tasks",
+        json={
+            "title": "Weekly lab report",
+            "due_at_override": "2026-09-18T17:00:00+00:00",
+            "repeat_every": 1,
+            "repeat_unit": "week",
+        },
+        headers=auth_headers(token),
+    )
+    assert resp.status_code == 201
+    body = resp.json()
+    assert body["repeat_every"] == 1
+    assert body["repeat_unit"] == "week"
+
+
+async def test_completing_recurring_task_spawns_next(client: AsyncClient, auth):
+    """Completion spawns one next occurrence anchored to the prior due date."""
+    token, _, _ = auth
+    created = await client.post(
+        "/tasks",
+        json={
+            "title": "Weekly lab report",
+            "due_at_override": "2026-09-11T17:00:00+00:00",
+            "repeat_every": 1,
+            "repeat_unit": "week",
+        },
+        headers=auth_headers(token),
+    )
+    task_id = created.json()["id"]
+
+    done = await client.patch(
+        f"/tasks/{task_id}",
+        json={"status": "done"},
+        headers=auth_headers(token),
+    )
+    assert done.status_code == 200
+    assert done.json()["status"] == "done"
+
+    listing = (await client.get("/tasks", headers=auth_headers(token))).json()
+    todos = [task for task in listing if task["status"] == "todo"]
+    assert len(todos) == 1
+    spawned = todos[0]
+    assert spawned["title"] == "Weekly lab report"
+    assert spawned["due_at_override"].startswith("2026-09-18T17:00:00")
+    assert spawned["repeat_every"] == 1
+    assert spawned["repeat_unit"] == "week"
+
+
+async def test_completing_daily_recurring_task_uses_day_step(client: AsyncClient, auth):
+    token, _, _ = auth
+    created = await client.post(
+        "/tasks",
+        json={
+            "title": "Water the plants",
+            "due_at_override": "2026-09-14T09:00:00+00:00",
+            "repeat_every": 3,
+            "repeat_unit": "day",
+        },
+        headers=auth_headers(token),
+    )
+    task_id = created.json()["id"]
+    await client.patch(f"/tasks/{task_id}", json={"status": "done"}, headers=auth_headers(token))
+
+    listing = (await client.get("/tasks", headers=auth_headers(token))).json()
+    spawned = next(task for task in listing if task["status"] == "todo")
+    assert spawned["due_at_override"].startswith("2026-09-17T09:00:00")
+
+
+async def test_non_repeating_and_canvas_tasks_never_spawn(client: AsyncClient, auth):
+    token, _, _ = auth
+    plain = await client.post(
+        "/tasks", json={"title": "One-off chore"}, headers=auth_headers(token)
+    )
+    await client.patch(
+        f"/tasks/{plain.json()['id']}", json={"status": "done"}, headers=auth_headers(token)
+    )
+    canvas = await client.post(
+        "/tasks",
+        json={
+            "title": "Canvas quiz",
+            "source_type": "canvas",
+            "source_id": "quiz-1",
+            "repeat_every": 1,
+            "repeat_unit": "week",
+        },
+        headers=auth_headers(token),
+    )
+    await client.patch(
+        f"/tasks/{canvas.json()['id']}", json={"status": "done"}, headers=auth_headers(token)
+    )
+
+    listing = (await client.get("/tasks", headers=auth_headers(token))).json()
+    assert all(task["status"] != "todo" or task["source_type"] == "manual" and task["repeat_every"] is None for task in listing)

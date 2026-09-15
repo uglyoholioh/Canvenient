@@ -29,6 +29,10 @@ class TaskCreate(BaseModel):
     class_recurring: bool = False
     group_id: int | None = None
     assignee_id: int | None = None
+    # Subtle recurrence: completing the task spawns the next occurrence,
+    # anchored to the prior due date. Manual tasks only.
+    repeat_every: int | None = Field(default=None, ge=1, le=52)
+    repeat_unit: Literal["day", "week"] | None = None
 
     @field_validator("title")
     @classmethod
@@ -63,6 +67,8 @@ class TaskUpdate(BaseModel):
     external_url: str | None = Field(default=None, max_length=500)
     group_id: int | None = None
     assignee_id: int | None = None
+    repeat_every: int | None = Field(default=None, ge=1, le=52)
+    repeat_unit: Literal["day", "week"] | None = None
 
     @field_validator("title")
     @classmethod
@@ -121,3 +127,5 @@ class TaskOut(BaseModel):
     completed_at: datetime | None = None
     created_at: datetime
     updated_at: datetime
+    repeat_every: int | None = None
+    repeat_unit: Literal["day", "week"] | None = None

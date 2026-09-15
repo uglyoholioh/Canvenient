@@ -26,6 +26,8 @@ import {
   upcomingExamsLabel,
   withCanvasEvents,
 } from "./scheduleUtils";
+import OverdueTriage from "./OverdueTriage";
+import { collectOverdue } from "../taskUtils";
 import { useQuickCapture } from "./QuickCaptureContext";
 import { WorkspaceToolbarContext } from "./WorkspaceToolbarContext";
 import { useContext } from "react";
@@ -103,6 +105,10 @@ export default function Dashboard({ token, user, onNavigate }) {
       meta: metaParts.join(" · ") || "Nothing scheduled — enjoy the calm",
     };
   }, [schedule, tasks, now]);
+
+  const overdueCount = useMemo(() => collectOverdue(tasks).length, [tasks]);
+  const refreshTasks = useCallback(() => setTaskRefreshKey((key) => key + 1), []);
+  const [triageOpen, setTriageOpen] = useState(false);
 
   useEffect(() => {
     const layoutKey = "canvenient-dashboard-three-column-layout";
@@ -433,6 +439,15 @@ export default function Dashboard({ token, user, onNavigate }) {
           <div className="dashboard-hero-date">
             <h1>{hero.dateLabel}</h1>
             <p>{hero.meta}</p>
+            {overdueCount > 0 && (
+              <button
+                type="button"
+                className="dashboard-overdue-review"
+                onClick={() => setTriageOpen(true)}
+              >
+                {overdueCount} task{overdueCount === 1 ? "" : "s"} overdue — review
+              </button>
+            )}
           </div>
         </header>
         <div
@@ -452,6 +467,14 @@ export default function Dashboard({ token, user, onNavigate }) {
           )}
         </div>
       </div>
+      {triageOpen && (
+        <OverdueTriage
+          token={token}
+          tasks={tasks}
+          onChanged={refreshTasks}
+          onClose={() => setTriageOpen(false)}
+        />
+      )}
       <CanvasDrawer
         key={
           activeCanvasItem

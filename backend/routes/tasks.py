@@ -1,4 +1,4 @@
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 
 from fastapi import APIRouter, HTTPException, Response, status
 
@@ -185,6 +185,8 @@ def build_task(record) -> TaskOut:
         completed_at=completed_at,
         created_at=created_at,
         updated_at=updated_at,
+        repeat_every=record["repeat_every"],
+        repeat_unit=record["repeat_unit"],
     )
 
 
@@ -207,6 +209,8 @@ TASK_SELECT_FIELDS = """
     t.updated_at,
     t.group_id,
     t.assignee_id,
+    t.repeat_every,
+    t.repeat_unit,
     t.user_id AS creator_id,
     g.name AS group_name,
     COALESCE(NULLIF(uas.name, ''), au.email) AS assignee_name,
@@ -612,7 +616,9 @@ async def create_task(payload: TaskCreate, current_user: CurrentUser):
                 external_url,
                 completed_at,
                 group_id,
-                assignee_id
+                assignee_id,
+                repeat_every,
+                repeat_unit
             )
             VALUES (
                 :user_id,
@@ -630,7 +636,9 @@ async def create_task(payload: TaskCreate, current_user: CurrentUser):
                 :external_url,
                 :completed_at,
                 :group_id,
-                :assignee_id
+                :assignee_id,
+                :repeat_every,
+                :repeat_unit
             )
             RETURNING id
         """,
@@ -651,6 +659,8 @@ async def create_task(payload: TaskCreate, current_user: CurrentUser):
             "completed_at": completed_at,
             "group_id": payload.group_id,
             "assignee_id": payload.assignee_id,
+            "repeat_every": payload.repeat_every,
+            "repeat_unit": payload.repeat_unit,
         },
     )
     if linked_class is not None:
@@ -731,6 +741,9 @@ async def update_task(task_id: int, payload: TaskUpdate, current_user: CurrentUs
     if status_value != "done":
         completed_at = None
 
+    repeat_every = updates.get("repeat_every", existing["repeat_every"])
+    repeat_unit = updates.get("repeat_unit", existing["repeat_unit"])
+
     desc_val = updates.get("description", existing["description"])
     source_type_val = updates.get("source_type", existing["source_type"])
     if source_type_val == "canvas" and desc_val:
@@ -755,6 +768,8 @@ async def update_task(task_id: int, payload: TaskUpdate, current_user: CurrentUs
                 completed_at = :completed_at,
                 group_id = :group_id,
                 assignee_id = :assignee_id,
+                repeat_every = :repeat_every,
+                repeat_unit = :repeat_unit,
                 updated_at = CURRENT_TIMESTAMP
             WHERE id = :task_id
         """,
@@ -775,8 +790,58 @@ async def update_task(task_id: int, payload: TaskUpdate, current_user: CurrentUs
             "completed_at": completed_at,
             "group_id": group_id,
             "assignee_id": assignee_id,
+            "repeat_every": repeat_every,
+            "repeat_unit": repeat_unit,
         },
     )
+
+    # Recurrence: completing a repeating manual task spawns exactly one next
+    # occurrence, anchored to the prior due date (late completions keep the
+    # cadence regular instead of stacking on today). Group and Canvas-sourced
+    # tasks never spawn — the former would spam members, the latter are
+    # owned by the Canvas sync.
+    if (
+        status_value == "done"
+        and existing["status"] != "done"
+        and existing["source_type"] == "manual"
+        and existing["group_id"] is None
+        and repeat_every
+        and repeat_unit in ("day", "week")
+    ):
+        base_due = ensure_utc(
+            updates.get("due_at_override", existing["due_at_override"])
+            or updates.get("source_due_at", existing["source_due_at"])
+            or completed_at
+        )
+        if base_due is not None:
+            step = timedelta(days=repeat_every) if repeat_unit == "day" else timedelta(weeks=repeat_every)
+            next_due = base_due + step
+            await db.execute(
+                query="""
+                    INSERT INTO tasks (
+                        user_id, module_id, category_id, title, description, status,
+                        priority_manual, estimated_minutes, source_type, due_at_override,
+                        repeat_every, repeat_unit
+                    ) VALUES (
+                        :user_id, :module_id, :category_id, :title, :description, 'todo',
+                        :priority_manual, :estimated_minutes, 'manual', :due_at_override,
+                        :repeat_every, :repeat_unit
+                    )
+                """,
+                values={
+                    "user_id": current_user.id,
+                    "module_id": existing["module_id"],
+                    "category_id": existing["category_id"],
+                    "title": existing["title"],
+                    "description": existing["description"],
+                    "priority_manual": existing["priority_manual"],
+                    "estimated_minutes": existing["estimated_minutes"],
+                    "due_at_override": next_due,
+                    "repeat_every": repeat_every,
+                    "repeat_unit": repeat_unit,
+                },
+            )
+
     return build_task(await fetch_task_for_user(task_id, current_user.id))
 
 

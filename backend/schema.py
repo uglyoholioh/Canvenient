@@ -714,6 +714,12 @@ SCHEMA_STATEMENTS = [
     ALTER TABLE tasks ADD COLUMN IF NOT EXISTS assignee_id BIGINT REFERENCES users(id) ON DELETE SET NULL
     """,
     """
+    ALTER TABLE tasks ADD COLUMN IF NOT EXISTS repeat_every INTEGER
+    """,
+    """
+    ALTER TABLE tasks ADD COLUMN IF NOT EXISTS repeat_unit TEXT
+    """,
+    """
     CREATE INDEX IF NOT EXISTS tasks_group_id_idx ON tasks (group_id)
     """,
     """

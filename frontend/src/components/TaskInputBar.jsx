@@ -1,7 +1,7 @@
 // React is required by the test JSX transform.
 
 import { useEffect, useRef, useState } from "react";
-import { BookOpen, Calendar, ChevronDown, Clock, Flag, Plus, Sparkles, X } from "lucide-react";
+import { BookOpen, Calendar, ChevronDown, Clock, Flag, Plus, Repeat, Sparkles, X } from "lucide-react";
 import { createNote, createTask, getAcademicModules, parseTaskSmart } from "../api";
 
 function focusProperty(index, scope) {
@@ -301,6 +301,9 @@ export default function TaskInputBar({
   const [moduleId, setModuleId] = useState(
     initialTask?.module_id ? String(initialTask.module_id) : "",
   );
+  const [repeat, setRepeat] = useState(
+    initialTask?.repeat_every ? `${initialTask.repeat_every}:${initialTask.repeat_unit}` : "",
+  );
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [parseHint, setParseHint] = useState("");
@@ -372,6 +375,14 @@ export default function TaskInputBar({
         const dueAt = parseDueDate(dateType, customDate, time);
         if (dueAt !== undefined) payload.due_at_override = dueAt;
         if (moduleId !== undefined) payload.module_id = moduleId ? Number(moduleId) : null;
+        if (repeat) {
+          const [every, unit] = repeat.split(":");
+          payload.repeat_every = Number(every);
+          payload.repeat_unit = unit;
+        } else if (initialTask) {
+          payload.repeat_every = null;
+          payload.repeat_unit = null;
+        }
 
         if (initialTask && onSubmitTaskEdit) {
           await onSubmitTaskEdit(initialTask.id, payload);
@@ -650,16 +661,32 @@ export default function TaskInputBar({
                   })),
                 ]}
               />
+              <CustomSelect
+                icon={Repeat}
+                value={repeat}
+                onChange={setRepeat}
+                onEscape={() => textareaRef.current?.focus()}
+                propIndex={4}
+                propertyScope={cardRef}
+                placeholder="Repeat"
+                options={[
+                  { value: "", label: "No Repeat" },
+                  { value: "1:day", label: "Daily" },
+                  { value: "1:week", label: "Weekly" },
+                  { value: "2:week", label: "Every 2 Weeks" },
+                  { value: "3:week", label: "Every 3 Weeks" },
+                ]}
+              />
               {!showTaskNote && (
                 <button
                   type="button"
-                  data-property-index="4"
+                  data-property-index="5"
                   className="task-note-toggle"
                   onClick={() => {
                     setShowTaskNote(true);
                     requestAnimationFrame(() => noteRef.current?.focus());
                   }}
-                  onKeyDown={(event) => handleArrowNav(event, 4, cardRef)}
+                  onKeyDown={(event) => handleArrowNav(event, 5, cardRef)}
                 >
                   Add note
                 </button>
@@ -678,7 +705,7 @@ export default function TaskInputBar({
               )}
               <button
                 type="button"
-                data-property-index={showTaskNote ? "4" : "5"}
+                data-property-index={showTaskNote ? "6" : "5"}
                 className="task-add-button property-pill"
                 disabled={!inputValue.trim() || isSubmitting}
                 onClick={submit}
@@ -687,7 +714,7 @@ export default function TaskInputBar({
                     if (onClose) onClose();
                     else textareaRef.current?.focus();
                   } else if (event.key === "Enter") submit();
-                  else handleArrowNav(event, showTaskNote ? 4 : 5, cardRef);
+                  else handleArrowNav(event, showTaskNote ? 6 : 5, cardRef);
                 }}
               >
                 <Plus size={14} />
