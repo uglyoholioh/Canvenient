@@ -97,9 +97,7 @@ async def fetch_with_fake(handler, courses=COURSES):
     async with FakeCanvasClient(handler) as client:
         from routes.canvas import fetch_canvas_calendar_events
 
-        return await fetch_canvas_calendar_events(
-            client, {"Authorization": "Bearer x"}, courses
-        )
+        return await fetch_canvas_calendar_events(client, {"Authorization": "Bearer x"}, courses)
 
 
 class TestFetchCanvasCalendarEvents:
@@ -181,9 +179,7 @@ class TestCalendarEventsRoute:
 
         with _patch_canvas(lambda url, kwargs: _response(CANVAS_EVENTS)):
             with patch("routes.canvas.list_canvas_courses", side_effect=fake_courses):
-                resp = await client.get(
-                    "/canvas/calendar-events", headers=auth_headers(token)
-                )
+                resp = await client.get("/canvas/calendar-events", headers=auth_headers(token))
 
         assert resp.status_code == 200, resp.text
         body = resp.json()
@@ -206,9 +202,7 @@ class TestCalendarEventsRoute:
 
         with _patch_canvas(failing_handler):
             with patch("routes.canvas.list_canvas_courses", side_effect=fake_courses):
-                resp = await client.get(
-                    "/canvas/calendar-events", headers=auth_headers(token)
-                )
+                resp = await client.get("/canvas/calendar-events", headers=auth_headers(token))
 
         assert resp.status_code == 200
         assert resp.json() == stale

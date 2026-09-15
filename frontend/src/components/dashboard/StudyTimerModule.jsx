@@ -241,7 +241,11 @@ export default function StudyTimerModule({ token }) {
       if (elapsed >= planned * 60) {
         clearRunning();
         setRemainingSeconds(0);
-        persistSession({ startedAt: restored.startedAt, plannedMinutes: planned, elapsedSeconds: planned * 60 });
+        persistSession({
+          startedAt: restored.startedAt,
+          plannedMinutes: planned,
+          elapsedSeconds: planned * 60,
+        });
         return;
       }
       setRemainingSeconds(planned * 60 - elapsed);

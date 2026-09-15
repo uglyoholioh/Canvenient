@@ -32,7 +32,9 @@ export default function TrayChip() {
     <div
       className="tray-chip"
       onMouseDown={() => {
-        getCurrent().startDragging().catch(() => {});
+        getCurrent()
+          .startDragging()
+          .catch(() => {});
       }}
       role="timer"
       aria-label={show ? `Focus remaining ${minutes} minutes ${seconds} seconds` : "Focus idle"}

@@ -14,7 +14,6 @@ from pydantic import BaseModel
 
 from academic_calendar import (
     NUS_HOLIDAYS,
-    SEMESTER_STARTS,
     current_academic_year,
     monday_on_or_after,
     semester_start,
@@ -67,6 +66,7 @@ DAY_ABBREVIATIONS = {
 
 # Term dates and holidays live in backend/academic_calendar.py (synced with
 # frontend/src/components/scheduleUtils.js SEMESTER_STARTS). Imports above.
+
 
 class NUSModsImportRequest(BaseModel):
     url: str

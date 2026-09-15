@@ -342,10 +342,9 @@ describe("schedule module cards", () => {
     const quizDay = new Date(2026, 8, 20);
 
     it("withCanvasEvents merges canvas items into the events list, marked as canvas", () => {
-      const merged = withCanvasEvents(
-        { classes: [], exams: [], events: [userEvent] },
-        [canvasQuiz],
-      );
+      const merged = withCanvasEvents({ classes: [], exams: [], events: [userEvent] }, [
+        canvasQuiz,
+      ]);
       expect(merged.events).toHaveLength(2);
       const canvasRow = merged.events.find((event) => event.source === "canvas");
       expect(canvasRow).toMatchObject({
@@ -406,7 +405,11 @@ describe("schedule module cards", () => {
     });
 
     it("canvas events on other days stay out of today's agenda view", () => {
-      const later = { ...canvasQuiz, start_at: "2026-09-24T04:00:00Z", end_at: "2026-09-24T05:00:00Z" };
+      const later = {
+        ...canvasQuiz,
+        start_at: "2026-09-24T04:00:00Z",
+        end_at: "2026-09-24T05:00:00Z",
+      };
       const schedule = withCanvasEvents({ classes: [], exams: [], events: [] }, [later]);
       const agenda = dashboardAgendaItems(schedule, [], quizDay);
       const { items: todayOnly } = dashboardAgendaView(agenda, quizDay, "today");

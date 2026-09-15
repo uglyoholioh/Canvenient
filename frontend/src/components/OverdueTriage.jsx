@@ -59,13 +59,23 @@ export default function OverdueTriage({ token, tasks, onChanged, onClose }) {
           <span className="triage-count">
             {Math.min(index + 1, overdue.length)} of {overdue.length}
           </span>
-          <button type="button" className="triage-close" onClick={onClose} aria-label="Close review">
+          <button
+            type="button"
+            className="triage-close"
+            onClick={onClose}
+            aria-label="Close review"
+          >
             Close
           </button>
         </header>
 
         <p className="triage-due">
-          Was due {current._due.toLocaleDateString([], { weekday: "short", day: "numeric", month: "short" })}
+          Was due{" "}
+          {current._due.toLocaleDateString([], {
+            weekday: "short",
+            day: "numeric",
+            month: "short",
+          })}
           {current.module_code ? ` · ${current.module_code}` : ""}
         </p>
         <h2 className="triage-title">{current.title}</h2>
@@ -85,7 +95,12 @@ export default function OverdueTriage({ token, tasks, onChanged, onClose }) {
               aria-label="New due date"
               autoFocus
             />
-            <button type="button" className="triage-action is-primary" onClick={pickDate} disabled={!dateValue}>
+            <button
+              type="button"
+              className="triage-action is-primary"
+              onClick={pickDate}
+              disabled={!dateValue}
+            >
               Reschedule
             </button>
             <button type="button" className="triage-action" onClick={() => setShowDatePick(false)}>

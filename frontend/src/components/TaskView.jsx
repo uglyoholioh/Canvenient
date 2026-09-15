@@ -1,5 +1,15 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { BookOpen, Calendar, CheckCircle, Flag, Pencil, Plus, Repeat, Trash2, Users } from "lucide-react";
+import {
+  BookOpen,
+  Calendar,
+  CheckCircle,
+  Flag,
+  Pencil,
+  Plus,
+  Repeat,
+  Trash2,
+  Users,
+} from "lucide-react";
 import { getAcademicModules, getTasks, updateTask } from "../api";
 import { notifyTasksChanged } from "../taskEvents";
 import { queueTaskDeletion } from "../taskDeleteBuffer";
@@ -580,7 +590,9 @@ export default function TaskView({
                             </span>
                           )}
                           {task.repeat_every ? (
-                            <span title={`Repeats every ${task.repeat_every} ${task.repeat_unit}${task.repeat_every > 1 ? "s" : ""}`}>
+                            <span
+                              title={`Repeats every ${task.repeat_every} ${task.repeat_unit}${task.repeat_every > 1 ? "s" : ""}`}
+                            >
                               <Repeat size={10} />
                               {task.repeat_every}
                               {task.repeat_unit === "week" ? "w" : "d"}

@@ -44,7 +44,10 @@ describe("OverdueTriage sheet", () => {
 
   it("renders nothing when there is nothing overdue", () => {
     const { container } = render(
-      <OverdueTriage token="t" tasks={[{ id: 3, title: "Fine", status: "todo", due_at_override: iso(0, 8) }]} />,
+      <OverdueTriage
+        token="t"
+        tasks={[{ id: 3, title: "Fine", status: "todo", due_at_override: iso(0, 8) }]}
+      />,
     );
     expect(container).toBeEmptyDOMElement();
   });

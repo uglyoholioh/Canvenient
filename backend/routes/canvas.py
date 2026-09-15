@@ -542,11 +542,7 @@ async def fetch_canvas_calendar_events(
                 "all_day": bool(event.get("all_day")),
                 "location": event.get("location_name") or "",
                 "external_url": event.get("html_url")
-                or (
-                    f"https://canvas.nus.edu.sg/courses/{course_id}/calendar_events/{event_id}"
-                    if course_id
-                    else None
-                ),
+                or (f"https://canvas.nus.edu.sg/courses/{course_id}/calendar_events/{event_id}" if course_id else None),
                 "description": event.get("description", "") or "",
             }
         )

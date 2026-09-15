@@ -67,9 +67,7 @@ class TestCreateFocusSession:
 
     async def test_rejects_bad_source_and_inverted_times(self, client: AsyncClient, auth):
         token, _, _ = auth
-        bad_source = await client.post(
-            "/focus/sessions", json=payload(source="hacker"), headers=auth_headers(token)
-        )
+        bad_source = await client.post("/focus/sessions", json=payload(source="hacker"), headers=auth_headers(token))
         assert bad_source.status_code == 422
         inverted = await client.post(
             "/focus/sessions",
@@ -90,9 +88,7 @@ class TestScoping:
         session_id = created.json()["id"]
 
         other_email = f"focus_other_{session_id}@u.nus.edu"
-        token_b_resp = await client.post(
-            "/auth/register", json={"email": other_email, "password": TEST_PASSWORD}
-        )
+        token_b_resp = await client.post("/auth/register", json={"email": other_email, "password": TEST_PASSWORD})
         assert token_b_resp.status_code == 201
         token_b = token_b_resp.json()["access_token"]
 

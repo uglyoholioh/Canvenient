@@ -440,8 +440,7 @@ export function scheduleItemsForDate(schedule, selectedDate) {
       ? new Date(item.end_at)
       : new Date(rawStart.getTime() + 60 * 60 * 1000);
     const isCanvas = item.source === "canvas";
-    const courseColor =
-      isCanvas && item.module_code ? moduleColor(item, item.module_code) : null;
+    const courseColor = isCanvas && item.module_code ? moduleColor(item, item.module_code) : null;
     items.push({
       id: isCanvas ? `canvas-${item.id}` : `event-${item.id}`,
       kind: "event",

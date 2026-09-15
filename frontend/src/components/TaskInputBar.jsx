@@ -1,7 +1,17 @@
 // React is required by the test JSX transform.
 
 import { useEffect, useRef, useState } from "react";
-import { BookOpen, Calendar, ChevronDown, Clock, Flag, Plus, Repeat, Sparkles, X } from "lucide-react";
+import {
+  BookOpen,
+  Calendar,
+  ChevronDown,
+  Clock,
+  Flag,
+  Plus,
+  Repeat,
+  Sparkles,
+  X,
+} from "lucide-react";
 import { createNote, createTask, getAcademicModules, parseTaskSmart } from "../api";
 
 function focusProperty(index, scope) {

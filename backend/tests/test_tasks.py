@@ -201,12 +201,8 @@ async def test_completing_daily_recurring_task_uses_day_step(client: AsyncClient
 
 async def test_non_repeating_and_canvas_tasks_never_spawn(client: AsyncClient, auth):
     token, _, _ = auth
-    plain = await client.post(
-        "/tasks", json={"title": "One-off chore"}, headers=auth_headers(token)
-    )
-    await client.patch(
-        f"/tasks/{plain.json()['id']}", json={"status": "done"}, headers=auth_headers(token)
-    )
+    plain = await client.post("/tasks", json={"title": "One-off chore"}, headers=auth_headers(token))
+    await client.patch(f"/tasks/{plain.json()['id']}", json={"status": "done"}, headers=auth_headers(token))
     canvas = await client.post(
         "/tasks",
         json={
@@ -218,9 +214,9 @@ async def test_non_repeating_and_canvas_tasks_never_spawn(client: AsyncClient, a
         },
         headers=auth_headers(token),
     )
-    await client.patch(
-        f"/tasks/{canvas.json()['id']}", json={"status": "done"}, headers=auth_headers(token)
-    )
+    await client.patch(f"/tasks/{canvas.json()['id']}", json={"status": "done"}, headers=auth_headers(token))
 
     listing = (await client.get("/tasks", headers=auth_headers(token))).json()
-    assert all(task["status"] != "todo" or task["source_type"] == "manual" and task["repeat_every"] is None for task in listing)
+    assert all(
+        task["status"] != "todo" or task["source_type"] == "manual" and task["repeat_every"] is None for task in listing
+    )

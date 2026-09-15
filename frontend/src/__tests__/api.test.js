@@ -34,9 +34,7 @@ describe("api.js offline serve-stale", () => {
   });
 
   it("serves stale cached GET data when the backend is unreachable", async () => {
-    setCachedApiData("canvenient.cache.api:/tasks::test-token", [
-      { id: 1, title: "Cached task" },
-    ]);
+    setCachedApiData("canvenient.cache.api:/tasks::test-token", [{ id: 1, title: "Cached task" }]);
     globalThis.fetch = vi.fn().mockRejectedValue(new TypeError("Failed to fetch"));
 
     const tasks = await getTasks("test-token");

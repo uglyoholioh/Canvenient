@@ -34,7 +34,9 @@ function formatMinutes(totalSeconds) {
 function relativeDue(due, now) {
   if (!due) return "";
   const dayMs = 86400000;
-  const days = Math.round((new Date(due).setHours(0, 0, 0, 0) - new Date(now).setHours(0, 0, 0, 0)) / dayMs);
+  const days = Math.round(
+    (new Date(due).setHours(0, 0, 0, 0) - new Date(now).setHours(0, 0, 0, 0)) / dayMs,
+  );
   if (days === 0) return "today";
   if (days === 1) return "tomorrow";
   if (days < 0) return `${-days}d overdue`;
@@ -54,7 +56,10 @@ function usePanelData(token) {
     const results = await Promise.allSettled([
       getSchedule(token),
       getTasks(token),
-      getCampusBusArrivals(token, window.localStorage.getItem("canvenient-isb-stop") || DEFAULT_STOP),
+      getCampusBusArrivals(
+        token,
+        window.localStorage.getItem("canvenient-isb-stop") || DEFAULT_STOP,
+      ),
       getFocusSummary(token, "today"),
       getFocusSummary(token, "week"),
     ]);
@@ -168,9 +173,14 @@ export default function TrayPanel() {
           <p className="tray-row">
             <strong>ISB {arrivals.arrivals[0].service}</strong>
             <span>
-              {arrivals.arrivals[0].minutes[0] != null ? `${arrivals.arrivals[0].minutes[0]} min` : "—"}
+              {arrivals.arrivals[0].minutes[0] != null
+                ? `${arrivals.arrivals[0].minutes[0]} min`
+                : "—"}
               {arrivals.arrivals.length > 1 &&
-                ` · ${arrivals.arrivals.slice(1, 3).map((arrival) => arrival.service).join(", ")}`}
+                ` · ${arrivals.arrivals
+                  .slice(1, 3)
+                  .map((arrival) => arrival.service)
+                  .join(", ")}`}
             </span>
           </p>
         ) : (
@@ -215,7 +225,12 @@ export default function TrayPanel() {
             />
             <div className="tray-presets">
               {PRESETS.map((preset) => (
-                <button key={preset} type="button" className="tray-preset" onClick={() => timer.start(preset)}>
+                <button
+                  key={preset}
+                  type="button"
+                  className="tray-preset"
+                  onClick={() => timer.start(preset)}
+                >
                   {preset}
                 </button>
               ))}
