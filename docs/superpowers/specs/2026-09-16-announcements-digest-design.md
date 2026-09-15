@@ -1,7 +1,8 @@
 # Canvas announcements AI digest
 
 Date: 2026-09-16
-Status: awaiting review
+Status: ON HOLD — excluded from the current round; AI + Telegram work deferred
+by Oli (2026-09-16). Spec kept for when that round is revisited.
 Related request: round-2 item 9 — "for 9 we must deliberately plan it out as well".
 
 ## Goal

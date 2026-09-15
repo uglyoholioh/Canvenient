@@ -72,11 +72,13 @@ start, venue if present). Small, cacheable (client SWR, TTL minutes).
   an earlier round).
 - **Schedule**: compact banner when phase ≠ teaching ("Recess — no classes";
   "Reading week — no classes"; "Exam period").
-- **Telegram brief** (`build_brief_text`): greeting line gains the phase, e.g.
-  `Your day — Tue, Week 9` or `Your day — Tue, Recess week`.
 - **Exams on Today**: during reading/exam phases the day context already
   returns exam rows; the Today exam row is sorted first in those phases. No
   new surface.
+
+Deferred (Telegram/AI excluded this round): the planned phase line in the
+Telegram brief greeting moves to the parked announcements/Telegram round
+(see 2026-09-16-announcements-digest-design.md).
 
 ## Error handling
 
