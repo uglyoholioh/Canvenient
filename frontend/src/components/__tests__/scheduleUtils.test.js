@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  SEMESTER_STARTS,
   dashboardAgendaItems,
   dashboardAgendaView,
   getTaskModuleColor,
@@ -8,6 +9,7 @@ import {
   moduleHue,
   scheduleItemsForDate,
   timelineBlockGeometry,
+  upcomingExamsLabel,
   withCanvasEvents,
 } from "../scheduleUtils";
 
@@ -412,6 +414,44 @@ describe("schedule module cards", () => {
       // But the future event is still reachable in the upcoming view.
       const { items: upcoming } = dashboardAgendaView(agenda, quizDay, "upcoming");
       expect(upcoming.some((item) => item.id === "canvas-9001")).toBe(true);
+    });
+  });
+
+  describe("upcomingExamsLabel", () => {
+    const now = new Date(2026, 10, 16, 12, 0); // Mon 16 Nov 2026, noon local
+    const exams = [
+      { module_code: "MA2001", start_at: "2026-11-21T01:00:00Z" }, // Sat 21 Nov 09:00 SGT
+      { module_code: "CS2103", start_at: "2026-11-18T09:00:00Z" }, // Wed 18 Nov 17:00 SGT
+      { module_code: "ST2334", start_at: "2026-12-01T09:00:00Z" }, // outside the window
+    ];
+
+    it("names the next exam and counts the rest", () => {
+      expect(upcomingExamsLabel(exams, now)).toBe("CS2103 exam in 2 days · +1 more");
+    });
+
+    it("says today when the exam is today", () => {
+      const today = [{ module_code: "MA2001", start_at: "2026-11-16T02:00:00Z" }];
+      expect(upcomingExamsLabel(today, now)).toBe("MA2001 exam today");
+    });
+
+    it("uses singular for one day away", () => {
+      const tomorrow = [{ module_code: "CS2103", start_at: "2026-11-17T09:00:00Z" }];
+      expect(upcomingExamsLabel(tomorrow, now)).toBe("CS2103 exam in 1 day");
+    });
+
+    it("returns null with no exams or none within the window", () => {
+      expect(upcomingExamsLabel([], now)).toBeNull();
+      expect(upcomingExamsLabel(null, now)).toBeNull();
+      expect(upcomingExamsLabel([exams[2]], now)).toBeNull();
+    });
+  });
+
+  describe("semester data pin", () => {
+    // backend/academic_calendar.py asserts the same values — keep the copies in sync.
+    it("matches the backend's canonical dates", () => {
+      expect(SEMESTER_STARTS["2025/2026"][1]).toBe("2025-08-11");
+      expect(SEMESTER_STARTS["2026/2027"][1]).toBe("2026-08-10");
+      expect(SEMESTER_STARTS["2027/2028"][2]).toBe("2028-01-10");
     });
   });
 });

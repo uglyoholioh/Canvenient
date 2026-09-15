@@ -20,7 +20,12 @@ import {
   threeColumnDashboardConfig,
 } from "./dashboard/dashboardConfig";
 import { getCanvasCalendarEvents, getSchedule, getTasks } from "../api";
-import { dashboardAgendaItems, getAcademicWeek, withCanvasEvents } from "./scheduleUtils";
+import {
+  dashboardAgendaItems,
+  getAcademicWeek,
+  upcomingExamsLabel,
+  withCanvasEvents,
+} from "./scheduleUtils";
 import { useQuickCapture } from "./QuickCaptureContext";
 import { WorkspaceToolbarContext } from "./WorkspaceToolbarContext";
 import { useContext } from "react";
@@ -88,8 +93,10 @@ export default function Dashboard({ token, user, onNavigate }) {
       month: "long",
     });
     const weekLabel = getAcademicWeek(now)?.label;
+    const examLabel = upcomingExamsLabel(schedule?.exams, now);
     const metaParts = [];
     if (weekLabel) metaParts.push(weekLabel);
+    if (examLabel) metaParts.push(examLabel);
     if (remaining.length > 0) metaParts.push(`${remaining.length} left today`);
     return {
       dateLabel,

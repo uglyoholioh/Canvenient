@@ -495,6 +495,25 @@ export function withCanvasEvents(schedule, canvasEvents) {
   return { ...schedule, events: [...(schedule.events || []), ...events] };
 }
 
+// One plain-text line for the Dashboard hero: the next exam within `withinDays`.
+// Exams are the timetable rows NUSMods import already stored.
+export function upcomingExamsLabel(exams, now, withinDays = 7) {
+  const dayStart = startOfLocalDay(now);
+  const windowEnd = new Date(dayStart);
+  windowEnd.setDate(windowEnd.getDate() + withinDays);
+  const upcoming = (exams || [])
+    .map((exam) => ({ ...exam, startDate: new Date(exam.start_at) }))
+    .filter((exam) => exam.startDate >= dayStart && exam.startDate < windowEnd)
+    .sort((left, right) => left.startDate - right.startDate);
+  if (upcoming.length === 0) return null;
+  const first = upcoming[0];
+  const code = first.module_code || "Exam";
+  const daysAway = Math.round((startOfLocalDay(first.startDate) - dayStart) / 86400000);
+  const tail = upcoming.length > 1 ? ` · +${upcoming.length - 1} more` : "";
+  if (daysAway === 0) return `${code} exam today${tail}`;
+  return `${code} exam in ${daysAway} day${daysAway === 1 ? "" : "s"}${tail}`;
+}
+
 export function describeRelativeStart(item, now) {
   const minutes = Math.round((item.start - now) / 60000);
   if (minutes <= 0 && item.end > now) return "Happening now";

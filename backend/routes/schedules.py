@@ -12,6 +12,14 @@ from fastapi import APIRouter, HTTPException, Response, UploadFile, status
 from icalendar import Calendar
 from pydantic import BaseModel
 
+from academic_calendar import (
+    NUS_HOLIDAYS,
+    SEMESTER_STARTS,
+    current_academic_year,
+    monday_on_or_after,
+    semester_start,
+    week_number,
+)
 from database import db
 from dependencies import CurrentUser
 from models.schedule import ScheduleOut
@@ -57,57 +65,8 @@ DAY_ABBREVIATIONS = {
     "SUN": "Sunday",
 }
 
-# Official NUSMods semester starts. Older/future years use a conservative Monday fallback.
-SEMESTER_STARTS = {
-    "2024/2025": {1: date(2024, 8, 12), 2: date(2025, 1, 13), 3: date(2025, 5, 12), 4: date(2025, 6, 23)},
-    "2025/2026": {1: date(2025, 8, 11), 2: date(2026, 1, 12), 3: date(2026, 5, 11), 4: date(2026, 6, 22)},
-    "2026/2027": {1: date(2026, 8, 10), 2: date(2027, 1, 11), 3: date(2027, 5, 10), 4: date(2027, 6, 21)},
-}
-NUS_HOLIDAYS = {
-    date.fromisoformat(value)
-    for value in (
-        "2024-08-09",
-        "2024-10-31",
-        "2024-11-01",
-        "2024-12-25",
-        "2025-01-01",
-        "2025-01-29",
-        "2025-01-30",
-        "2025-03-31",
-        "2025-04-18",
-        "2025-05-01",
-        "2025-05-12",
-        "2025-06-07",
-        "2025-08-09",
-        "2025-10-20",
-        "2025-10-21",
-        "2025-12-25",
-        "2026-01-01",
-        "2026-02-17",
-        "2026-02-18",
-        "2026-03-21",
-        "2026-04-03",
-        "2026-05-01",
-        "2026-05-27",
-        "2026-06-01",
-        "2026-08-09",
-        "2026-08-10",
-        "2026-10-09",
-        "2026-11-08",
-        "2026-11-09",
-        "2026-12-25",
-        "2027-01-01",
-        "2027-02-06",
-        "2027-02-07",
-        "2027-02-08",
-        "2027-03-10",
-        "2027-03-26",
-        "2027-05-01",
-        "2027-05-17",
-        "2027-05-20",
-    )
-}
-
+# Term dates and holidays live in backend/academic_calendar.py (synced with
+# frontend/src/components/scheduleUtils.js SEMESTER_STARTS). Imports above.
 
 class NUSModsImportRequest(BaseModel):
     url: str
@@ -193,27 +152,15 @@ def _parse_time(raw: str) -> time:
 def _current_academic_year(today: date | str | None = None) -> str:
     if isinstance(today, str):
         today = date.fromisoformat(today[:10])
-    today = today or datetime.now(SGT).date()
-    start_year = today.year if today.month >= 8 else today.year - 1
-    return f"{start_year}/{start_year + 1}"
+    return current_academic_year(today)
 
 
 def _monday_on_or_after(value: date) -> date:
-    return value + timedelta(days=(7 - value.weekday()) % 7)
+    return monday_on_or_after(value)
 
 
 def _semester_start(academic_year: str, semester: int) -> date:
-    known = SEMESTER_STARTS.get(academic_year, {}).get(semester)
-    if known:
-        return known
-    start_year = int(academic_year.split("/")[0])
-    if semester == 1:
-        return _monday_on_or_after(date(start_year, 8, 8))
-    if semester == 2:
-        return _monday_on_or_after(date(start_year + 1, 1, 8))
-    if semester == 3:
-        return _monday_on_or_after(date(start_year + 1, 5, 8))
-    return _monday_on_or_after(date(start_year + 1, 6, 19))
+    return semester_start(academic_year, semester)
 
 
 def _to_date(val: date | str) -> date:
@@ -223,17 +170,7 @@ def _to_date(val: date | str) -> date:
 
 
 def _academic_week_number(target_date: date | str, semester_start: date | str) -> int | None:
-    target_date = _to_date(target_date)
-    semester_start = _to_date(semester_start)
-    diff_days = (target_date - semester_start).days
-    calendar_week = diff_days // 7
-    if 0 <= calendar_week <= 5:
-        return calendar_week + 1
-    if calendar_week == 6:
-        return None  # Recess week
-    if 7 <= calendar_week <= 13:
-        return calendar_week
-    return None
+    return week_number(_to_date(target_date), _to_date(semester_start))
 
 
 def _infer_semester(target_date: date | str) -> int:
@@ -586,7 +523,7 @@ async def import_nusmods(payload: NUSModsImportRequest, current_user: CurrentUse
 
     classes = []
     exams = []
-    semester_start = _semester_start(academic_year, semester)
+    term_start = _semester_start(academic_year, semester)
     seen_classes = set()
     for module_code, module in zip(module_configs, module_data, strict=False):
         semester_data = next(
@@ -602,7 +539,7 @@ async def import_nusmods(payload: NUSModsImportRequest, current_user: CurrentUse
             except ValueError:
                 continue
             lesson_weeks = lesson.get("weeks")
-            for class_date in _lesson_dates(lesson, semester_start):
+            for class_date in _lesson_dates(lesson, term_start):
                 key = (
                     module_code,
                     lesson.get("lessonType"),
