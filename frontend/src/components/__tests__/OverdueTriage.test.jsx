@@ -9,10 +9,10 @@ vi.mock("../../api", () => ({
 
 import { updateTask } from "../../api";
 
-const NOW = new Date(2026, 8, 16, 12, 0); // Wed 16 Sep 2026, noon local
-
+// collectOverdue works on the real clock, so seed dates relative to "now" —
+// a fixed date passes in one timezone and fails in another.
 function iso(daysAgo, hour = 9) {
-  const date = new Date(NOW);
+  const date = new Date();
   date.setDate(date.getDate() - daysAgo);
   date.setHours(hour, 0, 0, 0);
   return date.toISOString();
