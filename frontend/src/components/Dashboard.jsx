@@ -19,8 +19,8 @@ import {
   saveDashboardLayout,
   threeColumnDashboardConfig,
 } from "./dashboard/dashboardConfig";
-import { getSchedule, getTasks } from "../api";
-import { dashboardAgendaItems, getAcademicWeek } from "./scheduleUtils";
+import { getCanvasCalendarEvents, getSchedule, getTasks } from "../api";
+import { dashboardAgendaItems, getAcademicWeek, withCanvasEvents } from "./scheduleUtils";
 import { useQuickCapture } from "./QuickCaptureContext";
 import { WorkspaceToolbarContext } from "./WorkspaceToolbarContext";
 import { useContext } from "react";
@@ -57,17 +57,21 @@ export default function Dashboard({ token, user, onNavigate }) {
   useEffect(() => {
     if (!token) return undefined;
     let cancelled = false;
-    Promise.allSettled([getSchedule(token), getTasks(token)]).then(
-      ([scheduleResult, taskResult]) => {
-        if (cancelled) return;
-        setSchedule(
-          scheduleResult.status === "fulfilled" && scheduleResult.value
-            ? scheduleResult.value
-            : { classes: [], exams: [], events: [] },
-        );
-        setTasks(taskResult.status === "fulfilled" ? taskResult.value || [] : []);
-      },
-    );
+    Promise.allSettled([
+      getSchedule(token),
+      getTasks(token),
+      getCanvasCalendarEvents(token),
+    ]).then(([scheduleResult, taskResult, canvasResult]) => {
+      if (cancelled) return;
+      const baseSchedule =
+        scheduleResult.status === "fulfilled" && scheduleResult.value
+          ? scheduleResult.value
+          : { classes: [], exams: [], events: [] };
+      const canvasEvents =
+        canvasResult.status === "fulfilled" ? canvasResult.value || [] : [];
+      setSchedule(withCanvasEvents(baseSchedule, canvasEvents));
+      setTasks(taskResult.status === "fulfilled" ? taskResult.value || [] : []);
+    });
     return () => {
       cancelled = true;
     };

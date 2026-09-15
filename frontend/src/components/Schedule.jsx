@@ -12,7 +12,7 @@ import {
   Upload,
   X,
 } from "lucide-react";
-import { getSchedule, importIcs, importNusmods } from "../api";
+import { getCanvasCalendarEvents, getSchedule, importIcs, importNusmods } from "../api";
 import ClassContextDrawer from "./drawers/ClassContextDrawer";
 import { useWorkspaceToolbar } from "./WorkspaceToolbarContext";
 import {
@@ -24,6 +24,7 @@ import {
   startOfLocalDay,
   timelineBlockGeometry,
   weekDates,
+  withCanvasEvents,
 } from "./scheduleUtils";
 
 const EMPTY_SCHEDULE = { classes: [], exams: [], events: [] };
@@ -248,7 +249,15 @@ export default function Schedule({ token }) {
     if (!token) return;
     setLoading(true);
     try {
-      setSchedule((await getSchedule(token)) || EMPTY_SCHEDULE);
+      const [scheduleResult, canvasEventsResult] = await Promise.allSettled([
+        getSchedule(token),
+        getCanvasCalendarEvents(token),
+      ]);
+      const baseSchedule = scheduleResult.value ?? EMPTY_SCHEDULE;
+      const canvasEvents =
+        canvasEventsResult.status === "fulfilled" ? canvasEventsResult.value || [] : [];
+      setSchedule(withCanvasEvents(baseSchedule, canvasEvents));
+      if (scheduleResult.status === "rejected") throw scheduleResult.reason;
       setError("");
     } catch (loadError) {
       setError(loadError.message || "Could not load your schedule.");

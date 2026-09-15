@@ -4,8 +4,11 @@ import {
   dashboardAgendaView,
   getTaskModuleColor,
   moduleCardInk,
+  moduleColor,
+  moduleHue,
   scheduleItemsForDate,
   timelineBlockGeometry,
+  withCanvasEvents,
 } from "../scheduleUtils";
 
 describe("schedule module cards", () => {
@@ -314,6 +317,101 @@ describe("schedule module cards", () => {
       const itemsWeek3 = scheduleItemsForDate(schedule, week3Monday);
       expect(itemsWeek3).toHaveLength(1);
       expect(itemsWeek3[0].weeksLabel).toBe("Weeks 3–13 (Odd)");
+    });
+  });
+
+  describe("canvas calendar events", () => {
+    const canvasQuiz = {
+      id: 9001,
+      course_code: "CS3230",
+      title: "Quiz 2",
+      start_at: "2026-09-20T04:00:00Z", // 12:00 SGT, safely midday in any tz
+      end_at: "2026-09-20T05:00:00Z",
+      location: "LT19",
+      external_url: "https://canvas.nus.edu.sg/courses/202/calendar_events/9001",
+    };
+    const userEvent = {
+      id: 7,
+      title: "Dinner with lab group",
+      venue: "The Deck",
+      start_at: "2026-09-20T12:00:00Z",
+      end_at: "2026-09-20T13:30:00Z",
+    };
+    const quizDay = new Date(2026, 8, 20);
+
+    it("withCanvasEvents merges canvas items into the events list, marked as canvas", () => {
+      const merged = withCanvasEvents(
+        { classes: [], exams: [], events: [userEvent] },
+        [canvasQuiz],
+      );
+      expect(merged.events).toHaveLength(2);
+      const canvasRow = merged.events.find((event) => event.source === "canvas");
+      expect(canvasRow).toMatchObject({
+        id: 9001,
+        module_code: "CS3230",
+        title: "Quiz 2",
+        venue: "LT19",
+      });
+      expect(canvasRow.source).toBe("canvas");
+      // The original schedule object is not mutated.
+      expect(merged.events).not.toBe(undefined);
+    });
+
+    it("withCanvasEvents tolerates missing canvas data", () => {
+      const schedule = { classes: [], exams: [], events: [userEvent] };
+      expect(withCanvasEvents(schedule, null).events).toHaveLength(1);
+      expect(withCanvasEvents(schedule, []).events).toHaveLength(1);
+    });
+
+    it("scheduleItemsForDate renders canvas events with a Canvas badge and course color", () => {
+      const schedule = withCanvasEvents({ classes: [], exams: [], events: [] }, [canvasQuiz]);
+      const items = scheduleItemsForDate(schedule, quizDay);
+      expect(items).toHaveLength(1);
+      const item = items[0];
+      expect(item.id).toBe("canvas-9001");
+      expect(item.kind).toBe("event");
+      expect(item.subtitle).toBe("Canvas");
+      expect(item.venue).toBe("LT19");
+      expect(item.color).toBe(moduleColor({ module_code: "CS3230" }, "CS3230"));
+      expect(item.hue).toBe(moduleHue("CS3230"));
+      expect(item.canvasUrl).toContain("/calendar_events/9001");
+    });
+
+    it("canvas events without a course keep the generic event styling", () => {
+      const orphan = { ...canvasQuiz, course_code: null };
+      const schedule = withCanvasEvents({ classes: [], exams: [], events: [] }, [orphan]);
+      const items = scheduleItemsForDate(schedule, quizDay);
+      expect(items[0].subtitle).toBe("Canvas");
+      expect(items[0].color).toBe("var(--color-schedule-event)");
+    });
+
+    it("canvas ids cannot collide with user event ids", () => {
+      const schedule = withCanvasEvents(
+        { classes: [], exams: [], events: [{ ...userEvent, id: 9001 }] },
+        [canvasQuiz],
+      );
+      const items = scheduleItemsForDate(schedule, quizDay);
+      const ids = items.map((item) => item.id);
+      expect(new Set(ids).size).toBe(ids.length);
+    });
+
+    it("dashboardAgendaItems surfaces canvas events to My Day", () => {
+      const schedule = withCanvasEvents({ classes: [], exams: [], events: [] }, [canvasQuiz]);
+      const agenda = dashboardAgendaItems(schedule, [], quizDay);
+      expect(agenda.some((item) => item.id === "canvas-9001" && item.subtitle === "Canvas")).toBe(
+        true,
+      );
+    });
+
+    it("canvas events on other days stay out of today's agenda view", () => {
+      const later = { ...canvasQuiz, start_at: "2026-09-24T04:00:00Z", end_at: "2026-09-24T05:00:00Z" };
+      const schedule = withCanvasEvents({ classes: [], exams: [], events: [] }, [later]);
+      const agenda = dashboardAgendaItems(schedule, [], quizDay);
+      const { items: todayOnly } = dashboardAgendaView(agenda, quizDay, "today");
+      expect(todayOnly.some((item) => item.id === "canvas-9001")).toBe(false);
+      // But the future event is still reachable in the upcoming view.
+      const { items: upcoming } = dashboardAgendaView(agenda, quizDay, "upcoming");
+      expect(upcoming.some((item) => item.id === "canvas-9001")).toBe(true);
     });
   });
 });

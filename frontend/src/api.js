@@ -507,6 +507,11 @@ export function getCanvasAssignments(token, forceRefresh = false) {
   return apiRequest(`/canvas/assignments${query}`, { token });
 }
 
+export function getCanvasCalendarEvents(token, forceRefresh = false) {
+  const query = forceRefresh ? "?force_refresh=true" : "";
+  return apiRequest(`/canvas/calendar-events${query}`, { token });
+}
+
 export function getCanvasAssignment(token, courseId, assignmentId) {
   return apiRequest(
     `/canvas/assignments/${assignmentId}?course_id=${encodeURIComponent(courseId)}`,

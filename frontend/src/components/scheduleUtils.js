@@ -439,17 +439,21 @@ export function scheduleItemsForDate(schedule, selectedDate) {
     const rawEnd = item.end_at
       ? new Date(item.end_at)
       : new Date(rawStart.getTime() + 60 * 60 * 1000);
+    const isCanvas = item.source === "canvas";
+    const courseColor =
+      isCanvas && item.module_code ? moduleColor(item, item.module_code) : null;
     items.push({
-      id: `event-${item.id}`,
+      id: isCanvas ? `canvas-${item.id}` : `event-${item.id}`,
       kind: "event",
+      canvasUrl: isCanvas ? item.external_url || null : null,
       title: item.title,
-      subtitle: "Event",
+      subtitle: isCanvas ? "Canvas" : "Event",
       venue: item.venue || "Venue not listed",
       start: rawStart < dayStart ? dayStart : rawStart,
       end: rawEnd > dayEnd ? dayEnd : rawEnd,
-      hue: moduleHue(item.title),
-      color: "var(--color-schedule-event)",
-      ink: "var(--color-schedule-card-ink-light)",
+      hue: isCanvas && item.module_code ? moduleHue(item.module_code) : moduleHue(item.title),
+      color: courseColor || "var(--color-schedule-event)",
+      ink: courseColor ? moduleCardInk(courseColor) : "var(--color-schedule-card-ink-light)",
     });
   }
 
@@ -473,6 +477,22 @@ export function scheduleItemsForDate(schedule, selectedDate) {
   }
 
   return items.sort((left, right) => left.start - right.start || left.end - right.end);
+}
+
+// Canvas calendar events (date-only quizzes, midterms) ride the same shape as
+// user events; `source` marks them for the Canvas badge and course color.
+export function withCanvasEvents(schedule, canvasEvents) {
+  const events = (canvasEvents || []).map((item) => ({
+    id: item.id,
+    source: "canvas",
+    module_code: item.course_code || null,
+    title: item.title || "Canvas event",
+    venue: item.location || "",
+    start_at: item.start_at,
+    end_at: item.end_at,
+    external_url: item.external_url || null,
+  }));
+  return { ...schedule, events: [...(schedule.events || []), ...events] };
 }
 
 export function describeRelativeStart(item, now) {
