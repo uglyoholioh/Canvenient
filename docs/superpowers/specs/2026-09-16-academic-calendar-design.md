@@ -96,3 +96,33 @@ Telegram brief greeting moves to the parked announcements/Telegram round
 - Frontend: chip text matrix per phase; banner on Schedule compact.
 - Update `SEMESTER_STARTS` consumers; run existing NUSMods import tests to
   prove lesson generation is unchanged.
+
+## Implementation addendum (2026-09-16, after grounding)
+
+Grounding changed this design materially; the shipped scope is smaller and
+honest about what already existed:
+
+1. **The frontend already had the full phase machine.** `getAcademicWeek` in
+   `scheduleUtils.js` computes orientation/vacation/teaching/recess/reading/
+   exam labels, already had semester starts through AY2027/2028, and the
+   Dashboard hero plus Schedule toolbar subtitle already display the label.
+   The planned "Today chip" and "Schedule banner" surfaces therefore existed;
+   nothing new was needed there.
+2. **`GET /calendar/term` dropped (YAGNI).** With the Telegram/AI round parked
+   and the frontend computing phases client-side, the endpoint had no
+   consumer. A pure backend module (`backend/academic_calendar.py`) is kept
+   instead so future backend consumers (workload forecast, leave-now advisor)
+   share one implementation.
+3. **No runtime-loaded JSON.** The backend ships as a PyInstaller onefile
+   sidecar with `datas=[]` — a JSON data file read at runtime would break the
+   packaged app. The backend copy stays in Python
+   (`backend/academic_calendar.py`), synced to the frontend's
+   `SEMESTER_STARTS`; both copies are pinned by tests
+   (`test_academic_calendar.py`, the frontend "semester data pin") and the
+   sync duty is documented in the module header.
+4. **What was actually built:** the consolidated backend module (5-year
+   semester table, holidays, recess-aware `week_number` with the week-13 cap
+   lesson generation depends on), `schedules.py` delegating to it, and the
+   one genuinely missing surface — `upcomingExamsLabel`, the user-specific
+   "MA2001 exam in 5 days · +1 more" line in the Dashboard hero meta, driven
+   by the exam rows NUSMods import already stores.
