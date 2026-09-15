@@ -19,6 +19,7 @@ from routes.canvas import router as canvas_router
 from routes.categories import router as categories_router
 from routes.communities import router as communities_router
 from routes.events import router as events_router
+from routes.focus import router as focus_router
 from routes.folders import router as folders_router
 from routes.forms import router as forms_router
 from routes.groups import router as groups_router
@@ -95,6 +96,7 @@ app.include_router(invites_router)
 app.include_router(forms_router)
 app.include_router(notifications_router)
 app.include_router(study_sessions_router)
+app.include_router(focus_router)
 app.include_router(telegram_router)
 app.include_router(notes_router)
 app.include_router(folders_router)

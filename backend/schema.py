@@ -688,6 +688,26 @@ SCHEMA_STATEMENTS = [
     ON study_sessions (user_id, ended_at DESC)
     """,
     """
+    CREATE TABLE IF NOT EXISTS focus_sessions (
+        id BIGSERIAL PRIMARY KEY,
+        user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        started_at TIMESTAMPTZ NOT NULL,
+        ended_at TIMESTAMPTZ NOT NULL,
+        planned_minutes INTEGER NOT NULL CHECK (planned_minutes BETWEEN 1 AND 480),
+        actual_seconds INTEGER NOT NULL DEFAULT 0 CHECK (actual_seconds >= 0),
+        source TEXT NOT NULL DEFAULT 'manual' CHECK (source IN ('mac_tray', 'ios', 'manual', 'legacy', 'break')),
+        client_id TEXT UNIQUE,
+        module_id BIGINT REFERENCES academic_modules(id) ON DELETE SET NULL,
+        task_id BIGINT REFERENCES tasks(id) ON DELETE SET NULL,
+        is_break BOOLEAN NOT NULL DEFAULT FALSE,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+    """,
+    """
+    CREATE INDEX IF NOT EXISTS focus_sessions_user_ended_idx
+    ON focus_sessions (user_id, ended_at DESC)
+    """,
+    """
     ALTER TABLE tasks ADD COLUMN IF NOT EXISTS group_id BIGINT REFERENCES groups(id) ON DELETE CASCADE
     """,
     """

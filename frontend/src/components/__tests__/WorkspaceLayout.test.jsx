@@ -26,7 +26,9 @@ vi.mock("../wheel/SpinWheelView", () => ({ default: () => <div>Wheel content</di
 vi.mock("../../api", () => ({
   createNote: vi.fn(),
   createTask: vi.fn(),
+  createFocusSession: vi.fn(() => new Promise(() => {})),
   getAcademicModules: vi.fn(() => new Promise(() => {})),
+  getCanvasCalendarEvents: vi.fn(() => Promise.resolve([])),
   getStudySessions: vi.fn(() => new Promise(() => {})),
 }));
 

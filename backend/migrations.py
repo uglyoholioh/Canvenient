@@ -31,6 +31,29 @@ MIGRATIONS: list[tuple[str, list[str]]] = [
             "ALTER TABLE telegram_links ADD COLUMN last_digest_date DATE",
         ],
     ),
+    (
+        "0003_focus_sessions_legacy_copy",
+        [
+            # One-shot copy of completed study sessions into the new
+            # focus_sessions system. source='legacy' plus the stable synthetic
+            # client_id ('legacy-<old id>') keeps the copy idempotent.
+            """
+            INSERT INTO focus_sessions (
+                user_id, started_at, ended_at, planned_minutes, actual_seconds,
+                source, module_id, task_id, client_id
+            )
+            SELECT
+                s.user_id, s.started_at, s.ended_at, s.planned_minutes, s.actual_seconds,
+                'legacy', s.module_id, s.task_id, 'legacy-' || CAST(s.id AS TEXT)
+            FROM study_sessions s
+            WHERE s.status = 'completed' AND s.ended_at IS NOT NULL
+              AND NOT EXISTS (
+                  SELECT 1 FROM focus_sessions f
+                  WHERE f.client_id = 'legacy-' || CAST(s.id AS TEXT)
+              )
+            """,
+        ],
+    ),
 ]
 
 

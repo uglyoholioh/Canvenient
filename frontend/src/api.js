@@ -1038,6 +1038,14 @@ export function getStudyLeaderboard(token, period = "week") {
   return apiRequest(`/study-sessions/leaderboard?period=${period}`, { token });
 }
 
+export function createFocusSession(token, payload) {
+  return apiRequest("/focus/sessions", { method: "POST", body: payload, token });
+}
+
+export function getFocusSummary(token, range = "today") {
+  return apiRequest(`/focus/summary?range=${encodeURIComponent(range)}`, { token });
+}
+
 export function getNotes(token) {
   return apiRequest("/notes", { token });
 }

@@ -1,11 +1,28 @@
 import { useState, useEffect, useRef } from "react";
 import { Play, Pause, Square, Check, Timer } from "lucide-react";
+import { createFocusSession } from "../../api";
 import {
-  createStudySession,
-  completeStudySession,
-  cancelStudySession,
-  getStudySessions,
-} from "../../api";
+  clearRunning,
+  enqueueSession,
+  flushQueue,
+  loadRunning,
+  newClientId,
+  saveRunning,
+} from "../../focusStore";
+
+// Builds the completed-session record for a run. Persistence (POST, or
+// offline queue on failure) happens in persistSession below.
+function buildSessionRecord({ startedAt, plannedMinutes, elapsedSeconds, isBreak = false }) {
+  return {
+    started_at: new Date(startedAt).toISOString(),
+    ended_at: new Date().toISOString(),
+    planned_minutes: plannedMinutes,
+    actual_seconds: Math.max(0, Math.round(elapsedSeconds)),
+    source: isBreak ? "break" : "manual",
+    is_break: isBreak,
+    client_id: newClientId(),
+  };
+}
 
 const RulerSlider = ({ value, onChange }) => {
   const scrollRef = useRef(null);
@@ -186,7 +203,8 @@ export default function StudyTimerModule({ token }) {
   const [durationMinutes, setDurationMinutes] = useState(25);
   const [remainingSeconds, setRemainingSeconds] = useState(25 * 60);
   const [isRunning, setIsRunning] = useState(false);
-  const [activeSession, setActiveSession] = useState(null);
+  const [hasSession, setHasSession] = useState(false);
+  const startedAtRef = useRef(null);
   const timerRef = useRef(null);
   const popoverRef = useRef(null);
 
@@ -207,29 +225,37 @@ export default function StudyTimerModule({ token }) {
     };
   }, []);
 
+  // Restore a run that survived a restart, and flush any sessions that were
+  // queued while the backend was unreachable. A restored run whose planned
+  // time already passed while the app was closed is logged at once.
   useEffect(() => {
-    if (!token) return;
-    let mounted = true;
-    getStudySessions(token)
-      .then((sessions) => {
-        if (!mounted || !Array.isArray(sessions)) return;
-        const active = sessions.find((s) => s.status === "active");
-        if (active) {
-          setActiveSession(active);
-          const plannedSec = (active.planned_minutes || 25) * 60;
-          const elapsed = active.actual_seconds || 0;
-          const rem = Math.max(0, plannedSec - elapsed);
-          setDurationMinutes(active.planned_minutes || 25);
-          setRemainingSeconds(rem);
-          setIsRunning(true);
-        }
-      })
-      .catch(() => {});
-
-    return () => {
-      mounted = false;
-    };
+    flushQueue(createFocusSession, token).catch(() => {});
+    const restored = loadRunning();
+    if (!restored?.startedAt) return;
+    const elapsed = Math.round((Date.now() - new Date(restored.startedAt).getTime()) / 1000);
+    const planned = restored.plannedMinutes || 25;
+    setDurationMinutes(planned);
+    setHasSession(true);
+    if (elapsed >= planned * 60) {
+      clearRunning();
+      setRemainingSeconds(0);
+      persistSession({ startedAt: restored.startedAt, plannedMinutes: planned, elapsedSeconds: planned * 60 });
+      return;
+    }
+    setRemainingSeconds(planned * 60 - elapsed);
+    startedAtRef.current = new Date(restored.startedAt).getTime();
+    setIsRunning(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
+
+  async function persistSession({ startedAt, plannedMinutes, elapsedSeconds, isBreak = false }) {
+    const record = buildSessionRecord({ startedAt, plannedMinutes, elapsedSeconds, isBreak });
+    try {
+      await createFocusSession(token, record);
+    } catch {
+      enqueueSession(record);
+    }
+  }
 
   const completeRef = useRef(null);
 
@@ -253,18 +279,12 @@ export default function StudyTimerModule({ token }) {
     return () => clearInterval(timerRef.current);
   }, [isRunning]);
 
-  const handleStart = async () => {
-    if (!isRunning && !activeSession) {
-      try {
-        const session = await createStudySession(token, {
-          title: "Deep Focus",
-          planned_minutes: durationMinutes,
-        });
-        setActiveSession(session);
-      } catch {
-        // Fallback local
-        setActiveSession({ id: "local", title: "Deep Focus", planned_minutes: durationMinutes });
-      }
+  const handleStart = () => {
+    if (!hasSession) {
+      startedAtRef.current = Date.now();
+      setHasSession(true);
+      setRemainingSeconds(durationMinutes * 60);
+      saveRunning({ startedAt: new Date().toISOString(), plannedMinutes: durationMinutes });
     }
     setIsRunning(true);
   };
@@ -274,42 +294,31 @@ export default function StudyTimerModule({ token }) {
     clearInterval(timerRef.current);
   };
 
-  const handleReset = async () => {
+  const elapsedThisRun = () => durationMinutes * 60 - remainingSeconds;
+
+  const finishRun = async ({ minSeconds }) => {
     setIsRunning(false);
     clearInterval(timerRef.current);
-    const sessionToCancel = activeSession;
-    setActiveSession(null);
-    setRemainingSeconds(durationMinutes * 60);
-
-    if (sessionToCancel && sessionToCancel.id !== "local") {
-      try {
-        await cancelStudySession(token, sessionToCancel.id);
-      } catch {
-        // ignore error
-      }
+    const startedAt = startedAtRef.current;
+    const planned = durationMinutes;
+    const elapsed = elapsedThisRun();
+    setHasSession(false);
+    setRemainingSeconds(planned * 60);
+    startedAtRef.current = null;
+    clearRunning();
+    // Finish always logs; a cancel only counts once a real minute was focused.
+    if (startedAt && elapsed >= minSeconds) {
+      await persistSession({ startedAt, plannedMinutes: planned, elapsedSeconds: elapsed });
     }
   };
 
-  const handleComplete = async () => {
-    setIsRunning(false);
-    clearInterval(timerRef.current);
-    const sessionToComplete = activeSession;
-    setActiveSession(null);
-    const currentRemaining = remainingSeconds;
-    setRemainingSeconds(durationMinutes * 60);
-    setIsOpen(false);
+  const handleReset = async () => {
+    await finishRun({ minSeconds: 60 });
+  };
 
-    if (sessionToComplete && sessionToComplete.id !== "local") {
-      try {
-        const elapsed = durationMinutes * 60 - currentRemaining;
-        await completeStudySession(token, sessionToComplete.id, {
-          actual_seconds: Math.max(60, elapsed),
-          pause_count: 0,
-        });
-      } catch {
-        // ignore error
-      }
-    }
+  const handleComplete = async () => {
+    await finishRun({ minSeconds: 1 });
+    setIsOpen(false);
   };
 
   useEffect(() => {
@@ -381,14 +390,14 @@ export default function StudyTimerModule({ token }) {
             >
               {formatTime(remainingSeconds)}
             </div>
-            {activeSession && (
+            {hasSession && (
               <div style={{ fontSize: "11px", color: "var(--color-mac-muted)", marginTop: "4px" }}>
                 Deep Focus
               </div>
             )}
           </div>
 
-          {!isRunning && !activeSession ? (
+          {!isRunning && !hasSession ? (
             <>
               <RulerSlider value={durationMinutes} onChange={handlePreset} />
               <button

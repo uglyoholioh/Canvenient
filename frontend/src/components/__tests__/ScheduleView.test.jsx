@@ -1,10 +1,11 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { getClassContext, getSchedule } from "../../api";
+import { getClassContext, getCanvasCalendarEvents, getSchedule } from "../../api";
 import Schedule from "../Schedule";
 
 vi.mock("../../api", () => ({
   getSchedule: vi.fn(),
+  getCanvasCalendarEvents: vi.fn(),
   importIcs: vi.fn(),
   importNusmods: vi.fn(),
   getClassContext: vi.fn(),
@@ -22,6 +23,7 @@ function localDateKey(date) {
 describe("Schedule Full Page", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    getCanvasCalendarEvents.mockResolvedValue([]);
     const today = new Date();
 
     getSchedule.mockResolvedValue({
