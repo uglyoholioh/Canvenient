@@ -182,6 +182,24 @@ function getErrorMessage(payload, fallbackMessage) {
   return fallbackMessage;
 }
 
+// Connectivity tracking: when a GET fails at the network level but stale
+// cached data exists, the request resolves with the cache and the shell is
+// told to show an "Offline — showing last sync" marker. Any successful
+// response clears the flag. Only transitions dispatch events.
+let lastOfflineState = false;
+
+function markConnectivity(offline) {
+  if (lastOfflineState === offline) return;
+  lastOfflineState = offline;
+  try {
+    window.dispatchEvent(new CustomEvent("canvenient-connectivity", { detail: { offline } }));
+  } catch {}
+}
+
+function apiCacheKey(path, token) {
+  return `canvenient.cache.api:${path}::${token || ""}`;
+}
+
 async function executeApiRequest(path, { method = "GET", body, token } = {}) {
   const headers = {};
 
@@ -203,11 +221,21 @@ async function executeApiRequest(path, { method = "GET", body, token } = {}) {
       body: body !== undefined ? JSON.stringify(body) : undefined,
     });
   } catch (err) {
+    if (method === "GET") {
+      const stale = getCachedApiData(apiCacheKey(path, token));
+      if (stale !== null) {
+        markConnectivity(true);
+        return stale;
+      }
+    }
+    markConnectivity(true);
     throw new Error(
       `Could not connect to server at ${url}. Please check your backend connection.`,
       { cause: err },
     );
   }
+
+  markConnectivity(false);
 
   if (response.status === 204) {
     return null;
@@ -245,6 +273,10 @@ async function executeApiRequest(path, { method = "GET", body, token } = {}) {
     throw new Error(
       "Received non-JSON response from server. Please verify that VITE_API_BASE_URL points to your live backend API URL.",
     );
+  }
+
+  if (method === "GET" && payload !== null) {
+    setCachedApiData(apiCacheKey(path, token), payload);
   }
 
   return payload;

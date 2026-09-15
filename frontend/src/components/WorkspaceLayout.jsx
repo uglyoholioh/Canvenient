@@ -8,6 +8,7 @@ import Omnibar from "./Omnibar";
 import OnboardingModal from "./OnboardingModal";
 import WelcomeIntro from "./WelcomeIntro";
 import Dashboard from "./Dashboard";
+import OfflineBanner from "./OfflineBanner";
 import AssistantPane from "./AssistantPane";
 import CanvasDrawer from "./drawers/CanvasDrawer";
 import StudyTimerModule from "./dashboard/StudyTimerModule";
@@ -578,6 +579,7 @@ export default function WorkspaceLayout({ token, user, onLogout, onUpdateUser })
       <AssistantContext.Provider value={assistantValue}>
         <WorkspaceToolbarContext.Provider value={setToolbar}>
           <div className="mac-workspace-shell">
+            <OfflineBanner />
             <header className="mac-workspace-toolbar" data-tauri-drag-region>
               <div
                 className="mac-toolbar-leading"

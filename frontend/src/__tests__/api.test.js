@@ -1,5 +1,79 @@
-import { describe, it, expect, vi, afterEach } from "vitest";
-import { createTask, login, register, importIcs, updateProfile } from "../api";
+import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
+import {
+  createTask,
+  getCachedApiData,
+  getTasks,
+  importIcs,
+  login,
+  register,
+  setCachedApiData,
+  updateProfile,
+} from "../api";
+
+describe("api.js offline serve-stale", () => {
+  const originalFetch = globalThis.fetch;
+  let storage;
+  let connectivityEvents;
+
+  beforeEach(() => {
+    storage = new Map();
+    vi.stubGlobal("localStorage", {
+      getItem: (key) => storage.get(key) ?? null,
+      setItem: (key, value) => storage.set(key, String(value)),
+      removeItem: (key) => storage.delete(key),
+      clear: () => storage.clear(),
+    });
+    connectivityEvents = [];
+    window.addEventListener("canvenient-connectivity", (event) => connectivityEvents.push(event));
+  });
+
+  afterEach(() => {
+    globalThis.fetch = originalFetch;
+    vi.unstubAllGlobals();
+    window.removeEventListener("canvenient-connectivity", connectivityEvents.push);
+  });
+
+  it("serves stale cached GET data when the backend is unreachable", async () => {
+    setCachedApiData("canvenient.cache.api:/tasks::test-token", [
+      { id: 1, title: "Cached task" },
+    ]);
+    globalThis.fetch = vi.fn().mockRejectedValue(new TypeError("Failed to fetch"));
+
+    const tasks = await getTasks("test-token");
+    expect(tasks).toEqual([{ id: 1, title: "Cached task" }]);
+    expect(connectivityEvents.at(-1).detail.offline).toBe(true);
+  });
+
+  it("throws when offline and no cache exists", async () => {
+    globalThis.fetch = vi.fn().mockRejectedValue(new TypeError("Failed to fetch"));
+    await expect(getTasks("test-token")).rejects.toThrow("Could not connect to server");
+  });
+
+  it("caches successful GET responses and clears the offline flag", async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      headers: new Map([["content-type", "application/json"]]),
+      json: () => Promise.resolve([{ id: 2, title: "Fresh" }]),
+    });
+
+    const tasks = await getTasks("test-token");
+    expect(tasks).toEqual([{ id: 2, title: "Fresh" }]);
+    expect(getCachedApiData("canvenient.cache.api:/tasks::test-token")).toEqual([
+      { id: 2, title: "Fresh" },
+    ]);
+    expect(connectivityEvents.at(-1).detail.offline).toBe(false);
+  });
+
+  it("still throws for POST failures even with cached data", async () => {
+    setCachedApiData("canvenient.cache.api:/tasks::test-token", []);
+    globalThis.fetch = vi.fn().mockRejectedValue(new TypeError("Failed to fetch"));
+
+    await expect(createTask("test-token", { title: "New" })).rejects.toThrow(
+      "Could not connect to server",
+    );
+  });
+});
 
 describe("api.js error handling", () => {
   const originalFetch = globalThis.fetch;
