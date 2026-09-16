@@ -51,6 +51,36 @@ backend tests, frontend lint+tests, and the macOS compile gate on every push.
   `CARGO_TARGET_DIR="$HOME/.cache/canvenient-cargo-target"`.
 - Task branches integrate by fast-forward into `main` and are deleted after.
 
+## Concurrent installs & verification
+
+Worktrees isolate source, but the installed app, the shared cargo cache, and
+runtime data are singletons every agent contends for. Before any
+`rebuild-install-macos.sh` run:
+
+- **Installs are explicit.** Default verification is `vite build` plus the
+  dev-server pipeline (`VITE_API_BASE_URL=<remote> npx vite`, then Safari
+  against `localhost`). Install to `/Applications` only when the pack
+  authorises it or the user asks, and never while another agent may be
+  verifying: check the binary mtime and
+  `Contents/Resources/build-meta.json` (branch + commit + built_at, written
+  by the installer) first.
+- **Union before install.** While other feature branches are active, install
+  the union (merge the active branches first) rather than a branch-local
+  subset, so the installed app stays a superset of in-flight work.
+- **The installer claims its slot.** It records a claim under
+  `/tmp/canvenient-install-claims/` and aborts while a fresh claim (<20
+  minutes) exists for the same target app; older claims are treated as
+  abandoned and taken over. Remember the Mimosa hook blocks Bash commands
+  naming the installer — use a throwaway exec wrapper.
+- **Parallel review rounds use variant apps.** `CANVENIENT_VARIANT=<name>`
+  builds and installs `/Applications/Canvenient-<name>.app` with bundle id
+  `com.oli.canvenient.<name>`: its own Application Support dir and WebKit
+  storage, so it never contends with the main app. `tauri.conf.json` is
+  patched for the build and restored afterwards; the remote-API marker is
+  seeded from the main app when present (sign in once per variant app). Never
+  run a variant app in local-sidecar mode alongside the main app — both
+  bind port 8000.
+
 ## Safepoints
 
 Maintain Git properly at your own discretion. Make logical safepoint commits as work progresses or when a state is known-good. If a commit or operation involves significant risk or requires attention, elevate and ask the user for explicit approval first. Safepoint commits contain source, required assets, tests, and operational scripts; exclude local databases, build output, credentials, logs, and scratch files unless the user explicitly requests them.
