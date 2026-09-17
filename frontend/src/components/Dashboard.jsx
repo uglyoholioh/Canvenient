@@ -447,6 +447,9 @@ export default function Dashboard({ token, user, onNavigate }) {
             )}
           </div>
         </header>
+        {visibleModules.includes("aibrief") && (
+          <section className="ins-brief-band">{renderModule("aibrief")}</section>
+        )}
         <div
           className={`dashboard-grid is-${layout} ${isEditingLayout ? "is-layout-editing" : ""}`}
           style={{
@@ -456,10 +459,7 @@ export default function Dashboard({ token, user, onNavigate }) {
               .join(" "),
           }}
         >
-          {visibleModules.includes("aibrief") && renderModule("aibrief")}
-          {visibleModules
-            .filter((moduleId) => moduleId !== "aibrief")
-            .map(renderModule)}
+          {visibleModules.filter((moduleId) => moduleId !== "aibrief").map(renderModule)}
           {visibleModules.length === 0 && (
             <div className="dashboard-no-modules">
               No modules are visible. Use the customize button to add one.

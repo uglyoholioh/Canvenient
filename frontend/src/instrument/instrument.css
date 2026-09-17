@@ -682,9 +682,16 @@
   white-space: nowrap;
 }
 
-/* The brief headlines the dashboard, whatever the module order is. */
+/* The brief headlines the dashboard as a full-width band above the grid. */
 .dashboard-grid .dashboard-module[data-module="aibrief"] {
-  order: -1;
-  grid-row: 1;
-  grid-column: 1 / -1;
+  grid-row: auto;
+  grid-column: auto;
+}
+
+.ins-brief-band {
+  margin-bottom: var(--ins-s4);
+}
+
+.ins-brief-band .dashboard-module {
+  height: auto;
 }
