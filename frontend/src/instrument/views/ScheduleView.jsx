@@ -329,9 +329,10 @@ export default function ScheduleView({ token }) {
                     const endMin = minutesSinceMidnight(item.end);
                     if (endMin <= START_HOUR * 60 || startMin >= END_HOUR * 60) return null;
                     const left = axisPct(Math.max(startMin, START_HOUR * 60));
-                    const width = axisPct(
-                      Math.min(endMin, END_HOUR * 60) - Math.max(startMin, START_HOUR * 60),
-                    );
+                    const width =
+                      ((Math.min(endMin, END_HOUR * 60) - Math.max(startMin, START_HOUR * 60)) /
+                        TOTAL_MINUTES) *
+                      100;
                     const isSelected = selected?.id === item.id;
                     return (
                       <button
