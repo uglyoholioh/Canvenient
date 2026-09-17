@@ -1,5 +1,6 @@
 /* ==========================================================================
-   The Instrument — shell: toolbar, sidebar, content frame.
+   The Instrument v3 — Swiss shell: glass sidebar, rule toolbar, numbered
+   navigation, content that scrolls beneath the glass.
    ========================================================================== */
 
 .ins-root {
@@ -18,6 +19,7 @@
 
 /* ---- Toolbar ------------------------------------------------------------- */
 .ins-toolbar {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -25,13 +27,10 @@
   height: var(--ins-toolbar-h);
   flex-shrink: 0;
   padding: 0 var(--ins-s3);
-  background: linear-gradient(
-    180deg,
-    var(--ins-panel),
-    color-mix(in srgb, var(--ins-panel) 86%, #000000)
-  );
+  background: var(--ins-panel);
   border-bottom: 1px solid var(--ins-line);
   user-select: none;
+  z-index: 60;
 }
 
 .ins-toolbar-side {
@@ -46,23 +45,6 @@
   gap: 2px;
 }
 
-/* The study-timer pill rides the legacy classes; keep it quiet and mono
-   inside the instrument toolbar. */
-.ins-toolbar .mac-toolbar-action {
-  min-height: 26px;
-  border-color: var(--ins-line);
-  background: transparent;
-  font-family: var(--ins-mono);
-  font-variant-numeric: tabular-nums;
-  font-size: var(--ins-fs-cap);
-  color: var(--ins-ink-muted);
-}
-
-.ins-toolbar .mac-toolbar-action:hover {
-  background: var(--ins-raised);
-  color: var(--ins-ink);
-}
-
 .ins-traffic-space {
   width: 68px;
   height: 10px;
@@ -71,9 +53,10 @@
 
 .ins-toolbar-title {
   margin-left: var(--ins-s2);
-  font-size: var(--ins-fs-body);
+  font-size: var(--ins-fs-label);
   font-weight: 600;
-  letter-spacing: -0.01em;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
   color: var(--ins-ink);
   white-space: nowrap;
   overflow: hidden;
@@ -93,55 +76,46 @@
   text-align: center;
 }
 
-.ins-toolbar {
-  position: relative;
-}
-
 /* ---- Body frame ----------------------------------------------------------- */
 .ins-body {
   display: flex;
   flex: 1;
   min-height: 0;
+  position: relative;
 }
 
-/* ---- Sidebar --------------------------------------------------------------- */
+/* ---- Sidebar — glass over the scrolling content ---------------------------- */
 .ins-sidebar-rail {
-  flex-shrink: 0;
-  position: relative;
-  overflow: visible;
-  z-index: 40;
+  position: absolute;
+  inset: 0 auto 0 0;
+  z-index: 50;
 }
 
 .ins-sidebar {
   display: flex;
   flex-direction: column;
   height: 100%;
-  background: linear-gradient(
-    180deg,
-    color-mix(in srgb, var(--ins-panel) 70%, #ffffff 3%),
-    var(--ins-panel)
-  );
+  background: var(--ins-glass);
+  backdrop-filter: var(--ins-blur);
+  -webkit-backdrop-filter: var(--ins-blur);
   border-right: 1px solid var(--ins-line);
   overflow: hidden;
-  transition: width var(--ins-dur-panel) var(--ins-ease);
+  transition: width var(--ins-dur-panel) var(--ins-ease-out);
 }
 
 .ins-sidebar.is-hover-mode {
-  position: absolute;
-  inset: 0;
-  z-index: 50;
   box-shadow: none;
 }
 
 .ins-sidebar.is-hover-mode.is-expanded {
-  box-shadow: 6px 0 24px rgba(0, 0, 0, 0.18);
+  box-shadow: 8px 0 32px rgba(0, 0, 0, 0.3);
 }
 
 .ins-sidebar-scroll {
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
-  padding: var(--ins-s2) var(--ins-s2) var(--ins-s3);
+  padding: var(--ins-s3) var(--ins-s2) var(--ins-s3);
 }
 
 .ins-nav {
@@ -151,10 +125,12 @@
 }
 
 .ins-nav-caption {
-  margin: var(--ins-s4) 0 var(--ins-s1);
+  margin: var(--ins-s5) 0 var(--ins-s1);
   padding: 0 8px;
-  font-size: var(--ins-fs-cap);
-  font-weight: 500;
+  font-size: var(--ins-fs-label);
+  font-weight: 600;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
   color: var(--ins-ink-faint);
 }
 
@@ -164,39 +140,51 @@
   align-items: center;
   gap: 8px;
   width: 100%;
-  height: 28px;
+  height: 30px;
   padding: 0 8px;
   border: none;
-  border-radius: var(--ins-r-ctrl);
   background: transparent;
   color: var(--ins-ink-muted);
   font-size: var(--ins-fs-body);
   text-align: left;
   cursor: default;
   transition:
-    background var(--ins-dur-fast) var(--ins-ease),
-    color var(--ins-dur-fast) var(--ins-ease);
+    color var(--ins-dur-fast) var(--ins-ease),
+    background var(--ins-dur-fast) var(--ins-ease);
 }
 
 .ins-nav-row:hover {
-  background: color-mix(in srgb, var(--ins-raised) 72%, transparent);
   color: var(--ins-ink);
 }
 
 .ins-nav-row.is-active {
-  background: var(--ins-accent);
-  color: var(--ins-on-accent);
-  box-shadow: 0 1px 3px rgba(10, 132, 255, 0.35);
+  color: var(--ins-ink);
+  box-shadow: inset 2px 0 0 var(--ins-red);
 }
 
-.ins-nav-row.is-active svg {
-  color: var(--ins-on-accent);
+.ins-nav-row.is-active .ins-nav-index {
+  color: var(--ins-red);
+}
+
+.ins-nav-index {
+  font-family: var(--ins-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: var(--ins-fs-cap);
+  color: var(--ins-ink-faint);
+  width: 20px;
+  flex-shrink: 0;
+  letter-spacing: 0;
+}
+
+.ins-nav-row svg {
+  flex-shrink: 0;
 }
 
 .ins-nav-label {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  font-weight: 500;
 }
 
 .ins-sidebar.is-slim .ins-nav-row {
@@ -205,6 +193,7 @@
 }
 
 .ins-sidebar.is-slim .ins-nav-label,
+.ins-sidebar.is-slim .ins-nav-index,
 .ins-sidebar.is-slim .ins-nav-caption {
   display: none;
 }
@@ -243,7 +232,70 @@
 }
 
 .ins-sidebar-resizer.is-dragging {
-  background: var(--ins-selection);
+  background: var(--ins-ink);
+}
+
+/* ---- Main content ------------------------------------------------------------ */
+.ins-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+.ins-content {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: var(--ins-s5) var(--ins-s5) var(--ins-s6);
+  animation: ins-view-in var(--ins-dur-panel) var(--ins-ease-out);
+}
+
+.ins-view {
+  animation: ins-view-in var(--ins-dur-panel) var(--ins-ease-out);
+}
+
+.ins-content-narrow {
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+.ins-content-wide {
+  max-width: var(--ins-content-max);
+  margin: 0 auto;
+}
+
+/* View head pattern */
+.ins-view-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--ins-s4);
+  margin-bottom: var(--ins-s4);
+}
+
+/* Scrollbars — hairline */
+.ins-root ::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.ins-root ::-webkit-scrollbar-thumb {
+  background: var(--ins-line);
+  border-radius: 0;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+.ins-root ::-webkit-scrollbar-thumb:hover {
+  background: var(--ins-ink-muted);
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+.ins-root ::-webkit-scrollbar-track {
+  background: transparent;
 }
 
 /* ---- Command bar ----------------------------------------------------------- */
@@ -253,11 +305,11 @@
   display: flex;
   flex-direction: column;
   border: 1px solid var(--ins-line-strong);
-  border-radius: 12px;
-  background: var(--ins-sheet-bg);
-  backdrop-filter: blur(28px) saturate(170%);
-  -webkit-backdrop-filter: blur(28px) saturate(170%);
-  box-shadow: var(--ins-shadow-overlay);
+  border-radius: 0;
+  background: var(--ins-glass-strong);
+  backdrop-filter: var(--ins-blur);
+  -webkit-backdrop-filter: var(--ins-blur);
+  box-shadow: var(--ins-shadow-sheet);
   overflow: hidden;
   animation: ins-pop var(--ins-dur-panel) var(--ins-ease-out);
 }
@@ -292,8 +344,10 @@
 
 .ins-commandbar-group {
   padding: var(--ins-s2) var(--ins-s2) 2px;
-  font-size: var(--ins-fs-cap);
-  font-weight: 500;
+  font-size: var(--ins-fs-label);
+  font-weight: 600;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
   color: var(--ins-ink-faint);
 }
 
@@ -305,7 +359,6 @@
   width: 100%;
   padding: 6px var(--ins-s2);
   border: none;
-  border-radius: var(--ins-r-ctrl);
   background: transparent;
   color: var(--ins-ink-body);
   font-size: var(--ins-fs-body);
@@ -314,14 +367,18 @@
 }
 
 .ins-commandbar-row.is-hot {
-  background: var(--ins-accent);
-  color: var(--ins-on-accent);
+  background: var(--ins-ink);
+  color: var(--ins-bg);
+}
+
+.ins-commandbar-row.is-hot svg {
+  color: var(--ins-bg);
 }
 
 .ins-commandbar-row.is-hot .ins-kbd {
-  background: rgba(255, 255, 255, 0.18);
-  border-color: transparent;
-  color: var(--ins-on-accent);
+  background: transparent;
+  border-color: rgba(0, 0, 0, 0.3);
+  color: var(--ins-bg);
 }
 
 .ins-commandbar-label {
@@ -369,7 +426,11 @@
 
 .ins-cheatsheet-col h3 {
   margin-bottom: var(--ins-s2);
+  font-size: var(--ins-fs-label);
   font-weight: 600;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--ins-ink-muted);
 }
 
 .ins-cheatsheet-row {
@@ -381,13 +442,13 @@
 }
 
 .ins-cheatsheet-row dt {
-  color: var(--ins-ink-muted);
+  color: var(--ins-ink-body);
   font-size: var(--ins-fs-sub);
 }
 
 /* ---- Orientation sheet -------------------------------------------------------- */
 .ins-orientation {
-  padding: var(--ins-s5);
+  padding: var(--ins-s6) var(--ins-s5);
   display: flex;
   flex-direction: column;
   gap: var(--ins-s3);
@@ -413,6 +474,11 @@
   color: var(--ins-ink-body);
 }
 
+.ins-orientation-key .ins-kbd {
+  min-width: 34px;
+  justify-content: center;
+}
+
 .ins-orientation-name {
   display: flex;
   flex-direction: column;
@@ -424,60 +490,19 @@
   justify-content: flex-end;
 }
 
-/* ---- Main content ------------------------------------------------------------ */
-.ins-main {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  position: relative;
-}
-
-.ins-content {
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-  padding: var(--ins-s5) var(--ins-s5) var(--ins-s6);
-}
-
-.ins-content-narrow {
-  max-width: 720px;
-  margin: 0 auto;
-}
-
-.ins-content-wide {
-  max-width: var(--ins-content-max);
-  margin: 0 auto;
-}
-
-/* Page header pattern inside views */
-.ins-view-head {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: var(--ins-s4);
-  margin-bottom: var(--ins-s4);
-}
-
-/* Scrollbars inside the instrument stay hairline-quiet */
-.ins-root ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
-
-.ins-root ::-webkit-scrollbar-thumb {
-  background: var(--ins-line-strong);
-  border-radius: 4px;
-  border: 2px solid transparent;
-  background-clip: padding-box;
-}
-
-.ins-root ::-webkit-scrollbar-thumb:hover {
-  background: var(--ins-ink-faint);
-  border: 2px solid transparent;
-  background-clip: padding-box;
-}
-
-.ins-root ::-webkit-scrollbar-track {
+/* ---- Study-timer pill rides legacy classes ------------------------------------- */
+.ins-toolbar .mac-toolbar-action {
+  min-height: 28px;
+  border: 1px solid var(--ins-line);
+  border-radius: var(--ins-r);
   background: transparent;
+  font-family: var(--ins-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: var(--ins-fs-cap);
+  color: var(--ins-ink-muted);
+}
+
+.ins-toolbar .mac-toolbar-action:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--ins-ink);
 }

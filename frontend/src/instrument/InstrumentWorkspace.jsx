@@ -75,17 +75,17 @@ const VIEW_TITLES = {
 };
 
 const SIDEBAR_PRIMARY = [
-  { id: "dashboard", label: "Today", icon: Sun },
-  { id: "tasks", label: "Tasks", icon: ListTodo },
-  { id: "schedule", label: "Schedule", icon: CalendarDays },
-  { id: "venues", label: "Campus", icon: MapPin },
-  { id: "canvas", label: "Modules", icon: BookOpen },
-  { id: "notes", label: "Notes", icon: FileText },
+  { id: "dashboard", label: "Today", icon: Sun, index: "01" },
+  { id: "tasks", label: "Tasks", icon: ListTodo, index: "02" },
+  { id: "schedule", label: "Schedule", icon: CalendarDays, index: "03" },
+  { id: "venues", label: "Campus", icon: MapPin, index: "04" },
+  { id: "canvas", label: "Modules", icon: BookOpen, index: "05" },
+  { id: "notes", label: "Notes", icon: FileText, index: "06" },
 ];
 
 const SIDEBAR_UTILITIES = [
-  { id: "wheel", label: "Decide", icon: Dices },
-  { id: "groups", label: "Groups", icon: Users },
+  { id: "wheel", label: "Decide", icon: Dices, index: "07" },
+  { id: "groups", label: "Groups", icon: Users, index: "08" },
 ];
 
 const getSidebarBehavior = () => {
@@ -108,7 +108,7 @@ function ViewLoader() {
   );
 }
 
-const NavItem = ({ icon: Icon, label, active, onClick, isSlim }) => (
+const NavItem = ({ icon: Icon, label, index, active, onClick, isSlim }) => (
   <button
     type="button"
     className={`ins-nav-row ${active ? "is-active" : ""} ${isSlim ? "is-slim" : ""}`}
@@ -116,7 +116,8 @@ const NavItem = ({ icon: Icon, label, active, onClick, isSlim }) => (
     aria-current={active ? "page" : undefined}
     title={isSlim ? label : undefined}
   >
-    <Icon size={16} strokeWidth={1.8} style={{ flexShrink: 0 }} />
+    {index && <span className="ins-nav-index">{index}</span>}
+    <Icon size={15} strokeWidth={1.8} style={{ flexShrink: 0 }} />
     <span className="ins-nav-label">{label}</span>
   </button>
 );
@@ -641,6 +642,7 @@ export default function InstrumentWorkspace({ token, user, onLogout, onUpdateUse
                           isSlim={isSlim}
                           icon={item.icon}
                           label={item.label}
+                          index={item.index}
                           active={
                             activeTab === item.id ||
                             (item.id === "notes" && activeTab.startsWith("note-"))
@@ -657,6 +659,7 @@ export default function InstrumentWorkspace({ token, user, onLogout, onUpdateUse
                           isSlim={isSlim}
                           icon={item.icon}
                           label={item.label}
+                          index={item.index}
                           active={activeTab === item.id}
                           onClick={() => setActiveTab(item.id)}
                         />
@@ -693,8 +696,8 @@ export default function InstrumentWorkspace({ token, user, onLogout, onUpdateUse
                 </aside>
               </div>
 
-              <main className="ins-main">
-                <div className="ins-content">
+              <main className="ins-main" style={{ marginLeft: layoutSidebarWidth }}>
+                <div className="ins-content" key={activeTab}>
                   <Suspense fallback={<ViewLoader />}>
                     {activeTab === "dashboard" && (
                       <TodayView

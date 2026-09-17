@@ -29,7 +29,7 @@
   background: transparent;
   text-align: left;
   padding: 5px 8px;
-  border-radius: var(--ins-r-ctrl);
+  border-radius: var(--ins-r);
   font-size: var(--ins-fs-body);
   color: var(--ins-ink-muted);
   cursor: default;
@@ -40,12 +40,12 @@
 
 .ins-settings-tab:hover {
   color: var(--ins-ink);
-  background: color-mix(in srgb, var(--ins-raised) 72%, transparent);
+  background: color-mix(in srgb, var(--ins-bg-raise) 72%, transparent);
 }
 
 .ins-settings-tab.is-active {
-  background: var(--ins-selection);
-  color: var(--ins-selection-ink);
+  color: var(--ins-ink);
+  box-shadow: inset 2px 0 0 var(--ins-red);
 }
 
 .ins-settings-pane {
@@ -112,7 +112,7 @@
 }
 
 .ins-theme:hover {
-  background: var(--ins-raised);
+  background: var(--ins-bg-raise);
 }
 
 .ins-theme.is-active {

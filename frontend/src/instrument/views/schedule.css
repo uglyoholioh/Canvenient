@@ -32,7 +32,7 @@
 .ins-phases {
   display: flex;
   border: 1px solid var(--ins-line);
-  border-radius: var(--ins-r-ctrl);
+  border-radius: var(--ins-r);
   overflow: hidden;
 }
 
@@ -58,13 +58,13 @@
 }
 
 .ins-phase:hover {
-  background: var(--ins-raised);
+  background: var(--ins-bg-raise);
   color: var(--ins-ink-body);
 }
 
 .ins-phase.is-active {
-  background: var(--ins-selection);
-  color: var(--ins-selection-ink);
+  background: var(--ins-ink);
+  color: var(--ins-bg);
 }
 
 .ins-phase.is-recess,
@@ -79,7 +79,7 @@
   width: 4px;
   height: 4px;
   border-radius: 50%;
-  background: var(--ins-green);
+  background: var(--ins-red);
   transform: translateX(-50%);
 }
 

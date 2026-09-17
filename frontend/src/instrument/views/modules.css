@@ -34,7 +34,7 @@
   width: 100%;
   padding: 0;
   border: none;
-  border-radius: var(--ins-r-ctrl);
+  border-radius: var(--ins-r);
   background: transparent;
   text-align: left;
   font: inherit;
@@ -45,11 +45,16 @@
 }
 
 .ins-modrow:hover {
-  background: color-mix(in srgb, var(--ins-raised) 72%, transparent);
+  background: color-mix(in srgb, var(--ins-bg-raise) 72%, transparent);
 }
 
 .ins-modrow.is-active {
-  background: var(--ins-selection);
+  background: rgba(255, 255, 255, 0.06);
+  box-shadow: inset 2px 0 0 var(--ins-ink);
+}
+
+:root[data-theme="instrument-light"] .ins-modrow.is-active {
+  background: rgba(17, 17, 16, 0.06);
 }
 
 .ins-modrow .ins-tick {
@@ -66,7 +71,7 @@
 }
 
 .ins-modrow.is-active .ins-modrow-code {
-  color: var(--ins-selection-ink);
+  color: var(--ins-ink);
 }
 
 .ins-modrow-code {
@@ -177,16 +182,21 @@
   gap: 1px;
   padding: var(--ins-s2) var(--ins-s2);
   margin: 0 calc(var(--ins-s2) * -1);
-  border-radius: var(--ins-r-ctrl);
+  border-radius: var(--ins-r);
   transition: background var(--ins-dur-fast) var(--ins-ease);
 }
 
 .ins-annrow.is-hot {
-  background: var(--ins-selection);
+  background: rgba(255, 255, 255, 0.05);
+  box-shadow: inset 2px 0 0 var(--ins-red);
+}
+
+:root[data-theme="instrument-light"] .ins-annrow.is-hot {
+  background: rgba(17, 17, 16, 0.05);
 }
 
 .ins-annrow.is-hot .ins-annrow-title {
-  color: var(--ins-selection-ink);
+  color: var(--ins-ink);
 }
 
 .ins-annrow-course {
