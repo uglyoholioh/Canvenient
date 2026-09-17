@@ -38,6 +38,7 @@ import { getAcademicWeek } from "../components/scheduleUtils";
 import CommandBar from "./CommandBar";
 import CheatSheet from "./CheatSheet";
 import OrientationSheet from "./OrientationSheet";
+import TriageSheet from "./TriageSheet";
 import "./instrument.css";
 
 // Today renders the proven dashboard layout (AI brief, due list, classes,
@@ -149,6 +150,7 @@ export default function InstrumentWorkspace({ token, user, onLogout, onUpdateUse
 
   const [isCommandBarOpen, setIsCommandBarOpen] = useState(false);
   const [isCheatSheetOpen, setIsCheatSheetOpen] = useState(false);
+  const [isTriageOpen, setIsTriageOpen] = useState(false);
   const [toolbar, setToolbar] = useState(null);
   const [isSidebarHovered, setIsSidebarHovered] = useState(false);
   const [shortcuts, setShortcuts] = useState(readKeyboardShortcuts);
@@ -302,10 +304,13 @@ export default function InstrumentWorkspace({ token, user, onLogout, onUpdateUse
       setSidebarWidth(parseInt(localStorage.getItem("canvenient-sidebar-width") || "216", 10));
       setShortcuts(readKeyboardShortcuts());
     };
+    const openTriage = () => setIsTriageOpen(true);
+    window.addEventListener("canvenient-open-triage", openTriage);
     window.addEventListener("storage", handleStorage);
     window.addEventListener("settings-updated", handleStorage);
     window.addEventListener("keyboard-shortcuts-updated", handleStorage);
     return () => {
+      window.removeEventListener("canvenient-open-triage", openTriage);
       window.removeEventListener("storage", handleStorage);
       window.removeEventListener("settings-updated", handleStorage);
       window.removeEventListener("keyboard-shortcuts-updated", handleStorage);
@@ -345,6 +350,11 @@ export default function InstrumentWorkspace({ token, user, onLogout, onUpdateUse
       if (e.key === "/" && (e.metaKey || e.ctrlKey)) {
         e.preventDefault();
         setIsCheatSheetOpen((open) => !open);
+        return;
+      }
+      if (e.shiftKey && (e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "t") {
+        e.preventDefault();
+        setIsTriageOpen(true);
         return;
       }
       if (!(e.metaKey || e.ctrlKey)) return;
@@ -767,6 +777,7 @@ export default function InstrumentWorkspace({ token, user, onLogout, onUpdateUse
                   if (command === "quick-task") openQuickCapture({ mode: "task" });
                   if (command === "quick-note") openQuickCapture({ mode: "note" });
                   if (command === "cheat-sheet") setIsCheatSheetOpen(true);
+                  if (command === "triage") setIsTriageOpen(true);
                 }}
                 onNavigate={(type, item) => {
                   if (type === "note") {

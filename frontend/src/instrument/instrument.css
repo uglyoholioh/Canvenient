@@ -518,3 +518,166 @@
   background: rgba(128, 118, 100, 0.12);
   color: var(--ins-ink);
 }
+
+/* ---- AI brief card (dashboard module) -------------------------------------- */
+.ins-brief {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ins-s3);
+  height: 100%;
+}
+
+.ins-brief-head {
+  display: flex;
+  align-items: center;
+  gap: var(--ins-s2);
+}
+
+.ins-brief-head .ins-label {
+  flex: 1;
+}
+
+.ins-brief-source {
+  font-size: var(--ins-fs-cap);
+  font-weight: 600;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--ins-ink-faint);
+  border: 1px solid var(--ins-line);
+  border-radius: 999px;
+  padding: 1px 8px;
+}
+
+.ins-brief-source.is-ai {
+  color: var(--ins-red);
+  border-color: color-mix(in srgb, var(--ins-red) 45%, transparent);
+}
+
+.ins-brief-refresh {
+  width: 24px;
+  height: 24px;
+}
+
+.ins-brief-refresh .is-spinning {
+  animation: ins-breathe 1s linear infinite;
+}
+
+.ins-brief-lead {
+  font-size: var(--ins-fs-body);
+  line-height: 1.55;
+  color: var(--ins-ink);
+}
+
+.ins-brief-sec {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ins-s1);
+  padding-top: var(--ins-s3);
+  border-top: 1px solid var(--ins-line);
+}
+
+.ins-brief-sec-label {
+  margin-bottom: 2px;
+}
+
+.ins-brief-row {
+  display: flex;
+  align-items: baseline;
+  gap: var(--ins-s2);
+  font-size: var(--ins-fs-sub);
+  color: var(--ins-ink-body);
+  min-width: 0;
+}
+
+.ins-brief-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--ins-red);
+  flex-shrink: 0;
+  align-self: center;
+}
+
+.ins-brief-time {
+  flex-shrink: 0;
+  min-width: 58px;
+  color: var(--ins-ink-muted);
+}
+
+.ins-brief-time.is-red {
+  color: var(--ins-red);
+}
+
+.ins-brief-main {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ins-brief-sub {
+  flex-shrink: 0;
+}
+
+/* ---- Triage sheet ------------------------------------------------------------ */
+.ins-triage {
+  width: min(520px, calc(100vw - 48px));
+}
+
+.ins-triage-head {
+  display: flex;
+  align-items: center;
+  gap: var(--ins-s3);
+  padding: var(--ins-s3) var(--ins-s4);
+  border-bottom: 1px solid var(--ins-line);
+}
+
+.ins-triage-head .ins-cap {
+  flex: 1;
+}
+
+.ins-triage-item {
+  padding: var(--ins-s4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--ins-s2);
+}
+
+.ins-triage-title {
+  font-size: 17px;
+  font-weight: 650;
+  letter-spacing: -0.012em;
+  color: var(--ins-ink);
+  line-height: 1.3;
+}
+
+.ins-triage-actions {
+  display: flex;
+  gap: var(--ins-s2);
+  margin-top: var(--ins-s2);
+}
+
+.ins-triage-next {
+  padding: var(--ins-s3) var(--ins-s4);
+  border-top: 1px solid var(--ins-line);
+}
+
+.ins-triage-next-label {
+  margin-bottom: var(--ins-s1);
+}
+
+.ins-triage-nextrow {
+  display: flex;
+  align-items: baseline;
+  gap: var(--ins-s2);
+  padding: 3px 0;
+  font-size: var(--ins-fs-sub);
+  color: var(--ins-ink-muted);
+}
+
+.ins-triage-nextrow-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

@@ -36,26 +36,44 @@ export const DEFAULT_DASHBOARD_TRACKS = {
 };
 
 export const DEFAULT_DASHBOARD_CONFIG = {
-  order: ["tasks", "schedule", "canvas", "isb"],
-  hidden: ["notes", "aibrief", "studytimer", "wheel"],
+  order: ["aibrief", "tasks", "schedule", "canvas", "isb"],
+  hidden: ["notes", "studytimer", "wheel"],
   sizes: DEFAULT_DASHBOARD_SIZES,
   tracks: DEFAULT_DASHBOARD_TRACKS,
 };
 
 export function threeColumnDashboardConfig(config = DEFAULT_DASHBOARD_CONFIG) {
   const hidden = (config.hidden || []).filter(
-    (id) => !["tasks", "schedule", "canvas", "isb"].includes(id),
+    (id) => !["tasks", "schedule", "canvas", "isb", "aibrief"].includes(id),
   );
   if (!hidden.includes("notes")) {
     hidden.push("notes");
   }
   return {
     ...config,
-    order: ["tasks", "schedule", "canvas", "isb"],
+    order: ["aibrief", "tasks", "schedule", "canvas", "isb"],
     hidden,
     sizes: { ...config.sizes, ...DEFAULT_DASHBOARD_SIZES },
     tracks: { ...DEFAULT_DASHBOARD_TRACKS },
   };
+}
+
+const FORCE_AIBRIEF_KEY = "canvenient.aibrief.forced";
+
+// The brief is the dashboard's headline. Configs written before it existed
+// hide it; surface it once, then respect whatever the user chooses.
+function forceAibriefOnce(order, hidden) {
+  try {
+    if (localStorage.getItem(FORCE_AIBRIEF_KEY)) return { order, hidden };
+    if (!hidden.includes("aibrief")) return { order, hidden };
+    localStorage.setItem(FORCE_AIBRIEF_KEY, "1");
+    return {
+      order: ["aibrief", ...order.filter((id) => id !== "aibrief")],
+      hidden: hidden.filter((id) => id !== "aibrief"),
+    };
+  } catch {
+    return { order, hidden };
+  }
 }
 
 export function readDashboardLayout() {
@@ -93,9 +111,13 @@ export function readDashboardConfig() {
         normalizeDashboardSize(stored.sizes?.[id], DEFAULT_DASHBOARD_SIZES[id]),
       ]),
     );
+    const forced = forceAibriefOnce(
+      [...storedOrder, ...missingOrder],
+      [...storedHidden, ...missingHidden],
+    );
     return {
-      order: [...storedOrder, ...missingOrder],
-      hidden: [...storedHidden, ...missingHidden],
+      order: forced.order,
+      hidden: forced.hidden,
       sizes,
       tracks: normalizeDashboardTracks(stored.tracks),
     };

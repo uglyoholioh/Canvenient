@@ -51,10 +51,11 @@ describe("dashboard card sizes", () => {
     });
   });
 
-  it("keeps NUS ISB available alongside the primary dashboard modules and hides notes", () => {
+  it("keeps NUS ISB available, leads with the AI brief, and hides notes", () => {
     const config = threeColumnDashboardConfig(readDashboardConfig());
-    expect(config.order).toEqual(["tasks", "schedule", "canvas", "isb"]);
+    expect(config.order).toEqual(["aibrief", "tasks", "schedule", "canvas", "isb"]);
     expect(config.hidden).toContain("notes");
+    expect(config.hidden).not.toContain("aibrief");
     expect(config.sizes.tasks).toEqual({ columns: 2, rows: 2 });
     expect(config.sizes.schedule).toEqual({ columns: 1, rows: 1 });
     expect(config.sizes.canvas).toEqual({ columns: 1, rows: 2 });

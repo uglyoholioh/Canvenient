@@ -8,7 +8,7 @@ import CampusBusModule from "./dashboard/CampusBusModule";
 import TasksModule from "./dashboard/TasksModule";
 import DashboardCustomizer from "./dashboard/DashboardCustomizer";
 import NotesModule from "./dashboard/NotesModule";
-import AssistantBriefCard from "./dashboard/AssistantBriefCard";
+import AiBriefCard from "../instrument/AiBriefCard";
 import StudyTimerModule from "./dashboard/StudyTimerModule";
 import WheelModule from "./dashboard/WheelModule";
 import {
@@ -205,7 +205,7 @@ export default function Dashboard({ token, user, onNavigate }) {
     },
     aibrief: {
       title: "My Day",
-      body: <AssistantBriefCard token={token} />,
+      body: <AiBriefCard token={token} />,
     },
     studytimer: {
       title: "Study Timer",
@@ -440,7 +440,7 @@ export default function Dashboard({ token, user, onNavigate }) {
               <button
                 type="button"
                 className="dashboard-overdue-review"
-                onClick={() => setTriageOpen(true)}
+                onClick={() => window.dispatchEvent(new CustomEvent("canvenient-open-triage"))}
               >
                 {overdueCount} task{overdueCount === 1 ? "" : "s"} overdue — review
               </button>

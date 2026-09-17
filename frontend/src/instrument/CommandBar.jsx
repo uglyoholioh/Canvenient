@@ -100,6 +100,13 @@ export default function CommandBar({ token, onClose, onNavigate, onCommand }) {
         run: () => onCommand?.("quick-note"),
       },
       {
+        key: "cmd-triage",
+        group: "Capture",
+        label: "Triage tasks and posts",
+        icon: CheckSquare,
+        run: () => onCommand?.("triage"),
+      },
+      {
         key: "cmd-import",
         group: "Capture",
         label: "Import a timetable",

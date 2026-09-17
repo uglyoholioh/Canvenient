@@ -167,6 +167,13 @@ export default function TasksView({ token }) {
   return (
     <div className="ins-tasks">
       <div className="ins-tasks-toolbar">
+        <button
+          type="button"
+          className="ins-btn"
+          onClick={() => window.dispatchEvent(new CustomEvent("canvenient-open-triage"))}
+        >
+          Triage
+        </button>
         <div className="ins-seg">
           {[
             ["open", `Open ${openTasks.length}`],
