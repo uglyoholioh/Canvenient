@@ -35,8 +35,12 @@ export const DEFAULT_DASHBOARD_TRACKS = {
   rows: [220, 520],
 };
 
+// Modules that are always part of the dashboard; aibrief is surfaced by the
+// headline force below rather than by the missing-module resurrection.
+const CORE_ORDER = ["tasks", "schedule", "canvas", "isb"];
+
 export const DEFAULT_DASHBOARD_CONFIG = {
-  order: ["aibrief", "tasks", "schedule", "canvas", "isb"],
+  order: ["aibrief", ...CORE_ORDER],
   hidden: ["notes", "studytimer", "wheel"],
   sizes: DEFAULT_DASHBOARD_SIZES,
   tracks: DEFAULT_DASHBOARD_TRACKS,
@@ -51,7 +55,7 @@ export function threeColumnDashboardConfig(config = DEFAULT_DASHBOARD_CONFIG) {
   }
   return {
     ...config,
-    order: ["aibrief", "tasks", "schedule", "canvas", "isb"],
+    order: ["aibrief", ...CORE_ORDER],
     hidden,
     sizes: { ...config.sizes, ...DEFAULT_DASHBOARD_SIZES },
     tracks: { ...DEFAULT_DASHBOARD_TRACKS },
@@ -101,7 +105,7 @@ export function readDashboardConfig() {
     const missing = validIds.filter(
       (id) => !storedOrder.includes(id) && !storedHidden.includes(id),
     );
-    const missingOrder = missing.filter((id) => DEFAULT_DASHBOARD_CONFIG.order.includes(id));
+    const missingOrder = missing.filter((id) => CORE_ORDER.includes(id));
     const missingHidden = missing.filter((id) => DEFAULT_DASHBOARD_CONFIG.hidden.includes(id));
 
     const sizes = Object.fromEntries(
