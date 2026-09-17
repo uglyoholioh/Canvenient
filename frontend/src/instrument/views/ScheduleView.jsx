@@ -33,7 +33,7 @@ function semesterPhases(now) {
   const segments = [];
   const monday = startOfLocalDay(now);
   monday.setDate(monday.getDate() - ((monday.getDay() + 6) % 7) - 5 * 7);
-  for (let offset = 0; offset <= 24; offset += 1) {
+  for (let offset = 0; offset <= 21; offset += 1) {
     const probe = new Date(monday);
     probe.setDate(monday.getDate() + offset * 7);
     const week = getAcademicWeek(probe);
@@ -296,7 +296,11 @@ export default function ScheduleView({ token }) {
           <div className="ins-hgrid-corner" />
           <div className="ins-hgrid-hours">
             {hours.map((hour) => (
-              <span key={hour} className="ins-mono ins-hgrid-hour">
+              <span
+                key={hour}
+                className="ins-mono ins-hgrid-hour"
+                style={{ left: `${axisPct(hour * 60)}%` }}
+              >
                 {String(hour).padStart(2, "0")}
               </span>
             ))}
