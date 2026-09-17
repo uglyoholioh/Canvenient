@@ -1,6 +1,7 @@
-// Schedule — the Registrar look: a print-timetable grid that states the
-// week. Phase strip on top, weekend collapsed until it has somewhere to be,
-// class sheets open in the context drawer. ←/→ move weeks, T returns.
+// Schedule — the horizontal timeline: days stack as rows, time flows left
+// to right, and the red now-line crosses today where it belongs. Phase strip
+// on top, weekend collapsed until it has somewhere to be, class sheets open
+// in the context drawer. ←/→ move weeks, T returns.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { getCanvasCalendarEvents, getSchedule, importIcs, importNusmods } from "../../api";
@@ -19,7 +20,8 @@ import "./schedule.css";
 const DAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const START_HOUR = 8;
 const END_HOUR = 23;
-const HOUR_HEIGHT = 52;
+const TOTAL_MINUTES = (END_HOUR - START_HOUR) * 60;
+const ROW_HEIGHT = 64;
 
 function timeHM(date) {
   return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false });
@@ -30,8 +32,8 @@ function timeHM(date) {
 function semesterPhases(now) {
   const segments = [];
   const monday = startOfLocalDay(now);
-  monday.setDate(monday.getDate() - ((monday.getDay() + 6) % 7) - 8 * 7);
-  for (let offset = 0; offset <= 22; offset += 1) {
+  monday.setDate(monday.getDate() - ((monday.getDay() + 6) % 7) - 5 * 7);
+  for (let offset = 0; offset <= 24; offset += 1) {
     const probe = new Date(monday);
     probe.setDate(monday.getDate() + offset * 7);
     const week = getAcademicWeek(probe);
@@ -97,11 +99,11 @@ export default function ScheduleView({ token }) {
 
   useEffect(() => {
     load();
-    const onChanged = () => load();
-    window.addEventListener("canvenient-open-schedule-import", () => setImportOpen(true));
-    window.addEventListener("canvenient-import-ics-paths", onChanged);
+    const onImportOpen = () => setImportOpen(true);
+    window.addEventListener("canvenient-open-schedule-import", onImportOpen);
+    window.addEventListener("canvenient-import-ics-paths", load);
     return () => {
-      window.removeEventListener("canvenient-import-ics-paths", onChanged);
+      window.removeEventListener("canvenient-import-ics-paths", load);
     };
   }, [load]);
 
@@ -195,8 +197,10 @@ export default function ScheduleView({ token }) {
   };
 
   const nowMinutes = minutesSinceMidnight(now);
-  const nowDayIndex = (now.getDay() + 6) % 7;
-  const hourRange = Array.from({ length: END_HOUR - START_HOUR }, (_, i) => START_HOUR + i);
+  const hours = Array.from({ length: END_HOUR - START_HOUR }, (_, i) => START_HOUR + i);
+
+  // Horizontal placement as percentages of the time axis.
+  const axisPct = (minutes) => ((minutes - START_HOUR * 60) / TOTAL_MINUTES) * 100;
 
   return (
     <div className="ins-sched">
@@ -286,43 +290,43 @@ export default function ScheduleView({ token }) {
         </div>
       )}
 
-      <div className="ins-gridwrap">
-        <div className="ins-grid" style={{ "--hour-h": `${HOUR_HEIGHT}px` }}>
-          <div className="ins-grid-gutter">
-            <div className="ins-grid-dayhead" />
-            {hourRange.map((hour) => (
-              <div key={hour} className="ins-grid-hour ins-mono">
+      <div className="ins-hgridwrap">
+        <div className="ins-hgrid" style={{ "--row-h": `${ROW_HEIGHT}px` }}>
+          {/* corner + hour header */}
+          <div className="ins-hgrid-corner" />
+          <div className="ins-hgrid-hours">
+            {hours.map((hour) => (
+              <span key={hour} className="ins-mono ins-hgrid-hour">
                 {String(hour).padStart(2, "0")}
-              </div>
+              </span>
             ))}
           </div>
+
           {visibleDays.map((day, dayIndex) => {
             const isToday = day.toDateString() === now.toDateString();
             return (
-              <div key={dayIndex} className={`ins-grid-day ${isToday ? "is-today" : ""}`}>
-                <div className="ins-grid-dayhead">
-                  <span className={isToday ? "ins-grid-daynum is-now" : "ins-grid-daynum"}>
-                    {DAY_LABELS[(dayIndex + (showWeekend ? 0 : 0)) % 7]} {day.getDate()}
+              <div key={dayIndex} className={`ins-hgrid-row ${isToday ? "is-today" : ""}`}>
+                <div className="ins-hgrid-dayhead">
+                  <span className={`ins-hgrid-dayname ${isToday ? "is-now" : ""}`}>
+                    {DAY_LABELS[dayIndex]}
                   </span>
+                  <span className="ins-mono ins-hgrid-daydate">{day.getDate()}</span>
                 </div>
-                <div className="ins-grid-cells">
-                  {hourRange.map((hour) => (
-                    <div key={hour} className="ins-grid-cell" />
+                <div className="ins-hgrid-track">
+                  {hours.map((hour) => (
+                    <div
+                      key={hour}
+                      className="ins-hgrid-line"
+                      style={{ left: axisPct(hour * 60) }}
+                    />
                   ))}
-                </div>
-                <div className="ins-grid-blocks">
                   {(visibleItems[dayIndex] || []).map((item) => {
                     const startMin = minutesSinceMidnight(item.start);
                     const endMin = minutesSinceMidnight(item.end);
                     if (endMin <= START_HOUR * 60 || startMin >= END_HOUR * 60) return null;
-                    const top =
-                      ((Math.max(startMin, START_HOUR * 60) - START_HOUR * 60) / 60) * HOUR_HEIGHT;
-                    const height = Math.max(
-                      ((Math.min(endMin, END_HOUR * 60) - Math.max(startMin, START_HOUR * 60)) /
-                        60) *
-                        HOUR_HEIGHT -
-                        2,
-                      18,
+                    const left = axisPct(Math.max(startMin, START_HOUR * 60));
+                    const width = axisPct(
+                      Math.min(endMin, END_HOUR * 60) - Math.max(startMin, START_HOUR * 60),
                     );
                     const isSelected = selected?.id === item.id;
                     return (
@@ -331,26 +335,18 @@ export default function ScheduleView({ token }) {
                         type="button"
                         className={`ins-block is-${item.kind} ${isSelected ? "is-selected" : ""}`}
                         style={{
-                          top,
-                          height,
+                          left: `${left}%`,
+                          width: `${Math.max(width, 3)}%`,
                           "--tick-color": item.color,
-                          "--block-tint": `color-mix(in srgb, ${item.color} 13%, transparent)`,
-                          "--block-tint-selected": `color-mix(in srgb, ${item.color} 24%, transparent)`,
                         }}
                         onClick={() => item.classId && setSelected(item)}
                         title={`${item.title} ${timeHM(item.start)}–${timeHM(item.end)}`}
                       >
-                        <span className="ins-block-time ins-mono">
-                          {timeHM(item.start)}–{timeHM(item.end)}
-                        </span>
                         <span className="ins-block-title">{item.title}</span>
-                        {height > 40 && (
-                          <span className="ins-block-meta ins-cap">
-                            {[item.subtitle, item.venue !== "Venue not listed" ? item.venue : ""]
-                              .filter(Boolean)
-                              .join(" · ")}
-                          </span>
-                        )}
+                        <span className="ins-block-meta ins-cap">
+                          {timeHM(item.start)}
+                          {item.venue !== "Venue not listed" && width > 9 ? ` · ${item.venue}` : ""}
+                        </span>
                       </button>
                     );
                   })}
@@ -359,8 +355,8 @@ export default function ScheduleView({ token }) {
                     nowMinutes > START_HOUR * 60 &&
                     nowMinutes < END_HOUR * 60 && (
                       <div
-                        className="ins-grid-nowline"
-                        style={{ top: ((nowMinutes - START_HOUR * 60) / 60) * HOUR_HEIGHT }}
+                        className="ins-hgrid-nowline"
+                        style={{ left: `${axisPct(nowMinutes)}%` }}
                       >
                         <span className="ins-now-dot" />
                       </div>

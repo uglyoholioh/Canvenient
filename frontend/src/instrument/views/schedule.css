@@ -1,4 +1,4 @@
-/* Schedule — Registrar grid. */
+/* Schedule — horizontal timeline: days as rows, time flowing left→right. */
 
 .ins-sched {
   max-width: var(--ins-content-max);
@@ -21,14 +21,7 @@
   gap: var(--ins-s1);
 }
 
-.ins-sched-weeklabel {
-  min-width: 84px;
-  text-align: center;
-  font-size: var(--ins-fs-sub);
-  color: var(--ins-ink);
-}
-
-/* Phase strip */
+/* Phase strip — soft capsule rail */
 .ins-phases {
   display: flex;
   border: 1px solid var(--ins-line);
@@ -44,23 +37,19 @@
   flex: 1;
   padding: 4px 6px;
   border: none;
-  border-right: 1px solid var(--ins-line);
+  border-radius: 999px;
   background: transparent;
   color: var(--ins-ink-faint);
   font-family: var(--ins-mono);
   font-size: var(--ins-fs-cap);
   cursor: default;
   transition:
-    background var(--ins-dur-fast) var(--ins-ease),
-    color var(--ins-dur-fast) var(--ins-ease);
-}
-
-.ins-phase:last-child {
-  border-right: none;
+    background var(--ins-dur) var(--ins-ease-out),
+    color var(--ins-dur) var(--ins-ease-out);
 }
 
 .ins-phase:hover {
-  background: var(--ins-bg-raise);
+  background: rgba(128, 118, 100, 0.08);
   color: var(--ins-ink-body);
 }
 
@@ -86,146 +75,146 @@
   transform: translateX(-50%);
 }
 
-/* Grid */
-.ins-gridwrap {
+/* Horizontal grid — gutter column for day heads, tracks share one axis */
+.ins-hgridwrap {
   overflow-x: auto;
   border: 1px solid var(--ins-line);
   border-radius: var(--ins-r-big);
+  background: var(--ins-bg-raise);
   box-shadow: var(--ins-shadow-soft);
 }
 
-.ins-grid {
+.ins-hgrid {
   display: grid;
-  grid-template-columns: 48px repeat(auto-fit, minmax(120px, 1fr));
-  min-width: 720px;
+  grid-template-columns: 64px minmax(680px, 1fr);
+  min-width: 860px;
 }
 
-.ins-grid-gutter {
-  display: flex;
-  flex-direction: column;
+.ins-hgrid-corner {
+  border-bottom: 1px solid var(--ins-line);
   border-right: 1px solid var(--ins-line);
 }
 
-.ins-grid-dayhead {
-  height: 32px;
+/* Hour header */
+.ins-hgrid-hours {
+  position: relative;
   display: flex;
-  align-items: center;
-  justify-content: center;
   border-bottom: 1px solid var(--ins-line);
-  flex-shrink: 0;
+  height: 26px;
 }
 
-.ins-grid-daynum {
-  font-size: var(--ins-fs-cap);
-  font-weight: 500;
+.ins-hgrid-hour {
+  position: absolute;
+  top: 6px;
+  transform: translateX(4px);
+  font-size: 10px;
+  color: var(--ins-ink-faint);
+}
+
+/* Day rows */
+.ins-hgrid-row {
+  display: flex;
+  height: var(--row-h);
+  border-bottom: 1px solid var(--ins-line);
+}
+
+.ins-hgrid-row:last-child {
+  border-bottom: none;
+}
+
+.ins-hgrid-row.is-today {
+  background: color-mix(in srgb, var(--ins-panel) 55%, transparent);
+}
+
+.ins-hgrid-dayhead {
+  width: 64px;
+  flex-shrink: 0;
+  border-right: 1px solid var(--ins-line);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+}
+
+.ins-hgrid-dayname {
+  font-size: var(--ins-fs-label);
+  font-weight: 600;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
   color: var(--ins-ink-muted);
 }
 
-.ins-grid-daynum.is-now {
-  color: var(--ins-ink);
-  font-weight: 600;
+.ins-hgrid-dayname.is-now {
+  color: var(--ins-red);
 }
 
-.ins-grid-hour {
-  height: var(--hour-h);
-  flex-shrink: 0;
-  padding: 2px 6px 0 0;
-  font-size: 10px;
+.ins-hgrid-daydate {
+  font-size: var(--ins-fs-cap);
   color: var(--ins-ink-faint);
-  text-align: right;
 }
 
-.ins-grid-day {
-  display: flex;
-  flex-direction: column;
-  border-right: 1px solid var(--ins-line);
-  min-width: 0;
-}
-
-.ins-grid-day:last-child {
-  border-right: none;
-}
-
-.ins-grid-day.is-today {
-  background: color-mix(in srgb, var(--ins-panel) 42%, transparent);
-}
-
-.ins-grid-cells {
+/* Track — relative container; hour lines + blocks share the axis */
+.ins-hgrid-track {
   position: relative;
-  display: flex;
-  flex-direction: column;
+  flex: 1;
 }
 
-.ins-grid-cell {
-  height: var(--hour-h);
-  flex-shrink: 0;
-  border-bottom: 1px solid var(--ins-line);
-}
-
-/* Blocks — left ink rule + tint; selection brightens, never darkens */
-.ins-grid-blocks {
+.ins-hgrid-line {
   position: absolute;
-  inset: 0;
-}
-
-.ins-grid-day {
-  position: relative;
-}
-
-.ins-grid-blocks {
-  top: 32px;
+  top: 0;
   bottom: 0;
+  width: 1px;
+  background: var(--ins-line);
+  opacity: 0.55;
+  pointer-events: none;
 }
 
+/* Blocks — soft module tint, ink tick, rounded */
 .ins-block {
   appearance: none;
   position: absolute;
-  left: 3px;
-  right: 3px;
-  transition:
-    background var(--ins-dur) var(--ins-ease-out),
-    transform var(--ins-dur) var(--ins-ease-out);
+  top: 4px;
+  bottom: 4px;
   display: flex;
   flex-direction: column;
-  gap: 1px;
-  padding: 3px 6px 3px 8px;
-  border: none;
-  border-radius: 3px;
+  justify-content: center;
+  gap: 0;
+  padding: 0 5px 0 8px;
+  border: 1px solid color-mix(in srgb, var(--tick-color) 35%, transparent);
+  border-radius: 8px;
   border-left: var(--ins-tick) solid var(--tick-color);
-  background: var(--block-tint);
+  background: color-mix(in srgb, var(--tick-color) 14%, var(--ins-bg) 72%);
   color: var(--ins-ink);
   text-align: left;
   font: inherit;
   cursor: default;
   overflow: hidden;
   transition:
-    background var(--ins-dur-fast) var(--ins-ease),
-    box-shadow var(--ins-dur-fast) var(--ins-ease);
+    background var(--ins-dur) var(--ins-ease-out),
+    transform var(--ins-dur) var(--ins-ease-out);
 }
 
 .ins-block:hover {
-  box-shadow: 0 0 0 1px var(--ins-line-strong);
+  background: color-mix(in srgb, var(--tick-color) 24%, var(--ins-bg) 72%);
+  transform: translateY(-1px);
 }
 
 .ins-block.is-selected {
-  background: var(--block-tint-selected);
-  box-shadow: 0 0 0 1px var(--ins-line-strong);
+  background: color-mix(in srgb, var(--tick-color) 30%, var(--ins-bg) 72%);
+  outline: 2px solid var(--ins-red);
+  outline-offset: 1px;
 }
 
 .ins-block.is-exam {
   background: var(--ins-amber-bg);
-}
-
-.ins-block-time {
-  font-size: 10px;
-  color: var(--ins-ink-muted);
-  white-space: nowrap;
+  border-color: var(--ins-amber);
 }
 
 .ins-block-title {
   font-size: var(--ins-fs-sub);
-  font-weight: 600;
-  letter-spacing: -0.01em;
+  font-weight: 650;
+  letter-spacing: -0.008em;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -237,22 +226,23 @@
   text-overflow: ellipsis;
 }
 
-.ins-grid-nowline {
+/* Now-line — vertical red thread through today's row */
+.ins-hgrid-nowline {
   position: absolute;
-  left: 0;
-  right: 0;
-  display: flex;
-  align-items: center;
-  pointer-events: none;
+  top: 0;
+  bottom: 0;
+  width: 1.5px;
+  background: var(--ins-red);
   z-index: 5;
+  pointer-events: none;
+  transition: left 1s linear;
 }
 
-.ins-grid-nowline::before {
-  content: "";
-  flex: 1;
-  height: 1px;
-  background: var(--ins-red);
-  opacity: 0.7;
+.ins-hgrid-nowline .ins-now-dot {
+  position: absolute;
+  top: -3px;
+  left: 50%;
+  transform: translateX(-50%);
 }
 
 /* Import sheet */
