@@ -1,8 +1,9 @@
 /* ==========================================================================
-   THE INSTRUMENT — design system for the redesign draft.
-   One material, hairline structure, mono data, declarative voice.
+   THE INSTRUMENT — design system for the redesign draft (v2, Apple-craft).
+   Mac materials: system accent for interaction, translucent overlay panels,
+   layered shadows with half-pixel edges, controls with inner highlights.
    inform, never instruct: every string the UI renders states what is.
-   Loads after index.css; tokens are namespaced --ins-* so nothing collides,
+   Loads after index.css; tokens are namespaced --ins- so nothing collides,
    while the legacy vars are pinned to the instrument palette so any old-class
    surface (tray, settings during migration) stays inside the same material.
    ========================================================================== */
@@ -11,136 +12,170 @@
 :root,
 :root[data-theme="instrument-dark"] {
   --ins-bg: #0f1012; /* content material */
-  --ins-panel: #141518; /* sidebar, toolbar, drawers */
-  --ins-raised: #1a1c1f; /* controls, hovered rows */
-  --ins-active: #232529; /* pressed / selected rows */
-  --ins-line: rgba(255, 255, 255, 0.075);
-  --ins-line-strong: rgba(255, 255, 255, 0.14);
-  --ins-ink: #ececec;
-  --ins-ink-body: #c9cacb;
-  --ins-ink-muted: #8a8b8f;
-  --ins-ink-faint: #5d5e63;
-  --ins-accent: #b7b8bb; /* interactive graphite */
-  --ins-accent-ink: #101113; /* text on accent fills */
-  --ins-selection: rgba(201, 202, 204, 0.16);
-  --ins-selection-ink: #f1f1f1;
-  --ins-green: #8fba9e; /* the one signal colour; ≤2 uses per screen */
-  --ins-green-bg: rgba(143, 186, 158, 0.12);
-  --ins-red: #d89196;
-  --ins-red-bg: rgba(216, 145, 150, 0.1);
-  --ins-amber: #c9ad7b;
-  --ins-amber-bg: rgba(201, 173, 123, 0.1);
-  --ins-backdrop: rgba(8, 9, 10, 0.58);
+  --ins-panel: #16171a; /* sidebar, toolbar */
+  --ins-raised: #1e2024; /* controls */
+  --ins-raised-2: #26282d; /* control hover */
+  --ins-active: #2c2f34; /* pressed */
+  --ins-line: rgba(255, 255, 255, 0.08);
+  --ins-line-strong: rgba(255, 255, 255, 0.16);
+  --ins-ink: #f2f2f4;
+  --ins-ink-body: #d3d4d6;
+  --ins-ink-muted: #93949a;
+  --ins-ink-faint: #63646a;
+
+  /* macOS system accent — interaction only, never decoration */
+  --ins-accent: #0a84ff;
+  --ins-accent-hover: #2492ff;
+  --ins-accent-down: #0069d9;
+  --ins-on-accent: #ffffff;
+  --ins-accent-tint: rgba(10, 132, 255, 0.14);
+  --ins-accent-tint-strong: rgba(10, 132, 255, 0.24);
+  --ins-focus-ring: 0 0 0 3px rgba(10, 132, 255, 0.28);
+  --ins-selection: rgba(10, 132, 255, 0.14);
+  --ins-selection-ink: var(--ins-accent);
+
+  --ins-green: #30d158;
+  --ins-green-bg: rgba(48, 209, 88, 0.14);
+  --ins-red: #ff6961;
+  --ins-red-bg: rgba(255, 105, 97, 0.12);
+  --ins-amber: #ffd60a;
+  --ins-amber-bg: rgba(255, 214, 10, 0.12);
+  --ins-backdrop: rgba(6, 7, 9, 0.42);
+
+  /* materials */
+  --ins-sheet-bg: rgba(28, 30, 34, 0.78);
+  --ins-menu-bg: rgba(38, 40, 45, 0.86);
+  --ins-control-top: rgba(255, 255, 255, 0.055);
+
   --ins-shadow-overlay:
-    0 0 0 0.5px rgba(255, 255, 255, 0.08), 0 2px 8px rgba(0, 0, 0, 0.25),
-    0 12px 32px rgba(0, 0, 0, 0.35);
-  --ins-shadow-sheet: 0 0 0 0.5px rgba(255, 255, 255, 0.07), 0 4px 16px rgba(0, 0, 0, 0.3);
+    0 0 0 0.5px rgba(255, 255, 255, 0.1), 0 2px 8px rgba(0, 0, 0, 0.28),
+    0 12px 40px rgba(0, 0, 0, 0.44);
+  --ins-shadow-sheet:
+    0 0 0 0.5px rgba(255, 255, 255, 0.09), 0 3px 10px rgba(0, 0, 0, 0.3),
+    0 16px 48px rgba(0, 0, 0, 0.4);
+  --ins-shadow-control: 0 0.5px 1.5px rgba(0, 0, 0, 0.35);
 
   /* legacy vars pinned so unmigrated surfaces share the material */
   --bg: #0f1012;
   --bg-rgb: 15, 16, 18;
-  --surface: #141518;
-  --surface-muted: #1a1c1f;
-  --surface-warm: #202225;
-  --surface-hover: #26282c;
-  --primary: #ececec;
-  --primary-rgb: 236, 236, 236;
-  --accent: #b7b8bb;
-  --accent-gold: #c9c0aa;
-  --accent-glow: none;
-  --border: rgba(255, 255, 255, 0.075);
-  --border-strong: rgba(255, 255, 255, 0.14);
-  --border-focus: #c9cacb;
-  --text-h: #ececec;
-  --text: #c9cacb;
-  --text-muted: #8a8b8f;
-  --text-inverse: #101113;
-  --success: #8fba9e;
-  --success-bg: rgba(143, 186, 158, 0.12);
-  --error: #d89196;
-  --error-bg: rgba(216, 145, 150, 0.1);
-  --warning: #c9ad7b;
-  --warning-bg: rgba(201, 173, 123, 0.1);
-  --info: #a8bec9;
+  --surface: #16171a;
+  --surface-muted: #1e2024;
+  --surface-warm: #26282d;
+  --surface-hover: #2c2f34;
+  --primary: #f2f2f4;
+  --primary-rgb: 242, 242, 244;
+  --accent: #0a84ff;
+  --accent-gold: #ffd60a;
+  --accent-glow: rgba(10, 132, 255, 0.18);
+  --border: rgba(255, 255, 255, 0.08);
+  --border-strong: rgba(255, 255, 255, 0.16);
+  --border-focus: #0a84ff;
+  --text-h: #f2f2f4;
+  --text: #d3d4d6;
+  --text-muted: #93949a;
+  --text-inverse: #ffffff;
+  --success: #30d158;
+  --success-bg: rgba(48, 209, 88, 0.14);
+  --error: #ff6961;
+  --error-bg: rgba(255, 105, 97, 0.12);
+  --warning: #ffd60a;
+  --warning-bg: rgba(255, 214, 10, 0.12);
+  --info: #64a8ff;
   --color-mac-window: #0f1012;
-  --color-mac-sidebar: #141518;
-  --color-mac-toolbar: #141518;
-  --color-mac-panel: #191b1e;
-  --color-mac-control: #1e2023;
-  --color-mac-control-hover: #282a2e;
-  --color-mac-selection: rgba(201, 202, 204, 0.16);
-  --color-mac-selection-ink: #f1f1f1;
-  --color-mac-muted: #8a8b8f;
-  --color-mac-divider: rgba(255, 255, 255, 0.075);
-  --color-mac-shadow: rgba(0, 0, 0, 0.26);
-  --color-mac-backdrop: rgba(8, 9, 10, 0.58);
+  --color-mac-sidebar: #16171a;
+  --color-mac-toolbar: #16171a;
+  --color-mac-panel: #1e2024;
+  --color-mac-control: #26282d;
+  --color-mac-control-hover: #2f3237;
+  --color-mac-selection: rgba(10, 132, 255, 0.35);
+  --color-mac-selection-ink: #ffffff;
+  --color-mac-muted: #93949a;
+  --color-mac-divider: rgba(255, 255, 255, 0.08);
+  --color-mac-shadow: rgba(0, 0, 0, 0.3);
+  --color-mac-backdrop: rgba(6, 7, 9, 0.42);
 }
 
 /* ---- Paper (light) ------------------------------------------------------ */
 :root[data-theme="instrument-light"] {
-  --ins-bg: #f4f3ef;
-  --ins-panel: #fbfaf6;
-  --ins-raised: #eceae4;
-  --ins-active: #e2e0d8;
+  --ins-bg: #f5f4f0;
+  --ins-panel: #eceae5;
+  --ins-raised: #ffffff;
+  --ins-raised-2: #f8f7f4;
+  --ins-active: #e8e7e2;
   --ins-line: rgba(30, 30, 28, 0.1);
-  --ins-line-strong: rgba(30, 30, 28, 0.18);
-  --ins-ink: #191a1c;
-  --ins-ink-body: #333438;
+  --ins-line-strong: rgba(30, 30, 28, 0.2);
+  --ins-ink: #1b1c1e;
+  --ins-ink-body: #38393d;
   --ins-ink-muted: #77787c;
-  --ins-ink-faint: #a3a4a8;
-  --ins-accent: #2c2d30;
-  --ins-accent-ink: #f7f6f2;
-  --ins-selection: rgba(44, 45, 48, 0.12);
-  --ins-selection-ink: #191a1c;
-  --ins-green: #2e7d4f;
-  --ins-green-bg: rgba(46, 125, 79, 0.1);
-  --ins-red: #b3424f;
-  --ins-red-bg: rgba(179, 66, 79, 0.09);
-  --ins-amber: #93702c;
-  --ins-amber-bg: rgba(147, 112, 44, 0.1);
-  --ins-backdrop: rgba(28, 28, 26, 0.32);
-  --ins-shadow-overlay:
-    0 0 0 0.5px rgba(25, 26, 28, 0.12), 0 2px 8px rgba(25, 26, 28, 0.08),
-    0 12px 32px rgba(25, 26, 28, 0.12);
-  --ins-shadow-sheet: 0 0 0 0.5px rgba(25, 26, 28, 0.1), 0 4px 16px rgba(25, 26, 28, 0.1);
+  --ins-ink-faint: #a6a7ab;
 
-  --bg: #f4f3ef;
-  --bg-rgb: 244, 243, 239;
-  --surface: #fbfaf6;
+  --ins-accent: #007aff;
+  --ins-accent-hover: #1a82ff;
+  --ins-accent-down: #0062cc;
+  --ins-on-accent: #ffffff;
+  --ins-accent-tint: rgba(0, 122, 255, 0.1);
+  --ins-accent-tint-strong: rgba(0, 122, 255, 0.18);
+  --ins-focus-ring: 0 0 0 3px rgba(0, 122, 255, 0.22);
+  --ins-selection: rgba(0, 122, 255, 0.1);
+  --ins-selection-ink: var(--ins-accent);
+
+  --ins-green: #28a745;
+  --ins-green-bg: rgba(40, 167, 69, 0.12);
+  --ins-red: #e0382f;
+  --ins-red-bg: rgba(224, 56, 47, 0.1);
+  --ins-amber: #b25000;
+  --ins-amber-bg: rgba(178, 80, 0, 0.1);
+  --ins-backdrop: rgba(20, 20, 18, 0.22);
+
+  --ins-sheet-bg: rgba(252, 251, 248, 0.85);
+  --ins-menu-bg: rgba(250, 249, 246, 0.9);
+  --ins-control-top: rgba(255, 255, 255, 0.9);
+
+  --ins-shadow-overlay:
+    0 0 0 0.5px rgba(25, 26, 28, 0.1), 0 2px 8px rgba(25, 26, 28, 0.08),
+    0 12px 40px rgba(25, 26, 28, 0.18);
+  --ins-shadow-sheet:
+    0 0 0 0.5px rgba(25, 26, 28, 0.09), 0 3px 10px rgba(25, 26, 28, 0.08),
+    0 16px 48px rgba(25, 26, 28, 0.16);
+  --ins-shadow-control: 0 0.5px 1.5px rgba(25, 26, 28, 0.18);
+
+  --bg: #f5f4f0;
+  --bg-rgb: 245, 244, 240;
+  --surface: #fbfaf7;
   --surface-muted: #efeee9;
   --surface-warm: #e6e4dc;
   --surface-hover: #dcdad2;
-  --primary: #191a1c;
-  --primary-rgb: 25, 26, 28;
-  --accent: #2c2d30;
-  --accent-gold: #93702c;
-  --accent-glow: none;
+  --primary: #1b1c1e;
+  --primary-rgb: 27, 28, 30;
+  --accent: #007aff;
+  --accent-gold: #b25000;
+  --accent-glow: rgba(0, 122, 255, 0.15);
   --border: rgba(30, 30, 28, 0.1);
-  --border-strong: rgba(30, 30, 28, 0.18);
-  --border-focus: #55565a;
-  --text-h: #191a1c;
-  --text: #333438;
+  --border-strong: rgba(30, 30, 28, 0.2);
+  --border-focus: #007aff;
+  --text-h: #1b1c1e;
+  --text: #38393d;
   --text-muted: #77787c;
-  --text-inverse: #f7f6f2;
-  --success: #2e7d4f;
-  --success-bg: rgba(46, 125, 79, 0.1);
-  --error: #b3424f;
-  --error-bg: rgba(179, 66, 79, 0.09);
-  --warning: #93702c;
-  --warning-bg: rgba(147, 112, 44, 0.1);
-  --info: #4a6f80;
-  --color-mac-window: #f4f3ef;
-  --color-mac-sidebar: #eeede7;
-  --color-mac-toolbar: #fbfaf6;
+  --text-inverse: #ffffff;
+  --success: #28a745;
+  --success-bg: rgba(40, 167, 69, 0.12);
+  --error: #e0382f;
+  --error-bg: rgba(224, 56, 47, 0.1);
+  --warning: #b25000;
+  --warning-bg: rgba(178, 80, 0, 0.1);
+  --info: #0a68d8;
+  --color-mac-window: #f5f4f0;
+  --color-mac-sidebar: #eceae5;
+  --color-mac-toolbar: #f3f2ee;
   --color-mac-panel: #ffffff;
   --color-mac-control: #e9e7e0;
   --color-mac-control-hover: #dfddd5;
-  --color-mac-selection: rgba(44, 45, 48, 0.12);
-  --color-mac-selection-ink: #191a1c;
+  --color-mac-selection: rgba(0, 122, 255, 0.28);
+  --color-mac-selection-ink: #ffffff;
   --color-mac-muted: #77787c;
   --color-mac-divider: rgba(30, 30, 28, 0.1);
-  --color-mac-shadow: rgba(40, 40, 36, 0.12);
-  --color-mac-backdrop: rgba(28, 28, 26, 0.32);
+  --color-mac-shadow: rgba(40, 40, 36, 0.14);
+  --color-mac-backdrop: rgba(20, 20, 18, 0.22);
 }
 
 /* ---- Shared tokens ------------------------------------------------------ */
@@ -148,7 +183,7 @@
   --ins-font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif;
   --ins-mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, monospace;
 
-  --ins-fs-display: 26px; /* the date, the one hero moment */
+  --ins-fs-display: 28px; /* the date, the one hero moment */
   --ins-fs-title: 15px; /* view + section titles */
   --ins-fs-body: 13px;
   --ins-fs-sub: 12px;
@@ -166,16 +201,17 @@
 
   --ins-r-ctrl: 6px;
   --ins-r-panel: 10px;
-  --ins-r-tag: 4px;
+  --ins-r-tag: 5px;
 
   --ins-tick: 3px; /* module ink tick width */
   --ins-sidebar-w: 216px;
   --ins-toolbar-h: 40px;
 
   --ins-ease: cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  --ins-ease-out: cubic-bezier(0.16, 1, 0.3, 1);
   --ins-dur-fast: 120ms;
   --ins-dur: 160ms;
-  --ins-dur-panel: 220ms;
+  --ins-dur-panel: 240ms;
 
   --ins-content-max: 1080px;
 }
@@ -201,14 +237,14 @@ body:has(.ins-root) {
 }
 
 .ins-root ::selection {
-  background: var(--ins-selection);
-  color: var(--ins-selection-ink);
+  background: var(--ins-accent-tint-strong);
+  color: var(--ins-ink);
 }
 
 .ins-root :focus-visible {
-  outline: 2px solid var(--ins-ink-muted);
-  outline-offset: 1px;
-  border-radius: 2px;
+  outline: none;
+  box-shadow: var(--ins-focus-ring);
+  border-radius: var(--ins-r-ctrl);
 }
 
 .ins-root button,
@@ -233,8 +269,8 @@ body:has(.ins-root) {
    ========================================================================== */
 .ins-display {
   font-size: var(--ins-fs-display);
-  font-weight: 600;
-  letter-spacing: -0.022em;
+  font-weight: 700;
+  letter-spacing: -0.024em;
   line-height: var(--ins-leading-tight);
   color: var(--ins-ink);
 }
@@ -242,7 +278,7 @@ body:has(.ins-root) {
 .ins-title {
   font-size: var(--ins-fs-title);
   font-weight: 600;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.012em;
   color: var(--ins-ink);
 }
 
@@ -263,7 +299,7 @@ body:has(.ins-root) {
 }
 
 /* ==========================================================================
-   Controls
+   Controls — Apple chrome: gradient fills, inner highlight, real shadows
    ========================================================================== */
 .ins-btn {
   appearance: none;
@@ -271,27 +307,32 @@ body:has(.ins-root) {
   align-items: center;
   gap: 6px;
   height: 26px;
-  padding: 0 10px;
+  padding: 0 11px;
   border: 1px solid var(--ins-line-strong);
   border-radius: var(--ins-r-ctrl);
-  background: var(--ins-raised);
+  background:
+    linear-gradient(180deg, var(--ins-control-top), rgba(0, 0, 0, 0.001) 55%), var(--ins-raised);
+  box-shadow: var(--ins-shadow-control);
   color: var(--ins-ink);
   font-size: var(--ins-fs-sub);
   font-weight: 500;
   cursor: default;
   transition:
     background var(--ins-dur-fast) var(--ins-ease),
-    border-color var(--ins-dur-fast) var(--ins-ease);
+    border-color var(--ins-dur-fast) var(--ins-ease),
+    box-shadow var(--ins-dur-fast) var(--ins-ease);
   user-select: none;
   white-space: nowrap;
 }
 
 .ins-btn:hover {
-  background: var(--ins-active);
+  background:
+    linear-gradient(180deg, var(--ins-control-top), rgba(0, 0, 0, 0.001) 55%), var(--ins-raised-2);
 }
 
 .ins-btn:active {
-  background: var(--ins-selection);
+  background: var(--ins-active);
+  box-shadow: none;
 }
 
 .ins-btn:disabled {
@@ -300,24 +341,32 @@ body:has(.ins-root) {
 }
 
 .ins-btn.is-primary {
-  background: var(--ins-accent);
-  border-color: transparent;
-  color: var(--ins-accent-ink);
+  background: linear-gradient(180deg, var(--ins-accent-hover), var(--ins-accent-down));
+  border-color: rgba(0, 0, 0, 0.18);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    0 0.5px 2px rgba(10, 132, 255, 0.4);
+  color: var(--ins-on-accent);
 }
 
 .ins-btn.is-primary:hover {
-  background: var(--ins-ink);
+  background: linear-gradient(180deg, var(--ins-accent), var(--ins-accent-down));
+}
+
+.ins-btn.is-primary:active {
+  background: var(--ins-accent-down);
 }
 
 .ins-btn.is-ghost {
   background: transparent;
   border-color: transparent;
-  color: var(--ins-ink-muted);
+  box-shadow: none;
+  color: var(--ins-accent);
 }
 
 .ins-btn.is-ghost:hover {
-  background: var(--ins-raised);
-  color: var(--ins-ink);
+  background: var(--ins-accent-tint);
+  color: var(--ins-accent);
 }
 
 .ins-iconbtn {
@@ -325,7 +374,7 @@ body:has(.ins-root) {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
+  width: 30px;
   height: 26px;
   border: none;
   border-radius: var(--ins-r-ctrl);
@@ -338,17 +387,17 @@ body:has(.ins-root) {
 }
 
 .ins-iconbtn:hover {
-  background: var(--ins-raised);
+  background: var(--ins-accent-tint);
   color: var(--ins-ink);
 }
 
 .ins-iconbtn:active {
-  background: var(--ins-selection);
+  background: var(--ins-accent-tint-strong);
 }
 
 .ins-iconbtn.is-on {
-  background: var(--ins-selection);
-  color: var(--ins-selection-ink);
+  background: var(--ins-accent-tint-strong);
+  color: var(--ins-accent);
 }
 
 .ins-iconbtn:disabled {
@@ -356,30 +405,37 @@ body:has(.ins-root) {
   pointer-events: none;
 }
 
-/* Segmented control — view switching, never pills */
+/* Segmented control — raised knob on an inset well */
 .ins-seg {
   display: inline-flex;
   align-items: stretch;
   padding: 2px;
   gap: 2px;
   border: 1px solid var(--ins-line);
-  border-radius: 7px;
-  background: color-mix(in srgb, var(--ins-panel) 72%, var(--ins-bg));
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.22);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.22);
+}
+
+:root[data-theme="instrument-light"] .ins-seg {
+  background: rgba(30, 30, 28, 0.07);
+  box-shadow: inset 0 1px 2px rgba(25, 26, 28, 0.08);
 }
 
 .ins-seg button {
   appearance: none;
-  border: none;
-  border-radius: 5px;
+  border: 1px solid transparent;
+  border-radius: 6px;
   background: transparent;
   color: var(--ins-ink-muted);
   font-size: var(--ins-fs-sub);
   font-weight: 500;
-  padding: 3px 10px;
+  padding: 2px 11px;
   cursor: default;
   transition:
     background var(--ins-dur-fast) var(--ins-ease),
-    color var(--ins-dur-fast) var(--ins-ease);
+    color var(--ins-dur-fast) var(--ins-ease),
+    box-shadow var(--ins-dur-fast) var(--ins-ease);
 }
 
 .ins-seg button:hover {
@@ -387,12 +443,18 @@ body:has(.ins-root) {
 }
 
 .ins-seg button.is-active {
-  background: var(--ins-raised);
+  background:
+    linear-gradient(180deg, var(--ins-control-top), rgba(0, 0, 0, 0.001) 60%), var(--ins-raised);
+  border-color: var(--ins-line);
   color: var(--ins-ink);
-  box-shadow: 0 0 0 0.5px var(--ins-line-strong);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.24);
 }
 
-/* Inputs */
+:root[data-theme="instrument-light"] .ins-seg button.is-active {
+  box-shadow: 0 1px 3px rgba(25, 26, 28, 0.14);
+}
+
+/* Inputs — inset well with accent focus ring */
 .ins-input,
 .ins-select,
 .ins-textarea {
@@ -402,10 +464,20 @@ body:has(.ins-root) {
   padding: 0 9px;
   border: 1px solid var(--ins-line-strong);
   border-radius: var(--ins-r-ctrl);
-  background: var(--ins-bg);
+  background: rgba(0, 0, 0, 0.2);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.2);
   color: var(--ins-ink);
   font-size: var(--ins-fs-body);
-  transition: border-color var(--ins-dur-fast) var(--ins-ease);
+  transition:
+    border-color var(--ins-dur-fast) var(--ins-ease),
+    box-shadow var(--ins-dur-fast) var(--ins-ease);
+}
+
+:root[data-theme="instrument-light"] .ins-input,
+:root[data-theme="instrument-light"] .ins-select,
+:root[data-theme="instrument-light"] .ins-textarea {
+  background: rgba(255, 255, 255, 0.75);
+  box-shadow: inset 0 1px 2px rgba(25, 26, 28, 0.06);
 }
 
 .ins-textarea {
@@ -425,12 +497,15 @@ body:has(.ins-root) {
 .ins-select:focus,
 .ins-textarea:focus {
   outline: none;
-  border-color: var(--ins-ink-muted);
+  border-color: var(--ins-accent);
+  box-shadow:
+    var(--ins-focus-ring),
+    inset 0 1px 2px rgba(0, 0, 0, 0.15);
 }
 
 .ins-select {
   padding-right: 24px;
-  background-image: url("data:image/svg+xml;charset=utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5' viewBox='0 0 8 5'%3E%3Cpath d='M1 1l3 3 3-3' fill='none' stroke='%238a8b8f' stroke-width='1.4' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml;charset=utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5' viewBox='0 0 8 5'%3E%3Cpath d='M1 1l3 3 3-3' fill='none' stroke='%2393949a' stroke-width='1.4' stroke-linecap='round'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: right 8px center;
 }
@@ -439,11 +514,13 @@ body:has(.ins-root) {
 .ins-kbd {
   display: inline-flex;
   align-items: center;
-  padding: 1px 5px;
+  padding: 1.5px 6px;
   border: 0.5px solid var(--ins-line-strong);
-  border-radius: 4px;
-  background: var(--ins-raised);
-  color: var(--ins-ink-muted);
+  border-radius: 5px;
+  background:
+    linear-gradient(180deg, var(--ins-control-top), rgba(0, 0, 0, 0.001) 70%), var(--ins-raised);
+  box-shadow: 0 0.5px 1.5px rgba(0, 0, 0, 0.3);
+  color: var(--ins-ink-body);
   font-family: var(--ins-font);
   font-size: var(--ins-fs-cap);
   line-height: 1.5;
@@ -456,7 +533,8 @@ body:has(.ins-root) {
   align-items: center;
   gap: 4px;
   height: 18px;
-  padding: 0 6px;
+  padding: 0 7px;
+  border: 1px solid var(--ins-line);
   border-radius: var(--ins-r-tag);
   background: var(--ins-raised);
   color: var(--ins-ink-muted);
@@ -483,14 +561,15 @@ body:has(.ins-root) {
   flex-shrink: 0;
 }
 
-/* Bracket checkbox — the house checkbox idiom, kept */
+/* Checkbox — accent fill when checked */
 .ins-check {
   appearance: none;
   width: 15px;
   height: 15px;
   border: 1px solid var(--ins-line-strong);
-  border-radius: 4px;
-  background: transparent;
+  border-radius: 4.5px;
+  background: rgba(0, 0, 0, 0.18);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.18);
   cursor: default;
   display: inline-flex;
   align-items: center;
@@ -498,29 +577,55 @@ body:has(.ins-root) {
   flex-shrink: 0;
   transition:
     background var(--ins-dur-fast) var(--ins-ease),
-    border-color var(--ins-dur-fast) var(--ins-ease);
+    border-color var(--ins-dur-fast) var(--ins-ease),
+    box-shadow var(--ins-dur-fast) var(--ins-ease);
+}
+
+:root[data-theme="instrument-light"] .ins-check {
+  background: rgba(255, 255, 255, 0.8);
+  box-shadow: inset 0 1px 2px rgba(25, 26, 28, 0.08);
 }
 
 .ins-check:hover {
-  border-color: var(--ins-ink-muted);
+  border-color: var(--ins-ink-faint);
 }
 
 .ins-check:checked {
   background: var(--ins-accent);
-  border-color: var(--ins-accent);
+  border-color: var(--ins-accent-down);
+  box-shadow: 0 0.5px 2px rgba(10, 132, 255, 0.45);
 }
 
 .ins-check:checked::after {
   content: "";
   width: 8px;
   height: 4.5px;
-  border-left: 1.5px solid var(--ins-accent-ink);
-  border-bottom: 1.5px solid var(--ins-accent-ink);
+  border-left: 1.5px solid #fff;
+  border-bottom: 1.5px solid #fff;
   transform: rotate(-45deg) translate(0.5px, -0.5px);
 }
 
+/* Range slider — Apple knob */
+.ins-slider {
+  appearance: none;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--ins-line-strong);
+  outline: none;
+}
+
+.ins-slider::-webkit-slider-thumb {
+  appearance: none;
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  background: #ffffff;
+  border: 0.5px solid rgba(0, 0, 0, 0.2);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+}
+
 /* ==========================================================================
-   Structure — sections carry by hairlines, not cards
+   Structure — inset groups carry System-Settings weight
    ========================================================================== */
 .ins-sec {
   padding-top: var(--ins-s4);
@@ -543,8 +648,20 @@ body:has(.ins-root) {
 .ins-sec-head h2 {
   font-size: var(--ins-fs-title);
   font-weight: 600;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.012em;
   color: var(--ins-ink);
+}
+
+/* Inset grouped panel — System Settings idiom */
+.ins-group {
+  border: 1px solid var(--ins-line);
+  border-radius: var(--ins-r-panel);
+  background: color-mix(in srgb, var(--ins-panel) 55%, transparent);
+  overflow: hidden;
+}
+
+.ins-group > * + * {
+  border-top: 1px solid var(--ins-line);
 }
 
 /* Rows */
@@ -564,7 +681,7 @@ body:has(.ins-root) {
 }
 
 .ins-row.is-selected {
-  background: var(--ins-selection);
+  background: var(--ins-accent-tint);
 }
 
 button.ins-row {
@@ -632,13 +749,15 @@ button.ins-row {
 }
 
 /* ==========================================================================
-   Overlays — menu, sheet, popover
+   Overlays — translucent blurred materials, layered shadows
    ========================================================================== */
 .ins-backdrop {
   position: fixed;
   inset: 0;
   z-index: 300;
   background: var(--ins-backdrop);
+  backdrop-filter: blur(12px) saturate(140%);
+  -webkit-backdrop-filter: blur(12px) saturate(140%);
   display: flex;
   align-items: flex-start;
   justify-content: center;
@@ -649,10 +768,12 @@ button.ins-row {
   margin-top: 12vh;
   width: min(560px, calc(100vw - 48px));
   border: 1px solid var(--ins-line-strong);
-  border-radius: var(--ins-r-panel);
-  background: var(--ins-panel);
+  border-radius: 12px;
+  background: var(--ins-sheet-bg);
+  backdrop-filter: blur(28px) saturate(170%);
+  -webkit-backdrop-filter: blur(28px) saturate(170%);
   box-shadow: var(--ins-shadow-sheet);
-  animation: ins-pop var(--ins-dur-panel) var(--ins-ease);
+  animation: ins-pop var(--ins-dur-panel) var(--ins-ease-out);
   overflow: hidden;
 }
 
@@ -661,7 +782,9 @@ button.ins-row {
   padding: 4px;
   border: 1px solid var(--ins-line-strong);
   border-radius: var(--ins-r-ctrl);
-  background: var(--ins-panel);
+  background: var(--ins-menu-bg);
+  backdrop-filter: blur(28px) saturate(170%);
+  -webkit-backdrop-filter: blur(28px) saturate(170%);
   box-shadow: var(--ins-shadow-sheet);
   animation: ins-pop var(--ins-dur-fast) var(--ins-ease);
 }
@@ -685,8 +808,8 @@ button.ins-row {
 
 .ins-menu button:hover,
 .ins-menu button.is-hot {
-  background: var(--ins-selection);
-  color: var(--ins-selection-ink);
+  background: var(--ins-accent);
+  color: var(--ins-on-accent);
 }
 
 .ins-menu hr {
@@ -707,7 +830,7 @@ button.ins-row {
 @keyframes ins-pop {
   from {
     opacity: 0;
-    transform: translateY(-4px) scale(0.99);
+    transform: translateY(-6px) scale(0.98);
   }
   to {
     opacity: 1;
@@ -742,5 +865,6 @@ button.ins-row {
   height: 7px;
   border-radius: 50%;
   background: var(--ins-red);
+  box-shadow: 0 0 6px rgba(255, 105, 97, 0.5);
   animation: ins-breathe 4s ease-in-out infinite;
 }

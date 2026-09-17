@@ -398,7 +398,7 @@ export default function TodayView({ token, user, onNavigate }) {
                   : now.toLocaleDateString([], { weekday: "short" })}
             </span>
           </div>
-          <div className="ins-next">
+          <div className="ins-next" style={{ "--tick-color": nextToday.color }}>
             <div className="ins-next-main">
               <span className="ins-tick" style={{ "--tick-color": nextToday.color }} />
               <div className="ins-next-title">

@@ -109,18 +109,25 @@
 
 .ins-roomrow-bar {
   width: 120px;
-  height: 4px;
-  border-radius: 2px;
-  background: var(--ins-raised);
+  height: 5px;
+  border-radius: 3px;
+  background: rgba(0, 0, 0, 0.25);
+  box-shadow: inset 0 1px 1.5px rgba(0, 0, 0, 0.2);
   overflow: hidden;
   flex-shrink: 0;
+}
+
+:root[data-theme="instrument-light"] .ins-roomrow-bar {
+  background: rgba(30, 30, 28, 0.1);
+  box-shadow: inset 0 1px 1.5px rgba(25, 26, 28, 0.08);
 }
 
 .ins-roomrow-bar span {
   display: block;
   height: 100%;
-  border-radius: 2px;
-  background: var(--ins-green);
+  border-radius: 3px;
+  background: linear-gradient(180deg, #43d860, var(--ins-green));
+  box-shadow: 0 0 4px rgba(48, 209, 88, 0.35);
 }
 
 .ins-roomrow-free {

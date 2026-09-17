@@ -40,14 +40,22 @@
   font-size: var(--ins-fs-sub);
 }
 
-/* Next card — a hairline frame, not a card kit */
+/* Next card — module-tinted hero */
 .ins-next {
   border: 1px solid var(--ins-line);
   border-radius: var(--ins-r-panel);
-  padding: var(--ins-s3) var(--ins-s4);
+  padding: var(--ins-s4);
   display: flex;
   flex-direction: column;
   gap: var(--ins-s2);
+  background:
+    linear-gradient(
+      130deg,
+      color-mix(in srgb, var(--tick-color, #8e8e93) 17%, transparent),
+      transparent 62%
+    ),
+    color-mix(in srgb, var(--ins-panel) 62%, transparent);
+  box-shadow: var(--ins-shadow-control);
 }
 
 .ins-next-main {
@@ -79,8 +87,9 @@
 }
 
 .ins-next-clock {
-  font-size: 20px;
-  font-weight: 500;
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
   color: var(--ins-ink);
 }
 

@@ -213,9 +213,9 @@ export default function SettingsView({ token, user, onUpdateUser, onReplayOrient
   };
 
   const themeOptions = [
-    ["instrument-dark", "Graphite", "the default material"],
-    ["instrument-light", "Paper", "warm light"],
-    ["system", "System", "follows macOS"],
+    ["instrument-dark", "Graphite", "the default material", "dark"],
+    ["instrument-light", "Paper", "warm light", "light"],
+    ["system", "System", "follows macOS", "system"],
   ];
 
   return (
@@ -241,15 +241,21 @@ export default function SettingsView({ token, user, onUpdateUser, onReplayOrient
                 <h2>Material</h2>
               </div>
               <div className="ins-themes">
-                {themeOptions.map(([value, label, caption]) => (
+                {themeOptions.map(([value, label, caption, kind]) => (
                   <button
                     key={value}
                     type="button"
                     className={`ins-theme ${theme === value ? "is-active" : ""}`}
                     onClick={() => pickTheme(value)}
                   >
-                    <span className="ins-cap">{label}</span>
-                    <span className="ins-cap ins-theme-caption">{caption}</span>
+                    <span className={`ins-theme-swatch is-${kind}`} aria-hidden="true">
+                      <span />
+                      <span />
+                    </span>
+                    <span className="ins-theme-names">
+                      <span className="ins-theme-name">{label}</span>
+                      <span className="ins-cap ins-theme-caption">{caption}</span>
+                    </span>
                   </button>
                 ))}
               </div>

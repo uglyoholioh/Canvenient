@@ -25,7 +25,11 @@
   height: var(--ins-toolbar-h);
   flex-shrink: 0;
   padding: 0 var(--ins-s3);
-  background: var(--ins-panel);
+  background: linear-gradient(
+    180deg,
+    var(--ins-panel),
+    color-mix(in srgb, var(--ins-panel) 86%, #000000)
+  );
   border-bottom: 1px solid var(--ins-line);
   user-select: none;
 }
@@ -112,7 +116,11 @@
   display: flex;
   flex-direction: column;
   height: 100%;
-  background: var(--ins-panel);
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--ins-panel) 70%, #ffffff 3%),
+    var(--ins-panel)
+  );
   border-right: 1px solid var(--ins-line);
   overflow: hidden;
   transition: width var(--ins-dur-panel) var(--ins-ease);
@@ -176,12 +184,13 @@
 }
 
 .ins-nav-row.is-active {
-  background: var(--ins-selection);
-  color: var(--ins-selection-ink);
+  background: var(--ins-accent);
+  color: var(--ins-on-accent);
+  box-shadow: 0 1px 3px rgba(10, 132, 255, 0.35);
 }
 
 .ins-nav-row.is-active svg {
-  color: var(--ins-ink);
+  color: var(--ins-on-accent);
 }
 
 .ins-nav-label {
@@ -244,11 +253,13 @@
   display: flex;
   flex-direction: column;
   border: 1px solid var(--ins-line-strong);
-  border-radius: var(--ins-r-panel);
-  background: var(--ins-panel);
+  border-radius: 12px;
+  background: var(--ins-sheet-bg);
+  backdrop-filter: blur(28px) saturate(170%);
+  -webkit-backdrop-filter: blur(28px) saturate(170%);
   box-shadow: var(--ins-shadow-overlay);
   overflow: hidden;
-  animation: ins-pop var(--ins-dur-panel) var(--ins-ease);
+  animation: ins-pop var(--ins-dur-panel) var(--ins-ease-out);
 }
 
 .ins-commandbar-field {
@@ -303,8 +314,14 @@
 }
 
 .ins-commandbar-row.is-hot {
-  background: var(--ins-selection);
-  color: var(--ins-selection-ink);
+  background: var(--ins-accent);
+  color: var(--ins-on-accent);
+}
+
+.ins-commandbar-row.is-hot .ins-kbd {
+  background: rgba(255, 255, 255, 0.18);
+  border-color: transparent;
+  color: var(--ins-on-accent);
 }
 
 .ins-commandbar-label {
