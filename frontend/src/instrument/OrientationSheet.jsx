@@ -52,7 +52,7 @@ export default function OrientationSheet({ token, user, onUpdateUser, onDone }) 
             <span>capture a thought</span>
           </div>
           <div className="ins-orientation-key">
-            <kbd className="ins-kbd">⌘J</kbd>
+            <kbd className="ins-kbd">⌘I</kbd>
             <span>ask about your own data</span>
           </div>
         </div>
