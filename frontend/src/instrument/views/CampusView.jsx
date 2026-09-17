@@ -13,6 +13,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   getCampusBusArrivals,
   getCampusBusStops,
+  getVenueInformation,
   planCampusBusTrip,
   searchCampusBusPlaces,
   searchFreeVenues,
@@ -43,6 +44,11 @@ function minutesToHHMM(mins) {
   const h = Math.floor(mins / 60);
   const m = mins % 60;
   return h * 100 + m;
+}
+
+function slotToMinutes(hhmm) {
+  const clean = String(hhmm || "0000").padStart(4, "0");
+  return Number(clean.slice(0, 2)) * 60 + Number(clean.slice(2, 4));
 }
 
 function freeLabel(minutes) {
@@ -510,8 +516,58 @@ function VenuesPage({ token }) {
   const [results, setResults] = useState(null);
   const [loading, setLoading] = useState(false);
   const [saved, setSaved] = useState(readSaved);
+  const [area, setArea] = useState("All areas");
+  const [venuesInfo, setVenuesInfo] = useState({});
   const railRef = useRef(null);
   const draggingRef = useRef(false);
+
+  // Full-day schedules per venue (NUSMods, cached a day) — the strips.
+  useEffect(() => {
+    getVenueInformation(token)
+      .then((data) => setVenuesInfo(data?.venues || {}))
+      .catch(() => {});
+  }, [token]);
+
+  // The chosen day's actual date, for week-ranged lessons.
+  const targetDate = useMemo(() => {
+    const d = new Date();
+    d.setDate(d.getDate() + dayOffset);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  }, [dayOffset]);
+
+  // Taken slots for one room on the chosen day — with the occupying lesson.
+  const daySlots = useCallback(
+    (venueCode) => {
+      const dayList = venuesInfo[venueCode];
+      if (!Array.isArray(dayList)) return null;
+      const dayData = (dayList || []).find(
+        (d) => String(d.day || "").toLowerCase() === availabilityDay.toLowerCase(),
+      );
+      if (!dayData) return [];
+      return (dayData.classes || [])
+        .filter((cls) => {
+          if (cls.weeks && typeof cls.weeks === "object" && cls.weeks.start && cls.weeks.end) {
+            return targetDate >= cls.weeks.start && targetDate <= cls.weeks.end;
+          }
+          return true;
+        })
+        .map((cls) => {
+          const start = slotToMinutes(cls.startTime);
+          const end = slotToMinutes(cls.endTime);
+          const parts = [cls.moduleCode || cls.eventname || "Class"];
+          if (cls.lessonType) parts.push(cls.lessonType);
+          return {
+            start,
+            end,
+            label: parts.join(" · "),
+            range: `${clockFromHHMM(start)}–${clockFromHHMM(end)}`,
+          };
+        })
+        .filter((slot) => slot.end > RAIL_START && slot.start < RAIL_END)
+        .sort((a, b) => a.start - b.start);
+    },
+    [venuesInfo, availabilityDay, targetDate],
+  );
 
   useEffect(() => {
     const timer = window.setTimeout(() => setDebounced(query.trim()), 250);
@@ -584,6 +640,7 @@ function VenuesPage({ token }) {
   }, []);
 
   const railMinutes = hhmmToMinutes(timeHHMM);
+  const railPct = (mins) => ((mins - RAIL_START) / (RAIL_END - RAIL_START)) * 100;
   const railNowPct =
     dayOffset === 0
       ? Math.max(
@@ -594,7 +651,25 @@ function VenuesPage({ token }) {
           ),
         )
       : null;
-  const count = results?.total_matches ?? results?.results?.length ?? 0;
+
+  // Areas of campus, straight from the data — chips with live counts.
+  const areas = useMemo(() => {
+    const counts = new Map();
+    for (const room of results?.results || []) {
+      const name = room.faculty || "Other";
+      counts.set(name, (counts.get(name) || 0) + 1);
+    }
+    return [...counts.entries()]
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => b.count - a.count);
+  }, [results]);
+
+  const rooms = useMemo(() => {
+    const list = results?.results || [];
+    if (area === "All areas") return list;
+    return list.filter((room) => (room.faculty || "Other") === area);
+  }, [results, area]);
+  const count = rooms.length;
 
   return (
     <div className="ins-venuespage">
@@ -675,6 +750,28 @@ function VenuesPage({ token }) {
         />
       </div>
 
+      {areas.length > 1 && (
+        <div className="ins-arearow">
+          <button
+            type="button"
+            className={`ins-areachip ${area === "All areas" ? "is-active" : ""}`}
+            onClick={() => setArea("All areas")}
+          >
+            All areas
+          </button>
+          {areas.map(({ name, count: areaCount }) => (
+            <button
+              key={name}
+              type="button"
+              className={`ins-areachip ${area === name ? "is-active" : ""}`}
+              onClick={() => setArea(name)}
+            >
+              {name} <span className="ins-mono ins-areachip-count">{areaCount}</span>
+            </button>
+          ))}
+        </div>
+      )}
+
       <div className="ins-campus-list">
         {loading && !results && (
           <>
@@ -683,23 +780,41 @@ function VenuesPage({ token }) {
             ))}
           </>
         )}
-        {results && results.results?.length === 0 && (
+        {results && rooms.length === 0 && (
           <div className="ins-empty">No rooms free at this time</div>
         )}
-        {results?.results?.slice(0, 40).map((room) => {
+        {rooms.slice(0, 60).map((room) => {
+          const slots = daySlots(room.venue_code);
           const savedHere = savedSet.has(room.venue_code);
           return (
             <div key={room.venue_code} className="ins-roomrow">
               <SavedPin code={room.venue_code} saved={savedHere} onToggle={toggleSaved} />
-              <span className="ins-mono ins-roomrow-code">{room.venue_code}</span>
-              <span className="ins-roomrow-name">
-                {[room.room_name, room.building_name].filter(Boolean).join(" · ")}
-              </span>
+              <div className="ins-roomid">
+                <span className="ins-mono ins-roomrow-code">{room.venue_code}</span>
+                <span className="ins-roomrow-name">
+                  {[room.room_name, room.building_name].filter(Boolean).join(" · ") ||
+                    room.faculty ||
+                    ""}
+                </span>
+              </div>
               <div className="ins-roomstrip" aria-hidden="true">
+                {slots === null && <span className="ins-roomstrip-noinfo">no schedule data</span>}
+                {(slots || []).map((slot, index) => {
+                  const left = Math.max(0, railPct(slot.start));
+                  const right = Math.min(100, railPct(slot.end));
+                  return (
+                    <span
+                      key={index}
+                      className="ins-roomstrip-busy"
+                      style={{ left: `${left}%`, width: `${Math.max(right - left, 1)}%` }}
+                      title={`Occupied ${slot.range} — ${slot.label}`}
+                    />
+                  );
+                })}
                 <span
-                  style={{
-                    width: `${Math.min(100, ((room.free_minutes || 0) / 240) * 100)}%`,
-                  }}
+                  className="ins-roomstrip-cursor"
+                  style={{ left: `${railPct(hhmmToMinutes(timeHHMM))}%` }}
+                  title={clockFromHHMM(timeHHMM)}
                 />
               </div>
               <span className="ins-mono ins-cap ins-roomrow-free">

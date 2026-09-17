@@ -456,6 +456,51 @@
   transform: translateX(2px);
 }
 
+/* Area chips — parts of campus, straight from the data */
+.ins-arearow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ins-s1);
+}
+
+.ins-areachip {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 24px;
+  padding: 0 10px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: rgba(128, 118, 100, 0.09);
+  color: var(--ins-ink-muted);
+  font-size: var(--ins-fs-sub);
+  font-weight: 550;
+  cursor: default;
+  transition:
+    background var(--ins-dur) var(--ins-ease-out),
+    color var(--ins-dur) var(--ins-ease-out);
+}
+
+.ins-areachip:hover {
+  color: var(--ins-ink);
+}
+
+.ins-areachip.is-active {
+  background: var(--ins-bg-raise);
+  color: var(--ins-ink);
+  box-shadow: var(--ins-shadow-pill);
+}
+
+.ins-areachip-count {
+  font-size: var(--ins-fs-cap);
+  color: var(--ins-ink-faint);
+}
+
+.ins-areachip.is-active .ins-areachip-count {
+  color: var(--ins-ink-muted);
+}
+
 .ins-savedpin {
   appearance: none;
   border: none;
@@ -494,21 +539,62 @@
 }
 
 /* Availability strip — the honest free window from the chosen moment */
+.ins-roomid {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+  flex: 1;
+}
+
+/* Day timeline — taken slots on the room's strip */
 .ins-roomstrip {
-  width: 140px;
-  height: 5px;
-  border-radius: 999px;
-  background: rgba(128, 118, 100, 0.16);
+  width: 320px;
+  height: 16px;
+  border-radius: 6px;
+  background: rgba(128, 118, 100, 0.1);
+  position: relative;
   overflow: hidden;
   flex-shrink: 0;
 }
 
-.ins-roomstrip span {
-  display: block;
-  height: 100%;
-  border-radius: 999px;
-  background: var(--ins-green);
-  transition: width 900ms var(--ins-ease-out);
+:root[data-theme="instrument-dark"] .ins-roomstrip {
+  background: rgba(0, 0, 0, 0.24);
+}
+
+.ins-roomstrip-busy {
+  position: absolute;
+  top: 2px;
+  bottom: 2px;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--ins-red) 30%, transparent);
+  border: 1px solid color-mix(in srgb, var(--ins-red) 45%, transparent);
+  cursor: default;
+  transition: background var(--ins-dur-fast) var(--ins-ease);
+}
+
+.ins-roomstrip-busy:hover {
+  background: color-mix(in srgb, var(--ins-red) 55%, transparent);
+}
+
+.ins-roomstrip-cursor {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--ins-ink);
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+.ins-roomstrip-noinfo {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  padding-left: 8px;
+  font-size: 9.5px;
+  color: var(--ins-ink-faint);
 }
 
 .ins-roomrow-free {
