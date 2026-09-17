@@ -1,7 +1,7 @@
-/* Campus — rooms + board + trip. */
+/* Campus — Bus departure board + Venues availability timeline. */
 
 .ins-campus {
-  max-width: 1080px;
+  max-width: 1120px;
   margin: 0 auto;
   display: flex;
   flex-direction: column;
@@ -10,215 +10,234 @@
 
 .ins-campus-tabs {
   display: flex;
-  margin-bottom: var(--ins-s2);
 }
 
-.ins-campus-bus {
+/* ==========================================================================
+   Bus page
+   ========================================================================== */
+.ins-bushero {
+  display: flex;
+  align-items: stretch;
+  justify-content: space-between;
+  gap: var(--ins-s5);
+  border: 1px solid var(--ins-line);
+  border-radius: var(--ins-r-big);
+  background: var(--ins-bg-raise);
+  box-shadow: var(--ins-shadow-soft);
+  padding: var(--ins-s4) var(--ins-s5);
+}
+
+.ins-bushero-main {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ins-s2);
+  flex: 1;
+  min-width: 0;
+}
+
+.ins-bushero-countrow {
+  display: flex;
+  align-items: baseline;
+  gap: var(--ins-s3);
+}
+
+.ins-bushero-count {
+  font-size: 52px;
+}
+
+.ins-bushero-count.is-waiting {
+  color: var(--ins-ink-faint);
+}
+
+.ins-bushero-meter {
+  max-width: 340px;
+  margin-top: var(--ins-s1);
+}
+
+.ins-bushero-side {
+  display: flex;
+  align-items: center;
+  gap: var(--ins-s2);
+  align-self: flex-start;
+  padding-top: var(--ins-s1);
+}
+
+.ins-livedot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--ins-ink-faint);
+}
+
+.ins-livedot.is-live {
+  background: var(--ins-green);
+  box-shadow: 0 0 8px rgba(138, 169, 140, 0.5);
+  animation: ins-breathe 2.4s var(--ins-ease) infinite;
+}
+
+/* Service chip — washed route tone */
+.ins-service {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 34px;
+  height: 26px;
+  padding: 0 8px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--tone) 24%, var(--ins-bg-raise));
+  color: var(--ins-ink);
+  font-family: var(--ins-rounded);
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  font-size: var(--ins-fs-sub);
+  letter-spacing: 0.02em;
+  border: 1px solid color-mix(in srgb, var(--tone) 55%, transparent);
+}
+
+.ins-bushero-countrow .ins-service {
+  align-self: center;
+}
+
+.ins-busgrid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
   gap: var(--ins-s5);
   align-items: start;
 }
 
-@media (max-width: 900px) {
-  .ins-campus-bus {
+@media (max-width: 940px) {
+  .ins-busgrid {
     grid-template-columns: 1fr;
   }
 }
 
-.ins-buspage-board .ins-busboard {
-  margin-top: var(--ins-s2);
-}
-
-.ins-venuespage {
-  display: flex;
-  flex-direction: column;
-  gap: var(--ins-s3);
-  border-top: none;
-  padding-top: 0;
-}
-
-/* Rooms */
-.ins-campus-rooms {
-  display: flex;
-  flex-direction: column;
-  gap: var(--ins-s3);
-  min-width: 0;
-}
-
-.ins-campus-search .ins-input {
-  height: 32px;
-}
-
-.ins-campus-scrubber {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--ins-s3);
-  flex-wrap: wrap;
-}
-
-.ins-campus-time {
-  display: flex;
-  align-items: center;
-  gap: var(--ins-s2);
-}
-
-.ins-campus-time input[type="range"] {
-  appearance: none;
-  width: 160px;
-  height: 4px;
-  border-radius: 999px;
-  background: rgba(128, 118, 100, 0.2);
-  outline: none;
-}
-
-.ins-campus-time input[type="range"]::-webkit-slider-thumb {
-  appearance: none;
-  width: 15px;
-  height: 15px;
-  border-radius: 50%;
-  background: var(--ins-bg-raise);
-  box-shadow: var(--ins-shadow-pill);
-  transition: transform var(--ins-dur-fast) var(--ins-ease-spring);
-}
-
-.ins-campus-time input[type="range"]::-webkit-slider-thumb:hover {
-  transform: scale(1.15);
-}
-
-.ins-campus-list {
-  display: flex;
-  flex-direction: column;
-}
-
-.ins-roomrow {
-  display: flex;
-  align-items: center;
-  gap: var(--ins-s3);
-  padding: 7px 8px;
-  margin: 0 -8px;
-  border-radius: var(--ins-r);
-  border-bottom: 1px solid var(--ins-line);
-  transition: background var(--ins-dur) var(--ins-ease-out);
-}
-
-.ins-roomrow:hover {
-  background: rgba(128, 118, 100, 0.07);
-}
-
-.ins-roomrow:last-child {
-  border-bottom: none;
-}
-
-.ins-savedpin {
-  appearance: none;
-  border: none;
-  background: transparent;
-  color: var(--ins-ink-faint);
-  font-size: 14px;
-  padding: 0 2px;
-  cursor: default;
-}
-
-.ins-savedpin.is-on {
-  color: var(--ins-amber);
-}
-
-.ins-roomrow-code {
-  min-width: 88px;
-  font-size: var(--ins-fs-sub);
-  color: var(--ins-ink);
-}
-
-.ins-roomrow-name {
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: var(--ins-fs-sub);
-  color: var(--ins-ink-muted);
-}
-
-.ins-roomrow-bar {
-  width: 120px;
-  height: 4px;
-  border-radius: 999px;
-  background: rgba(128, 118, 100, 0.14);
-  overflow: hidden;
-  flex-shrink: 0;
-}
-
-.ins-roomrow-bar span {
-  display: block;
-  height: 100%;
-  border-radius: 999px;
-  background: var(--ins-green);
-  transition: width 900ms var(--ins-ease-out);
-}
-
-.ins-roomrow-free {
-  min-width: 150px;
-  text-align: right;
-  flex-shrink: 0;
-  color: var(--ins-ink-muted);
-}
-
-/* Board + trip blocks on the bus page */
-.ins-buspage-board,
+.ins-busboardpanel,
 .ins-buspage-trip {
   border: 1px solid var(--ins-line);
   border-radius: var(--ins-r-big);
   background: var(--ins-bg-raise);
+  box-shadow: var(--ins-shadow-soft);
   padding: var(--ins-s4);
 }
 
+/* Stop picker */
+.ins-stoppicker {
+  position: relative;
+}
+
+.ins-stoppicker-btn {
+  appearance: none;
+  display: flex;
+  align-items: baseline;
+  gap: var(--ins-s2);
+  border: none;
+  background: transparent;
+  cursor: default;
+  padding: 0;
+}
+
+.ins-stoppicker-btn:hover .ins-cap {
+  color: var(--ins-ink);
+}
+
+.ins-stoppicker-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 40;
+  width: 280px;
+  padding: var(--ins-s2);
+  border-radius: 14px;
+  background: var(--ins-menu-bg);
+  backdrop-filter: var(--ins-blur);
+  -webkit-backdrop-filter: var(--ins-blur);
+  box-shadow: var(--ins-shadow-sheet);
+  animation: ins-pop var(--ins-dur) var(--ins-ease-spring);
+}
+
+.ins-stoppicker-list {
+  max-height: 260px;
+  overflow-y: auto;
+  margin-top: var(--ins-s1);
+}
+
+.ins-stoppicker-list button {
+  appearance: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ins-s3);
+  width: 100%;
+  padding: 6px 8px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ins-ink-body);
+  font-size: var(--ins-fs-sub);
+  text-align: left;
+  cursor: default;
+}
+
+.ins-stoppicker-list button:hover,
+.ins-stoppicker-list button.is-hot {
+  background: rgba(217, 138, 112, 0.14);
+  color: var(--ins-ink);
+}
+
+/* Board rows */
 .ins-busboard {
   display: flex;
   flex-direction: column;
-  padding: var(--ins-s1) 0;
-}
-
-.ins-campus-stopselect {
-  width: auto;
-  max-width: 180px;
-  height: 24px;
-  font-size: var(--ins-fs-cap);
-}
-
-.ins-busboard {
-  display: flex;
-  flex-direction: column;
-  border: 1px solid var(--ins-line);
-  border-radius: var(--ins-r-big);
-  padding: var(--ins-s2) var(--ins-s3);
 }
 
 .ins-busboard-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 6px 0;
+  gap: var(--ins-s3);
+  padding: 9px 0;
   border-bottom: 1px solid var(--ins-line);
+  transition: opacity var(--ins-dur) var(--ins-ease-out);
 }
 
 .ins-busboard-row:last-child {
   border-bottom: none;
 }
 
-.ins-busboard-route {
-  font-weight: 600;
-  color: var(--ins-ink);
+.ins-busboard-row.is-next .ins-busboard-etas .is-big {
+  color: var(--ins-red);
 }
 
 .ins-busboard-etas {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--ins-s2);
   color: var(--ins-ink-muted);
-  letter-spacing: 0.06em;
+  font-size: var(--ins-fs-sub);
+}
+
+.ins-eta {
+  display: inline-block;
+  animation: ins-tick-in 300ms var(--ins-ease-out);
+}
+
+.ins-eta.is-big {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--ins-ink);
+}
+
+.ins-eta.is-departing {
+  color: var(--ins-red);
+}
+
+.ins-busboard-etas i {
+  font-style: normal;
+  color: var(--ins-ink-faint);
 }
 
 .ins-campus-boardfoot {
-  margin-top: var(--ins-s1);
+  margin-top: var(--ins-s2);
 }
 
 /* Trip planner */
@@ -247,26 +266,290 @@
   margin-top: var(--ins-s2);
 }
 
-.ins-triproute {
+.ins-routecard {
+  appearance: none;
   display: flex;
   flex-direction: column;
-  gap: 1px;
-  padding: var(--ins-s2) 0;
-  border-top: 1px solid var(--ins-line);
+  gap: var(--ins-s1);
+  width: 100%;
+  padding: var(--ins-s3);
+  border: 1px solid var(--ins-line);
+  border-radius: 12px;
+  background: var(--ins-bg-raise);
+  box-shadow: var(--ins-shadow-pill);
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: default;
+  transition:
+    border-color var(--ins-dur) var(--ins-ease-out),
+    transform var(--ins-dur) var(--ins-ease-out),
+    box-shadow var(--ins-dur) var(--ins-ease-out);
 }
 
-.ins-triproute-line {
+.ins-routecard:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--ins-shadow-soft);
+}
+
+.ins-routecard.is-hot {
+  border-color: var(--ins-red);
+}
+
+.ins-routecard-steps {
   display: flex;
   align-items: center;
   gap: var(--ins-s2);
+}
+
+.ins-stepdot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--tone);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--tone) 25%, transparent);
+}
+
+.ins-routecard-service {
+  font-weight: 700;
+  color: var(--ins-ink);
+}
+
+.ins-routecard-steps.is-sub {
+  padding-left: 21px;
 }
 
 .ins-triproute-total {
   color: var(--ins-ink-muted);
 }
 
+/* ==========================================================================
+   Venues page
+   ========================================================================== */
+.ins-venuespage {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ins-s4);
+}
+
+.ins-venhero {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ins-s3);
+  border: 1px solid var(--ins-line);
+  border-radius: var(--ins-r-big);
+  background: var(--ins-bg-raise);
+  box-shadow: var(--ins-shadow-soft);
+  padding: var(--ins-s4) var(--ins-s5);
+}
+
+.ins-venhero-clock {
+  display: flex;
+  align-items: baseline;
+  gap: var(--ins-s3);
+}
+
+.ins-venhero-time {
+  font-size: 44px;
+}
+
+.ins-venhero-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ins-s3);
+  flex-wrap: wrap;
+}
+
+.ins-venhero-count {
+  font-size: 24px;
+  color: var(--ins-green);
+}
+
+/* Time rail */
+.ins-timerail {
+  position: relative;
+  height: 30px;
+  border-radius: 999px;
+  background: rgba(62, 56, 48, 0.06);
+  cursor: ew-resize;
+  touch-action: none;
+}
+
+:root[data-theme="instrument-dark"] .ins-timerail {
+  background: rgba(0, 0, 0, 0.22);
+}
+
+.ins-timerail-tick {
+  position: absolute;
+  top: -16px;
+  transform: translateX(-50%);
+  font-size: 9.5px;
+  color: var(--ins-ink-faint);
+  pointer-events: none;
+}
+
+.ins-timerail-fill {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  height: 4px;
+  border-radius: 999px;
+  transform: translateY(-50%);
+  background: var(--ins-red);
+  opacity: 0.75;
+  pointer-events: none;
+  transition: width 120ms var(--ins-ease-out);
+}
+
+.ins-timerail-knob {
+  position: absolute;
+  top: 50%;
+  width: 16px;
+  height: 26px;
+  border-radius: 6px;
+  background: var(--ins-bg-raise);
+  border: 1px solid var(--ins-line-strong);
+  box-shadow: var(--ins-shadow-pill);
+  transform: translate(-50%, -50%);
+  transition: left 120ms var(--ins-ease-out);
+}
+
+.ins-timerail-now {
+  position: absolute;
+  top: 50%;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--ins-green);
+  box-shadow: 0 0 8px rgba(138, 169, 140, 0.6);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+/* Room list */
+.ins-campus-search .ins-input {
+  height: 34px;
+  border-radius: var(--ins-r);
+}
+
+.ins-campus-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.ins-roomrow {
+  display: flex;
+  align-items: center;
+  gap: var(--ins-s3);
+  padding: 8px 10px;
+  margin: 0 -10px;
+  border-radius: var(--ins-r);
+  border-bottom: 1px solid var(--ins-line);
+  transition:
+    background var(--ins-dur) var(--ins-ease-out),
+    transform var(--ins-dur) var(--ins-ease-out);
+}
+
+.ins-roomrow:hover {
+  background: rgba(128, 118, 100, 0.07);
+  transform: translateX(2px);
+}
+
+.ins-savedpin {
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: var(--ins-ink-faint);
+  font-size: 14px;
+  padding: 0 2px;
+  cursor: default;
+  transition:
+    color var(--ins-dur-fast) var(--ins-ease),
+    transform var(--ins-dur-fast) var(--ins-ease-spring);
+}
+
+.ins-savedpin:hover {
+  transform: scale(1.2);
+}
+
+.ins-savedpin.is-on {
+  color: var(--ins-red);
+}
+
+.ins-roomrow-code {
+  min-width: 88px;
+  font-size: var(--ins-fs-sub);
+  color: var(--ins-ink);
+}
+
+.ins-roomrow-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--ins-fs-sub);
+  color: var(--ins-ink-muted);
+}
+
+/* Availability strip — the honest free window from the chosen moment */
+.ins-roomstrip {
+  width: 140px;
+  height: 5px;
+  border-radius: 999px;
+  background: rgba(128, 118, 100, 0.16);
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.ins-roomstrip span {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--ins-green);
+  transition: width 900ms var(--ins-ease-out);
+}
+
+.ins-roomrow-free {
+  min-width: 150px;
+  text-align: right;
+  flex-shrink: 0;
+  color: var(--ins-ink-muted);
+}
+
+/* Skeleton rows — shimmer while reading the timetable */
+.ins-skrow {
+  height: 34px;
+  margin: 3px 0;
+  border-radius: var(--ins-r);
+  background: linear-gradient(
+    90deg,
+    rgba(128, 118, 100, 0.07) 25%,
+    rgba(128, 118, 100, 0.14) 45%,
+    rgba(128, 118, 100, 0.07) 65%
+  );
+  background-size: 240% 100%;
+  animation: ins-shimmer 1.4s ease-in-out infinite;
+}
+
+@keyframes ins-shimmer {
+  from {
+    background-position: 120% 0;
+  }
+  to {
+    background-position: -120% 0;
+  }
+}
+
 /* Saved */
 .ins-savedrooms {
+  display: flex;
+  align-items: center;
+  gap: var(--ins-s3);
+}
+
+.ins-savedrooms .ins-mono {
   display: flex;
   flex-wrap: wrap;
   gap: var(--ins-s1);
