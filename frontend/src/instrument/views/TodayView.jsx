@@ -1,6 +1,6 @@
-// Today — the editorial brief. One glance states where you are: the date,
-// the NUS week, what's happening, what's next (with the bus facts that get
-// you there), and what's due. Everything declarative; nothing pushes.
+// Today — the Swiss front page. A live clock, the day as a thin rule,
+// the next class as a depleting line of time, and the facts of the day set
+// in type. Everything ticks; nothing pushes.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -31,12 +31,16 @@ function timeHM(date) {
   return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false });
 }
 
-// Departure ETAs read as minutes up close, as clock times once the wait is
-// long enough that minutes stop meaning anything.
-function etaLabel(minutes, now) {
-  if (minutes <= 0) return "now";
-  if (minutes < 180) return `${minutes} min`;
-  return timeHM(new Date(now.getTime() + minutes * 60000));
+// Live countdown to a future moment: H:MM above an hour, MM:SS under it.
+function countdownUntil(target, now) {
+  const diff = Math.max(0, target.getTime() - now.getTime());
+  const totalSeconds = Math.floor(diff / 1000);
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+  const pad = (n) => String(n).padStart(2, "0");
+  if (hours > 0) return `${hours}:${pad(minutes)}`;
+  return `${pad(minutes)}:${pad(seconds)}`;
 }
 
 function dueLabel(due, now) {
@@ -74,13 +78,17 @@ function phaseAhead(now) {
         instructional: "Classes",
         orientation: "Orientation",
       };
-      return {
-        label: labels[week.type] || week.label,
-        inDays: offset,
-      };
+      return { label: labels[week.type] || week.label, inDays: offset };
     }
   }
   return null;
+}
+
+// Long waits read as clock times; a countdown only means something close.
+function etaLabel(minutes, now) {
+  if (minutes <= 0) return "now";
+  if (minutes < 180) return `${minutes} min`;
+  return timeHM(new Date(now.getTime() + minutes * 60000));
 }
 
 // Compact departures board for one stop.
@@ -121,7 +129,7 @@ function BusStrip({ token, stops, stopId, onSelectStop }) {
   return (
     <div className="ins-busstrip">
       <div className="ins-busstrip-head">
-        <span className="ins-cap">{stop?.name || "Bus stop"}</span>
+        <span className="ins-label">{stop?.name || "Bus stop"}</span>
         <button type="button" className="ins-btn is-ghost" onClick={onSelectStop}>
           Change
         </button>
@@ -136,8 +144,12 @@ function BusStrip({ token, stops, stopId, onSelectStop }) {
               <span className="ins-busstrip-etas ins-mono">
                 {service.minutes
                   .slice(0, 3)
-                  .map((m) => etaLabel(m, tick))
-                  .join(" · ")}
+                  .map((m) => (
+                    <span key={m} className="ins-tickvalue">
+                      {etaLabel(m, tick)}
+                    </span>
+                  ))
+                  .reduce((acc, item, index) => (index ? [...acc, " · ", item] : [item]), [])}
               </span>
             </div>
           ))}
@@ -161,8 +173,9 @@ export default function TodayView({ token, user, onNavigate }) {
   const [completion, setCompletion] = useState({});
   const journeyTimer = useRef(null);
 
+  // The clock ticks every second; the page breathes with it.
   useEffect(() => {
-    const timer = window.setInterval(() => setNow(new Date()), 30000);
+    const timer = window.setInterval(() => setNow(new Date()), 1000);
     return () => window.clearInterval(timer);
   }, []);
 
@@ -355,13 +368,39 @@ export default function TodayView({ token, user, onNavigate }) {
   const everythingEmpty =
     loaded && !happeningNow && !nextToday && overdue.length === 0 && dueToday.length === 0;
 
+  // Day progress — elapsed share of today, as a thin filling rule.
+  const dayPct =
+    ((now.getTime() - dayStart.getTime()) / (dayEnd.getTime() - dayStart.getTime())) * 100;
+  const clockHM = timeHM(now);
+  const clockSS = String(now.getSeconds()).padStart(2, "0");
+
+  // Next-card countdown + approach meter (the final 8 hours deplete visibly).
+  const nextCountdown = nextToday ? countdownUntil(nextToday.start, now) : null;
+  const nextApproachPct = nextToday
+    ? Math.max(
+        0,
+        Math.min(100, (1 - (nextToday.start.getTime() - now.getTime()) / (8 * 3600 * 1000)) * 100),
+      )
+    : 0;
+
   return (
     <div className="ins-today">
       <header className="ins-today-head">
+        <div className="ins-today-clockrow">
+          <span className="ins-today-clock ins-mono">
+            {clockHM}
+            <span className="ins-today-sec">:{clockSS}</span>
+          </span>
+          <div className="ins-today-daymeter ins-meter is-red">
+            <span style={{ width: `${dayPct}%` }} />
+          </div>
+        </div>
         <h2 className="ins-display">{dateLabel}</h2>
-        <p className="ins-sub ins-mono">
+        <p className="ins-today-sub">
           {week?.formatted || ""}
-          {phase ? ` · ${phase.label} in ${phase.inDays} day${phase.inDays === 1 ? "" : "s"}` : ""}
+          {phase
+            ? ` — ${phase.label} in ${phase.inDays} day${phase.inDays === 1 ? "" : "s"}`
+            : ""}
         </p>
       </header>
 
@@ -389,18 +428,19 @@ export default function TodayView({ token, user, onNavigate }) {
       {nextToday && (
         <section className="ins-sec">
           <div className="ins-sec-head">
-            <h2>Next</h2>
-            <span className="ins-cap ins-mono">
+            <p className="ins-label">
+              Next —{" "}
               {nextToday.dayOffset === 0
                 ? "today"
                 : nextToday.dayOffset === 1
                   ? "tomorrow"
                   : now.toLocaleDateString([], { weekday: "short" })}
-            </span>
+            </p>
+            <span className="ins-numeral ins-next-count">{nextCountdown}</span>
           </div>
           <div className="ins-next" style={{ "--tick-color": nextToday.color }}>
             <div className="ins-next-main">
-              <span className="ins-tick" style={{ "--tick-color": nextToday.color }} />
+              <span className="ins-tick" />
               <div className="ins-next-title">
                 <strong>{nextToday.title}</strong>
                 <span className="ins-cap">
@@ -412,6 +452,9 @@ export default function TodayView({ token, user, onNavigate }) {
                 <span className="ins-mono ins-next-clock">{timeHM(nextToday.start)}</span>
                 <span className="ins-cap">{nextToday.venue}</span>
               </div>
+            </div>
+            <div className="ins-meter ins-next-meter">
+              <span style={{ width: `${nextApproachPct}%` }} />
             </div>
             {journey?.best && (
               <div className="ins-next-journey">
@@ -439,9 +482,8 @@ export default function TodayView({ token, user, onNavigate }) {
           {overdue.length > 0 && (
             <>
               <div className="ins-sec-head">
-                <h2>
-                  Overdue <span className="ins-mono ins-count is-overdue">{overdue.length}</span>
-                </h2>
+                <p className="ins-label is-red">Overdue</p>
+                <span className="ins-numeral ins-duenum is-red">{overdue.length}</span>
               </div>
               {overdue.slice(0, 5).map((task) => renderTaskRow(task, "overdue"))}
               {overdue.length > 5 && (
@@ -458,9 +500,8 @@ export default function TodayView({ token, user, onNavigate }) {
           {dueToday.length > 0 && (
             <>
               <div className="ins-sec-head">
-                <h2>
-                  Due today <span className="ins-mono ins-count">{dueToday.length}</span>
-                </h2>
+                <p className="ins-label">Due today</p>
+                <span className="ins-numeral ins-duenum">{dueToday.length}</span>
               </div>
               {dueToday.slice(0, 6).map((task) => renderTaskRow(task))}
             </>
@@ -468,9 +509,8 @@ export default function TodayView({ token, user, onNavigate }) {
           {dueSoon.length > 0 && (
             <>
               <div className="ins-sec-head">
-                <h2>
-                  This week <span className="ins-mono ins-count">{dueSoon.length}</span>
-                </h2>
+                <p className="ins-label">This week</p>
+                <span className="ins-numeral ins-duenum">{dueSoon.length}</span>
               </div>
               {dueSoon.slice(0, 5).map((task) => renderTaskRow(task))}
             </>
@@ -481,8 +521,8 @@ export default function TodayView({ token, user, onNavigate }) {
       {todayClasses.length > 0 && (
         <section className="ins-sec">
           <div className="ins-sec-head">
-            <h2>Classes</h2>
-            <span className="ins-cap ins-mono">{todayClasses.length} today</span>
+            <p className="ins-label">Classes</p>
+            <span className="ins-mono ins-cap">{todayClasses.length} today</span>
           </div>
           <div className="ins-classlist">
             {todayClasses.map((item) => {
@@ -510,7 +550,7 @@ export default function TodayView({ token, user, onNavigate }) {
       {stops.length > 0 && (
         <section className="ins-sec">
           <div className="ins-sec-head">
-            <h2>Departures</h2>
+            <p className="ins-label">Departures</p>
           </div>
           <BusStrip
             token={token}
@@ -524,8 +564,8 @@ export default function TodayView({ token, user, onNavigate }) {
       {brief?.new_announcements?.length > 0 && (
         <section className="ins-sec">
           <div className="ins-sec-head">
-            <h2>Announcements</h2>
-            <span className="ins-cap ins-mono">{brief.new_announcements.length} new</span>
+            <p className="ins-label">Announcements</p>
+            <span className="ins-mono ins-cap">{brief.new_announcements.length} new</span>
           </div>
           {brief.new_announcements.slice(0, 4).map((a) => (
             <button
