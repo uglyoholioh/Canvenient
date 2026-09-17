@@ -1,21 +1,18 @@
-/* Modules — semester columns. */
+/* Modules — smart views + module workspaces. */
 
 .ins-mods {
-  max-width: 1240px;
+  max-width: 1120px;
   margin: 0 auto;
   display: grid;
-  grid-template-columns: 230px minmax(0, 1fr) 280px;
+  grid-template-columns: 240px minmax(0, 1fr);
   gap: var(--ins-s5);
   align-items: start;
   min-height: 50vh;
 }
 
-@media (max-width: 1080px) {
+@media (max-width: 900px) {
   .ins-mods {
     grid-template-columns: 200px minmax(0, 1fr);
-  }
-  .ins-mods-inbox {
-    display: none;
   }
 }
 
@@ -24,80 +21,269 @@
   display: flex;
   flex-direction: column;
   gap: 1px;
+  position: sticky;
+  top: 0;
 }
 
-.ins-modrow {
+.ins-railrow {
   appearance: none;
   display: flex;
-  align-items: stretch;
+  align-items: center;
   gap: var(--ins-s2);
   width: 100%;
-  padding: 0;
+  min-height: 34px;
+  padding: 4px 8px;
   border: none;
   border-radius: var(--ins-r);
   background: transparent;
   text-align: left;
   font: inherit;
-  color: inherit;
+  color: var(--ins-ink-muted);
   cursor: default;
-  overflow: hidden;
-  transition: background var(--ins-dur-fast) var(--ins-ease);
+  transition:
+    background var(--ins-dur) var(--ins-ease-out),
+    color var(--ins-dur) var(--ins-ease-out);
 }
 
-.ins-modrow:hover {
-  background: color-mix(in srgb, var(--ins-bg-raise) 72%, transparent);
+.ins-railrow:hover {
+  background: rgba(128, 118, 100, 0.08);
+  color: var(--ins-ink);
 }
 
-.ins-modrow.is-active {
-  background: rgba(217, 138, 112, 0.13);
+.ins-railrow.is-active {
+  background: rgba(217, 138, 112, 0.14);
+  color: var(--ins-ink);
 }
 
-.ins-modrow .ins-tick {
-  opacity: 0.9;
-}
-
-.ins-modrow-main {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  padding: 6px 4px 6px 8px;
-  min-width: 0;
+.ins-railrow-label {
+  font-weight: 550;
   flex: 1;
-}
-
-.ins-modrow.is-active .ins-modrow-code {
-  color: var(--ins-ink);
-}
-
-.ins-modrow-code {
-  font-size: var(--ins-fs-sub);
-  font-weight: 600;
-  color: var(--ins-ink);
-}
-
-.ins-modrow-name {
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.ins-modrow-count {
-  align-self: center;
-  padding-right: 8px;
-  color: var(--ins-ink-muted);
-}
-
-/* Pane */
-.ins-mods-pane {
+.ins-railrow-main {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  flex: 1;
   min-width: 0;
 }
 
-.ins-mods-coursehead {
+.ins-railrow-code {
+  font-size: var(--ins-fs-sub);
+  font-weight: 650;
+  color: var(--ins-ink);
+}
+
+.ins-railrow.is-active .ins-railrow-code {
+  color: var(--ins-ink);
+}
+
+.ins-railrow-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ins-railrow-count {
+  color: var(--ins-ink-muted);
+}
+
+.ins-railrow .ins-tick {
+  border-radius: 999px;
+}
+
+/* Pane */
+.ins-modspane {
+  min-width: 0;
+}
+
+.ins-mods-bucket {
+  margin-bottom: var(--ins-s4);
+}
+
+.ins-mods-bucket:last-child {
+  margin-bottom: 0;
+}
+
+/* Deadline rows */
+.ins-dlrow {
+  appearance: none;
+  display: flex;
+  align-items: center;
+  gap: var(--ins-s3);
+  width: calc(100% + 16px);
+  margin: 0 -8px;
+  padding: 7px 8px;
+  border: none;
+  border-radius: var(--ins-r);
+  background: transparent;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: default;
+  transition:
+    background var(--ins-dur) var(--ins-ease-out),
+    transform var(--ins-dur) var(--ins-ease-out);
+}
+
+.ins-dlrow:hover {
+  background: rgba(128, 118, 100, 0.08);
+  transform: translateX(2px);
+}
+
+.ins-dlrow-title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--ins-ink-body);
+}
+
+.ins-dlrow:hover .ins-dlrow-title {
+  color: var(--ins-ink);
+}
+
+.ins-dlrow-code {
+  flex-shrink: 0;
+}
+
+.ins-dlrow-due {
+  flex-shrink: 0;
+  min-width: 74px;
+  text-align: right;
+  color: var(--ins-ink-muted);
+}
+
+.ins-dlrow-due.is-red {
+  color: var(--ins-red);
+}
+
+/* Inbox */
+.ins-inbox-hint {
+  margin-bottom: var(--ins-s2);
+}
+
+.ins-annrow {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--ins-s2) var(--ins-s3);
+  margin: 0 calc(var(--ins-s3) * -1);
+  border-radius: var(--ins-r);
+  transition: background var(--ins-dur) var(--ins-ease-out);
+}
+
+.ins-annrow:hover,
+.ins-annrow.is-hot {
+  background: rgba(217, 138, 112, 0.1);
+}
+
+.ins-annrow-course {
+  color: var(--ins-ink-faint);
+}
+
+.ins-annrow-title {
+  font-size: var(--ins-fs-body);
+  color: var(--ins-ink-body);
+  text-decoration: none;
+}
+
+.ins-annrow-title:hover {
+  color: var(--ins-ink);
+  text-decoration: underline;
+  text-decoration-color: var(--ins-line-strong);
+}
+
+.ins-annrow-foot {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: var(--ins-s3);
-  margin-bottom: var(--ins-s3);
+}
+
+/* Grades */
+.ins-graderow {
+  appearance: none;
+  display: flex;
+  align-items: center;
+  gap: var(--ins-s3);
+  width: 100%;
+  padding: 8px 0;
+  border: none;
+  border-bottom: 1px solid var(--ins-line);
+  background: transparent;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: default;
+}
+
+.ins-graderow:last-child {
+  border-bottom: none;
+}
+
+.ins-graderow-code {
+  min-width: 88px;
+  color: var(--ins-ink);
+}
+
+.ins-graderow-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--ins-fs-sub);
+  color: var(--ins-ink-muted);
+}
+
+.ins-graderow-bar {
+  width: 110px;
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(128, 118, 100, 0.16);
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.ins-graderow-bar span {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--ins-green);
+  transition: width 900ms var(--ins-ease-out);
+}
+
+.ins-graderow-grade {
+  min-width: 52px;
+  text-align: right;
+  color: var(--ins-ink);
+}
+
+/* Course workspace */
+.ins-coursehead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ins-s3);
+  margin-bottom: var(--ins-s4);
+  flex-wrap: wrap;
+}
+
+.ins-coursehead-id {
+  display: flex;
+  align-items: center;
+  gap: var(--ins-s3);
+  min-width: 0;
+}
+
+.ins-coursehead .ins-title {
+  font-size: var(--ins-fs-title);
 }
 
 .ins-mods-list {
@@ -112,7 +298,7 @@
   justify-content: space-between;
   gap: var(--ins-s3);
   width: 100%;
-  padding: 7px 0;
+  padding: 8px 0;
   border: none;
   border-bottom: 1px solid var(--ins-line);
   background: transparent;
@@ -154,6 +340,7 @@
 .ins-mods-files {
   border: 1px solid var(--ins-line);
   border-radius: var(--ins-r-big);
+  background: var(--ins-bg-raise);
   padding: var(--ins-s3);
 }
 
@@ -162,53 +349,4 @@
   flex-direction: column;
   gap: var(--ins-s4);
   max-width: 480px;
-}
-
-/* Inbox */
-.ins-mods-inbox {
-  min-width: 0;
-  position: sticky;
-  top: 0;
-}
-
-.ins-annrow {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  padding: var(--ins-s2) var(--ins-s2);
-  margin: 0 calc(var(--ins-s2) * -1);
-  border-radius: var(--ins-r);
-  transition: background var(--ins-dur-fast) var(--ins-ease);
-}
-
-.ins-annrow.is-hot {
-  background: rgba(217, 138, 112, 0.13);
-}
-
-.ins-annrow.is-hot .ins-annrow-title {
-  color: var(--ins-ink);
-}
-
-.ins-annrow-course {
-  color: var(--ins-ink-faint);
-}
-
-.ins-annrow-title {
-  font-size: var(--ins-fs-sub);
-  color: var(--ins-ink-body);
-  text-decoration: none;
-  overflow: hidden;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-}
-
-.ins-annrow-title:hover {
-  color: var(--ins-ink);
-  text-decoration: underline;
-  text-decoration-color: var(--ins-line-strong);
-}
-
-.ins-annrow-date {
-  color: var(--ins-ink-faint);
 }

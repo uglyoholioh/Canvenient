@@ -1,7 +1,7 @@
-/* Decide. */
+/* Decide — pastel wheel + card draw. */
 
 .ins-decide {
-  max-width: 900px;
+  max-width: 940px;
   margin: 0 auto;
   display: grid;
   grid-template-columns: minmax(0, 1fr) 300px;
@@ -9,30 +9,172 @@
   align-items: start;
 }
 
-@media (max-width: 860px) {
+@media (max-width: 880px) {
   .ins-decide {
     grid-template-columns: 1fr;
   }
 }
 
-.ins-decide-wheel {
+/* Stage */
+.ins-decide-stage {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: var(--ins-s3);
-}
-
-.ins-decide-spin {
-  min-width: 120px;
+  gap: var(--ins-s4);
+  padding: var(--ins-s5);
+  border-radius: var(--ins-r-big);
+  background: var(--ins-bg-raise);
+  box-shadow: var(--ins-shadow-soft);
 }
 
 .ins-decide-result {
-  color: var(--ins-ink-muted);
   min-height: 20px;
+  font-size: var(--ins-fs-body);
+  color: var(--ins-ink-muted);
 }
 
-.ins-decide-wheelmenu {
-  flex-wrap: wrap;
+/* Wheel — pastel conic disc, soft shadow, round hub */
+.ins-wheelwrap {
+  position: relative;
+  width: 340px;
+  height: 340px;
+}
+
+.ins-wheel-pointer {
+  position: absolute;
+  top: -6px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 11px solid transparent;
+  border-right: 11px solid transparent;
+  border-top: 20px solid var(--ins-ink);
+  z-index: 3;
+  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.2));
+}
+
+.ins-wheel {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  border: 6px solid var(--ins-bg-raise);
+  box-shadow:
+    0 0 0 1px var(--ins-line),
+    var(--ins-shadow-soft);
+  transition: transform 3.3s cubic-bezier(0.16, 1, 0.24, 1);
+  position: relative;
+}
+
+.ins-wheel.is-spinning {
+  transition: transform 3.3s cubic-bezier(0.12, 0.7, 0.08, 1);
+}
+
+.ins-wheel-hub {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 84px;
+  height: 84px;
+  border-radius: 50%;
+  border: 1px solid var(--ins-line);
+  background: var(--ins-bg-raise);
+  box-shadow: var(--ins-shadow-pill);
+  color: var(--ins-ink);
+  font-size: var(--ins-fs-label);
+  font-weight: 650;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  cursor: default;
+  transition: transform var(--ins-dur-fast) var(--ins-ease-spring);
+}
+
+.ins-wheel-hub:hover:not(:disabled) {
+  transform: translate(-50%, -50%) scale(1.06);
+}
+
+.ins-wheel-hub:disabled {
+  opacity: 0.5;
+}
+
+/* Cards — a fanned deck that scatters then reveals one */
+.ins-cardstage {
+  position: relative;
+  width: 340px;
+  height: 300px;
+}
+
+.ins-deckcard {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 108px;
+  height: 150px;
+  border: 1px solid var(--ins-line);
+  border-radius: 14px;
+  border-top: 6px solid var(--tone);
+  background: var(--ins-bg-raise);
+  box-shadow: var(--ins-shadow-pill);
+  color: var(--ins-ink);
+  font-size: var(--ins-fs-sub);
+  font-weight: 600;
+  padding: 10px;
+  cursor: default;
+  overflow: hidden;
+  transform: translate(-50%, -50%) rotate(calc((var(--i) - (var(--n) - 1) / 2) * 3deg))
+    translateX(calc((var(--i) - (var(--n) - 1) / 2) * 16px));
+  transition:
+    transform 550ms var(--ins-ease-spring),
+    box-shadow var(--ins-dur) var(--ins-ease-out);
+}
+
+.ins-cardstage:hover .ins-deckcard:not(.is-drawn) {
+  transform: translate(-50%, -56%) rotate(calc((var(--i) - (var(--n) - 1) / 2) * 2deg))
+    translateX(calc((var(--i) - (var(--n) - 1) / 2) * 18px));
+}
+
+.ins-deckcard.is-shuffling {
+  animation: ins-shuffle 760ms var(--ins-ease) infinite;
+}
+
+.ins-deckcard.is-drawn {
+  z-index: 10;
+  transform: translate(-50%, -50%) rotate(-2deg) scale(1.35);
+  box-shadow: var(--ins-shadow-sheet);
+  animation: ins-cardflip 480ms var(--ins-ease-spring);
+}
+
+@keyframes ins-shuffle {
+  0% {
+    transform: translate(-50%, -50%) rotate(0deg);
+  }
+  25% {
+    transform: translate(calc(-50% + 26px), calc(-50% - 18px)) rotate(9deg);
+  }
+  50% {
+    transform: translate(calc(-50% - 22px), calc(-50% + 10px)) rotate(-7deg);
+  }
+  75% {
+    transform: translate(calc(-50% + 14px), calc(-50% + 16px)) rotate(5deg);
+  }
+  100% {
+    transform: translate(-50%, -50%) rotate(0deg);
+  }
+}
+
+@keyframes ins-cardflip {
+  from {
+    transform: translate(-50%, -50%) rotateY(90deg) scale(0.8);
+  }
+  to {
+    transform: translate(-50%, -50%) rotate(-2deg) scale(1.35);
+  }
+}
+
+/* Side — pickers + options */
+.ins-decide-modemenu {
+  margin-bottom: var(--ins-s2);
 }
 
 .ins-decide-options {
@@ -47,8 +189,13 @@
   padding: 4px 0;
   font-size: var(--ins-fs-sub);
   color: var(--ins-ink-body);
+  cursor: default;
 }
 
 .ins-decide-option .is-off {
   color: var(--ins-ink-faint);
+}
+
+.ins-decide-spin {
+  min-width: 120px;
 }
