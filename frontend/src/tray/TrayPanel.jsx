@@ -1,12 +1,14 @@
-// TrayPanel — the menu-bar popover face. Onigiri's base: big remaining
-// countdown, slider + typed minutes + one-click presets, pause/stop, and on
-// expiry the panel raises an interaction-to-stop alarm. Above the timer,
-// Canvenient's glanceable rows: next class, next ISB departure, top
-// deadlines. Footer carries today/week focus totals.
+// TrayPanel — the menu-bar popover, styled after Onigiri: the timer is the
+// panel, everything else is quiet rows beneath it. A slim search field opens
+// Canvenient's corpus from the menubar; picking a result raises the main
+// window on the right view. Above the timer, glanceable facts: next class,
+// next ISB departure, nearest deadlines. On expiry the panel raises an
+// interaction-to-stop alarm.
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { getCurrent, WebviewWindow } from "@tauri-apps/api/window";
-import { listen } from "@tauri-apps/api/event";
+import { emit, listen } from "@tauri-apps/api/event";
+import { Search } from "lucide-react";
 import {
   getCampusBusArrivals,
   getFocusSummary,
@@ -17,12 +19,16 @@ import {
 import { scheduleItemsForDate, taskDueDate } from "../components/scheduleUtils";
 import { ALARM_SOUNDS, loadAlarmSound, storeAlarmSound } from "./alarm";
 import { useFocusTimer } from "./useFocusTimer";
+import "../design/system.css";
+import "./tray.css";
+import { loadCorpus } from "../omnibarCorpus";
+import "./tray.css";
 
 const DEFAULT_STOP = "COM3";
 const PRESETS = [15, 25, 45, 90];
 
 function formatClock(date) {
-  return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false });
 }
 
 function formatMinutes(totalSeconds) {
@@ -92,6 +98,81 @@ export default function TrayPanel() {
   const [sound, setSound] = useState(loadAlarmSound);
   const [chipVisible, setChipVisible] = useState(false);
 
+  // --- Search ---------------------------------------------------------------
+  const [searchQuery, setSearchQuery] = useState("");
+  const [corpus, setCorpus] = useState(null);
+  const [results, setResults] = useState([]);
+
+  useEffect(() => {
+    let alive = true;
+    loadCorpus(token)
+      .then((data) => {
+        if (alive) setCorpus(data);
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [token]);
+
+  useEffect(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q || !corpus) {
+      setResults([]);
+      return;
+    }
+    const found = [];
+    (corpus.notes || []).forEach((note) => {
+      if ((note.title || "untitled").toLowerCase().includes(q)) {
+        found.push({ kind: "note", id: note.id, label: note.title || "Untitled", source: "Note" });
+      }
+    });
+    (corpus.tasks || []).forEach((task) => {
+      if ((task.title || "").toLowerCase().includes(q)) {
+        found.push({ kind: "task", id: task.id, label: task.title, source: "Task" });
+      }
+    });
+    (corpus.canvas?.courses || []).forEach((course) => {
+      if (
+        (course.name || "").toLowerCase().includes(q) ||
+        (course.course_code || "").toLowerCase().includes(q)
+      ) {
+        found.push({
+          kind: "course",
+          id: course.id,
+          label: course.name || course.course_code,
+          source: course.course_code || "Module",
+        });
+      }
+    });
+    (corpus.canvas?.assignments || []).forEach((assignment) => {
+      if ((assignment.title || "").toLowerCase().includes(q)) {
+        found.push({
+          kind: "assignment",
+          id: assignment.id,
+          label: assignment.title,
+          source: "Assignment",
+        });
+      }
+    });
+    setResults(found.slice(0, 7));
+  }, [searchQuery, corpus]);
+
+  const openResult = async (result) => {
+    try {
+      const main = WebviewWindow.getByLabel("main");
+      if (main) {
+        await main.show();
+        await main.setFocus();
+      }
+      await emit("tray-open", result);
+    } catch {
+      // Worst case the main window stays as it was.
+    }
+    setSearchQuery("");
+    getCurrent().hide();
+  };
+
   const toggleChip = async () => {
     const chip = WebviewWindow.getByLabel("tray-chip");
     if (!chip) return;
@@ -150,6 +231,8 @@ export default function TrayPanel() {
     .sort((left, right) => left.due - right.due)
     .slice(0, 3);
   const running = timer.status !== "idle";
+  const plannedSeconds = Math.max(1, timer.plannedMinutes * 60);
+  const progressPct = Math.min(100, (1 - timer.remaining / plannedSeconds) * 100);
 
   const startDraft = () => {
     timer.start(Number(draftMinutes) || 25);
@@ -157,156 +240,186 @@ export default function TrayPanel() {
 
   return (
     <div
-      className={`tray-panel ${timer.alarmActive ? "is-alarm" : ""}`}
+      className={`tp-root ${timer.alarmActive ? "is-alarm" : ""}`}
       onClick={() => timer.alarmActive && timer.dismissAlarm()}
       role="application"
       aria-label="Canvenient tray panel"
     >
-      {offline && <div className="tray-offline">Offline — showing cached data</div>}
+      {offline && <div className="tp-offline">Offline — showing cached data</div>}
 
-      <section className="tray-section">
-        <h2 className="tray-heading">Next</h2>
-        {nextUp ? (
-          <p className="tray-row">
-            <strong>{nextUp.title}</strong>
-            <span>
-              {formatClock(nextUp.start)}–{formatClock(nextUp.end)}
-              {nextUp.venue ? ` · ${nextUp.venue}` : ""}
-            </span>
-          </p>
-        ) : (
-          <p className="tray-row is-muted">No more classes today</p>
-        )}
-        {arrivals?.arrivals?.length ? (
-          <p className="tray-row">
-            <strong>ISB {arrivals.arrivals[0].service}</strong>
-            <span>
-              {arrivals.arrivals[0].minutes[0] != null
-                ? `${arrivals.arrivals[0].minutes[0]} min`
-                : "—"}
-              {arrivals.arrivals.length > 1 &&
-                ` · ${arrivals.arrivals
-                  .slice(1, 3)
-                  .map((arrival) => arrival.service)
-                  .join(", ")}`}
-            </span>
-          </p>
-        ) : (
-          <p className="tray-row is-muted">No bus times</p>
-        )}
-      </section>
+      <div className="tp-search">
+        <Search size={13} strokeWidth={1.8} />
+        <input
+          value={searchQuery}
+          onChange={(event) => setSearchQuery(event.target.value)}
+          placeholder="Search Canvenient"
+          spellCheck={false}
+          aria-label="Search Canvenient"
+        />
+      </div>
 
-      <section className="tray-section">
-        <h2 className="tray-heading">Deadlines</h2>
-        {deadlines.length ? (
-          <ul className="tray-list">
-            {deadlines.map((task) => (
-              <li key={task.id} className="tray-row">
-                <strong>{task.title}</strong>
-                <span className={task.due < now ? "is-overdue" : ""}>
-                  {relativeDue(task.due, now)}
-                </span>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p className="tray-row is-muted">Nothing due — enjoy the calm</p>
-        )}
-      </section>
+      {results.length > 0 && (
+        <section className="tp-section tp-results" aria-label="Search results">
+          {results.map((result) => (
+            <button
+              key={`${result.kind}-${result.id}`}
+              type="button"
+              className="tp-result"
+              onClick={() => openResult(result)}
+            >
+              <span className="tp-result-label">{result.label}</span>
+              <span className="tp-result-source">{result.source}</span>
+            </button>
+          ))}
+        </section>
+      )}
 
-      <section className="tray-section tray-timer" aria-label="Focus timer">
-        <div className="tray-countdown" aria-live="off">
+      <section className="tp-section tp-timer" aria-label="Focus timer">
+        <div className="tp-count" aria-live="off">
           {String(Math.floor(timer.remaining / 60)).padStart(2, "0")}:
           {String(timer.remaining % 60).padStart(2, "0")}
         </div>
+        <div className="tp-progress">
+          <span style={{ width: `${running || timer.status === "paused" ? progressPct : 0}%` }} />
+        </div>
         {timer.status === "idle" ? (
           <>
-            <input
-              className="tray-minutes"
-              type="number"
-              min="1"
-              max="480"
-              value={draftMinutes}
-              onChange={(event) => setDraftMinutes(event.target.value)}
-              onKeyDown={(event) => event.key === "Enter" && startDraft()}
-              aria-label="Minutes"
-            />
-            <div className="tray-presets">
+            <div className="tp-presets">
               {PRESETS.map((preset) => (
                 <button
                   key={preset}
                   type="button"
-                  className="tray-preset"
-                  onClick={() => timer.start(preset)}
+                  className={`tp-preset ${draftMinutes === preset ? "is-active" : ""}`}
+                  onClick={() => setDraftMinutes(preset)}
                 >
                   {preset}
                 </button>
               ))}
+              <input
+                className="tp-minutes"
+                type="number"
+                min="1"
+                max="480"
+                value={draftMinutes}
+                onChange={(event) => setDraftMinutes(event.target.value)}
+                onKeyDown={(event) => event.key === "Enter" && startDraft()}
+                aria-label="Minutes"
+              />
             </div>
-            <div className="tray-sound">
-              <label htmlFor="tray-sound-select">Sound</label>
-              <select
-                id="tray-sound-select"
-                value={sound}
-                onChange={(event) => {
-                  setSound(event.target.value);
-                  storeAlarmSound(event.target.value);
-                }}
-              >
-                {ALARM_SOUNDS.map((option) => (
-                  <option key={option} value={option}>
-                    {option[0].toUpperCase() + option.slice(1)}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <button type="button" className="tray-link" onClick={toggleChip}>
-              {chipVisible ? "Hide floating timer" : "Float timer on desktop"}
+            <button type="button" className="tp-start" onClick={startDraft}>
+              Start focus
             </button>
           </>
         ) : (
-          <div className="tray-controls">
+          <div className="tp-controls">
             {timer.status === "running" ? (
-              <button type="button" className="tray-button" onClick={timer.pause}>
+              <button type="button" className="tp-control" onClick={timer.pause}>
                 Pause
               </button>
             ) : (
-              <button type="button" className="tray-button" onClick={timer.resume}>
+              <button type="button" className="tp-control" onClick={timer.resume}>
                 Resume
               </button>
             )}
-            <button type="button" className="tray-button is-primary" onClick={timer.complete}>
+            <button type="button" className="tp-control is-primary" onClick={timer.complete}>
               Finish
             </button>
-            <button type="button" className="tray-button is-danger" onClick={timer.cancel}>
+            <button type="button" className="tp-control is-danger" onClick={timer.cancel}>
               Cancel
             </button>
           </div>
         )}
         {timer.alarmActive && (
-          <button
-            type="button"
-            className="tray-button is-primary tray-stop"
-            onClick={timer.dismissAlarm}
-          >
+          <button type="button" className="tp-start tp-stop" onClick={timer.dismissAlarm}>
             Stop alarm
           </button>
         )}
+        <div className="tp-timerfoot">
+          <button type="button" className="tp-footlink" onClick={toggleChip}>
+            {chipVisible ? "Hide chip" : "Float chip"}
+          </button>
+          <label className="tp-sound">
+            <select
+              value={sound}
+              onChange={(event) => {
+                setSound(event.target.value);
+                storeAlarmSound(event.target.value);
+              }}
+              aria-label="Alarm sound"
+            >
+              {ALARM_SOUNDS.map((option) => (
+                <option key={option} value={option}>
+                  {option[0].toUpperCase() + option.slice(1)}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
       </section>
 
-      <footer className="tray-footer">
-        <span className="tray-totals">
+      <div className="tp-scroll">
+        <section className="tp-section">
+          <p className="tp-label">Next</p>
+          {nextUp ? (
+            <div className="tp-row">
+              <span className="tp-row-main">{nextUp.title}</span>
+              <span className="tp-row-sub">
+                {formatClock(nextUp.start)}–{formatClock(nextUp.end)}
+                {nextUp.venue ? ` · ${nextUp.venue}` : ""}
+              </span>
+            </div>
+          ) : (
+            <p className="tp-row-sub">No more classes today</p>
+          )}
+          {arrivals?.arrivals?.length ? (
+            <div className="tp-row">
+              <span className="tp-row-main">ISB {arrivals.arrivals[0].service}</span>
+              <span className="tp-row-sub">
+                {arrivals.arrivals[0].minutes[0] != null
+                  ? `${arrivals.arrivals[0].minutes[0]} min`
+                  : "—"}
+                {arrivals.arrivals.length > 1 &&
+                  ` · ${arrivals.arrivals
+                    .slice(1, 3)
+                    .map((arrival) => arrival.service)
+                    .join(", ")}`}
+              </span>
+            </div>
+          ) : (
+            <p className="tp-row-sub">No bus times</p>
+          )}
+        </section>
+
+        <section className="tp-section">
+          <p className="tp-label">Deadlines</p>
+          {deadlines.length ? (
+            deadlines.map((task) => (
+              <div key={task.id} className="tp-row">
+                <span className="tp-row-main">{task.title}</span>
+                <span className={`tp-row-sub${task.due < now ? " is-overdue" : ""}`}>
+                  {relativeDue(task.due, now)}
+                </span>
+              </div>
+            ))
+          ) : (
+            <p className="tp-row-sub">Nothing due</p>
+          )}
+        </section>
+      </div>
+
+      <footer className="tp-footer">
+        <span className="tp-totals">
           {summary
             ? `Today ${formatMinutes(summary.today?.total_seconds ?? 0)} · Week ${formatMinutes(
                 summary.week?.total_seconds ?? 0,
               )}`
             : ""}
         </span>
-        <span className="tray-footer-actions">
-          <button type="button" className="tray-link" onClick={reload}>
+        <span className="tp-footer-actions">
+          <button type="button" className="tp-footlink" onClick={reload}>
             Sync
           </button>
-          <button type="button" className="tray-link" onClick={() => getCurrent().hide()}>
+          <button type="button" className="tp-footlink" onClick={() => getCurrent().hide()}>
             Hide
           </button>
         </span>

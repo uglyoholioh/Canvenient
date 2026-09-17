@@ -1,0 +1,361 @@
+/* TrayPanel v2 — Onigiri-style menubar popover in the instrument language.
+   Timer-first: huge rounded numerals, one depleting progress rule, presets,
+   and quiet fact rows. Loads over index.css; imports system.css tokens via
+   TrayPanel's own import so both materials work. */
+
+.tp-root {
+  --tp-bg: var(--bg);
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-native, -apple-system, BlinkMacSystemFont, sans-serif);
+  font-size: 12.5px;
+  line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+  user-select: none;
+}
+
+.tp-root.is-alarm {
+  background: color-mix(in srgb, var(--error) 12%, var(--bg));
+}
+
+.tp-offline {
+  padding: 4px 14px;
+  font-size: 10.5px;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border);
+}
+
+/* Search */
+.tp-search {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 10px 12px 4px;
+  padding: 0 9px;
+  height: 28px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text-muted);
+  transition: border-color 140ms ease;
+}
+
+.tp-search:focus-within {
+  border-color: var(--border-strong);
+}
+
+.tp-search input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: transparent;
+  outline: none;
+  font-size: 12px;
+  color: var(--text-h);
+}
+
+.tp-search input::placeholder {
+  color: var(--text-muted);
+}
+
+/* Search results */
+.tp-section {
+  padding: 6px 12px;
+}
+
+.tp-results {
+  max-height: 240px;
+  overflow-y: auto;
+  border-bottom: 1px solid var(--border);
+}
+
+.tp-result {
+  appearance: none;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  padding: 5px 4px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text);
+  font-size: 12px;
+  text-align: left;
+  cursor: default;
+}
+
+.tp-result:hover {
+  background: var(--surface-hover, rgba(128, 128, 128, 0.12));
+}
+
+.tp-result-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tp-result-source {
+  flex-shrink: 0;
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+/* Timer — the panel's reason to exist */
+.tp-timer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px 12px;
+}
+
+.tp-count {
+  font-family: var(--font-native);
+  font-size: 58px;
+  font-weight: 200;
+  letter-spacing: 0.01em;
+  line-height: 1;
+  color: var(--text-h);
+  font-variant-numeric: tabular-nums;
+}
+
+.tp-progress {
+  width: 100%;
+  height: 3px;
+  border-radius: 2px;
+  background: rgba(128, 128, 128, 0.2);
+  overflow: hidden;
+}
+
+.tp-progress span {
+  display: block;
+  height: 100%;
+  border-radius: 2px;
+  background: var(--text-h);
+  transition: width 400ms linear;
+}
+
+.tp-presets {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 2px;
+}
+
+.tp-preset {
+  appearance: none;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 11px;
+  font-weight: 550;
+  padding: 2px 9px;
+  cursor: default;
+  transition:
+    background 120ms ease,
+    color 120ms ease;
+}
+
+.tp-preset:hover {
+  border-color: var(--border-strong);
+}
+
+.tp-preset.is-active {
+  background: var(--text-h);
+  color: var(--text-inverse);
+  border-color: var(--text-h);
+}
+
+.tp-minutes {
+  width: 52px;
+  height: 24px;
+  padding: 0 6px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 11px;
+  text-align: center;
+  outline: none;
+}
+
+.tp-minutes:focus {
+  border-color: var(--border-strong);
+}
+
+.tp-start {
+  appearance: none;
+  width: 100%;
+  height: 30px;
+  border: none;
+  border-radius: 9px;
+  background: var(--text-h);
+  color: var(--text-inverse);
+  font-size: 12px;
+  font-weight: 650;
+  letter-spacing: 0.01em;
+  cursor: default;
+  transition:
+    filter 120ms ease,
+    transform 120ms ease;
+}
+
+.tp-start:hover {
+  filter: brightness(1.12);
+}
+
+.tp-start:active {
+  transform: scale(0.98);
+}
+
+.tp-controls {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.tp-control {
+  appearance: none;
+  flex: 1;
+  height: 26px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 11px;
+  font-weight: 550;
+  cursor: default;
+  transition:
+    background 120ms ease,
+    filter 120ms ease;
+}
+
+.tp-control:hover {
+  filter: brightness(1.12);
+}
+
+.tp-control.is-primary {
+  background: var(--text-h);
+  color: var(--text-inverse);
+  border-color: var(--text-h);
+}
+
+.tp-control.is-danger {
+  color: var(--error);
+}
+
+.tp-timerfoot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  margin-top: 2px;
+}
+
+.tp-sound select {
+  appearance: none;
+  height: 22px;
+  max-width: 120px;
+  padding: 0 6px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--text-muted);
+  font-size: 10.5px;
+  outline: none;
+}
+
+/* Fact rows */
+.tp-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding-bottom: 6px;
+}
+
+.tp-label {
+  margin: 4px 0 3px;
+  font-size: 10px;
+  font-weight: 650;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.tp-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 3px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.tp-row:last-child {
+  border-bottom: none;
+}
+
+.tp-row-main {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 550;
+  color: var(--text-h);
+}
+
+.tp-row-sub {
+  flex-shrink: 0;
+  font-size: 10.5px;
+  color: var(--text-muted);
+}
+
+.tp-row-sub.is-overdue {
+  color: var(--error);
+}
+
+/* Footer */
+.tp-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 7px 12px;
+  border-top: 1px solid var(--border);
+  font-size: 10.5px;
+  color: var(--text-muted);
+}
+
+.tp-footer-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.tp-footlink {
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 10.5px;
+  cursor: default;
+  padding: 0;
+}
+
+.tp-footlink:hover {
+  color: var(--text-h);
+}
+
+.tp-totals {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

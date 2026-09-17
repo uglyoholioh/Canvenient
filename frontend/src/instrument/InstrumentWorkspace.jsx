@@ -451,6 +451,14 @@ export default function InstrumentWorkspace({ token, user, onLogout, onUpdateUse
             await eventApi.listen("menu-action", ({ payload }) => runMenuAction(payload)),
           );
           cleanups.push(
+            await eventApi.listen("tray-open", ({ payload }) => {
+              if (payload?.kind === "note") setActiveTab(`note-${payload.id}`);
+              else if (payload?.kind === "task") setActiveTab("tasks");
+              else if (payload?.kind === "course" || payload?.kind === "assignment")
+                setActiveTab("canvas");
+            }),
+          );
+          cleanups.push(
             await eventApi.listen("calendar-files-ready", async () => {
               const queued = await tauriApi.invoke("take_pending_calendar_files");
               if (queued?.length) {
