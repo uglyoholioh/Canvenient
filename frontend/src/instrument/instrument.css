@@ -681,3 +681,8 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+/* The brief headlines the dashboard, whatever the module order is. */
+.dashboard-grid .dashboard-module[data-module="aibrief"] {
+  order: -1;
+}
