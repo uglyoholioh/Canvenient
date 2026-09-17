@@ -556,6 +556,8 @@ function VenuesPage({ token }) {
     });
   }, []);
 
+  const savedSet = useMemo(() => new Set(saved), [saved]);
+
   // Time rail — click or drag anywhere on the axis.
   const railToTime = (clientX) => {
     const rail = railRef.current;
