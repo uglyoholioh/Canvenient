@@ -1,12 +1,15 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
+  ArrowUpDown,
   ChevronDown,
+  Clock,
   DoorOpen,
   ExternalLink,
   Loader2,
   LocateFixed,
   MapPin,
   Search,
+  SlidersHorizontal,
   Star,
   X,
 } from "lucide-react";
@@ -285,6 +288,17 @@ function formatWeeks(weeks) {
   return String(weeks);
 }
 
+function formatDuration(minutes, isFree) {
+  if (!isFree) return "Occupied";
+  if (minutes <= 0) return "Vacant now";
+  if (minutes >= 12 * 60) return "All day";
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  if (h === 0) return `${m}m free`;
+  if (m === 0) return `${h}h free`;
+  return `${h}h ${m}m free`;
+}
+
 export default function VenueFinder({ token }) {
   const [venuesData, setVenuesData] = useState({});
   const [locationsData, setLocationsData] = useState({});
@@ -306,16 +320,38 @@ export default function VenueFinder({ token }) {
 
   const [searchQuery, setSearchQuery] = useState("");
   const [showOnlyFree, setShowOnlyFree] = useState(true);
+  const [sortBy, setSortBy] = useState("distance");
+
+  const getStoredPreference = (key, defaultValue) => {
+    try {
+      if (typeof window !== "undefined" && window.localStorage && typeof window.localStorage.getItem === "function") {
+        return window.localStorage.getItem(`canvenient.vf.${key}`) || defaultValue;
+      }
+    } catch {}
+    return defaultValue;
+  };
+
+  const [timePickerStyle, setTimePickerStyle] = useState(() => getStoredPreference("timePickerStyle", "scrubber"));
+  const [vizStyle, setVizStyle] = useState(() => getStoredPreference("vizStyle", "blocks"));
+  const [markerStyle, setMarkerStyle] = useState(() => getStoredPreference("markerStyle", "needle"));
+  const [transitionStyle, setTransitionStyle] = useState(() => getStoredPreference("transitionStyle", "stagger"));
+
+  const [isOptionsOpen, setIsOptionsOpen] = useState(false);
+  const optionsDropdownRef = useRef(null);
+  const scrubberTrackRef = useRef(null);
 
   const [inspectedVenue, setInspectedVenue] = useState(null);
-  const [tooltipData, setTooltipData] = useState(null);
+  const [pinnedPopover, setPinnedPopover] = useState(null);
 
   const [starredVenues, setStarredVenues] = useState(() => {
     try {
-      return JSON.parse(window.localStorage.getItem("canvenient.venues.starred") || "[]");
+      if (typeof window !== "undefined" && window.localStorage && typeof window.localStorage.getItem === "function") {
+        return JSON.parse(window.localStorage.getItem("canvenient.venues.starred") || "[]");
+      }
     } catch {
       return [];
     }
+    return [];
   });
 
   const toggleStar = (venueCode, e) => {
@@ -328,7 +364,18 @@ export default function VenueFinder({ token }) {
     }
     setStarredVenues(newStarred);
     try {
-      window.localStorage.setItem("canvenient.venues.starred", JSON.stringify(newStarred));
+      if (typeof window !== "undefined" && window.localStorage && typeof window.localStorage.setItem === "function") {
+        window.localStorage.setItem("canvenient.venues.starred", JSON.stringify(newStarred));
+      }
+    } catch {}
+  };
+
+  const setPreference = (key, val, setter) => {
+    setter(val);
+    try {
+      if (typeof window !== "undefined" && window.localStorage && typeof window.localStorage.setItem === "function") {
+        window.localStorage.setItem(`canvenient.vf.${key}`, val);
+      }
     } catch {}
   };
 
@@ -337,10 +384,15 @@ export default function VenueFinder({ token }) {
       if (locationDropdownRef.current && !locationDropdownRef.current.contains(e.target)) {
         setIsLocationDropdownOpen(false);
       }
+      if (optionsDropdownRef.current && !optionsDropdownRef.current.contains(e.target)) {
+        setIsOptionsOpen(false);
+      }
     };
     const handleKeyDown = (e) => {
       if (e.key === "Escape") {
         setIsLocationDropdownOpen(false);
+        setIsOptionsOpen(false);
+        setInspectedVenue(null);
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
@@ -573,6 +625,7 @@ export default function VenueFinder({ token }) {
         distanceM,
         walkMins,
         isFree: isVacantNow,
+        freeMinutes,
         rawAvail: computedAvail,
         classesToday,
       });
@@ -583,15 +636,22 @@ export default function VenueFinder({ token }) {
       const bStarred = starredVenues.includes(b.venueCode) ? -1 : 1;
       if (aStarred !== bStarred) return aStarred - bStarred;
 
-      if (effectiveCoords) {
-        if (a.distanceM === null) return 1;
-        if (b.distanceM === null) return -1;
-        return a.distanceM - b.distanceM;
+      if (sortBy === "duration") {
+        if (b.freeMinutes !== a.freeMinutes) {
+          return b.freeMinutes - a.freeMinutes;
+        }
+      } else if (sortBy === "distance" && effectiveCoords) {
+        if (a.distanceM === null && b.distanceM !== null) return 1;
+        if (b.distanceM === null && a.distanceM !== null) return -1;
+        if (a.distanceM !== null && b.distanceM !== null && a.distanceM !== b.distanceM) {
+          return a.distanceM - b.distanceM;
+        }
       }
+
       return a.venueCode.localeCompare(b.venueCode);
     });
 
-    return list.slice(0, 100);
+    return list.slice(0, 120);
   }, [
     venuesData,
     locationsData,
@@ -604,29 +664,105 @@ export default function VenueFinder({ token }) {
     effectiveCoords,
     selectedLocations,
     starredVenues,
+    sortBy,
   ]);
+
+  const handleScrubberMouseDown = (e) => {
+    if (!scrubberTrackRef.current) return;
+    const updateFromEvent = (event) => {
+      const rect = scrubberTrackRef.current.getBoundingClientRect();
+      const clientX = event.clientX;
+      const pct = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+      const idx = Math.min(TIME_SLOTS.length - 1, Math.floor(pct * TIME_SLOTS.length));
+      setSelectedTime(TIME_SLOTS[idx]);
+    };
+    updateFromEvent(e);
+
+    const handleMouseMove = (event) => {
+      updateFromEvent(event);
+    };
+    const handleMouseUp = () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleMouseUp);
+    };
+    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mouseup", handleMouseUp);
+  };
+
+  const realTimePct = useMemo(() => {
+    const now = new Date();
+    const dayName = getCurrentDayName();
+    if (selectedDay !== dayName) return null;
+    const hours = now.getHours() + now.getMinutes() / 60;
+    if (hours < 8 || hours > 22) return null;
+    return ((hours - 8) / 14) * 100;
+  }, [selectedDay]);
+
+  const selectedTimePct = useMemo(() => {
+    const idx = TIME_SLOTS.indexOf(selectedTime);
+    if (idx < 0) return 0;
+    return ((idx + 0.5) / TIME_SLOTS.length) * 100;
+  }, [selectedTime]);
+
+  const isCurrentTimeSlotSelected = selectedTime === getCurrentTimeSlot();
+  const isCurrentDaySelected = selectedDay === getCurrentDayName();
+
+  const resetFilters = () => {
+    setSelectedDay(getCurrentDayName());
+    setSelectedTime(getCurrentTimeSlot());
+    setMinDuration(0);
+    setSelectedLocations([]);
+    setSearchQuery("");
+    setShowOnlyFree(true);
+    setUserCoords(null);
+    setLocationLabel("");
+  };
+
+  const hasActiveFilters =
+    !isCurrentDaySelected ||
+    !isCurrentTimeSlotSelected ||
+    minDuration > 0 ||
+    selectedLocations.length > 0 ||
+    searchQuery.trim() !== "" ||
+    !showOnlyFree ||
+    userCoords !== null;
 
   return (
     <div className="vf-container">
-      {/* Search and Filters Header */}
-      <div className="vf-header">
-        <div className="vf-search-bar">
-          <Search size={18} className="vf-search-icon" />
-          <input
-            type="text"
-            className="vf-search-input"
-            placeholder="Search rooms, buildings..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
-        </div>
+      {/* Sticky Filter Header */}
+      <header className="vf-sticky-header">
+        <div className="vf-filter-bar">
+          {/* Controls Row */}
+          <div className="vf-controls-row">
+            {/* Search Input */}
+            <div className="vf-search-wrap">
+              <Search size={15} className="vf-search-icon" />
+              <input
+                type="text"
+                className="vf-search-input"
+                placeholder="Search rooms, buildings..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  className="vf-search-clear"
+                  onClick={() => setSearchQuery("")}
+                  title="Clear search"
+                  aria-label="Clear search"
+                >
+                  <X size={13} />
+                </button>
+              )}
+            </div>
 
-        <div className="vf-filters-row">
-          <div className="vf-filter-group">
+            {/* Day Selector */}
             <select
               className="vf-select"
               value={selectedDay}
               onChange={(e) => setSelectedDay(e.target.value)}
+              aria-label="Select day of the week"
             >
               {DAYS_OF_WEEK.map((d) => (
                 <option key={d} value={d}>
@@ -634,21 +770,13 @@ export default function VenueFinder({ token }) {
                 </option>
               ))}
             </select>
-            <select
-              className="vf-select"
-              value={selectedTime}
-              onChange={(e) => setSelectedTime(e.target.value)}
-            >
-              {TIME_SLOTS.map((t) => (
-                <option key={t} value={t}>
-                  {formatTimeSlot(t)}
-                </option>
-              ))}
-            </select>
+
+            {/* Duration Selector */}
             <select
               className="vf-select"
               value={minDuration}
               onChange={(e) => setMinDuration(Number(e.target.value))}
+              aria-label="Minimum free duration"
             >
               {DURATION_OPTIONS.map((d) => (
                 <option key={d.value} value={d.value}>
@@ -656,28 +784,20 @@ export default function VenueFinder({ token }) {
                 </option>
               ))}
             </select>
-            <button
-              className={`vf-filter-btn ${showOnlyFree ? "active" : ""}`}
-              onClick={() => setShowOnlyFree(!showOnlyFree)}
-            >
-              Available only
-            </button>
-          </div>
 
-          <div className="vf-filter-group">
             {/* Campus Locations Dropdown */}
             <div className="vf-dropdown-wrapper" ref={locationDropdownRef}>
               <button
                 type="button"
-                className={`vf-filter-btn vf-dropdown-trigger ${selectedLocations.length > 0 ? "active" : ""}`}
+                className={`vf-btn ${selectedLocations.length > 0 ? "active" : ""}`}
                 onClick={() => setIsLocationDropdownOpen((prev) => !prev)}
                 aria-haspopup="listbox"
                 aria-expanded={isLocationDropdownOpen}
               >
-                <MapPin size={14} />
+                <MapPin size={13} />
                 <span>{dropdownButtonLabel}</span>
                 <ChevronDown
-                  size={14}
+                  size={13}
                   className={`vf-dropdown-chevron ${isLocationDropdownOpen ? "open" : ""}`}
                 />
               </button>
@@ -692,7 +812,7 @@ export default function VenueFinder({ token }) {
                         className="vf-dropdown-action-btn"
                         onClick={selectAllLocations}
                       >
-                        Select all
+                        All
                       </button>
                       <button
                         type="button"
@@ -729,191 +849,751 @@ export default function VenueFinder({ token }) {
               )}
             </div>
 
+            {/* Near Me Location Button */}
             <button
-              className={`vf-filter-btn ${userCoords ? "active" : ""}`}
+              type="button"
+              className={`vf-btn ${userCoords ? "active" : ""}`}
               onClick={handleUseCurrentLocation}
+              title="Filter by distance to your current location"
             >
-              {isLocating ? <Loader2 size={14} className="spin" /> : <LocateFixed size={14} />}
-              {locationLabel || "Near me"}
+              {isLocating ? <Loader2 size={13} className="spin" /> : <LocateFixed size={13} />}
+              <span>{locationLabel || "Near me"}</span>
             </button>
             {userCoords && (
               <button
-                className="vf-icon-btn"
+                type="button"
+                className="vf-btn vf-btn-icon-only"
                 onClick={() => {
                   setUserCoords(null);
                   setLocationLabel("");
                 }}
+                title="Clear current location filter"
+                aria-label="Clear current location"
               >
-                <X size={14} />
+                <X size={13} />
               </button>
             )}
-          </div>
-        </div>
 
-        {/* Active Location Filter Badges */}
-        {selectedLocations.length > 0 && selectedLocations.length < CAMPUS_PRESETS.length && (
-          <div className="vf-active-locations">
-            <span className="vf-active-locations-label">Filtering locations:</span>
-            {selectedLocations.map((locId) => {
-              const p = CAMPUS_PRESETS.find((item) => item.id === locId);
-              if (!p) return null;
-              return (
-                <span key={p.id} className="vf-location-pill">
-                  {p.name}
-                  <button
-                    type="button"
-                    className="vf-location-pill-remove"
-                    onClick={() => toggleLocation(p.id)}
-                    aria-label={`Remove ${p.name}`}
-                  >
-                    <X size={12} />
-                  </button>
-                </span>
-              );
-            })}
-            <button type="button" className="vf-location-pill-clear" onClick={clearAllLocations}>
-              Clear all
+            {/* Available Only Toggle Button */}
+            <button
+              type="button"
+              className={`vf-btn ${showOnlyFree ? "active" : ""}`}
+              onClick={() => setShowOnlyFree(!showOnlyFree)}
+            >
+              <span>Available only</span>
             </button>
-          </div>
-        )}
-      </div>
 
-      {/* Main Grid */}
-      {isLoading ? (
-        <div className="vf-empty-state">
-          <Loader2 size={24} className="spin" />
-          <p>Loading campus venues...</p>
-        </div>
-      ) : processedVenues.length === 0 ? (
-        <div className="vf-empty-state">
-          <DoorOpen size={32} />
-          <p>No rooms found matching your criteria.</p>
-        </div>
-      ) : (
-        <div className="vf-grid">
-          {processedVenues.map((v) => (
-            <div key={v.venueCode} className="vf-card" onClick={() => setInspectedVenue(v)}>
-              <div className="vf-card-header">
-                <div>
-                  <h3 className="vf-card-title">{v.venueCode}</h3>
-                  <p className="vf-card-subtitle">{v.roomName}</p>
-                </div>
-                <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-                  {v.distanceM !== null && (
-                    <div className="vf-card-distance">
-                      <MapPin size={12} />
-                      {v.distanceM < 1000
-                        ? `${v.distanceM}m`
-                        : `${(v.distanceM / 1000).toFixed(1)}km`}
+            {/* View Customizer Popover Trigger */}
+            <div className="vf-dropdown-wrapper" ref={optionsDropdownRef} style={{ marginLeft: "auto" }}>
+              <button
+                type="button"
+                className={`vf-btn vf-btn-icon-only ${isOptionsOpen ? "active" : ""}`}
+                onClick={() => setIsOptionsOpen((prev) => !prev)}
+                title="View and design preferences"
+                aria-label="View options"
+              >
+                <SlidersHorizontal size={14} />
+              </button>
+
+              {isOptionsOpen && (
+                <div className="vf-options-popover">
+                  <div className="vf-options-group">
+                    <span className="vf-options-label">Time Picker Style</span>
+                    <div className="vf-segmented-toggle">
+                      <button
+                        type="button"
+                        className={`vf-segmented-item ${timePickerStyle === "scrubber" ? "selected" : ""}`}
+                        onClick={() => setPreference("timePickerStyle", "scrubber", setTimePickerStyle)}
+                      >
+                        Timeline
+                      </button>
+                      <button
+                        type="button"
+                        className={`vf-segmented-item ${timePickerStyle === "chips" ? "selected" : ""}`}
+                        onClick={() => setPreference("timePickerStyle", "chips", setTimePickerStyle)}
+                      >
+                        Chips
+                      </button>
+                      <button
+                        type="button"
+                        className={`vf-segmented-item ${timePickerStyle === "select" ? "selected" : ""}`}
+                        onClick={() => setPreference("timePickerStyle", "select", setTimePickerStyle)}
+                      >
+                        Select
+                      </button>
                     </div>
-                  )}
-                  <button
-                    className="vf-icon-btn"
-                    onClick={(e) => toggleStar(v.venueCode, e)}
-                    title={
-                      starredVenues.includes(v.venueCode)
-                        ? "Remove from favorites"
-                        : "Add to favorites"
-                    }
-                    style={{ padding: 0, width: "24px", height: "24px", flex: "none" }}
-                  >
-                    <Star
-                      size={14}
-                      fill={starredVenues.includes(v.venueCode) ? "var(--warning)" : "none"}
-                      color={
-                        starredVenues.includes(v.venueCode) ? "var(--warning)" : "currentColor"
-                      }
+                  </div>
+
+                  <div className="vf-options-group">
+                    <span className="vf-options-label">Availability Bar Style</span>
+                    <div className="vf-segmented-toggle">
+                      <button
+                        type="button"
+                        className={`vf-segmented-item ${vizStyle === "blocks" ? "selected" : ""}`}
+                        onClick={() => setPreference("vizStyle", "blocks", setVizStyle)}
+                      >
+                        Blocks
+                      </button>
+                      <button
+                        type="button"
+                        className={`vf-segmented-item ${vizStyle === "dots" ? "selected" : ""}`}
+                        onClick={() => setPreference("vizStyle", "dots", setVizStyle)}
+                      >
+                        Dots
+                      </button>
+                      <button
+                        type="button"
+                        className={`vf-segmented-item ${vizStyle === "continuous" ? "selected" : ""}`}
+                        onClick={() => setPreference("vizStyle", "continuous", setVizStyle)}
+                      >
+                        Bar
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="vf-options-group">
+                    <span className="vf-options-label">Time Marker Style</span>
+                    <div className="vf-segmented-toggle">
+                      <button
+                        type="button"
+                        className={`vf-segmented-item ${markerStyle === "needle" ? "selected" : ""}`}
+                        onClick={() => setPreference("markerStyle", "needle", setMarkerStyle)}
+                      >
+                        Needle
+                      </button>
+                      <button
+                        type="button"
+                        className={`vf-segmented-item ${markerStyle === "dot" ? "selected" : ""}`}
+                        onClick={() => setPreference("markerStyle", "dot", setMarkerStyle)}
+                      >
+                        Dot
+                      </button>
+                      <button
+                        type="button"
+                        className={`vf-segmented-item ${markerStyle === "taller" ? "selected" : ""}`}
+                        onClick={() => setPreference("markerStyle", "taller", setMarkerStyle)}
+                      >
+                        Raised
+                      </button>
+                      <button
+                        type="button"
+                        className={`vf-segmented-item ${markerStyle === "label" ? "selected" : ""}`}
+                        onClick={() => setPreference("markerStyle", "label", setMarkerStyle)}
+                      >
+                        Label
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="vf-options-group">
+                    <span className="vf-options-label">Transition Animation</span>
+                    <div className="vf-segmented-toggle">
+                      <button
+                        type="button"
+                        className={`vf-segmented-item ${transitionStyle === "stagger" ? "selected" : ""}`}
+                        onClick={() => setPreference("transitionStyle", "stagger", setTransitionStyle)}
+                      >
+                        Stagger
+                      </button>
+                      <button
+                        type="button"
+                        className={`vf-segmented-item ${transitionStyle === "fade" ? "selected" : ""}`}
+                        onClick={() => setPreference("transitionStyle", "fade", setTransitionStyle)}
+                      >
+                        Fade
+                      </button>
+                      <button
+                        type="button"
+                        className={`vf-segmented-item ${transitionStyle === "skeleton" ? "selected" : ""}`}
+                        onClick={() => setPreference("transitionStyle", "skeleton", setTransitionStyle)}
+                      >
+                        Pulse
+                      </button>
+                      <button
+                        type="button"
+                        className={`vf-segmented-item ${transitionStyle === "slide" ? "selected" : ""}`}
+                        onClick={() => setPreference("transitionStyle", "slide", setTransitionStyle)}
+                      >
+                        Slide
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Time Picker Shell */}
+          <div className="vf-time-picker-shell">
+            <div className="vf-time-picker-header">
+              <span>
+                Target time: <strong style={{ color: "var(--text-h)" }}>{formatTimeSlot(selectedTime)}</strong>
+              </span>
+              <button
+                type="button"
+                className="vf-time-picker-now-btn"
+                onClick={() => {
+                  setSelectedDay(getCurrentDayName());
+                  setSelectedTime(getCurrentTimeSlot());
+                }}
+                title="Jump to current day and time"
+              >
+                <Clock size={11} />
+                <span>Jump to now</span>
+              </button>
+            </div>
+
+            {/* Time Picker Variant A: Timeline Scrubber */}
+            {timePickerStyle === "scrubber" && (
+              <div className="vf-scrubber-container">
+                <div
+                  ref={scrubberTrackRef}
+                  className="vf-scrubber-track"
+                  onMouseDown={handleScrubberMouseDown}
+                  role="slider"
+                  tabIndex={0}
+                  aria-label="Time scrubber"
+                  aria-valuemin={8}
+                  aria-valuemax={22}
+                  aria-valuenow={parseInt(selectedTime.slice(0, 2), 10)}
+                >
+                  <div className="vf-scrubber-ticks">
+                    <span className="vf-scrubber-tick-label">08:00</span>
+                    <span className="vf-scrubber-tick-label">10:00</span>
+                    <span className="vf-scrubber-tick-label">12:00</span>
+                    <span className="vf-scrubber-tick-label">14:00</span>
+                    <span className="vf-scrubber-tick-label">16:00</span>
+                    <span className="vf-scrubber-tick-label">18:00</span>
+                    <span className="vf-scrubber-tick-label">20:00</span>
+                    <span className="vf-scrubber-tick-label">22:00</span>
+                  </div>
+
+                  {realTimePct !== null && (
+                    <div
+                      className="vf-scrubber-realnow-line"
+                      style={{ left: `${realTimePct}%` }}
+                      title="Real-world current time"
                     />
-                  </button>
+                  )}
+
+                  <div className="vf-scrubber-cursor-line" style={{ left: `${selectedTimePct}%` }}>
+                    <div className="vf-scrubber-cursor-bubble">{formatTimeSlot(selectedTime)}</div>
+                  </div>
                 </div>
               </div>
+            )}
 
-              <div className="vf-timeline-bars">
-                {TIME_SLOTS.map((slot) => {
-                  const isVacant = (v.rawAvail[slot] || "vacant") === "vacant";
-                  const isSelected = slot === selectedTime;
-
-                  let currentClass = null;
-                  if (!isVacant) {
-                    currentClass = v.classesToday.find(
-                      (c) => (c.startTime || "0000") <= slot && (c.endTime || "0000") > slot,
-                    );
-                  }
-
-                  let tooltip = isVacant ? "Available" : "Occupied";
-                  if (currentClass) {
-                    tooltip = `${currentClass.moduleCode} ${currentClass.lessonType}\n${formatTimeSlot(currentClass.startTime)} - ${formatTimeSlot(currentClass.endTime)}\n${formatWeeks(currentClass.weeks)}`;
-                  } else if (isVacant) {
-                    // For vacant block, show the time of the block
-                    const endMin =
-                      parseInt(slot.slice(0, 2), 10) * 60 + parseInt(slot.slice(2), 10) + 30;
-                    const endHour = Math.floor(endMin / 60)
-                      .toString()
-                      .padStart(2, "0");
-                    const endMinute = (endMin % 60).toString().padStart(2, "0");
-                    tooltip = `Available \n${formatTimeSlot(slot)} - ${endHour}:${endMinute}`;
-                  }
-
+            {/* Time Picker Variant B: Pill Chips */}
+            {timePickerStyle === "chips" && (
+              <div className="vf-chips-container">
+                {TIME_SLOTS.map((t) => {
+                  const isSelected = t === selectedTime;
+                  const isNowSlot = isCurrentDaySelected && t === getCurrentTimeSlot();
                   return (
-                    <div
-                      key={slot}
-                      className={`vf-t-block ${isVacant ? "free" : "occupied"} ${isSelected ? "selected" : ""}`}
-                      onMouseEnter={(e) => {
-                        const rect = e.target.getBoundingClientRect();
-                        setTooltipData({
-                          text: tooltip,
-                          x: rect.left + rect.width / 2,
-                          y: rect.top - 8,
-                        });
-                      }}
-                      onMouseLeave={() => setTooltipData(null)}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setSelectedTime(slot);
-                      }}
-                      style={{ cursor: "pointer" }}
-                    />
+                    <button
+                      key={t}
+                      type="button"
+                      className={`vf-time-chip ${isSelected ? "active" : ""} ${isNowSlot ? "is-now" : ""}`}
+                      onClick={() => setSelectedTime(t)}
+                    >
+                      {formatTimeSlot(t)}
+                    </button>
                   );
                 })}
               </div>
+            )}
+
+            {/* Time Picker Variant C: Classic Select */}
+            {timePickerStyle === "select" && (
+              <div className="vf-time-classic-wrap">
+                <select
+                  className="vf-select"
+                  value={selectedTime}
+                  onChange={(e) => setSelectedTime(e.target.value)}
+                  style={{ width: "160px" }}
+                  aria-label="Target time slot"
+                >
+                  {TIME_SLOTS.map((t) => (
+                    <option key={t} value={t}>
+                      {formatTimeSlot(t)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+          </div>
+        </div>
+      </header>
+
+      {/* Results Summary Bar */}
+      <div className="vf-results-bar">
+        <div className="vf-results-left">
+          <div className="vf-count-badge">
+            <span className="vf-count-number">{processedVenues.length}</span>
+            <span>{processedVenues.length === 1 ? "room available" : "rooms available"}</span>
+          </div>
+
+          {/* Active Filter Pills */}
+          {hasActiveFilters && (
+            <div className="vf-active-pills">
+              {!isCurrentDaySelected && (
+                <span className="vf-filter-pill">
+                  {selectedDay}
+                  <button
+                    type="button"
+                    className="vf-filter-pill-remove"
+                    onClick={() => setSelectedDay(getCurrentDayName())}
+                    aria-label={`Remove ${selectedDay} filter`}
+                  >
+                    <X size={10} />
+                  </button>
+                </span>
+              )}
+              {!isCurrentTimeSlotSelected && (
+                <span className="vf-filter-pill">
+                  {formatTimeSlot(selectedTime)}
+                  <button
+                    type="button"
+                    className="vf-filter-pill-remove"
+                    onClick={() => setSelectedTime(getCurrentTimeSlot())}
+                    aria-label="Reset to current time"
+                  >
+                    <X size={10} />
+                  </button>
+                </span>
+              )}
+              {minDuration > 0 && (
+                <span className="vf-filter-pill">
+                  ≥ {minDuration >= 60 ? `${minDuration / 60}h` : `${minDuration}m`}
+                  <button
+                    type="button"
+                    className="vf-filter-pill-remove"
+                    onClick={() => setMinDuration(0)}
+                    aria-label="Remove duration filter"
+                  >
+                    <X size={10} />
+                  </button>
+                </span>
+              )}
+              {selectedLocations.length > 0 && selectedLocations.length < CAMPUS_PRESETS.length && (
+                <span className="vf-filter-pill">
+                  {selectedLocations.length === 1
+                    ? CAMPUS_PRESETS.find((p) => p.id === selectedLocations[0])?.name
+                    : `${selectedLocations.length} campuses`}
+                  <button
+                    type="button"
+                    className="vf-filter-pill-remove"
+                    onClick={clearAllLocations}
+                    aria-label="Clear campus filters"
+                  >
+                    <X size={10} />
+                  </button>
+                </span>
+              )}
+              {userCoords && (
+                <span className="vf-filter-pill">
+                  Near me
+                  <button
+                    type="button"
+                    className="vf-filter-pill-remove"
+                    onClick={() => {
+                      setUserCoords(null);
+                      setLocationLabel("");
+                    }}
+                    aria-label="Remove near me filter"
+                  >
+                    <X size={10} />
+                  </button>
+                </span>
+              )}
+              {!showOnlyFree && (
+                <span className="vf-filter-pill">
+                  Showing occupied
+                  <button
+                    type="button"
+                    className="vf-filter-pill-remove"
+                    onClick={() => setShowOnlyFree(true)}
+                    aria-label="Show free only"
+                  >
+                    <X size={10} />
+                  </button>
+                </span>
+              )}
+              {searchQuery && (
+                <span className="vf-filter-pill">
+                  &ldquo;{searchQuery}&rdquo;
+                  <button
+                    type="button"
+                    className="vf-filter-pill-remove"
+                    onClick={() => setSearchQuery("")}
+                    aria-label="Clear search"
+                  >
+                    <X size={10} />
+                  </button>
+                </span>
+              )}
+              <button
+                type="button"
+                className="vf-filter-pill-clear-all"
+                onClick={resetFilters}
+              >
+                Clear all
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Sort selector on the right */}
+        <div className="vf-results-right">
+          <ArrowUpDown size={12} style={{ color: "var(--text-muted)" }} />
+          <select
+            className="vf-select"
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value)}
+            style={{ height: "28px", fontSize: "11.5px" }}
+            aria-label="Sort venues by"
+          >
+            <option value="distance">Sort: Distance</option>
+            <option value="code">Sort: Room Code</option>
+            <option value="duration">Sort: Free Duration</option>
+          </select>
+        </div>
+      </div>
+
+      {/* Main Content Area */}
+      {isLoading ? (
+        <div className="vf-grid">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <div key={i} className="vf-skeleton-card">
+              <div className="vf-skeleton-line" style={{ width: "45%" }} />
+              <div className="vf-skeleton-line" style={{ width: "70%" }} />
+              <div className="vf-skeleton-line" style={{ width: "100%", height: "10px", marginTop: "auto" }} />
             </div>
           ))}
         </div>
+      ) : processedVenues.length === 0 ? (
+        <div className="vf-empty-state">
+          <DoorOpen size={28} className="vf-empty-icon" />
+          <h3 className="vf-empty-title">No free rooms match your filters</h3>
+          <p className="vf-empty-subtext">
+            Try choosing a different time, reducing minimum duration, or clearing campus filters.
+          </p>
+          {hasActiveFilters && (
+            <button
+              type="button"
+              className="vf-btn"
+              onClick={resetFilters}
+              style={{ marginTop: "12px" }}
+            >
+              Reset filters
+            </button>
+          )}
+        </div>
+      ) : (
+        <div
+          className={`vf-grid ${
+            transitionStyle === "stagger"
+              ? "anim-stagger"
+              : transitionStyle === "fade"
+                ? "anim-fade"
+                : transitionStyle === "slide"
+                  ? "anim-slide"
+                  : ""
+          }`}
+        >
+          {processedVenues.map((v, index) => {
+            const isStarred = starredVenues.includes(v.venueCode);
+            const targetIdx = TIME_SLOTS.indexOf(selectedTime);
+
+            return (
+              <div
+                key={v.venueCode}
+                className={`vf-card ${v.isFree ? "is-free" : ""}`}
+                style={{ "--stagger-idx": Math.min(index, 25) }}
+                onClick={() => setInspectedVenue(v)}
+                onMouseLeave={() => setPinnedPopover(null)}
+              >
+                {/* Header row */}
+                <div className="vf-card-header">
+                  <div className="vf-card-titles">
+                    <h3 className="vf-card-title">{v.venueCode}</h3>
+                    <span className="vf-card-building" title={v.buildingName}>
+                      {v.buildingName}
+                    </span>
+                  </div>
+
+                  <div className="vf-card-header-actions">
+                    {v.distanceM !== null && (
+                      <span className="vf-walk-badge" title={`${v.distanceM}m away`}>
+                        <MapPin size={10} />
+                        {v.distanceM < 1000 ? `${v.distanceM}m` : `${(v.distanceM / 1000).toFixed(1)}km`}
+                      </span>
+                    )}
+                    <button
+                      type="button"
+                      className={`vf-star-btn ${isStarred ? "is-starred" : ""}`}
+                      onClick={(e) => toggleStar(v.venueCode, e)}
+                      title={isStarred ? "Remove from favorites" : "Add to favorites"}
+                      aria-label={isStarred ? "Remove from favorites" : "Add to favorites"}
+                    >
+                      <Star
+                        size={13}
+                        fill={isStarred ? "var(--warning)" : "none"}
+                        color={isStarred ? "var(--warning)" : "currentColor"}
+                      />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Room Name Subtitle */}
+                <p className="vf-card-room-name" title={v.roomName}>
+                  {v.roomName}
+                </p>
+
+                {/* Availability Visualization Container */}
+                <div className="vf-avail-wrapper">
+                  {/* Selected Time Marker */}
+                  {targetIdx >= 0 && (
+                    <>
+                      {markerStyle === "needle" && (
+                        <div
+                          className="vf-marker-needle"
+                          style={{ left: `${((targetIdx + 0.5) / TIME_SLOTS.length) * 100}%` }}
+                        />
+                      )}
+                      {markerStyle === "dot" && (
+                        <div
+                          className="vf-marker-dot"
+                          style={{ left: `${((targetIdx + 0.5) / TIME_SLOTS.length) * 100}%` }}
+                        />
+                      )}
+                      {markerStyle === "label" && (
+                        <div
+                          className="vf-marker-label"
+                          style={{ left: `${((targetIdx + 0.5) / TIME_SLOTS.length) * 100}%` }}
+                        >
+                          {formatTimeSlot(selectedTime)}
+                        </div>
+                      )}
+                    </>
+                  )}
+
+                  {/* Viz Style A: 28-Block Heat-Strip */}
+                  {vizStyle === "blocks" && (
+                    <div className="vf-avail-strip">
+                      {TIME_SLOTS.map((slot) => {
+                        const isVacant = (v.rawAvail[slot] || "vacant") === "vacant";
+                        const isSelected = slot === selectedTime;
+
+                        let currentClass = null;
+                        if (!isVacant) {
+                          currentClass = v.classesToday.find(
+                            (c) => (c.startTime || "0000") <= slot && (c.endTime || "0000") > slot,
+                          );
+                        }
+
+                        return (
+                          <div
+                            key={slot}
+                            className={`vf-slot-block ${isVacant ? "free" : "occupied"} ${
+                              isSelected && markerStyle === "taller" ? "marker-taller" : ""
+                            }`}
+                            onMouseEnter={(e) => {
+                              const rect = e.currentTarget.getBoundingClientRect();
+                              setPinnedPopover({
+                                x: rect.left + rect.width / 2,
+                                y: rect.top - 6,
+                                venueCode: v.venueCode,
+                                slot,
+                                isVacant,
+                                currentClass,
+                              });
+                            }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedTime(slot);
+                            }}
+                          />
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {/* Viz Style B: Dot Matrix */}
+                  {vizStyle === "dots" && (
+                    <div className="vf-avail-dots">
+                      {TIME_SLOTS.map((slot) => {
+                        const isVacant = (v.rawAvail[slot] || "vacant") === "vacant";
+                        const isSelected = slot === selectedTime;
+
+                        let currentClass = null;
+                        if (!isVacant) {
+                          currentClass = v.classesToday.find(
+                            (c) => (c.startTime || "0000") <= slot && (c.endTime || "0000") > slot,
+                          );
+                        }
+
+                        return (
+                          <div
+                            key={slot}
+                            className={`vf-dot ${isVacant ? "free" : "occupied"} ${
+                              isSelected ? "selected" : ""
+                            }`}
+                            onMouseEnter={(e) => {
+                              const rect = e.currentTarget.getBoundingClientRect();
+                              setPinnedPopover({
+                                x: rect.left + rect.width / 2,
+                                y: rect.top - 6,
+                                venueCode: v.venueCode,
+                                slot,
+                                isVacant,
+                                currentClass,
+                              });
+                            }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedTime(slot);
+                            }}
+                          />
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {/* Viz Style C: Continuous Bar */}
+                  {vizStyle === "continuous" && (
+                    <div className="vf-avail-continuous">
+                      {TIME_SLOTS.map((slot) => {
+                        const isVacant = (v.rawAvail[slot] || "vacant") === "vacant";
+                        let currentClass = null;
+                        if (!isVacant) {
+                          currentClass = v.classesToday.find(
+                            (c) => (c.startTime || "0000") <= slot && (c.endTime || "0000") > slot,
+                          );
+                        }
+                        return (
+                          <div
+                            key={slot}
+                            className={`vf-cont-segment ${isVacant ? "free" : "occupied"}`}
+                            style={{ flex: 1 }}
+                            onMouseEnter={(e) => {
+                              const rect = e.currentTarget.getBoundingClientRect();
+                              setPinnedPopover({
+                                x: rect.left + rect.width / 2,
+                                y: rect.top - 6,
+                                venueCode: v.venueCode,
+                                slot,
+                                isVacant,
+                                currentClass,
+                              });
+                            }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedTime(slot);
+                            }}
+                          />
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+
+                {/* Footer: Status Dot and Bar-End Label */}
+                <div className="vf-card-footer">
+                  <span className="vf-card-status-pill">
+                    <span className={`vf-status-dot ${v.isFree ? "free" : ""}`} />
+                    <span>{v.isFree ? "Vacant now" : "In use"}</span>
+                  </span>
+
+                  <span className="vf-bar-end-label">
+                    {formatDuration(v.freeMinutes, v.isFree)}
+                  </span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
       )}
 
-      {/* Detail Modal */}
+      {/* Pinned Slot Popover (stays pinned until leaving the card) */}
+      {pinnedPopover && (
+        <div
+          className="vf-pinned-popover"
+          style={{
+            left: pinnedPopover.x,
+            top: pinnedPopover.y,
+          }}
+        >
+          {pinnedPopover.currentClass ? (
+            <div>
+              <div className="vf-popover-module">
+                {pinnedPopover.currentClass.moduleCode} ({pinnedPopover.currentClass.lessonType})
+              </div>
+              <div className="vf-popover-meta">
+                {formatTimeSlot(pinnedPopover.currentClass.startTime)} -{" "}
+                {formatTimeSlot(pinnedPopover.currentClass.endTime)} ·{" "}
+                {formatWeeks(pinnedPopover.currentClass.weeks)}
+              </div>
+            </div>
+          ) : (
+            <div>
+              <div className="vf-popover-module" style={{ color: "var(--success)" }}>
+                Available
+              </div>
+              <div className="vf-popover-meta">
+                {formatTimeSlot(pinnedPopover.slot)} -{" "}
+                {formatTimeSlot(
+                  String(
+                    parseInt(pinnedPopover.slot.slice(0, 2), 10) * 100 +
+                      parseInt(pinnedPopover.slot.slice(2), 10) +
+                      30,
+                  ).padStart(4, "0"),
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Restyled Centered Modal Sheet for Venue Detail */}
       {inspectedVenue && (
         <div className="vf-modal-overlay" onClick={() => setInspectedVenue(null)}>
           <div className="vf-modal" onClick={(e) => e.stopPropagation()}>
             <div className="vf-modal-header">
               <div>
                 <h2 className="vf-modal-title">{inspectedVenue.venueCode}</h2>
-                <p className="vf-modal-subtitle">{inspectedVenue.buildingName}</p>
+                <p className="vf-modal-subtitle">
+                  {inspectedVenue.buildingName} · {inspectedVenue.roomName}
+                </p>
               </div>
-              <button className="vf-icon-btn" onClick={() => setInspectedVenue(null)}>
-                <X size={16} />
+              <button
+                type="button"
+                className="vf-btn vf-btn-icon-only"
+                onClick={() => setInspectedVenue(null)}
+                title="Close modal (Esc)"
+                aria-label="Close modal"
+              >
+                <X size={15} />
               </button>
             </div>
 
             <div className="vf-modal-body">
               {inspectedVenue.latitude && inspectedVenue.longitude && (
-                <div style={{ marginBottom: "20px" }}>
-                  <a
-                    href={`https://www.google.com/maps/search/?api=1&query=${inspectedVenue.latitude},${inspectedVenue.longitude}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="vf-filter-btn"
-                    style={{ width: "100%", justifyContent: "center" }}
-                  >
-                    <ExternalLink size={14} />
-                    Open in Google Maps
-                  </a>
-                </div>
+                <a
+                  href={`https://www.google.com/maps/search/?api=1&query=${inspectedVenue.latitude},${inspectedVenue.longitude}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="vf-modal-map-link"
+                >
+                  <ExternalLink size={14} />
+                  <span>Open in Google Maps</span>
+                </a>
               )}
+
               <div className="vf-detail-section">
                 <h4 className="vf-detail-heading">Schedule ({selectedDay})</h4>
                 {inspectedVenue.classesToday.length === 0 ? (
-                  <p className="vf-detail-text">No classes scheduled.</p>
+                  <p className="vf-detail-text">No classes scheduled for this venue today.</p>
                 ) : (
                   <div className="vf-schedule-list">
                     {inspectedVenue.classesToday
@@ -936,32 +1616,6 @@ export default function VenueFinder({ token }) {
               </div>
             </div>
           </div>
-        </div>
-      )}
-
-      {tooltipData && (
-        <div
-          style={{
-            position: "fixed",
-            left: tooltipData.x,
-            top: tooltipData.y,
-            transform: "translate(-50%, -100%)",
-            backgroundColor: "var(--surface-warm)",
-            border: "1px solid var(--border-strong)",
-            padding: "8px 12px",
-            borderRadius: "var(--radius-sm)",
-            fontSize: "12px",
-            color: "var(--text-h)",
-            whiteSpace: "pre-wrap",
-            pointerEvents: "none",
-            zIndex: 99999,
-            boxShadow: "var(--shadow)",
-            lineHeight: "1.4",
-            textAlign: "center",
-            fontFamily: "var(--font-sans)",
-          }}
-        >
-          {tooltipData.text}
         </div>
       )}
     </div>
