@@ -1,6 +1,6 @@
-// Campus — one surface for moving around campus: free rooms right now,
-// live departures, and the A→B trip planner. Facts only: the bars show
-// availability, the board shows ETAs, the planner shows routes.
+// Campus — one section, two pages: Bus (live departures + trip planner) and
+// Venues (free rooms right now). Facts only: bars show availability, the
+// board shows ETAs, the planner shows routes.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -16,11 +16,19 @@ import "./campus.css";
 const DAY_NAMES = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 const SAVED_KEY = "canvenient.campus.saved";
 const BUS_REFRESH_MS = 20000;
+const PAGE_KEY = "canvenient.campus.page";
 
 function clockFromHHMM(hhmm) {
   const h = Math.floor(hhmm / 100);
   const m = hhmm % 100;
   return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+}
+
+function etaClock(minutes) {
+  if (minutes <= 0) return "now";
+  if (minutes < 180) return `${minutes}`;
+  const at = new Date(Date.now() + minutes * 60000);
+  return at.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false });
 }
 
 function freeLabel(minutes) {
@@ -107,6 +115,9 @@ function PlaceInput({ token, value, onChange, placeholder }) {
 }
 
 export default function CampusView({ token }) {
+  const [page, setPage] = useState(() => localStorage.getItem(PAGE_KEY) || "bus");
+
+  // --- Venues page state ---
   const [query, setQuery] = useState("");
   const [debounced, setDebounced] = useState("");
   const [dayOffset, setDayOffset] = useState(0);
@@ -118,18 +129,23 @@ export default function CampusView({ token }) {
   const [loading, setLoading] = useState(false);
   const [saved, setSaved] = useState(readSaved);
 
+  // --- Bus page state ---
   const [stops, setStops] = useState([]);
   const [boardStop, setBoardStop] = useState(
     () => localStorage.getItem("canvenient-isb-stop") || "",
   );
   const [arrivals, setArrivals] = useState(null);
   const [boardFailed, setBoardFailed] = useState(false);
-
   const [tripFrom, setTripFrom] = useState("");
   const [tripTo, setTripTo] = useState("");
   const [trip, setTrip] = useState(null);
   const [tripBusy, setTripBusy] = useState(false);
   const [tripError, setTripError] = useState("");
+
+  const showPage = (next) => {
+    setPage(next);
+    localStorage.setItem(PAGE_KEY, next);
+  };
 
   useEffect(() => {
     const timer = window.setTimeout(() => setDebounced(query.trim()), 250);
@@ -238,9 +254,18 @@ export default function CampusView({ token }) {
   };
 
   const fact = useMemo(() => {
-    if (!results) return "";
-    return `${results.total_matches ?? results.results?.length ?? 0} rooms free ${clockFromHHMM(timeHHMM)} ${availabilityDay.slice(0, 3)}`;
-  }, [results, timeHHMM, availabilityDay]);
+    if (page === "venues" && results) {
+      return `${results.total_matches ?? results.results?.length ?? 0} rooms free ${clockFromHHMM(timeHHMM)} ${availabilityDay.slice(0, 3)}`;
+    }
+    const live = (arrivals?.arrivals || []).filter(
+      (entry) => Array.isArray(entry.minutes) && entry.minutes.length > 0,
+    );
+    if (live.length) {
+      const next = Math.min(...live.map((s) => Math.min(...s.minutes.filter((m) => m > 0))));
+      if (Number.isFinite(next)) return `next bus in ${next} min`;
+    }
+    return "bus feed awaiting";
+  }, [page, results, arrivals, timeHHMM, availabilityDay]);
 
   const toolbarConfig = useMemo(() => ({ fact }), [fact]);
   useWorkspaceToolbar(toolbarConfig);
@@ -253,189 +278,205 @@ export default function CampusView({ token }) {
 
   return (
     <div className="ins-campus">
-      <section className="ins-campus-rooms">
-        <div className="ins-campus-search">
-          <input
-            className="ins-input"
-            placeholder="Find a room — code, name, building"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-          />
+      <div className="ins-campus-tabs">
+        <div className="ins-seg">
+          <button
+            type="button"
+            className={page === "bus" ? "is-active" : ""}
+            onClick={() => showPage("bus")}
+          >
+            Bus
+          </button>
+          <button
+            type="button"
+            className={page === "venues" ? "is-active" : ""}
+            onClick={() => showPage("venues")}
+          >
+            Venues
+          </button>
         </div>
-        <div className="ins-campus-scrubber">
-          <div className="ins-seg">
-            {DAY_NAMES.map((day, index) => {
-              const d = new Date();
-              d.setDate(d.getDate() + index);
-              return (
-                <button
-                  key={day}
-                  type="button"
-                  className={dayOffset === index ? "is-active" : ""}
-                  onClick={() => setDayOffset(index)}
-                >
-                  {index === 0 ? "Today" : DAY_NAMES[(d.getDay() + 6) % 7].slice(0, 3)}
-                </button>
-              );
-            })}
-          </div>
-          <div className="ins-campus-time">
-            <input
-              type="range"
-              min="800"
-              max="2100"
-              step="30"
-              value={timeHHMM}
-              onChange={(e) => setTimeHHMM(Number(e.target.value))}
-              aria-label="Time"
-            />
-            <span className="ins-mono ins-cap">{clockFromHHMM(timeHHMM)}</span>
-          </div>
-        </div>
+      </div>
 
-        <div className="ins-campus-list">
-          {loading && !results && <div className="ins-empty">Reading the timetable…</div>}
-          {results && results.results?.length === 0 && (
-            <div className="ins-empty">No rooms free at this time</div>
-          )}
-          {results?.results?.slice(0, 40).map((room) => (
-            <div key={room.venue_code} className="ins-roomrow">
-              <SavedPin
-                code={room.venue_code}
-                saved={savedSet.has(room.venue_code)}
-                onToggle={toggleSaved}
-              />
-              <span className="ins-mono ins-roomrow-code">{room.venue_code}</span>
-              <span className="ins-roomrow-name">
-                {[room.room_name, room.building_name].filter(Boolean).join(" · ")}
-              </span>
-              <div className="ins-roomrow-bar" aria-hidden="true">
-                <span
-                  style={{
-                    width: `${Math.min(100, ((room.free_minutes || 0) / 240) * 100)}%`,
-                  }}
-                />
-              </div>
-              <span className="ins-mono ins-cap ins-roomrow-free">
-                {freeLabel(room.free_minutes)}
-                {room.distance_metres != null ? ` · ${Math.round(room.distance_metres)} m` : ""}
-              </span>
+      {page === "bus" ? (
+        <div className="ins-campus-bus">
+          <section className="ins-sec ins-buspage-board">
+            <div className="ins-sec-head">
+              <p className="ins-label">Departures</p>
+              <select
+                className="ins-select ins-campus-stopselect"
+                value={boardStop}
+                onChange={(e) => {
+                  setBoardStop(e.target.value);
+                  localStorage.setItem("canvenient-isb-stop", e.target.value);
+                }}
+                aria-label="Bus stop"
+              >
+                {stops.map((stop) => (
+                  <option key={stop.id} value={stop.id}>
+                    {stop.name}
+                  </option>
+                ))}
+              </select>
             </div>
-          ))}
-        </div>
-      </section>
-
-      <aside className="ins-campus-side">
-        <section className="ins-sec">
-          <div className="ins-sec-head">
-            <h2>Departures</h2>
-            <select
-              className="ins-select ins-campus-stopselect"
-              value={boardStop}
-              onChange={(e) => {
-                setBoardStop(e.target.value);
-                localStorage.setItem("canvenient-isb-stop", e.target.value);
-              }}
-              aria-label="Bus stop"
-            >
-              {stops.map((stop) => (
-                <option key={stop.id} value={stop.id}>
-                  {stop.name}
-                </option>
-              ))}
-            </select>
-          </div>
-          {boardFailed && !arrivals && <p className="ins-cap">Departures unavailable right now.</p>}
-          {arrivals && boardServices.length === 0 && (
-            <p className="ins-cap">No departures in the feed.</p>
-          )}
-          <div className="ins-busboard">
-            {boardServices.map((service) => (
-              <div key={service.service} className="ins-busboard-row">
-                <span className="ins-mono ins-busboard-route">{service.service}</span>
-                <span className="ins-mono ins-busboard-etas">
-                  {service.minutes
-                    .slice(0, 3)
-                    .map((m) => {
-                      if (m <= 0) return "now";
-                      if (m < 180) return `${m}`;
-                      const at = new Date(Date.now() + m * 60000);
-                      return at.toLocaleTimeString([], {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                        hour12: false,
-                      });
-                    })
-                    .join("  ")}
-                </span>
-              </div>
-            ))}
-          </div>
-          <p className="ins-cap ins-campus-boardfoot">
-            {boardStopName} · live feed
-            {arrivals?.updated_at ? ` · ${String(arrivals.updated_at).slice(11, 16)}` : ""}
-          </p>
-        </section>
-
-        <section className="ins-sec">
-          <div className="ins-sec-head">
-            <h2>Trip</h2>
-          </div>
-          <div className="ins-trip">
-            <PlaceInput token={token} value={tripFrom} onChange={setTripFrom} placeholder="From" />
-            <PlaceInput token={token} value={tripTo} onChange={setTripTo} placeholder="To" />
-            <button
-              type="button"
-              className="ins-btn"
-              onClick={runTrip}
-              disabled={tripBusy || !tripFrom.trim() || !tripTo.trim()}
-            >
-              {tripBusy ? "Planning…" : "Plan"}
-            </button>
-          </div>
-          {tripError && <p className="ins-cap">{tripError}</p>}
-          {trip?.routes?.length > 0 && (
-            <div className="ins-triproutes">
-              {trip.routes.map((route, index) => (
-                <div key={`${route.service}-${index}`} className="ins-triproute">
-                  <div className="ins-triproute-line">
-                    <span className="ins-mono ins-busboard-route">{route.service}</span>
-                    <span className="ins-cap">
-                      {route.from_stop.name} → {route.to_stop.name}
-                    </span>
-                  </div>
-                  <span className="ins-mono ins-cap ins-triproute-total">
-                    {route.next_bus_minutes != null
-                      ? `bus in ${route.next_bus_minutes} min · `
-                      : ""}
-                    {route.total_minutes ?? route.bus_travel_minutes} min total · arr{" "}
-                    {String(route.destination_arrival_at).slice(11, 16)}
-                    {route.travel_source === "live" ? "" : " · est"}
+            {boardFailed && !arrivals && (
+              <p className="ins-cap">Departures unavailable right now.</p>
+            )}
+            {arrivals && boardServices.length === 0 && (
+              <p className="ins-cap">No departures in the feed.</p>
+            )}
+            <div className="ins-busboard">
+              {boardServices.map((service) => (
+                <div key={service.service} className="ins-busboard-row">
+                  <span className="ins-mono ins-busboard-route">{service.service}</span>
+                  <span className="ins-mono ins-busboard-etas">
+                    {service.minutes
+                      .slice(0, 3)
+                      .map((m) => (
+                        <span key={m} className="ins-tickvalue">
+                          {etaClock(m)}
+                        </span>
+                      ))
+                      .reduce((acc, item, index) => (index ? [...acc, "  ", item] : [item]), [])}
                   </span>
                 </div>
               ))}
             </div>
-          )}
-          {trip && trip.routes?.length === 0 && (
-            <p className="ins-cap">{trip.message || "No direct route found."}</p>
+            <p className="ins-cap ins-campus-boardfoot">
+              {boardStopName} · live feed
+              {arrivals?.updated_at ? ` · ${String(arrivals.updated_at).slice(11, 16)}` : ""}
+            </p>
+          </section>
+
+          <section className="ins-sec ins-buspage-trip">
+            <div className="ins-sec-head">
+              <p className="ins-label">Trip</p>
+            </div>
+            <div className="ins-trip">
+              <PlaceInput token={token} value={tripFrom} onChange={setTripFrom} placeholder="From" />
+              <PlaceInput token={token} value={tripTo} onChange={setTripTo} placeholder="To" />
+              <button
+                type="button"
+                className="ins-btn"
+                onClick={runTrip}
+                disabled={tripBusy || !tripFrom.trim() || !tripTo.trim()}
+              >
+                {tripBusy ? "Planning…" : "Plan"}
+              </button>
+            </div>
+            {tripError && <p className="ins-cap">{tripError}</p>}
+            {trip?.routes?.length > 0 && (
+              <div className="ins-triproutes">
+                {trip.routes.map((route, index) => (
+                  <div key={`${route.service}-${index}`} className="ins-triproute">
+                    <div className="ins-triproute-line">
+                      <span className="ins-mono ins-busboard-route">{route.service}</span>
+                      <span className="ins-cap">
+                        {route.from_stop.name} → {route.to_stop.name}
+                      </span>
+                    </div>
+                    <span className="ins-mono ins-cap ins-triproute-total">
+                      {route.next_bus_minutes != null
+                        ? `bus in ${route.next_bus_minutes} min · `
+                        : ""}
+                      {route.total_minutes ?? route.bus_travel_minutes} min total · arr{" "}
+                      {String(route.destination_arrival_at).slice(11, 16)}
+                      {route.travel_source === "live" ? "" : " · est"}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+            {trip && trip.routes?.length === 0 && (
+              <p className="ins-cap">{trip.message || "No direct route found."}</p>
+            )}
+          </section>
+        </div>
+      ) : (
+        <section className="ins-sec ins-venuespage">
+          <div className="ins-campus-search">
+            <input
+              className="ins-input"
+              placeholder="Find a room — code, name, building"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+            />
+          </div>
+          <div className="ins-campus-scrubber">
+            <div className="ins-seg">
+              {DAY_NAMES.map((day, index) => {
+                const d = new Date();
+                d.setDate(d.getDate() + index);
+                return (
+                  <button
+                    key={day}
+                    type="button"
+                    className={dayOffset === index ? "is-active" : ""}
+                    onClick={() => setDayOffset(index)}
+                  >
+                    {index === 0 ? "Today" : DAY_NAMES[(d.getDay() + 6) % 7].slice(0, 3)}
+                  </button>
+                );
+              })}
+            </div>
+            <div className="ins-campus-time">
+              <input
+                type="range"
+                min="800"
+                max="2100"
+                step="30"
+                value={timeHHMM}
+                onChange={(e) => setTimeHHMM(Number(e.target.value))}
+                aria-label="Time"
+              />
+              <span className="ins-mono ins-cap">{clockFromHHMM(timeHHMM)}</span>
+            </div>
+          </div>
+
+          <div className="ins-campus-list">
+            {loading && !results && <div className="ins-empty">Reading the timetable…</div>}
+            {results && results.results?.length === 0 && (
+              <div className="ins-empty">No rooms free at this time</div>
+            )}
+            {results?.results?.slice(0, 40).map((room) => (
+              <div key={room.venue_code} className="ins-roomrow">
+                <SavedPin
+                  code={room.venue_code}
+                  saved={savedSet.has(room.venue_code)}
+                  onToggle={toggleSaved}
+                />
+                <span className="ins-mono ins-roomrow-code">{room.venue_code}</span>
+                <span className="ins-roomrow-name">
+                  {[room.room_name, room.building_name].filter(Boolean).join(" · ")}
+                </span>
+                <div className="ins-roomrow-bar" aria-hidden="true">
+                  <span
+                    style={{
+                      width: `${Math.min(100, ((room.free_minutes || 0) / 240) * 100)}%`,
+                    }}
+                  />
+                </div>
+                <span className="ins-mono ins-cap ins-roomrow-free">
+                  {freeLabel(room.free_minutes)}
+                  {room.distance_metres != null ? ` · ${Math.round(room.distance_metres)} m` : ""}
+                </span>
+              </div>
+            ))}
+          </div>
+
+          {saved.length > 0 && (
+            <div className="ins-savedrooms">
+              <span className="ins-label">Saved</span>
+              <div className="ins-mono">
+                {saved.map((code) => (
+                  <span key={code} className="ins-tag">
+                    {code}
+                  </span>
+                ))}
+              </div>
+            </div>
           )}
         </section>
-
-        {saved.length > 0 && (
-          <section className="ins-sec">
-            <div className="ins-sec-head">
-              <h2>Saved rooms</h2>
-            </div>
-            <div className="ins-savedrooms ins-mono">
-              {saved.map((code) => (
-                <span key={code} className="ins-tag">
-                  {code}
-                </span>
-              ))}
-            </div>
-          </section>
-        )}
-      </aside>
+      )}
     </div>
   );
 }
