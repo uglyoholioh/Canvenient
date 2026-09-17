@@ -108,15 +108,15 @@ export default function TrayPanel() {
   // The tray windows render outside the workspace shell, so they apply the
   // stored theme themselves.
   useEffect(() => {
-    const theme = window.localStorage.getItem("canvenient-theme") || "instrument-dark";
+    const theme = window.localStorage.getItem("canvenient-theme") || "instrument-light";
     const resolved =
-      theme === "instrument-light" || theme === "light"
-        ? "instrument-light"
+      theme === "instrument-dark" || theme === "dark" || theme === "graphite"
+        ? "instrument-dark"
         : theme === "system"
           ? window.matchMedia("(prefers-color-scheme: dark)").matches
             ? "instrument-dark"
             : "instrument-light"
-          : "instrument-dark";
+          : "instrument-light";
     document.documentElement.setAttribute("data-theme", resolved);
   }, []);
 

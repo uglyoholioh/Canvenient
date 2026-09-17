@@ -5,13 +5,15 @@
 export const INSTRUMENT_THEMES = ["instrument-dark", "instrument-light"];
 
 export function resolveTheme(preference) {
-  if (preference === "instrument-light" || preference === "light") return "instrument-light";
+  if (preference === "instrument-dark" || preference === "dark" || preference === "graphite") {
+    return "instrument-dark";
+  }
   if (preference === "system") {
     return window.matchMedia("(prefers-color-scheme: dark)").matches
       ? "instrument-dark"
       : "instrument-light";
   }
-  return "instrument-dark";
+  return "instrument-light";
 }
 
 export function applyTheme(preference) {
@@ -28,5 +30,5 @@ export function setThemePreference(preference) {
 }
 
 export function getThemePreference() {
-  return localStorage.getItem("canvenient-theme") || "instrument-dark";
+  return localStorage.getItem("canvenient-theme") || "instrument-light";
 }

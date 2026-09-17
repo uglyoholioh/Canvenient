@@ -25,9 +25,10 @@
 }
 
 .ins-today-clock {
-  font-size: 44px;
+  font-family: var(--ins-rounded);
+  font-size: 46px;
   font-weight: 700;
-  letter-spacing: -0.04em;
+  letter-spacing: -0.02em;
   line-height: 1;
   color: var(--ins-ink);
 }
@@ -59,6 +60,7 @@
 
 .ins-today-empty {
   border: 1px solid var(--ins-line);
+  border-radius: var(--ins-r-big);
   padding: var(--ins-s5);
   gap: var(--ins-s1);
 }
@@ -84,8 +86,11 @@
 
 /* Next card — typographic, module tick, depleting approach meter */
 .ins-next {
-  border: 1px solid var(--ins-line-strong);
+  border: 1px solid var(--ins-line);
+  border-radius: var(--ins-r-big);
   padding: var(--ins-s4);
+  background: var(--ins-bg-raise);
+  box-shadow: var(--ins-shadow-soft);
   display: flex;
   flex-direction: column;
   gap: var(--ins-s3);
@@ -120,14 +125,16 @@
 }
 
 .ins-next-clock {
+  font-family: var(--ins-rounded);
   font-size: 30px;
   font-weight: 700;
-  letter-spacing: -0.03em;
+  letter-spacing: -0.02em;
   color: var(--ins-ink);
 }
 
 .ins-next-count {
-  font-size: 20px;
+  font-size: 22px;
+  color: var(--ins-red);
 }
 
 .ins-next-journey {
@@ -168,11 +175,8 @@
 }
 
 .ins-duerow.as-button:hover {
-  background: rgba(255, 255, 255, 0.04);
-}
-
-:root[data-theme="instrument-light"] .ins-duerow.as-button:hover {
-  background: rgba(17, 17, 16, 0.04);
+  background: rgba(128, 118, 100, 0.07);
+  border-radius: var(--ins-r);
 }
 
 .ins-duerow-title {
@@ -243,11 +247,8 @@ button.ins-duerow-title:hover {
 }
 
 .ins-classrow:hover {
-  background: rgba(255, 255, 255, 0.03);
-}
-
-:root[data-theme="instrument-light"] .ins-classrow:hover {
-  background: rgba(17, 17, 16, 0.03);
+  background: rgba(128, 118, 100, 0.06);
+  border-radius: var(--ins-r);
 }
 
 .ins-classrow.is-past {
@@ -278,7 +279,9 @@ button.ins-duerow-title:hover {
 /* Departures strip */
 .ins-busstrip {
   border: 1px solid var(--ins-line);
+  border-radius: var(--ins-r-big);
   padding: var(--ins-s3) var(--ins-s4);
+  background: var(--ins-bg-raise);
 }
 
 .ins-busstrip-head {

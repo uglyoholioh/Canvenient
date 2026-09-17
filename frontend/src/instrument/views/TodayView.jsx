@@ -398,9 +398,7 @@ export default function TodayView({ token, user, onNavigate }) {
         <h2 className="ins-display">{dateLabel}</h2>
         <p className="ins-today-sub">
           {week?.formatted || ""}
-          {phase
-            ? ` — ${phase.label} in ${phase.inDays} day${phase.inDays === 1 ? "" : "s"}`
-            : ""}
+          {phase ? ` — ${phase.label} in ${phase.inDays} day${phase.inDays === 1 ? "" : "s"}` : ""}
         </p>
       </header>
 

@@ -66,17 +66,19 @@ function App() {
   }, [token]);
 
   useEffect(() => {
-    // The draft speaks two materials: instrument-dark (default) and
-    // instrument-light. Legacy preferences map onto them.
-    const storedPreference = localStorage.getItem("canvenient-theme") || "instrument-dark";
+    // The draft speaks two materials: Fog (soft light, default) and
+    // Dusk (soft dark). Legacy preferences map onto them.
+    const storedPreference = localStorage.getItem("canvenient-theme") || "instrument-light";
     const resolvedTheme =
       storedPreference === "system"
         ? window.matchMedia("(prefers-color-scheme: dark)").matches
           ? "instrument-dark"
           : "instrument-light"
-        : storedPreference === "instrument-light" || storedPreference === "light"
-          ? "instrument-light"
-          : "instrument-dark";
+        : storedPreference === "instrument-dark" ||
+            storedPreference === "dark" ||
+            storedPreference === "graphite"
+          ? "instrument-dark"
+          : "instrument-light";
     document.documentElement.setAttribute("data-theme", resolvedTheme);
   }, []);
 

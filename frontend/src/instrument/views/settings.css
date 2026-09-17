@@ -45,7 +45,7 @@
 
 .ins-settings-tab.is-active {
   color: var(--ins-ink);
-  box-shadow: inset 2px 0 0 var(--ins-red);
+  background: rgba(217, 138, 112, 0.13);
 }
 
 .ins-settings-pane {
@@ -101,7 +101,7 @@
   gap: 2px;
   padding: var(--ins-s2) var(--ins-s3);
   border: 1px solid var(--ins-line-strong);
-  border-radius: var(--ins-r-panel);
+  border-radius: var(--ins-r-big);
   background: transparent;
   color: var(--ins-ink);
   font: inherit;
@@ -117,7 +117,7 @@
 
 .ins-theme.is-active {
   border-color: var(--ins-ink-muted);
-  background: var(--ins-selection);
+  background: rgba(217, 138, 112, 0.12);
 }
 
 .ins-theme-caption {

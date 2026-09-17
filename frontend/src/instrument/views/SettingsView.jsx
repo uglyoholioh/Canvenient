@@ -213,8 +213,8 @@ export default function SettingsView({ token, user, onUpdateUser, onReplayOrient
   };
 
   const themeOptions = [
-    ["instrument-dark", "Graphite", "the default material", "dark"],
-    ["instrument-light", "Paper", "warm light", "light"],
+    ["instrument-light", "Fog", "soft light — the default", "light"],
+    ["instrument-dark", "Dusk", "soft dark", "dark"],
     ["system", "System", "follows macOS", "system"],
   ];
 

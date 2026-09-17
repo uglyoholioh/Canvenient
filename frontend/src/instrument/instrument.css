@@ -140,26 +140,38 @@
   align-items: center;
   gap: 8px;
   width: 100%;
-  height: 30px;
-  padding: 0 8px;
+  height: 32px;
+  padding: 0 9px;
   border: none;
+  border-radius: 999px;
   background: transparent;
   color: var(--ins-ink-muted);
   font-size: var(--ins-fs-body);
   text-align: left;
   cursor: default;
   transition:
-    color var(--ins-dur-fast) var(--ins-ease),
-    background var(--ins-dur-fast) var(--ins-ease);
+    color var(--ins-dur) var(--ins-ease-out),
+    background var(--ins-dur) var(--ins-ease-out),
+    transform var(--ins-dur-fast) var(--ins-ease-out);
 }
 
 .ins-nav-row:hover {
   color: var(--ins-ink);
+  background: rgba(128, 118, 100, 0.09);
+}
+
+.ins-nav-row:active {
+  transform: scale(0.985);
 }
 
 .ins-nav-row.is-active {
   color: var(--ins-ink);
-  box-shadow: inset 2px 0 0 var(--ins-red);
+  background: rgba(217, 138, 112, 0.14);
+  box-shadow: none;
+}
+
+.ins-nav-row.is-active:hover {
+  background: rgba(217, 138, 112, 0.18);
 }
 
 .ins-nav-row.is-active .ins-nav-index {
@@ -493,8 +505,8 @@
 /* ---- Study-timer pill rides legacy classes ------------------------------------- */
 .ins-toolbar .mac-toolbar-action {
   min-height: 28px;
-  border: 1px solid var(--ins-line);
-  border-radius: var(--ins-r);
+  border: 1px solid transparent;
+  border-radius: 999px;
   background: transparent;
   font-family: var(--ins-mono);
   font-variant-numeric: tabular-nums;
@@ -503,6 +515,6 @@
 }
 
 .ins-toolbar .mac-toolbar-action:hover {
-  background: rgba(255, 255, 255, 0.06);
+  background: rgba(128, 118, 100, 0.12);
   color: var(--ins-ink);
 }

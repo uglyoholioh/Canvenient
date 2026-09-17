@@ -1,168 +1,178 @@
 /* ==========================================================================
-   THE INSTRUMENT — design system v3: Swiss typography minimal.
-   Black ink on two grounds; one red for live facts. Exposed rules instead of
-   boxes; the numbers ARE the decoration. Glass is earned, only for overlays.
+   THE INSTRUMENT — design system v4: fluid typographic, washed pastels.
+   Typographic backbone kept — huge numerals, quiet body, tracked labels —
+   but the ground is soft Fog, the ink warm, the shapes rounded, the motion
+   springy. Colour is washed pastel; data colors keep their meaning.
    inform, never instruct: every string the UI renders states what is.
    ========================================================================== */
 
-/* ---- Ink (dark, default) ----------------------------------------------- */
+/* ---- Fog (soft light, default) ------------------------------------------ */
 :root,
-:root[data-theme="instrument-dark"] {
-  --ins-bg: #0c0c0d;
-  --ins-bg-raise: #121214;
-  --ins-panel: #101012;
-  --ins-line: rgba(255, 255, 255, 0.14);
-  --ins-line-strong: rgba(255, 255, 255, 0.38);
-  --ins-ink: #fafaf8;
-  --ins-ink-body: #e6e6e3;
-  --ins-ink-muted: #8c8c90;
-  --ins-ink-faint: #55555a;
+:root[data-theme="instrument-light"] {
+  --ins-bg: #f5f2ec;
+  --ins-bg-raise: #fdfcf9;
+  --ins-panel: #efece5;
+  --ins-line: rgba(62, 56, 48, 0.12);
+  --ins-line-strong: rgba(62, 56, 48, 0.26);
+  --ins-ink: #45403a;
+  --ins-ink-body: #5d574e;
+  --ins-ink-muted: #8f887c;
+  --ins-ink-faint: #b9b2a4;
 
-  /* Swiss red — live facts only: now, overdue, recording */
-  --ins-red: #ff4530;
-  --ins-red-bg: rgba(255, 69, 48, 0.1);
-  --ins-green: #30d158;
-  --ins-amber: #ffd60a;
-
-  /* data colors keep their meaning */
-  --ins-green-bg: rgba(48, 209, 88, 0.14);
-  --ins-red-soft: rgba(255, 69, 48, 0.55);
-  --ins-amber-bg: rgba(255, 214, 10, 0.12);
+  /* washed pastels — soft coral for live facts, sage for the good state */
+  --ins-red: #d98a70;
+  --ins-red-soft: rgba(217, 138, 112, 0.5);
+  --ins-red-bg: rgba(217, 138, 112, 0.12);
+  --ins-green: #8aa98c;
+  --ins-green-bg: rgba(138, 169, 140, 0.16);
+  --ins-amber: #c2a265;
+  --ins-amber-bg: rgba(194, 162, 101, 0.14);
+  --ins-sky: #93a8c4;
 
   /* glass */
-  --ins-glass: rgba(14, 14, 16, 0.62);
-  --ins-glass-strong: rgba(14, 14, 16, 0.78);
-  --ins-blur: blur(26px) saturate(150%);
-  --ins-menu-bg: rgba(20, 20, 22, 0.85);
+  --ins-glass: rgba(250, 248, 243, 0.62);
+  --ins-glass-strong: rgba(250, 248, 243, 0.8);
+  --ins-blur: blur(24px) saturate(130%);
+  --ins-menu-bg: rgba(252, 250, 245, 0.92);
 
+  --ins-shadow-soft: 0 10px 30px rgba(90, 80, 62, 0.1);
   --ins-shadow-sheet:
-    0 0 0 0.5px rgba(255, 255, 255, 0.14), 0 6px 16px rgba(0, 0, 0, 0.4),
-    0 24px 64px rgba(0, 0, 0, 0.5);
+    0 0 0 1px rgba(62, 56, 48, 0.06), 0 12px 40px rgba(90, 80, 62, 0.14),
+    0 2px 8px rgba(90, 80, 62, 0.06);
+  --ins-shadow-pill: 0 1px 3px rgba(90, 80, 62, 0.12), 0 4px 12px rgba(90, 80, 62, 0.08);
+
+  --ins-backdrop: rgba(90, 80, 62, 0.18);
 
   /* legacy vars pinned so unmigrated surfaces share the material */
-  --bg: #0c0c0d;
-  --bg-rgb: 12, 12, 13;
-  --surface: #121214;
-  --surface-muted: #17171a;
-  --surface-warm: #1d1d20;
-  --surface-hover: #232327;
-  --primary: #fafaf8;
-  --primary-rgb: 250, 250, 248;
-  --accent: #fafaf8;
-  --accent-gold: #ffd60a;
+  --bg: #f5f2ec;
+  --bg-rgb: 245, 242, 236;
+  --surface: #fdfcf9;
+  --surface-muted: #efece5;
+  --surface-warm: #e7e3d9;
+  --surface-hover: #ddd8cc;
+  --primary: #45403a;
+  --primary-rgb: 69, 64, 58;
+  --accent: #45403a;
+  --accent-gold: #c2a265;
   --accent-glow: none;
-  --border: rgba(255, 255, 255, 0.14);
-  --border-strong: rgba(255, 255, 255, 0.38);
-  --border-focus: #fafaf8;
-  --text-h: #fafaf8;
-  --text: #e6e6e3;
-  --text-muted: #8c8c90;
-  --text-inverse: #0c0c0d;
-  --success: #30d158;
-  --success-bg: rgba(48, 209, 88, 0.14);
-  --error: #ff4530;
-  --error-bg: rgba(255, 69, 48, 0.1);
-  --warning: #ffd60a;
-  --warning-bg: rgba(255, 214, 10, 0.12);
-  --info: #e6e6e3;
-  --color-mac-window: #0c0c0d;
-  --color-mac-sidebar: #101012;
-  --color-mac-toolbar: #101012;
-  --color-mac-panel: #141416;
-  --color-mac-control: #1a1a1d;
-  --color-mac-control-hover: #232327;
-  --color-mac-selection: rgba(255, 255, 255, 0.16);
-  --color-mac-selection-ink: #fafaf8;
-  --color-mac-muted: #8c8c90;
-  --color-mac-divider: rgba(255, 255, 255, 0.14);
-  --color-mac-shadow: rgba(0, 0, 0, 0.4);
-  --color-mac-backdrop: rgba(6, 6, 7, 0.5);
+  --border: rgba(62, 56, 48, 0.12);
+  --border-strong: rgba(62, 56, 48, 0.26);
+  --border-focus: #8f887c;
+  --text-h: #45403a;
+  --text: #5d574e;
+  --text-muted: #8f887c;
+  --text-inverse: #fdfcf9;
+  --success: #8aa98c;
+  --success-bg: rgba(138, 169, 140, 0.16);
+  --error: #d98a70;
+  --error-bg: rgba(217, 138, 112, 0.12);
+  --warning: #c2a265;
+  --warning-bg: rgba(194, 162, 101, 0.14);
+  --info: #93a8c4;
+  --color-mac-window: #f5f2ec;
+  --color-mac-sidebar: #efece5;
+  --color-mac-toolbar: #f5f2ec;
+  --color-mac-panel: #fdfcf9;
+  --color-mac-control: #e7e3d9;
+  --color-mac-control-hover: #ddd8cc;
+  --color-mac-selection: rgba(62, 56, 48, 0.12);
+  --color-mac-selection-ink: #45403a;
+  --color-mac-muted: #8f887c;
+  --color-mac-divider: rgba(62, 56, 48, 0.12);
+  --color-mac-shadow: rgba(90, 80, 62, 0.12);
+  --color-mac-backdrop: rgba(90, 80, 62, 0.18);
 }
 
-/* ---- Paper (light) ------------------------------------------------------ */
-:root[data-theme="instrument-light"] {
-  --ins-bg: #f4f3ef;
-  --ins-bg-raise: #fbfaf6;
-  --ins-panel: #eeede8;
-  --ins-line: rgba(17, 17, 16, 0.16);
-  --ins-line-strong: rgba(17, 17, 16, 0.6);
-  --ins-ink: #111110;
-  --ins-ink-body: #2b2b29;
-  --ins-ink-muted: #74747a;
-  --ins-ink-faint: #a8a8a4;
+/* ---- Dusk (soft dark) ----------------------------------------------------- */
+:root[data-theme="instrument-dark"] {
+  --ins-bg: #26252b;
+  --ins-bg-raise: #2e2d34;
+  --ins-panel: #232228;
+  --ins-line: rgba(238, 234, 228, 0.1);
+  --ins-line-strong: rgba(238, 234, 228, 0.24);
+  --ins-ink: #eceae4;
+  --ins-ink-body: #cfccc5;
+  --ins-ink-muted: #98948e;
+  --ins-ink-faint: #6d6a67;
 
-  --ins-red: #e63312;
-  --ins-red-bg: rgba(230, 51, 18, 0.08);
-  --ins-green: #1f9d48;
-  --ins-amber: #b25000;
+  --ins-red: #d99681;
+  --ins-red-soft: rgba(217, 150, 129, 0.45);
+  --ins-red-bg: rgba(217, 150, 129, 0.12);
+  --ins-green: #9db8a0;
+  --ins-green-bg: rgba(157, 184, 160, 0.14);
+  --ins-amber: #cdb181;
+  --ins-amber-bg: rgba(205, 177, 129, 0.12);
+  --ins-sky: #9fb2cc;
 
-  --ins-green-bg: rgba(31, 157, 72, 0.12);
-  --ins-red-soft: rgba(230, 51, 18, 0.5);
-  --ins-amber-bg: rgba(178, 80, 0, 0.1);
+  --ins-glass: rgba(38, 37, 43, 0.6);
+  --ins-glass-strong: rgba(38, 37, 43, 0.8);
+  --ins-blur: blur(24px) saturate(130%);
+  --ins-menu-bg: rgba(46, 45, 52, 0.92);
 
-  --ins-glass: rgba(244, 243, 239, 0.66);
-  --ins-glass-strong: rgba(244, 243, 239, 0.82);
-  --ins-blur: blur(26px) saturate(140%);
-  --ins-menu-bg: rgba(250, 249, 245, 0.92);
-
+  --ins-shadow-soft: 0 10px 30px rgba(0, 0, 0, 0.2);
   --ins-shadow-sheet:
-    0 0 0 0.5px rgba(17, 17, 16, 0.14), 0 6px 16px rgba(17, 17, 16, 0.1),
-    0 24px 64px rgba(17, 17, 16, 0.16);
+    0 0 0 1px rgba(238, 234, 228, 0.07), 0 12px 40px rgba(0, 0, 0, 0.3),
+    0 2px 8px rgba(0, 0, 0, 0.18);
+  --ins-shadow-pill: 0 1px 3px rgba(0, 0, 0, 0.25), 0 4px 12px rgba(0, 0, 0, 0.16);
 
-  --bg: #f4f3ef;
-  --bg-rgb: 244, 243, 239;
-  --surface: #fbfaf6;
-  --surface-muted: #efeee9;
-  --surface-warm: #e6e4dc;
-  --surface-hover: #dcdad2;
-  --primary: #111110;
-  --primary-rgb: 17, 17, 16;
-  --accent: #111110;
-  --accent-gold: #b25000;
+  --ins-backdrop: rgba(18, 17, 20, 0.35);
+
+  --bg: #26252b;
+  --bg-rgb: 38, 37, 43;
+  --surface: #2e2d34;
+  --surface-muted: #34333b;
+  --surface-warm: #3c3b43;
+  --surface-hover: #46444d;
+  --primary: #eceae4;
+  --primary-rgb: 236, 234, 228;
+  --accent: #eceae4;
+  --accent-gold: #cdb181;
   --accent-glow: none;
-  --border: rgba(17, 17, 16, 0.16);
-  --border-strong: rgba(17, 17, 16, 0.6);
-  --border-focus: #111110;
-  --text-h: #111110;
-  --text: #2b2b29;
-  --text-muted: #74747a;
-  --text-inverse: #f4f3ef;
-  --success: #1f9d48;
-  --success-bg: rgba(31, 157, 72, 0.12);
-  --error: #e63312;
-  --error-bg: rgba(230, 51, 18, 0.08);
-  --warning: #b25000;
-  --warning-bg: rgba(178, 80, 0, 0.1);
-  --info: #2b2b29;
-  --color-mac-window: #f4f3ef;
-  --color-mac-sidebar: #eeede8;
-  --color-mac-toolbar: #f4f3ef;
-  --color-mac-panel: #fbfaf6;
-  --color-mac-control: #e9e7e0;
-  --color-mac-control-hover: #dfddd5;
-  --color-mac-selection: rgba(17, 17, 16, 0.12);
-  --color-mac-selection-ink: #111110;
-  --color-mac-muted: #74747a;
-  --color-mac-divider: rgba(17, 17, 16, 0.16);
-  --color-mac-shadow: rgba(40, 40, 36, 0.14);
-  --color-mac-backdrop: rgba(17, 17, 16, 0.24);
+  --border: rgba(238, 234, 228, 0.1);
+  --border-strong: rgba(238, 234, 228, 0.24);
+  --border-focus: #98948e;
+  --text-h: #eceae4;
+  --text: #cfccc5;
+  --text-muted: #98948e;
+  --text-inverse: #26252b;
+  --success: #9db8a0;
+  --success-bg: rgba(157, 184, 160, 0.14);
+  --error: #d99681;
+  --error-bg: rgba(217, 150, 129, 0.12);
+  --warning: #cdb181;
+  --warning-bg: rgba(205, 177, 129, 0.12);
+  --info: #9fb2cc;
+  --color-mac-window: #26252b;
+  --color-mac-sidebar: #232228;
+  --color-mac-toolbar: #232228;
+  --color-mac-panel: #2e2d34;
+  --color-mac-control: #3a3941;
+  --color-mac-control-hover: #46444d;
+  --color-mac-selection: rgba(238, 234, 228, 0.14);
+  --color-mac-selection-ink: #eceae4;
+  --color-mac-muted: #98948e;
+  --color-mac-divider: rgba(238, 234, 228, 0.1);
+  --color-mac-shadow: rgba(0, 0, 0, 0.28);
+  --color-mac-backdrop: rgba(18, 17, 20, 0.35);
 }
 
 /* ---- Shared tokens ------------------------------------------------------ */
 :root {
   --ins-font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif;
+  /* the rounded voice — numerals, clocks, display moments */
+  --ins-rounded: -apple-system-rounded, ui-rounded, "SF Pro Rounded", -apple-system, sans-serif;
   --ins-mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, monospace;
 
-  --ins-fs-display: 34px; /* the date */
-  --ins-fs-numeral: 56px; /* the clock, the big counts */
+  --ins-fs-display: 34px;
+  --ins-fs-numeral: 56px;
   --ins-fs-title: 15px;
   --ins-fs-body: 13px;
   --ins-fs-sub: 12px;
   --ins-fs-cap: 11px;
-  --ins-fs-label: 10px; /* uppercase micro labels */
+  --ins-fs-label: 10.5px;
 
-  --ins-leading-tight: 1.05;
-  --ins-leading: 1.45;
+  --ins-leading-tight: 1.08;
+  --ins-leading: 1.5;
 
   --ins-s1: 4px;
   --ins-s2: 8px;
@@ -172,18 +182,20 @@
   --ins-s6: 32px;
   --ins-s7: 48px;
 
-  --ins-r: 2px; /* controls — nearly sharp */
-  --ins-r-panel: 0px; /* swiss frames are square */
+  --ins-r: 9px; /* controls — soft, not sharp */
+  --ins-r-big: 16px; /* panels, cards, sheets */
 
   --ins-tick: 3px;
   --ins-sidebar-w: 212px;
   --ins-toolbar-h: 44px;
 
+  /* fluid motion — long tail, gentle overshoot on entry */
   --ins-ease: cubic-bezier(0.25, 0.46, 0.45, 0.94);
-  --ins-ease-out: cubic-bezier(0.16, 1, 0.3, 1);
-  --ins-dur-fast: 120ms;
-  --ins-dur: 180ms;
-  --ins-dur-panel: 260ms;
+  --ins-ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ins-ease-spring: cubic-bezier(0.34, 1.3, 0.5, 1);
+  --ins-dur-fast: 150ms;
+  --ins-dur: 240ms;
+  --ins-dur-panel: 380ms;
 
   --ins-content-max: 1120px;
 }
@@ -208,14 +220,13 @@ body:has(.ins-root) {
 }
 
 .ins-root ::selection {
-  background: var(--ins-ink);
-  color: var(--ins-bg);
+  background: rgba(217, 138, 112, 0.25);
+  color: var(--ins-ink);
 }
 
 .ins-root :focus-visible {
-  outline: 1.5px solid var(--ins-ink);
-  outline-offset: 2px;
-  border-radius: 0;
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(217, 138, 112, 0.25);
 }
 
 .ins-root button,
@@ -236,29 +247,30 @@ body:has(.ins-root) {
 }
 
 /* ==========================================================================
-   Type — the Swiss scale: huge numerals, quiet body, tracked micro labels
+   Type — rounded numerals carry the moments; labels stay quiet and tracked
    ========================================================================== */
 .ins-display {
+  font-family: var(--ins-rounded);
   font-size: var(--ins-fs-display);
   font-weight: 700;
-  letter-spacing: -0.03em;
+  letter-spacing: -0.022em;
   line-height: var(--ins-leading-tight);
   color: var(--ins-ink);
 }
 
 .ins-numeral {
-  font-family: var(--ins-mono);
+  font-family: var(--ins-rounded);
   font-variant-numeric: tabular-nums;
   font-weight: 700;
-  letter-spacing: -0.04em;
+  letter-spacing: -0.02em;
   line-height: 1;
   color: var(--ins-ink);
 }
 
 .ins-title {
   font-size: var(--ins-fs-title);
-  font-weight: 700;
-  letter-spacing: -0.01em;
+  font-weight: 650;
+  letter-spacing: -0.008em;
   color: var(--ins-ink);
 }
 
@@ -272,11 +284,11 @@ body:has(.ins-root) {
   color: var(--ins-ink-muted);
 }
 
-/* uppercase micro label — section voices */
+/* micro label — soft voice, gently tracked */
 .ins-label {
   font-size: var(--ins-fs-label);
   font-weight: 600;
-  letter-spacing: 0.09em;
+  letter-spacing: 0.07em;
   text-transform: uppercase;
   color: var(--ins-ink-muted);
 }
@@ -292,69 +304,73 @@ body:has(.ins-root) {
 }
 
 /* ==========================================================================
-   Controls — monochrome, sharp, invert on hover
+   Controls — soft pills that breathe on hover
    ========================================================================== */
 .ins-btn {
   appearance: none;
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  height: 27px;
-  padding: 0 11px;
-  border: 1px solid var(--ins-line-strong);
-  border-radius: var(--ins-r);
-  background: transparent;
+  height: 28px;
+  padding: 0 12px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: var(--ins-bg-raise);
+  box-shadow: var(--ins-shadow-pill);
   color: var(--ins-ink);
-  font-size: var(--ins-fs-cap);
+  font-size: var(--ins-fs-sub);
   font-weight: 600;
-  letter-spacing: 0.04em;
   cursor: default;
   transition:
-    background var(--ins-dur-fast) var(--ins-ease),
-    color var(--ins-dur-fast) var(--ins-ease);
+    background var(--ins-dur) var(--ins-ease-out),
+    color var(--ins-dur) var(--ins-ease-out),
+    transform var(--ins-dur-fast) var(--ins-ease-out),
+    box-shadow var(--ins-dur) var(--ins-ease-out);
   user-select: none;
   white-space: nowrap;
-  text-transform: uppercase;
 }
 
 .ins-btn:hover {
-  background: var(--ins-ink);
-  color: var(--ins-bg);
-  border-color: var(--ins-ink);
+  background: #ffffff;
+  transform: translateY(-1px);
+  box-shadow: var(--ins-shadow-soft);
+}
+
+:root[data-theme="instrument-dark"] .ins-btn:hover {
+  background: var(--ins-raised-2, #38373f);
 }
 
 .ins-btn:active {
-  opacity: 0.8;
+  transform: translateY(0);
+  box-shadow: var(--ins-shadow-pill);
 }
 
 .ins-btn:disabled {
-  opacity: 0.35;
+  opacity: 0.4;
   pointer-events: none;
-  background: transparent;
-  color: var(--ins-ink);
-  border-color: var(--ins-line);
 }
 
 .ins-btn.is-primary {
   background: var(--ins-ink);
   color: var(--ins-bg);
-  border-color: var(--ins-ink);
+  box-shadow: var(--ins-shadow-pill);
 }
 
 .ins-btn.is-primary:hover {
-  background: transparent;
-  color: var(--ins-ink);
+  filter: brightness(1.06);
+  transform: translateY(-1px);
 }
 
 .ins-btn.is-ghost {
-  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
   color: var(--ins-ink-muted);
 }
 
 .ins-btn.is-ghost:hover {
-  background: transparent;
+  background: rgba(217, 138, 112, 0.1);
   color: var(--ins-ink);
-  border-color: var(--ins-line-strong);
+  box-shadow: none;
 }
 
 .ins-iconbtn {
@@ -365,31 +381,28 @@ body:has(.ins-root) {
   width: 30px;
   height: 28px;
   border: none;
-  border-radius: var(--ins-r);
+  border-radius: 999px;
   background: transparent;
   color: var(--ins-ink-muted);
   cursor: default;
   transition:
-    background var(--ins-dur-fast) var(--ins-ease),
-    color var(--ins-dur-fast) var(--ins-ease);
+    background var(--ins-dur) var(--ins-ease-out),
+    color var(--ins-dur) var(--ins-ease-out),
+    transform var(--ins-dur-fast) var(--ins-ease-out);
 }
 
 .ins-iconbtn:hover {
+  background: rgba(217, 138, 112, 0.12);
   color: var(--ins-ink);
-  background: rgba(255, 255, 255, 0.07);
-}
-
-:root[data-theme="instrument-light"] .ins-iconbtn:hover {
-  background: rgba(17, 17, 16, 0.07);
 }
 
 .ins-iconbtn:active {
-  opacity: 0.7;
+  transform: scale(0.94);
 }
 
 .ins-iconbtn.is-on {
-  background: var(--ins-ink);
-  color: var(--ins-bg);
+  background: rgba(217, 138, 112, 0.16);
+  color: var(--ins-red);
 }
 
 .ins-iconbtn:disabled {
@@ -397,35 +410,34 @@ body:has(.ins-root) {
   pointer-events: none;
 }
 
-/* Segmented control — inverted active cell, no chrome */
+/* Segmented control — one soft capsule, the selected cell floats */
 .ins-seg {
   display: inline-flex;
   align-items: stretch;
-  gap: 0;
-  border: 1px solid var(--ins-line-strong);
-  border-radius: var(--ins-r);
-  overflow: hidden;
+  gap: 2px;
+  padding: 2px;
+  border-radius: 999px;
+  background: rgba(62, 56, 48, 0.07);
+}
+
+:root[data-theme="instrument-dark"] .ins-seg {
+  background: rgba(0, 0, 0, 0.22);
 }
 
 .ins-seg button {
   appearance: none;
   border: none;
-  border-right: 1px solid var(--ins-line);
+  border-radius: 999px;
   background: transparent;
   color: var(--ins-ink-muted);
-  font-size: var(--ins-fs-cap);
+  font-size: var(--ins-fs-sub);
   font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  padding: 4px 11px;
+  padding: 3px 12px;
   cursor: default;
   transition:
-    background var(--ins-dur-fast) var(--ins-ease),
-    color var(--ins-dur-fast) var(--ins-ease);
-}
-
-.ins-seg button:last-child {
-  border-right: none;
+    background var(--ins-dur) var(--ins-ease-out),
+    color var(--ins-dur) var(--ins-ease-out),
+    box-shadow var(--ins-dur) var(--ins-ease-out);
 }
 
 .ins-seg button:hover {
@@ -433,8 +445,9 @@ body:has(.ins-root) {
 }
 
 .ins-seg button.is-active {
-  background: var(--ins-ink);
-  color: var(--ins-bg);
+  background: var(--ins-bg-raise);
+  color: var(--ins-ink);
+  box-shadow: var(--ins-shadow-pill);
 }
 
 /* Inputs */
@@ -444,19 +457,27 @@ body:has(.ins-root) {
   appearance: none;
   width: 100%;
   height: 30px;
-  padding: 0 9px;
-  border: 1px solid var(--ins-line-strong);
+  padding: 0 11px;
+  border: 1px solid transparent;
   border-radius: var(--ins-r);
-  background: transparent;
+  background: rgba(62, 56, 48, 0.06);
   color: var(--ins-ink);
   font-size: var(--ins-fs-body);
-  transition: border-color var(--ins-dur-fast) var(--ins-ease);
+  transition:
+    background var(--ins-dur) var(--ins-ease-out),
+    box-shadow var(--ins-dur) var(--ins-ease-out);
+}
+
+:root[data-theme="instrument-dark"] .ins-input,
+:root[data-theme="instrument-dark"] .ins-select,
+:root[data-theme="instrument-dark"] .ins-textarea {
+  background: rgba(0, 0, 0, 0.18);
 }
 
 .ins-textarea {
   height: auto;
   min-height: 64px;
-  padding: 8px 9px;
+  padding: 8px 11px;
   resize: vertical;
   line-height: var(--ins-leading);
 }
@@ -466,27 +487,40 @@ body:has(.ins-root) {
   color: var(--ins-ink-faint);
 }
 
+.ins-input:hover,
+.ins-select:hover,
+.ins-textarea:hover {
+  background: rgba(62, 56, 48, 0.09);
+}
+
+:root[data-theme="instrument-dark"] .ins-input:hover,
+:root[data-theme="instrument-dark"] .ins-select:hover,
+:root[data-theme="instrument-dark"] .ins-textarea:hover {
+  background: rgba(0, 0, 0, 0.24);
+}
+
 .ins-input:focus,
 .ins-select:focus,
 .ins-textarea:focus {
   outline: none;
-  border-color: var(--ins-ink);
+  background: var(--ins-bg-raise);
+  box-shadow: 0 0 0 3px rgba(217, 138, 112, 0.2);
 }
 
 .ins-select {
   padding-right: 24px;
-  background-image: url("data:image/svg+xml;charset=utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5' viewBox='0 0 8 5'%3E%3Cpath d='M1 1l3 3 3-3' fill='none' stroke='%238c8c90' stroke-width='1.4' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml;charset=utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5' viewBox='0 0 8 5'%3E%3Cpath d='M1 1l3 3 3-3' fill='none' stroke='%238f887c' stroke-width='1.6' stroke-linecap='round'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
-  background-position: right 8px center;
+  background-position: right 9px center;
 }
 
 /* Keyboard hints */
 .ins-kbd {
   display: inline-flex;
   align-items: center;
-  padding: 1px 5px;
-  border: 1px solid var(--ins-line);
-  border-radius: var(--ins-r);
+  padding: 1px 6px;
+  border-radius: 6px;
+  background: rgba(62, 56, 48, 0.08);
   color: var(--ins-ink-muted);
   font-family: var(--ins-mono);
   font-size: var(--ins-fs-cap);
@@ -494,45 +528,54 @@ body:has(.ins-root) {
   white-space: nowrap;
 }
 
+:root[data-theme="instrument-dark"] .ins-kbd {
+  background: rgba(0, 0, 0, 0.22);
+}
+
 /* Tags and ticks */
 .ins-tag {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  height: 18px;
-  padding: 0 6px;
-  border: 1px solid var(--ins-line);
-  border-radius: var(--ins-r);
+  height: 19px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: rgba(62, 56, 48, 0.07);
   color: var(--ins-ink-muted);
   font-size: var(--ins-fs-cap);
-  font-weight: 500;
+  font-weight: 550;
   white-space: nowrap;
+}
+
+:root[data-theme="instrument-dark"] .ins-tag {
+  background: rgba(0, 0, 0, 0.2);
 }
 
 .ins-tick {
   display: inline-block;
   width: var(--ins-tick);
   align-self: stretch;
+  border-radius: 999px;
   background: var(--tick-color, var(--ins-ink-faint));
   flex-shrink: 0;
 }
 
 .ins-dot {
   display: inline-block;
-  width: 6px;
-  height: 6px;
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
   background: var(--tick-color, var(--ins-ink-faint));
   flex-shrink: 0;
 }
 
-/* Checkbox — sharp square, ink fill when checked */
+/* Checkbox — round-soft, coral fill when checked */
 .ins-check {
   appearance: none;
-  width: 15px;
-  height: 15px;
-  border: 1px solid var(--ins-line-strong);
-  border-radius: var(--ins-r);
+  width: 17px;
+  height: 17px;
+  border: 1.5px solid var(--ins-line-strong);
+  border-radius: 6px;
   background: transparent;
   cursor: default;
   display: inline-flex;
@@ -540,49 +583,59 @@ body:has(.ins-root) {
   justify-content: center;
   flex-shrink: 0;
   transition:
-    background var(--ins-dur-fast) var(--ins-ease),
-    border-color var(--ins-dur-fast) var(--ins-ease);
+    background var(--ins-dur) var(--ins-ease-spring),
+    border-color var(--ins-dur) var(--ins-ease),
+    box-shadow var(--ins-dur) var(--ins-ease);
 }
 
 .ins-check:hover {
-  border-color: var(--ins-ink);
+  border-color: var(--ins-red);
 }
 
 .ins-check:checked {
-  background: var(--ins-ink);
-  border-color: var(--ins-ink);
+  background: var(--ins-red);
+  border-color: var(--ins-red);
+  box-shadow: 0 2px 8px rgba(217, 138, 112, 0.4);
 }
 
 .ins-check:checked::after {
   content: "";
-  width: 8px;
+  width: 8.5px;
   height: 4.5px;
-  border-left: 1.5px solid var(--ins-bg);
-  border-bottom: 1.5px solid var(--ins-bg);
+  border-left: 1.8px solid #fff;
+  border-bottom: 1.8px solid #fff;
   transform: rotate(-45deg) translate(0.5px, -0.5px);
 }
 
 /* Range slider */
 .ins-slider {
   appearance: none;
-  height: 2px;
-  border-radius: 0;
-  background: var(--ins-line);
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(62, 56, 48, 0.12);
   outline: none;
+}
+
+:root[data-theme="instrument-dark"] .ins-slider {
+  background: rgba(0, 0, 0, 0.24);
 }
 
 .ins-slider::-webkit-slider-thumb {
   appearance: none;
-  width: 12px;
-  height: 20px;
-  border-radius: 1px;
-  background: var(--ins-ink);
-  border: none;
-  box-shadow: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--ins-bg-raise);
+  box-shadow: var(--ins-shadow-pill);
+  transition: transform var(--ins-dur-fast) var(--ins-ease-spring);
+}
+
+.ins-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.15);
 }
 
 /* ==========================================================================
-   Structure — rules, not boxes
+   Structure — soft groups
    ========================================================================== */
 .ins-sec {
   padding-top: var(--ins-s4);
@@ -604,8 +657,8 @@ body:has(.ins-root) {
 
 .ins-sec-head h2 {
   font-size: var(--ins-fs-title);
-  font-weight: 700;
-  letter-spacing: -0.01em;
+  font-weight: 650;
+  letter-spacing: -0.008em;
   color: var(--ins-ink);
 }
 
@@ -614,29 +667,32 @@ body:has(.ins-root) {
   display: flex;
   align-items: center;
   gap: var(--ins-s3);
-  min-height: 32px;
-  padding: 3px 8px;
-  margin: 0 -8px;
-  transition: background var(--ins-dur-fast) var(--ins-ease);
+  min-height: 34px;
+  padding: 3px 10px;
+  margin: 0 -10px;
+  border-radius: var(--ins-r);
+  transition:
+    background var(--ins-dur) var(--ins-ease-out),
+    transform var(--ins-dur-fast) var(--ins-ease-out);
 }
 
 .ins-row:hover {
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(62, 56, 48, 0.05);
 }
 
-:root[data-theme="instrument-light"] .ins-row:hover {
-  background: rgba(17, 17, 16, 0.05);
+:root[data-theme="instrument-dark"] .ins-row:hover {
+  background: rgba(238, 234, 228, 0.05);
 }
 
 .ins-row.is-selected {
-  box-shadow: inset 2px 0 0 var(--ins-ink);
+  background: rgba(217, 138, 112, 0.12);
 }
 
 button.ins-row {
   appearance: none;
   border: none;
   background: transparent;
-  width: calc(100% + 16px);
+  width: calc(100% + 20px);
   text-align: left;
   font: inherit;
   color: inherit;
@@ -646,7 +702,8 @@ button.ins-row {
 /* Table */
 .ins-table {
   width: 100%;
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
   font-size: var(--ins-fs-body);
 }
 
@@ -655,12 +712,12 @@ button.ins-row {
   top: 0;
   z-index: 2;
   background: var(--ins-bg);
-  border-bottom: 1px solid var(--ins-line-strong);
+  border-bottom: 1px solid var(--ins-line);
   padding: 6px 10px;
   text-align: left;
   font-size: var(--ins-fs-label);
   font-weight: 600;
-  letter-spacing: 0.09em;
+  letter-spacing: 0.07em;
   text-transform: uppercase;
   color: var(--ins-ink-muted);
   white-space: nowrap;
@@ -674,15 +731,15 @@ button.ins-row {
 }
 
 .ins-table tbody tr {
-  transition: background var(--ins-dur-fast) var(--ins-ease);
+  transition: background var(--ins-dur) var(--ins-ease-out);
 }
 
 .ins-table tbody tr:hover {
-  background: rgba(255, 255, 255, 0.04);
+  background: rgba(62, 56, 48, 0.045);
 }
 
-:root[data-theme="instrument-light"] .ins-table tbody tr:hover {
-  background: rgba(17, 17, 16, 0.04);
+:root[data-theme="instrument-dark"] .ins-table tbody tr:hover {
+  background: rgba(238, 234, 228, 0.045);
 }
 
 /* Empty state — describes, never pushes */
@@ -703,48 +760,42 @@ button.ins-row {
 }
 
 /* ==========================================================================
-   Overlays — glass, square frames, confident shadows
+   Overlays — milky glass, rounded, floating
    ========================================================================== */
 .ins-backdrop {
   position: fixed;
   inset: 0;
   z-index: 300;
-  background: rgba(0, 0, 0, 0.35);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  background: var(--ins-backdrop);
+  backdrop-filter: blur(10px) saturate(120%);
+  -webkit-backdrop-filter: blur(10px) saturate(120%);
   display: flex;
   align-items: flex-start;
   justify-content: center;
   animation: ins-fade var(--ins-dur) var(--ins-ease);
 }
 
-:root[data-theme="instrument-light"] .ins-backdrop {
-  background: rgba(17, 17, 16, 0.18);
-}
-
 .ins-sheet {
   margin-top: 12vh;
   width: min(560px, calc(100vw - 48px));
-  border: 1px solid var(--ins-line-strong);
-  border-radius: 0;
+  border-radius: var(--ins-r-big);
   background: var(--ins-glass-strong);
   backdrop-filter: var(--ins-blur);
   -webkit-backdrop-filter: var(--ins-blur);
   box-shadow: var(--ins-shadow-sheet);
-  animation: ins-pop var(--ins-dur-panel) var(--ins-ease-out);
+  animation: ins-pop var(--ins-dur-panel) var(--ins-ease-spring);
   overflow: hidden;
 }
 
 .ins-menu {
   min-width: 180px;
-  padding: 4px;
-  border: 1px solid var(--ins-line-strong);
-  border-radius: var(--ins-r);
+  padding: 5px;
+  border-radius: 14px;
   background: var(--ins-menu-bg);
   backdrop-filter: var(--ins-blur);
   -webkit-backdrop-filter: var(--ins-blur);
   box-shadow: var(--ins-shadow-sheet);
-  animation: ins-pop var(--ins-dur-fast) var(--ins-ease);
+  animation: ins-pop var(--ins-dur) var(--ins-ease-spring);
 }
 
 .ins-menu button {
@@ -754,19 +805,21 @@ button.ins-row {
   justify-content: space-between;
   gap: var(--ins-s4);
   width: 100%;
-  padding: 6px 8px;
+  padding: 7px 10px;
   border: none;
+  border-radius: 9px;
   background: transparent;
   color: var(--ins-ink-body);
   font-size: var(--ins-fs-sub);
   text-align: left;
   cursor: default;
+  transition: background var(--ins-dur-fast) var(--ins-ease-out);
 }
 
 .ins-menu button:hover,
 .ins-menu button.is-hot {
-  background: var(--ins-ink);
-  color: var(--ins-bg);
+  background: rgba(217, 138, 112, 0.16);
+  color: var(--ins-ink);
 }
 
 .ins-menu hr {
@@ -787,31 +840,31 @@ button.ins-row {
 @keyframes ins-pop {
   from {
     opacity: 0;
-    transform: translateY(-8px);
+    transform: translateY(-10px) scale(0.97);
   }
   to {
     opacity: 1;
-    transform: translateY(0);
+    transform: translateY(0) scale(1);
   }
 }
 
-/* View change — one quiet rise */
+/* View change — a soft rise and settle */
 @keyframes ins-view-in {
   from {
     opacity: 0;
-    transform: translateY(10px);
+    transform: translateY(14px) scale(0.996);
   }
   to {
     opacity: 1;
-    transform: translateY(0);
+    transform: translateY(0) scale(1);
   }
 }
 
-/* Ticking values — settle in from above on change */
+/* Ticking values — settle in from above */
 @keyframes ins-tick-in {
   from {
-    opacity: 0.2;
-    transform: translateY(-0.35em);
+    opacity: 0.15;
+    transform: translateY(-0.3em);
   }
   to {
     opacity: 1;
@@ -819,45 +872,53 @@ button.ins-row {
   }
 }
 
-/* Live red — breathes */
+/* Live coral — gentle breathing */
 @keyframes ins-breathe {
   0%,
   100% {
     opacity: 1;
+    transform: scale(1);
   }
   50% {
-    opacity: 0.45;
+    opacity: 0.55;
+    transform: scale(0.9);
   }
 }
 
 .ins-now-dot {
-  width: 7px;
-  height: 7px;
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
   background: var(--ins-red);
-  box-shadow: 0 0 8px var(--ins-red-soft);
-  animation: ins-breathe 2s ease-in-out infinite;
+  box-shadow: 0 0 10px var(--ins-red-soft);
+  animation: ins-breathe 2.4s var(--ins-ease) infinite;
 }
 
-/* Progress lines — thin rules that fill */
+/* Progress lines — rounded, pastel, springy fill */
 .ins-meter {
   position: relative;
-  height: 2px;
-  background: rgba(255, 255, 255, 0.1);
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(62, 56, 48, 0.09);
   overflow: hidden;
 }
 
-:root[data-theme="instrument-light"] .ins-meter {
-  background: rgba(17, 17, 16, 0.1);
+:root[data-theme="instrument-dark"] .ins-meter {
+  background: rgba(0, 0, 0, 0.22);
 }
 
 .ins-meter > span {
   position: absolute;
   inset: 0 auto 0 0;
+  border-radius: 999px;
   background: var(--ins-ink);
-  transition: width 600ms var(--ins-ease-out);
+  transition: width 900ms var(--ins-ease-out);
 }
 
 .ins-meter.is-red > span {
   background: var(--ins-red);
+}
+
+.ins-meter.is-green > span {
+  background: var(--ins-green);
 }

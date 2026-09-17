@@ -32,7 +32,9 @@
 .ins-phases {
   display: flex;
   border: 1px solid var(--ins-line);
-  border-radius: var(--ins-r);
+  border-radius: 999px;
+  padding: 2px;
+  gap: 2px;
   overflow: hidden;
 }
 
@@ -63,8 +65,9 @@
 }
 
 .ins-phase.is-active {
-  background: var(--ins-ink);
-  color: var(--ins-bg);
+  background: var(--ins-bg-raise);
+  color: var(--ins-ink);
+  box-shadow: var(--ins-shadow-pill);
 }
 
 .ins-phase.is-recess,
@@ -87,7 +90,8 @@
 .ins-gridwrap {
   overflow-x: auto;
   border: 1px solid var(--ins-line);
-  border-radius: var(--ins-r-panel);
+  border-radius: var(--ins-r-big);
+  box-shadow: var(--ins-shadow-soft);
 }
 
 .ins-grid {
@@ -178,6 +182,9 @@
   position: absolute;
   left: 3px;
   right: 3px;
+  transition:
+    background var(--ins-dur) var(--ins-ease-out),
+    transform var(--ins-dur) var(--ins-ease-out);
   display: flex;
   flex-direction: column;
   gap: 1px;
