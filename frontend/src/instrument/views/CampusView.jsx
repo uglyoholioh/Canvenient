@@ -522,6 +522,12 @@ function VenuesPage({ token }) {
   const draggingRef = useRef(false);
 
   // Full-day schedules per venue (NUSMods, cached a day) — the strips.
+  const availabilityDay = useMemo(() => {
+    const d = new Date();
+    d.setDate(d.getDate() + dayOffset);
+    return DAY_NAMES[(d.getDay() + 6) % 7];
+  }, [dayOffset]);
+
   useEffect(() => {
     getVenueInformation(token)
       .then((data) => setVenuesInfo(data?.venues || {}))
@@ -573,12 +579,6 @@ function VenuesPage({ token }) {
     const timer = window.setTimeout(() => setDebounced(query.trim()), 250);
     return () => window.clearTimeout(timer);
   }, [query]);
-
-  const availabilityDay = useMemo(() => {
-    const d = new Date();
-    d.setDate(d.getDate() + dayOffset);
-    return DAY_NAMES[(d.getDay() + 6) % 7];
-  }, [dayOffset]);
 
   useEffect(() => {
     let alive = true;
