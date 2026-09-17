@@ -58,13 +58,15 @@ export function threeColumnDashboardConfig(config = DEFAULT_DASHBOARD_CONFIG) {
   };
 }
 
-const FORCE_AIBRIEF_KEY = "canvenient.aibrief.forced";
+const FORCE_AIBRIEF_KEY = "canvenient.aibrief.forced.v2";
 
 // The brief is the dashboard's headline. Configs written before it existed
 // hide it; reads surface it until the user saves a customization of their
 // own (saveDashboardConfig arms the flag), after which their choice stands.
 function forceAibriefOnce(order, hidden) {
   try {
+    // Clear the pre-v2 flag written by the one-shot attempt.
+    localStorage.removeItem("canvenient.aibrief.forced");
     if (localStorage.getItem(FORCE_AIBRIEF_KEY)) return { order, hidden };
   } catch {}
   return {
