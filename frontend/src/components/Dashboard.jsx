@@ -456,7 +456,10 @@ export default function Dashboard({ token, user, onNavigate }) {
               .join(" "),
           }}
         >
-          {visibleModules.map(renderModule)}
+          {visibleModules.includes("aibrief") && renderModule("aibrief")}
+          {visibleModules
+            .filter((moduleId) => moduleId !== "aibrief")
+            .map(renderModule)}
           {visibleModules.length === 0 && (
             <div className="dashboard-no-modules">
               No modules are visible. Use the customize button to add one.
