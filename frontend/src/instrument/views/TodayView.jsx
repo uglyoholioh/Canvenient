@@ -168,14 +168,15 @@ export default function TodayView({ token, user, onNavigate }) {
 
   useEffect(() => {
     let alive = true;
+    // Essentials paint the page as soon as they land; the brief is optional
+    // and may think for a while, so it never blocks the view.
     Promise.allSettled([
       getSchedule(token),
       getTasks(token),
       getAcademicModules(token),
       getCampusBusStops(token),
       getVenueLocations(token),
-      getAssistantBrief(token),
-    ]).then(([scheduleRes, tasksRes, modulesRes, stopsRes, locRes, briefRes]) => {
+    ]).then(([scheduleRes, tasksRes, modulesRes, stopsRes, locRes]) => {
       if (!alive) return;
       if (scheduleRes.status === "fulfilled") setSchedule(scheduleRes.value);
       if (tasksRes.status === "fulfilled") setTasks(tasksRes.value || []);
@@ -185,9 +186,13 @@ export default function TodayView({ token, user, onNavigate }) {
         setLocations(locRes.value?.locations || {});
         setCentroids(locRes.value?.building_centroids || {});
       }
-      if (briefRes.status === "fulfilled") setBrief(briefRes.value);
       setLoaded(true);
     });
+    getAssistantBrief(token)
+      .then((data) => {
+        if (alive) setBrief(data);
+      })
+      .catch(() => {});
     return () => {
       alive = false;
     };
@@ -411,16 +416,16 @@ export default function TodayView({ token, user, onNavigate }) {
             {journey?.best && (
               <div className="ins-next-journey">
                 <span className="ins-mono ins-next-route">
-                  {journey.best.service} · {journey.best.fromStopName}
+                  {journey.best.service} from {journey.best.fromStopName}
                 </span>
                 <span className="ins-cap">
-                  bus{" "}
                   {journey.best.nextBusMinutes != null
-                    ? `in ${journey.best.nextBusMinutes} min`
-                    : "awaiting feed"}
-                  {" · "}
-                  arrives {timeHM(journey.best.arrivesAt)} · then {journey.best.walkFromStopMin} min
-                  walk
+                    ? journey.best.nextBusMinutes < 180
+                      ? `bus in ${journey.best.nextBusMinutes} min`
+                      : `bus at ${timeHM(new Date(now.getTime() + journey.best.nextBusMinutes * 60000))}`
+                    : "bus awaiting feed"}
+                  {" · arrives "}
+                  {timeHM(journey.best.arrivesAt)} · then {journey.best.walkFromStopMin} min walk
                   {journey.best.travelSource === "live" ? "" : " · est"}
                 </span>
               </div>
