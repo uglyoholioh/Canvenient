@@ -1,0 +1,85 @@
+/* Tasks — dense table. */
+
+.ins-tasks {
+  max-width: 900px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--ins-s4);
+  min-height: 100%;
+}
+
+.ins-tasks-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.ins-tasks-tablewrap {
+  flex: 1;
+}
+
+.ins-tasks-table td {
+  padding-top: 6px;
+  padding-bottom: 6px;
+}
+
+.ins-tasks-check {
+  width: 32px;
+}
+
+.ins-tasks-title {
+  display: flex;
+  align-items: center;
+  gap: var(--ins-s2);
+  color: var(--ins-ink);
+}
+
+.ins-tasks-title .is-done {
+  color: var(--ins-ink-faint);
+  text-decoration: line-through;
+  text-decoration-color: var(--ins-line-strong);
+}
+
+.ins-tasks-title .ins-tick {
+  height: 16px;
+}
+
+.ins-tasks-module {
+  font-size: var(--ins-fs-sub);
+  color: var(--ins-ink-muted);
+}
+
+.ins-tasks-due {
+  font-size: var(--ins-fs-sub);
+  color: var(--ins-ink-muted);
+}
+
+.ins-tasks-due.is-overdue,
+.ins-tasks-table tr.is-overdue .ins-tasks-title {
+  color: var(--ins-red);
+}
+
+.ins-tasks-table tr.is-overdue .ins-tasks-due {
+  color: var(--ins-red);
+}
+
+.ins-tasks-actions {
+  text-align: right;
+}
+
+.ins-tasks-actions .ins-iconbtn {
+  opacity: 0;
+}
+
+.ins-tasks-table tr:hover .ins-iconbtn {
+  opacity: 1;
+}
+
+.ins-tasks-composer {
+  position: sticky;
+  bottom: 0;
+  padding: var(--ins-s2) 0;
+  background: var(--ins-bg);
+  border-top: 1px solid var(--ins-line);
+}

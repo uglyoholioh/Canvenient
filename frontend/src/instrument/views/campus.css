@@ -1,0 +1,232 @@
+/* Campus — rooms + board + trip. */
+
+.ins-campus {
+  max-width: 1240px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: var(--ins-s6);
+  align-items: start;
+}
+
+@media (max-width: 980px) {
+  .ins-campus {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Rooms */
+.ins-campus-rooms {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ins-s3);
+  min-width: 0;
+}
+
+.ins-campus-search .ins-input {
+  height: 32px;
+}
+
+.ins-campus-scrubber {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ins-s3);
+  flex-wrap: wrap;
+}
+
+.ins-campus-time {
+  display: flex;
+  align-items: center;
+  gap: var(--ins-s2);
+}
+
+.ins-campus-time input[type="range"] {
+  appearance: none;
+  width: 160px;
+  height: 2px;
+  border-radius: 1px;
+  background: var(--ins-line-strong);
+  outline: none;
+}
+
+.ins-campus-time input[type="range"]::-webkit-slider-thumb {
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--ins-ink);
+  border: 3px solid var(--ins-bg);
+  box-shadow: 0 0 0 1px var(--ins-line-strong);
+}
+
+.ins-campus-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.ins-roomrow {
+  display: flex;
+  align-items: center;
+  gap: var(--ins-s3);
+  padding: 6px 0;
+  border-bottom: 1px solid var(--ins-line);
+}
+
+.ins-roomrow:last-child {
+  border-bottom: none;
+}
+
+.ins-savedpin {
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: var(--ins-ink-faint);
+  font-size: 14px;
+  padding: 0 2px;
+  cursor: default;
+}
+
+.ins-savedpin.is-on {
+  color: var(--ins-amber);
+}
+
+.ins-roomrow-code {
+  min-width: 88px;
+  font-size: var(--ins-fs-sub);
+  color: var(--ins-ink);
+}
+
+.ins-roomrow-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--ins-fs-sub);
+  color: var(--ins-ink-muted);
+}
+
+.ins-roomrow-bar {
+  width: 120px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--ins-raised);
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.ins-roomrow-bar span {
+  display: block;
+  height: 100%;
+  border-radius: 2px;
+  background: var(--ins-green);
+}
+
+.ins-roomrow-free {
+  min-width: 150px;
+  text-align: right;
+  flex-shrink: 0;
+  color: var(--ins-ink-muted);
+}
+
+/* Side column */
+.ins-campus-side {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ins-s4);
+  position: sticky;
+  top: 0;
+}
+
+.ins-campus-stopselect {
+  width: auto;
+  max-width: 180px;
+  height: 24px;
+  font-size: var(--ins-fs-cap);
+}
+
+.ins-busboard {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--ins-line);
+  border-radius: var(--ins-r-panel);
+  padding: var(--ins-s2) var(--ins-s3);
+}
+
+.ins-busboard-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--ins-line);
+}
+
+.ins-busboard-row:last-child {
+  border-bottom: none;
+}
+
+.ins-busboard-route {
+  font-weight: 600;
+  color: var(--ins-ink);
+}
+
+.ins-busboard-etas {
+  color: var(--ins-ink-muted);
+  letter-spacing: 0.06em;
+}
+
+.ins-campus-boardfoot {
+  margin-top: var(--ins-s1);
+}
+
+/* Trip planner */
+.ins-trip {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ins-s2);
+}
+
+.ins-place {
+  position: relative;
+}
+
+.ins-place-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 30;
+}
+
+.ins-triproutes {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ins-s2);
+  margin-top: var(--ins-s2);
+}
+
+.ins-triproute {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: var(--ins-s2) 0;
+  border-top: 1px solid var(--ins-line);
+}
+
+.ins-triproute-line {
+  display: flex;
+  align-items: center;
+  gap: var(--ins-s2);
+}
+
+.ins-triproute-total {
+  color: var(--ins-ink-muted);
+}
+
+/* Saved */
+.ins-savedrooms {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ins-s1);
+}

@@ -3,11 +3,12 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-d
 import RegisterForm from "./components/RegisterForm";
 import LoginForm from "./components/LoginForm";
 import AuthShell, { BrandMark } from "./components/AuthShell";
-import WorkspaceLayout from "./components/WorkspaceLayout";
+import InstrumentWorkspace from "./instrument/InstrumentWorkspace";
 import GlobalToast from "./components/GlobalToast";
 import TrayPanel from "./tray/TrayPanel";
 import TrayChip from "./tray/TrayChip";
 import "./components/auth.css";
+import "./design/system.css";
 
 import {
   getStoredToken,
@@ -65,14 +66,17 @@ function App() {
   }, [token]);
 
   useEffect(() => {
-    const storedPreference = localStorage.getItem("canvenient-theme") || "graphite";
-    const preference = storedPreference === "dark" ? "graphite" : storedPreference;
+    // The draft speaks two materials: instrument-dark (default) and
+    // instrument-light. Legacy preferences map onto them.
+    const storedPreference = localStorage.getItem("canvenient-theme") || "instrument-dark";
     const resolvedTheme =
-      preference === "system"
+      storedPreference === "system"
         ? window.matchMedia("(prefers-color-scheme: dark)").matches
-          ? "graphite"
-          : "light"
-        : preference;
+          ? "instrument-dark"
+          : "instrument-light"
+        : storedPreference === "instrument-light" || storedPreference === "light"
+          ? "instrument-light"
+          : "instrument-dark";
     document.documentElement.setAttribute("data-theme", resolvedTheme);
   }, []);
 
@@ -135,7 +139,7 @@ function App() {
             !currentUser ? (
               <Navigate to="/login" replace />
             ) : (
-              <WorkspaceLayout
+              <InstrumentWorkspace
                 token={token}
                 user={currentUser}
                 onLogout={handleLogout}

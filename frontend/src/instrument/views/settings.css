@@ -1,0 +1,139 @@
+/* Settings — panes. */
+
+.ins-settings {
+  max-width: 720px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 150px minmax(0, 1fr);
+  gap: var(--ins-s6);
+  align-items: start;
+}
+
+@media (max-width: 700px) {
+  .ins-settings {
+    grid-template-columns: 1fr;
+  }
+}
+
+.ins-settings-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  position: sticky;
+  top: 0;
+}
+
+.ins-settings-tab {
+  appearance: none;
+  border: none;
+  background: transparent;
+  text-align: left;
+  padding: 5px 8px;
+  border-radius: var(--ins-r-ctrl);
+  font-size: var(--ins-fs-body);
+  color: var(--ins-ink-muted);
+  cursor: default;
+  transition:
+    background var(--ins-dur-fast) var(--ins-ease),
+    color var(--ins-dur-fast) var(--ins-ease);
+}
+
+.ins-settings-tab:hover {
+  color: var(--ins-ink);
+  background: color-mix(in srgb, var(--ins-raised) 72%, transparent);
+}
+
+.ins-settings-tab.is-active {
+  background: var(--ins-selection);
+  color: var(--ins-selection-ink);
+}
+
+.ins-settings-pane {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ins-s4);
+}
+
+.ins-setting {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ins-s2);
+  padding-bottom: var(--ins-s4);
+  border-bottom: 1px solid var(--ins-line);
+}
+
+.ins-sec .ins-setting:last-child {
+  border-bottom: none;
+}
+
+.ins-setting-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--ins-s3);
+  color: var(--ins-ink);
+  font-weight: 600;
+  font-size: var(--ins-fs-title);
+  letter-spacing: -0.01em;
+}
+
+.ins-setting-inline {
+  display: flex;
+  gap: var(--ins-s2);
+  align-items: center;
+}
+
+.ins-setting-inline .ins-input {
+  max-width: 320px;
+}
+
+/* Theme picker */
+.ins-themes {
+  display: flex;
+  gap: var(--ins-s2);
+}
+
+.ins-theme {
+  appearance: none;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: var(--ins-s2) var(--ins-s3);
+  border: 1px solid var(--ins-line-strong);
+  border-radius: var(--ins-r-panel);
+  background: transparent;
+  color: var(--ins-ink);
+  font: inherit;
+  cursor: default;
+  transition:
+    border-color var(--ins-dur-fast) var(--ins-ease),
+    background var(--ins-dur-fast) var(--ins-ease);
+}
+
+.ins-theme:hover {
+  background: var(--ins-raised);
+}
+
+.ins-theme.is-active {
+  border-color: var(--ins-ink-muted);
+  background: var(--ins-selection);
+}
+
+.ins-theme-caption {
+  color: var(--ins-ink-muted);
+}
+
+/* Backups */
+.ins-backuprow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ins-s3);
+  padding: 6px 0;
+  border-bottom: 1px solid var(--ins-line);
+}
+
+.ins-backuprow:last-child {
+  border-bottom: none;
+}

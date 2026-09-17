@@ -108,8 +108,16 @@ export default function TrayPanel() {
   // The tray windows render outside the workspace shell, so they apply the
   // stored theme themselves.
   useEffect(() => {
-    const theme = window.localStorage.getItem("canvenient-theme") || "graphite";
-    document.documentElement.setAttribute("data-theme", theme);
+    const theme = window.localStorage.getItem("canvenient-theme") || "instrument-dark";
+    const resolved =
+      theme === "instrument-light" || theme === "light"
+        ? "instrument-light"
+        : theme === "system"
+          ? window.matchMedia("(prefers-color-scheme: dark)").matches
+            ? "instrument-dark"
+            : "instrument-light"
+          : "instrument-dark";
+    document.documentElement.setAttribute("data-theme", resolved);
   }, []);
 
   // The tray right-click "Start focus" item lands here.

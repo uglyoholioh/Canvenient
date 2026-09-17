@@ -1,0 +1,54 @@
+/* Decide. */
+
+.ins-decide {
+  max-width: 900px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  gap: var(--ins-s6);
+  align-items: start;
+}
+
+@media (max-width: 860px) {
+  .ins-decide {
+    grid-template-columns: 1fr;
+  }
+}
+
+.ins-decide-wheel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--ins-s3);
+}
+
+.ins-decide-spin {
+  min-width: 120px;
+}
+
+.ins-decide-result {
+  color: var(--ins-ink-muted);
+  min-height: 20px;
+}
+
+.ins-decide-wheelmenu {
+  flex-wrap: wrap;
+}
+
+.ins-decide-options {
+  display: flex;
+  flex-direction: column;
+}
+
+.ins-decide-option {
+  display: flex;
+  align-items: center;
+  gap: var(--ins-s2);
+  padding: 4px 0;
+  font-size: var(--ins-fs-sub);
+  color: var(--ins-ink-body);
+}
+
+.ins-decide-option .is-off {
+  color: var(--ins-ink-faint);
+}

@@ -1,0 +1,746 @@
+/* ==========================================================================
+   THE INSTRUMENT — design system for the redesign draft.
+   One material, hairline structure, mono data, declarative voice.
+   inform, never instruct: every string the UI renders states what is.
+   Loads after index.css; tokens are namespaced --ins-* so nothing collides,
+   while the legacy vars are pinned to the instrument palette so any old-class
+   surface (tray, settings during migration) stays inside the same material.
+   ========================================================================== */
+
+/* ---- Graphite (dark, default) ------------------------------------------ */
+:root,
+:root[data-theme="instrument-dark"] {
+  --ins-bg: #0f1012; /* content material */
+  --ins-panel: #141518; /* sidebar, toolbar, drawers */
+  --ins-raised: #1a1c1f; /* controls, hovered rows */
+  --ins-active: #232529; /* pressed / selected rows */
+  --ins-line: rgba(255, 255, 255, 0.075);
+  --ins-line-strong: rgba(255, 255, 255, 0.14);
+  --ins-ink: #ececec;
+  --ins-ink-body: #c9cacb;
+  --ins-ink-muted: #8a8b8f;
+  --ins-ink-faint: #5d5e63;
+  --ins-accent: #b7b8bb; /* interactive graphite */
+  --ins-accent-ink: #101113; /* text on accent fills */
+  --ins-selection: rgba(201, 202, 204, 0.16);
+  --ins-selection-ink: #f1f1f1;
+  --ins-green: #8fba9e; /* the one signal colour; ≤2 uses per screen */
+  --ins-green-bg: rgba(143, 186, 158, 0.12);
+  --ins-red: #d89196;
+  --ins-red-bg: rgba(216, 145, 150, 0.1);
+  --ins-amber: #c9ad7b;
+  --ins-amber-bg: rgba(201, 173, 123, 0.1);
+  --ins-backdrop: rgba(8, 9, 10, 0.58);
+  --ins-shadow-overlay:
+    0 0 0 0.5px rgba(255, 255, 255, 0.08), 0 2px 8px rgba(0, 0, 0, 0.25),
+    0 12px 32px rgba(0, 0, 0, 0.35);
+  --ins-shadow-sheet: 0 0 0 0.5px rgba(255, 255, 255, 0.07), 0 4px 16px rgba(0, 0, 0, 0.3);
+
+  /* legacy vars pinned so unmigrated surfaces share the material */
+  --bg: #0f1012;
+  --bg-rgb: 15, 16, 18;
+  --surface: #141518;
+  --surface-muted: #1a1c1f;
+  --surface-warm: #202225;
+  --surface-hover: #26282c;
+  --primary: #ececec;
+  --primary-rgb: 236, 236, 236;
+  --accent: #b7b8bb;
+  --accent-gold: #c9c0aa;
+  --accent-glow: none;
+  --border: rgba(255, 255, 255, 0.075);
+  --border-strong: rgba(255, 255, 255, 0.14);
+  --border-focus: #c9cacb;
+  --text-h: #ececec;
+  --text: #c9cacb;
+  --text-muted: #8a8b8f;
+  --text-inverse: #101113;
+  --success: #8fba9e;
+  --success-bg: rgba(143, 186, 158, 0.12);
+  --error: #d89196;
+  --error-bg: rgba(216, 145, 150, 0.1);
+  --warning: #c9ad7b;
+  --warning-bg: rgba(201, 173, 123, 0.1);
+  --info: #a8bec9;
+  --color-mac-window: #0f1012;
+  --color-mac-sidebar: #141518;
+  --color-mac-toolbar: #141518;
+  --color-mac-panel: #191b1e;
+  --color-mac-control: #1e2023;
+  --color-mac-control-hover: #282a2e;
+  --color-mac-selection: rgba(201, 202, 204, 0.16);
+  --color-mac-selection-ink: #f1f1f1;
+  --color-mac-muted: #8a8b8f;
+  --color-mac-divider: rgba(255, 255, 255, 0.075);
+  --color-mac-shadow: rgba(0, 0, 0, 0.26);
+  --color-mac-backdrop: rgba(8, 9, 10, 0.58);
+}
+
+/* ---- Paper (light) ------------------------------------------------------ */
+:root[data-theme="instrument-light"] {
+  --ins-bg: #f4f3ef;
+  --ins-panel: #fbfaf6;
+  --ins-raised: #eceae4;
+  --ins-active: #e2e0d8;
+  --ins-line: rgba(30, 30, 28, 0.1);
+  --ins-line-strong: rgba(30, 30, 28, 0.18);
+  --ins-ink: #191a1c;
+  --ins-ink-body: #333438;
+  --ins-ink-muted: #77787c;
+  --ins-ink-faint: #a3a4a8;
+  --ins-accent: #2c2d30;
+  --ins-accent-ink: #f7f6f2;
+  --ins-selection: rgba(44, 45, 48, 0.12);
+  --ins-selection-ink: #191a1c;
+  --ins-green: #2e7d4f;
+  --ins-green-bg: rgba(46, 125, 79, 0.1);
+  --ins-red: #b3424f;
+  --ins-red-bg: rgba(179, 66, 79, 0.09);
+  --ins-amber: #93702c;
+  --ins-amber-bg: rgba(147, 112, 44, 0.1);
+  --ins-backdrop: rgba(28, 28, 26, 0.32);
+  --ins-shadow-overlay:
+    0 0 0 0.5px rgba(25, 26, 28, 0.12), 0 2px 8px rgba(25, 26, 28, 0.08),
+    0 12px 32px rgba(25, 26, 28, 0.12);
+  --ins-shadow-sheet: 0 0 0 0.5px rgba(25, 26, 28, 0.1), 0 4px 16px rgba(25, 26, 28, 0.1);
+
+  --bg: #f4f3ef;
+  --bg-rgb: 244, 243, 239;
+  --surface: #fbfaf6;
+  --surface-muted: #efeee9;
+  --surface-warm: #e6e4dc;
+  --surface-hover: #dcdad2;
+  --primary: #191a1c;
+  --primary-rgb: 25, 26, 28;
+  --accent: #2c2d30;
+  --accent-gold: #93702c;
+  --accent-glow: none;
+  --border: rgba(30, 30, 28, 0.1);
+  --border-strong: rgba(30, 30, 28, 0.18);
+  --border-focus: #55565a;
+  --text-h: #191a1c;
+  --text: #333438;
+  --text-muted: #77787c;
+  --text-inverse: #f7f6f2;
+  --success: #2e7d4f;
+  --success-bg: rgba(46, 125, 79, 0.1);
+  --error: #b3424f;
+  --error-bg: rgba(179, 66, 79, 0.09);
+  --warning: #93702c;
+  --warning-bg: rgba(147, 112, 44, 0.1);
+  --info: #4a6f80;
+  --color-mac-window: #f4f3ef;
+  --color-mac-sidebar: #eeede7;
+  --color-mac-toolbar: #fbfaf6;
+  --color-mac-panel: #ffffff;
+  --color-mac-control: #e9e7e0;
+  --color-mac-control-hover: #dfddd5;
+  --color-mac-selection: rgba(44, 45, 48, 0.12);
+  --color-mac-selection-ink: #191a1c;
+  --color-mac-muted: #77787c;
+  --color-mac-divider: rgba(30, 30, 28, 0.1);
+  --color-mac-shadow: rgba(40, 40, 36, 0.12);
+  --color-mac-backdrop: rgba(28, 28, 26, 0.32);
+}
+
+/* ---- Shared tokens ------------------------------------------------------ */
+:root {
+  --ins-font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif;
+  --ins-mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, monospace;
+
+  --ins-fs-display: 26px; /* the date, the one hero moment */
+  --ins-fs-title: 15px; /* view + section titles */
+  --ins-fs-body: 13px;
+  --ins-fs-sub: 12px;
+  --ins-fs-cap: 11px; /* absolute floor */
+
+  --ins-leading-tight: 1.2;
+  --ins-leading: 1.45;
+
+  --ins-s1: 4px;
+  --ins-s2: 8px;
+  --ins-s3: 12px;
+  --ins-s4: 16px;
+  --ins-s5: 24px;
+  --ins-s6: 32px;
+
+  --ins-r-ctrl: 6px;
+  --ins-r-panel: 10px;
+  --ins-r-tag: 4px;
+
+  --ins-tick: 3px; /* module ink tick width */
+  --ins-sidebar-w: 216px;
+  --ins-toolbar-h: 40px;
+
+  --ins-ease: cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  --ins-dur-fast: 120ms;
+  --ins-dur: 160ms;
+  --ins-dur-panel: 220ms;
+
+  --ins-content-max: 1080px;
+}
+
+/* ==========================================================================
+   Base adjustments — scoped so the tray windows and auth are unaffected
+   until their own pass.
+   ========================================================================== */
+body:has(.ins-root) {
+  background: var(--ins-bg);
+  color: var(--ins-ink-body);
+  font-family: var(--ins-font);
+  font-size: var(--ins-fs-body);
+  line-height: var(--ins-leading);
+  -webkit-font-smoothing: antialiased;
+}
+
+.ins-root,
+.ins-root *,
+.ins-root *::before,
+.ins-root *::after {
+  box-sizing: border-box;
+}
+
+.ins-root ::selection {
+  background: var(--ins-selection);
+  color: var(--ins-selection-ink);
+}
+
+.ins-root :focus-visible {
+  outline: 2px solid var(--ins-ink-muted);
+  outline-offset: 1px;
+  border-radius: 2px;
+}
+
+.ins-root button,
+.ins-root input,
+.ins-root select,
+.ins-root textarea {
+  font: inherit;
+  color: inherit;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ins-root *,
+  .ins-root *::before,
+  .ins-root *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ==========================================================================
+   Type
+   ========================================================================== */
+.ins-display {
+  font-size: var(--ins-fs-display);
+  font-weight: 600;
+  letter-spacing: -0.022em;
+  line-height: var(--ins-leading-tight);
+  color: var(--ins-ink);
+}
+
+.ins-title {
+  font-size: var(--ins-fs-title);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--ins-ink);
+}
+
+.ins-sub {
+  font-size: var(--ins-fs-sub);
+  color: var(--ins-ink-muted);
+}
+
+.ins-cap {
+  font-size: var(--ins-fs-cap);
+  color: var(--ins-ink-muted);
+}
+
+.ins-mono {
+  font-family: var(--ins-mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
+/* ==========================================================================
+   Controls
+   ========================================================================== */
+.ins-btn {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 26px;
+  padding: 0 10px;
+  border: 1px solid var(--ins-line-strong);
+  border-radius: var(--ins-r-ctrl);
+  background: var(--ins-raised);
+  color: var(--ins-ink);
+  font-size: var(--ins-fs-sub);
+  font-weight: 500;
+  cursor: default;
+  transition:
+    background var(--ins-dur-fast) var(--ins-ease),
+    border-color var(--ins-dur-fast) var(--ins-ease);
+  user-select: none;
+  white-space: nowrap;
+}
+
+.ins-btn:hover {
+  background: var(--ins-active);
+}
+
+.ins-btn:active {
+  background: var(--ins-selection);
+}
+
+.ins-btn:disabled {
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+.ins-btn.is-primary {
+  background: var(--ins-accent);
+  border-color: transparent;
+  color: var(--ins-accent-ink);
+}
+
+.ins-btn.is-primary:hover {
+  background: var(--ins-ink);
+}
+
+.ins-btn.is-ghost {
+  background: transparent;
+  border-color: transparent;
+  color: var(--ins-ink-muted);
+}
+
+.ins-btn.is-ghost:hover {
+  background: var(--ins-raised);
+  color: var(--ins-ink);
+}
+
+.ins-iconbtn {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 26px;
+  border: none;
+  border-radius: var(--ins-r-ctrl);
+  background: transparent;
+  color: var(--ins-ink-muted);
+  cursor: default;
+  transition:
+    background var(--ins-dur-fast) var(--ins-ease),
+    color var(--ins-dur-fast) var(--ins-ease);
+}
+
+.ins-iconbtn:hover {
+  background: var(--ins-raised);
+  color: var(--ins-ink);
+}
+
+.ins-iconbtn:active {
+  background: var(--ins-selection);
+}
+
+.ins-iconbtn.is-on {
+  background: var(--ins-selection);
+  color: var(--ins-selection-ink);
+}
+
+.ins-iconbtn:disabled {
+  opacity: 0.35;
+  pointer-events: none;
+}
+
+/* Segmented control — view switching, never pills */
+.ins-seg {
+  display: inline-flex;
+  align-items: stretch;
+  padding: 2px;
+  gap: 2px;
+  border: 1px solid var(--ins-line);
+  border-radius: 7px;
+  background: color-mix(in srgb, var(--ins-panel) 72%, var(--ins-bg));
+}
+
+.ins-seg button {
+  appearance: none;
+  border: none;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--ins-ink-muted);
+  font-size: var(--ins-fs-sub);
+  font-weight: 500;
+  padding: 3px 10px;
+  cursor: default;
+  transition:
+    background var(--ins-dur-fast) var(--ins-ease),
+    color var(--ins-dur-fast) var(--ins-ease);
+}
+
+.ins-seg button:hover {
+  color: var(--ins-ink);
+}
+
+.ins-seg button.is-active {
+  background: var(--ins-raised);
+  color: var(--ins-ink);
+  box-shadow: 0 0 0 0.5px var(--ins-line-strong);
+}
+
+/* Inputs */
+.ins-input,
+.ins-select,
+.ins-textarea {
+  appearance: none;
+  width: 100%;
+  height: 28px;
+  padding: 0 9px;
+  border: 1px solid var(--ins-line-strong);
+  border-radius: var(--ins-r-ctrl);
+  background: var(--ins-bg);
+  color: var(--ins-ink);
+  font-size: var(--ins-fs-body);
+  transition: border-color var(--ins-dur-fast) var(--ins-ease);
+}
+
+.ins-textarea {
+  height: auto;
+  min-height: 64px;
+  padding: 8px 9px;
+  resize: vertical;
+  line-height: var(--ins-leading);
+}
+
+.ins-input::placeholder,
+.ins-textarea::placeholder {
+  color: var(--ins-ink-faint);
+}
+
+.ins-input:focus,
+.ins-select:focus,
+.ins-textarea:focus {
+  outline: none;
+  border-color: var(--ins-ink-muted);
+}
+
+.ins-select {
+  padding-right: 24px;
+  background-image: url("data:image/svg+xml;charset=utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5' viewBox='0 0 8 5'%3E%3Cpath d='M1 1l3 3 3-3' fill='none' stroke='%238a8b8f' stroke-width='1.4' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+}
+
+/* Keyboard hints */
+.ins-kbd {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 5px;
+  border: 0.5px solid var(--ins-line-strong);
+  border-radius: 4px;
+  background: var(--ins-raised);
+  color: var(--ins-ink-muted);
+  font-family: var(--ins-font);
+  font-size: var(--ins-fs-cap);
+  line-height: 1.5;
+  white-space: nowrap;
+}
+
+/* Tags and ticks — data, not decoration */
+.ins-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 18px;
+  padding: 0 6px;
+  border-radius: var(--ins-r-tag);
+  background: var(--ins-raised);
+  color: var(--ins-ink-muted);
+  font-size: var(--ins-fs-cap);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.ins-tick {
+  display: inline-block;
+  width: var(--ins-tick);
+  align-self: stretch;
+  border-radius: 2px;
+  background: var(--tick-color, var(--ins-ink-faint));
+  flex-shrink: 0;
+}
+
+.ins-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--tick-color, var(--ins-ink-faint));
+  flex-shrink: 0;
+}
+
+/* Bracket checkbox — the house checkbox idiom, kept */
+.ins-check {
+  appearance: none;
+  width: 15px;
+  height: 15px;
+  border: 1px solid var(--ins-line-strong);
+  border-radius: 4px;
+  background: transparent;
+  cursor: default;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition:
+    background var(--ins-dur-fast) var(--ins-ease),
+    border-color var(--ins-dur-fast) var(--ins-ease);
+}
+
+.ins-check:hover {
+  border-color: var(--ins-ink-muted);
+}
+
+.ins-check:checked {
+  background: var(--ins-accent);
+  border-color: var(--ins-accent);
+}
+
+.ins-check:checked::after {
+  content: "";
+  width: 8px;
+  height: 4.5px;
+  border-left: 1.5px solid var(--ins-accent-ink);
+  border-bottom: 1.5px solid var(--ins-accent-ink);
+  transform: rotate(-45deg) translate(0.5px, -0.5px);
+}
+
+/* ==========================================================================
+   Structure — sections carry by hairlines, not cards
+   ========================================================================== */
+.ins-sec {
+  padding-top: var(--ins-s4);
+  border-top: 1px solid var(--ins-line);
+}
+
+.ins-sec:first-child {
+  padding-top: 0;
+  border-top: none;
+}
+
+.ins-sec-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--ins-s3);
+  margin-bottom: var(--ins-s3);
+}
+
+.ins-sec-head h2 {
+  font-size: var(--ins-fs-title);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--ins-ink);
+}
+
+/* Rows */
+.ins-row {
+  display: flex;
+  align-items: center;
+  gap: var(--ins-s3);
+  min-height: 32px;
+  padding: 3px 8px;
+  margin: 0 -8px;
+  border-radius: var(--ins-r-ctrl);
+  transition: background var(--ins-dur-fast) var(--ins-ease);
+}
+
+.ins-row:hover {
+  background: color-mix(in srgb, var(--ins-panel) 55%, transparent);
+}
+
+.ins-row.is-selected {
+  background: var(--ins-selection);
+}
+
+button.ins-row {
+  appearance: none;
+  border: none;
+  background: transparent;
+  width: calc(100% + 16px);
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  cursor: default;
+}
+
+/* Table */
+.ins-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--ins-fs-body);
+}
+
+.ins-table th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--ins-bg);
+  border-bottom: 1px solid var(--ins-line);
+  padding: 6px 10px;
+  text-align: left;
+  font-size: var(--ins-fs-cap);
+  font-weight: 500;
+  color: var(--ins-ink-muted);
+  white-space: nowrap;
+}
+
+.ins-table td {
+  border-bottom: 1px solid var(--ins-line);
+  padding: 7px 10px;
+  vertical-align: middle;
+  color: var(--ins-ink-body);
+}
+
+.ins-table tbody tr {
+  transition: background var(--ins-dur-fast) var(--ins-ease);
+}
+
+.ins-table tbody tr:hover {
+  background: color-mix(in srgb, var(--ins-panel) 55%, transparent);
+}
+
+/* Empty state — describes, never pushes */
+.ins-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--ins-s2);
+  padding: var(--ins-s6) var(--ins-s4);
+  text-align: center;
+  color: var(--ins-ink-faint);
+  font-size: var(--ins-fs-sub);
+}
+
+.ins-empty .ins-kbd {
+  margin-left: 2px;
+}
+
+/* ==========================================================================
+   Overlays — menu, sheet, popover
+   ========================================================================== */
+.ins-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  background: var(--ins-backdrop);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  animation: ins-fade var(--ins-dur) var(--ins-ease);
+}
+
+.ins-sheet {
+  margin-top: 12vh;
+  width: min(560px, calc(100vw - 48px));
+  border: 1px solid var(--ins-line-strong);
+  border-radius: var(--ins-r-panel);
+  background: var(--ins-panel);
+  box-shadow: var(--ins-shadow-sheet);
+  animation: ins-pop var(--ins-dur-panel) var(--ins-ease);
+  overflow: hidden;
+}
+
+.ins-menu {
+  min-width: 180px;
+  padding: 4px;
+  border: 1px solid var(--ins-line-strong);
+  border-radius: var(--ins-r-ctrl);
+  background: var(--ins-panel);
+  box-shadow: var(--ins-shadow-sheet);
+  animation: ins-pop var(--ins-dur-fast) var(--ins-ease);
+}
+
+.ins-menu button {
+  appearance: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ins-s4);
+  width: 100%;
+  padding: 5px 8px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--ins-ink-body);
+  font-size: var(--ins-fs-sub);
+  text-align: left;
+  cursor: default;
+}
+
+.ins-menu button:hover,
+.ins-menu button.is-hot {
+  background: var(--ins-selection);
+  color: var(--ins-selection-ink);
+}
+
+.ins-menu hr {
+  border: none;
+  border-top: 1px solid var(--ins-line);
+  margin: 4px 6px;
+}
+
+@keyframes ins-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes ins-pop {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.99);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes ins-slide-in {
+  from {
+    transform: translateX(24px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+/* Now-line — the only continuously moving element */
+@keyframes ins-breathe {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.55;
+  }
+}
+
+.ins-now-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--ins-red);
+  animation: ins-breathe 4s ease-in-out infinite;
+}
