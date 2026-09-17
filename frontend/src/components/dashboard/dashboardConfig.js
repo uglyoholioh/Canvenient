@@ -61,19 +61,16 @@ export function threeColumnDashboardConfig(config = DEFAULT_DASHBOARD_CONFIG) {
 const FORCE_AIBRIEF_KEY = "canvenient.aibrief.forced";
 
 // The brief is the dashboard's headline. Configs written before it existed
-// hide it; surface it once, then respect whatever the user chooses.
+// hide it; reads surface it until the user saves a customization of their
+// own (saveDashboardConfig arms the flag), after which their choice stands.
 function forceAibriefOnce(order, hidden) {
   try {
     if (localStorage.getItem(FORCE_AIBRIEF_KEY)) return { order, hidden };
-    if (!hidden.includes("aibrief")) return { order, hidden };
-    localStorage.setItem(FORCE_AIBRIEF_KEY, "1");
-    return {
-      order: ["aibrief", ...order.filter((id) => id !== "aibrief")],
-      hidden: hidden.filter((id) => id !== "aibrief"),
-    };
-  } catch {
-    return { order, hidden };
-  }
+  } catch {}
+  return {
+    order: ["aibrief", ...order.filter((id) => id !== "aibrief")],
+    hidden: hidden.filter((id) => id !== "aibrief"),
+  };
 }
 
 export function readDashboardLayout() {
@@ -171,6 +168,10 @@ export function normalizeDashboardSize(size, fallback = { columns: 1, rows: 1 })
 }
 
 export function saveDashboardConfig(config) {
+  // A user-saved customization ends the headline force — their layout wins.
+  try {
+    localStorage.setItem(FORCE_AIBRIEF_KEY, "1");
+  } catch {}
   localStorage.setItem("canvenient-dashboard-config", JSON.stringify(config));
   window.dispatchEvent(new Event("dashboard-settings-updated"));
 }
