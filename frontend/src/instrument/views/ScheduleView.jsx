@@ -1,14 +1,26 @@
 // Schedule — the horizontal timeline: days stack as rows, time flows left
-// to right, and the red now-line crosses today where it belongs. Phase strip
-// on top, weekend collapsed until it has somewhere to be, class sheets open
-// in the context drawer. ←/→ move weeks, T returns.
+// to right, and the red now-line crosses today where it belongs.
+//
+// Non-instructional weeks say so in words ("Recess Week") and stay meaningful:
+// Canvas events and any tasks the user scheduled that week still render on the
+// grid. Only a truly empty week shows a note, and it describes, it doesn't
+// push. Class cards carry the full facts: type + class number, module name,
+// venue, time. ←/→ move weeks, T returns.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { getCanvasCalendarEvents, getSchedule, importIcs, importNusmods } from "../../api";
+import {
+  getCanvasCalendarEvents,
+  getSchedule,
+  getTasks,
+  importIcs,
+  importNusmods,
+  updateTask,
+} from "../../api";
 import {
   getAcademicWeek,
   scheduleItemsForDate,
   startOfLocalDay,
+  taskDueDate,
   weekDates,
   withCanvasEvents,
   minutesSinceMidnight,
@@ -21,52 +33,15 @@ const DAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const START_HOUR = 8;
 const END_HOUR = 23;
 const TOTAL_MINUTES = (END_HOUR - START_HOUR) * 60;
-const ROW_HEIGHT = 64;
+const ROW_HEIGHT = 72;
 
 function timeHM(date) {
   return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false });
 }
 
-// Semester phase model for the strip: a window around the current week,
-// collapsed into runs (instructional weeks, recess, reading, exams).
-function semesterPhases(now) {
-  const segments = [];
-  const monday = startOfLocalDay(now);
-  monday.setDate(monday.getDate() - ((monday.getDay() + 6) % 7) - 5 * 7);
-  for (let offset = 0; offset <= 21; offset += 1) {
-    const probe = new Date(monday);
-    probe.setDate(monday.getDate() + offset * 7);
-    const week = getAcademicWeek(probe);
-    if (!week) continue;
-    const last = segments[segments.length - 1];
-    if (
-      last &&
-      last.type === week.type &&
-      week.type === "instructional" &&
-      last.endWeek + 1 === week.weekNumber
-    ) {
-      last.endWeek = week.weekNumber;
-      last.endDate = probe;
-    } else if (last && last.type === week.type && week.type !== "instructional") {
-      last.count += 1;
-      last.endDate = probe;
-    } else {
-      segments.push({
-        type: week.type,
-        label: week.type === "instructional" ? "W" : week.label.replace(" Week", ""),
-        startWeek: week.weekNumber ?? 0,
-        endWeek: week.weekNumber ?? 0,
-        count: 1,
-        startDate: new Date(probe),
-        endDate: new Date(probe),
-      });
-    }
-  }
-  return segments;
-}
-
 export default function ScheduleView({ token }) {
   const [schedule, setSchedule] = useState(null);
+  const [tasks, setTasks] = useState([]);
   const [weekAnchor, setWeekAnchor] = useState(() => startOfLocalDay(new Date()));
   const [selected, setSelected] = useState(null);
   const [importOpen, setImportOpen] = useState(false);
@@ -95,12 +70,16 @@ export default function ScheduleView({ token }) {
     } catch {
       setSchedule({ classes: [], events: [], exams: [] });
     }
+    try {
+      setTasks((await getTasks(token)) || []);
+    } catch {
+      setTasks([]);
+    }
   }, [token]);
 
   useEffect(() => {
     load();
-    const onImportOpen = () => setImportOpen(true);
-    window.addEventListener("canvenient-open-schedule-import", onImportOpen);
+    window.addEventListener("canvenient-open-schedule-import", () => setImportOpen(true));
     window.addEventListener("canvenient-import-ics-paths", load);
     return () => {
       window.removeEventListener("canvenient-import-ics-paths", load);
@@ -123,13 +102,31 @@ export default function ScheduleView({ token }) {
     [schedule, days],
   );
 
+  // Tasks the user scheduled inside the visible week render on the grid too.
+  const weekTasks = useMemo(() => {
+    const buckets = days.map(() => []);
+    for (const task of tasks) {
+      if (task.status === "done" || task.status === "completed") continue;
+      const due = taskDueDate(task);
+      if (!due) continue;
+      const dayIndex = days.findIndex(
+        (day) =>
+          due >= startOfLocalDay(day) &&
+          due < new Date(startOfLocalDay(day)).setDate(startOfLocalDay(day).getDate() + 1),
+      );
+      if (dayIndex >= 0) buckets[dayIndex].push({ ...task, due });
+    }
+    return buckets;
+  }, [tasks, days]);
+
   const weekendHasItems = weekItems[5].length + weekItems[6].length > 0;
-  const showWeekend = fullWeek || weekendHasItems;
+  const weekendHasTasks = weekTasks[5].length + weekTasks[6].length > 0;
+  const showWeekend = fullWeek || weekendHasItems || weekendHasTasks;
   const visibleDays = showWeekend ? days : days.slice(0, 5);
   const visibleItems = showWeekend ? weekItems : weekItems.slice(0, 5);
+  const visibleTasks = showWeekend ? weekTasks : weekTasks.slice(0, 5);
 
   const week = getAcademicWeek(weekAnchor);
-  const phases = useMemo(() => semesterPhases(new Date()), []);
 
   const fact = useMemo(() => {
     const range = `${days[0].getDate()}–${days[days.length - 1].getDate()} ${days[days.length - 1].toLocaleDateString([], { month: "short" })}`;
@@ -196,32 +193,49 @@ export default function ScheduleView({ token }) {
     }
   };
 
+  const toggleTask = async (task) => {
+    const done = task.status === "done" || task.status === "completed";
+    const nextStatus = done ? "pending" : "done";
+    setTasks((prev) => prev.map((t) => (t.id === task.id ? { ...t, status: nextStatus } : t)));
+    try {
+      await updateTask(token, task.id, { status: nextStatus });
+      window.dispatchEvent(new CustomEvent("canvenient-tasks-changed"));
+    } catch {
+      setTasks((prev) => prev.map((t) => (t.id === task.id ? { ...t, status: task.status } : t)));
+    }
+  };
+
   const nowMinutes = minutesSinceMidnight(now);
   const hours = Array.from({ length: END_HOUR - START_HOUR }, (_, i) => START_HOUR + i);
-
-  // Horizontal placement as percentages of the time axis.
   const axisPct = (minutes) => ((minutes - START_HOUR * 60) / TOTAL_MINUTES) * 100;
 
   return (
     <div className="ins-sched">
       <div className="ins-sched-controls">
-        <div className="ins-seg">
-          <button
-            type="button"
-            className={showWeekend ? "" : "is-active"}
-            onClick={() => setFullWeek(false)}
-          >
-            Mon–Fri
-          </button>
-          <button
-            type="button"
-            className={showWeekend ? "is-active" : ""}
-            onClick={() => setFullWeek(true)}
-          >
-            Full week
-          </button>
+        <div className="ins-sched-phase">
+          <span className="ins-sched-weeklabel">{week?.label || ""}</span>
+          <span className="ins-cap ins-mono ins-sched-range">
+            {days[0].toLocaleDateString([], { day: "numeric", month: "short" })} –{" "}
+            {days[days.length - 1].toLocaleDateString([], { day: "numeric", month: "short" })}
+          </span>
         </div>
         <div className="ins-sched-weeknav">
+          <div className="ins-seg">
+            <button
+              type="button"
+              className={showWeekend ? "" : "is-active"}
+              onClick={() => setFullWeek(false)}
+            >
+              Mon–Fri
+            </button>
+            <button
+              type="button"
+              className={showWeekend ? "is-active" : ""}
+              onClick={() => setFullWeek(true)}
+            >
+              Full week
+            </button>
+          </div>
           <button
             type="button"
             className="ins-iconbtn"
@@ -238,7 +252,7 @@ export default function ScheduleView({ token }) {
           </button>
           <button
             type="button"
-            className={`ins-btn ${isCurrentWeek ? "" : "is-ghost"}`}
+            className={`ins-btn ${isCurrentWeek ? "is-primary" : "is-ghost"}`}
             onClick={() => setWeekAnchor(currentWeekMonday)}
           >
             This week
@@ -260,39 +274,8 @@ export default function ScheduleView({ token }) {
         </div>
       </div>
 
-      {phases.length > 0 && (
-        <div className="ins-phases" role="img" aria-label="Semester phases">
-          {phases.map((segment, index) => {
-            const isActive =
-              week &&
-              segment.type === week.type &&
-              (segment.type !== "instructional" ||
-                (week.weekNumber >= segment.startWeek && week.weekNumber <= segment.endWeek));
-            return (
-              <button
-                key={index}
-                type="button"
-                className={`ins-phase is-${segment.type} ${isActive ? "is-active" : ""}`}
-                onClick={() => setWeekAnchor(new Date(segment.startDate))}
-                title={
-                  segment.type === "instructional"
-                    ? `Weeks ${segment.startWeek}–${segment.endWeek}`
-                    : segment.label
-                }
-              >
-                {segment.type === "instructional"
-                  ? `W${segment.startWeek}${segment.endWeek !== segment.startWeek ? `–${segment.endWeek}` : ""}`
-                  : segment.label}
-                {isActive && <span className="ins-phase-marker" />}
-              </button>
-            );
-          })}
-        </div>
-      )}
-
       <div className="ins-hgridwrap">
         <div className="ins-hgrid" style={{ "--row-h": `${ROW_HEIGHT}px` }}>
-          {/* corner + hour header */}
           <div className="ins-hgrid-corner" />
           <div className="ins-hgrid-hours">
             {hours.map((hour) => (
@@ -321,7 +304,7 @@ export default function ScheduleView({ token }) {
                     <div
                       key={hour}
                       className="ins-hgrid-line"
-                      style={{ left: axisPct(hour * 60) }}
+                      style={{ left: `${axisPct(hour * 60)}%` }}
                     />
                   ))}
                   {(visibleItems[dayIndex] || []).map((item) => {
@@ -334,6 +317,7 @@ export default function ScheduleView({ token }) {
                         TOTAL_MINUTES) *
                       100;
                     const isSelected = selected?.id === item.id;
+                    const typeName = [item.subtitle, item.classNo].filter(Boolean).join(" ");
                     return (
                       <button
                         key={item.id}
@@ -341,17 +325,42 @@ export default function ScheduleView({ token }) {
                         className={`ins-block is-${item.kind} ${isSelected ? "is-selected" : ""}`}
                         style={{
                           left: `${left}%`,
-                          width: `${Math.max(width, 3)}%`,
+                          width: `${Math.max(width, 3.5)}%`,
                           "--tick-color": item.color,
                         }}
                         onClick={() => item.classId && setSelected(item)}
-                        title={`${item.title} ${timeHM(item.start)}–${timeHM(item.end)}`}
+                        title={`${item.title} — ${typeName || item.subtitle || ""} · ${item.venue} · ${timeHM(item.start)}–${timeHM(item.end)}`}
                       >
-                        <span className="ins-block-title">{item.title}</span>
-                        <span className="ins-block-meta ins-cap">
-                          {timeHM(item.start)}
-                          {item.venue !== "Venue not listed" && width > 9 ? ` · ${item.venue}` : ""}
+                        <span className="ins-block-time ins-mono">
+                          {timeHM(item.start)}–{timeHM(item.end)}
                         </span>
+                        <span className="ins-block-title">
+                          {item.title}
+                          {typeName ? ` · ${typeName}` : ""}
+                        </span>
+                        <span className="ins-block-name ins-cap">{item.moduleName || ""}</span>
+                        <span className="ins-block-venue ins-cap">
+                          {item.venue !== "Venue not listed" ? item.venue : ""}
+                        </span>
+                      </button>
+                    );
+                  })}
+                  {(visibleTasks[dayIndex] || []).map((task) => {
+                    const due = taskDueDate(task);
+                    if (!due) return null;
+                    const dueMin = minutesSinceMidnight(due);
+                    const left = axisPct(Math.max(dueMin, START_HOUR * 60));
+                    return (
+                      <button
+                        key={`task-${task.id}`}
+                        type="button"
+                        className="ins-taskblock"
+                        style={{ left: `${left}%` }}
+                        title={`Task due ${timeHM(due)} — ${task.title}`}
+                        onClick={() => toggleTask(task)}
+                      >
+                        <span className="ins-taskblock-time ins-mono">{timeHM(due)}</span>
+                        <span className="ins-taskblock-title">{task.title}</span>
                       </button>
                     );
                   })}
@@ -373,9 +382,19 @@ export default function ScheduleView({ token }) {
         </div>
       </div>
 
-      {schedule && visibleItems.every((items) => items.length === 0) && (
-        <div className="ins-empty">No scheduled items this week</div>
-      )}
+      {schedule &&
+        visibleItems.every((items) => items.length === 0) &&
+        visibleTasks.every((tasks) => tasks.length === 0) && (
+          <div className="ins-empty ins-sched-empty">
+            {week?.type === "recess" || week?.type === "vacation" ? (
+              <span>{week.label} — no classes scheduled</span>
+            ) : week?.type === "exam" ? (
+              <span>No exams scheduled this week</span>
+            ) : (
+              <span>No classes this week</span>
+            )}
+          </div>
+        )}
 
       {selected && (
         <ClassContextDrawer

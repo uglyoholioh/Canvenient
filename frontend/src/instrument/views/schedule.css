@@ -21,58 +21,111 @@
   gap: var(--ins-s1);
 }
 
-/* Phase strip — soft capsule rail */
-.ins-phases {
+.ins-sched-phase {
   display: flex;
-  border: 1px solid var(--ins-line);
-  border-radius: 999px;
-  padding: 2px;
-  gap: 2px;
-  overflow: hidden;
+  align-items: baseline;
+  gap: var(--ins-s3);
 }
 
-.ins-phase {
-  appearance: none;
-  position: relative;
-  flex: 1;
-  padding: 4px 6px;
-  border: none;
-  border-radius: 999px;
-  background: transparent;
-  color: var(--ins-ink-faint);
-  font-family: var(--ins-mono);
-  font-size: var(--ins-fs-cap);
-  cursor: default;
-  transition:
-    background var(--ins-dur) var(--ins-ease-out),
-    color var(--ins-dur) var(--ins-ease-out);
-}
-
-.ins-phase:hover {
-  background: rgba(128, 118, 100, 0.08);
-  color: var(--ins-ink-body);
-}
-
-.ins-phase.is-active {
-  background: var(--ins-bg-raise);
+.ins-sched-weeklabel {
+  font-size: var(--ins-fs-title);
+  font-weight: 700;
+  letter-spacing: -0.01em;
   color: var(--ins-ink);
-  box-shadow: var(--ins-shadow-pill);
 }
 
-.ins-phase.is-recess,
-.ins-phase.is-vacation {
-  flex: 0.6;
+.ins-sched-range {
+  color: var(--ins-ink-muted);
 }
 
-.ins-phase-marker {
+/* Class cards — four quiet lines: time, code · type · no, module name, venue */
+.ins-block {
+  gap: 0;
+}
+
+.ins-block-time {
+  display: block;
+  font-size: 9.5px;
+  color: var(--ins-ink-muted);
+  white-space: nowrap;
+}
+
+.ins-block-title {
+  display: block;
+  font-size: var(--ins-fs-sub);
+  font-weight: 650;
+  letter-spacing: -0.008em;
+  color: var(--ins-ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ins-block-name {
+  display: block;
+  font-size: 10px;
+  color: var(--ins-ink-muted);
+  font-style: italic;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ins-block-venue {
+  display: block;
+  font-size: 10px;
+  color: var(--ins-ink-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Task blocks — the user's own markers on the week */
+.ins-taskblock {
+  appearance: none;
   position: absolute;
-  left: 50%;
-  bottom: 1px;
-  width: 4px;
-  height: 4px;
-  border-radius: 50%;
-  background: var(--ins-red);
-  transform: translateX(-50%);
+  top: 6px;
+  bottom: 6px;
+  min-width: 76px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0;
+  padding: 0 7px;
+  border: 1px dashed var(--ins-line-strong);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--ins-bg) 70%, transparent);
+  color: var(--ins-ink-body);
+  text-align: left;
+  font: inherit;
+  cursor: default;
+  overflow: hidden;
+  z-index: 4;
+  transition: background var(--ins-dur) var(--ins-ease-out);
+}
+
+.ins-taskblock:hover {
+  background: var(--ins-bg-raise);
+}
+
+.ins-taskblock-time {
+  font-size: 9.5px;
+  color: var(--ins-ink-faint);
+}
+
+.ins-taskblock-title {
+  font-size: 10.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ins-sched-empty {
+  border: 1px solid var(--ins-line);
+  border-radius: var(--ins-r-big);
+  background: var(--ins-bg-raise);
+  padding: var(--ins-s5);
 }
 
 /* Horizontal grid — gutter column for day heads, tracks share one axis */
