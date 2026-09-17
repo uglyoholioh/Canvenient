@@ -21,7 +21,14 @@
 
 ## What the app does (unchanged through all four visual generations)
 
-Six primary views — **Today, Tasks, Schedule, Campus** (venues + buses + trips), **Modules**, **Notes** — plus utilities (Decide, Groups) and Settings. ⌘K command layer with capture/appearance/import actions; ⌘/ cheat sheet; one mono fact per view in the title bar; the leave-by journey join on Today's Next card; tray jewel unchanged.
+Six primary views — **Today, Tasks, Schedule** (horizontal time axis: days as
+rows, hours left→right, red now-line), **Campus** (pages: **Bus** = hero
+next-departure + toned board + filterable stop picker + route step-cards,
+**Venues** = draggable time rail + availability strips + saved chips),
+**Modules**, **Notes** — plus utilities (Decide, Groups) and Settings. ⌘K
+command layer with capture/appearance/import actions; ⌘/ cheat sheet; one mono
+fact per view in the title bar; the leave-by journey join on Today's Next card;
+tray jewel unchanged.
 
 ## Verification
 
