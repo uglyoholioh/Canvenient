@@ -448,7 +448,9 @@ export default function Dashboard({ token, user, onNavigate }) {
           </div>
         </header>
         {visibleModules.includes("aibrief") && (
-          <section className="ins-brief-band">{renderModule("aibrief")}</section>
+          <div className="ins-brief-rowwrap">
+            <section className="ins-brief-band">{renderModule("aibrief")}</section>
+          </div>
         )}
         <div
           className={`dashboard-grid is-${layout} ${isEditingLayout ? "is-layout-editing" : ""}`}

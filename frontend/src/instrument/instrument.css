@@ -689,9 +689,14 @@
 }
 
 .ins-brief-band {
+  flex-shrink: 0;
   margin-bottom: var(--ins-s4);
 }
 
 .ins-brief-band .dashboard-module {
   height: auto;
+}
+
+.ins-brief-rowwrap {
+  grid-column: 1 / -1;
 }
