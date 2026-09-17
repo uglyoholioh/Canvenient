@@ -431,6 +431,11 @@ export default function Dashboard({ token, user, onNavigate }) {
 
   return (
     <div className="dashboard-page">
+      {visibleModules.includes("aibrief") && (
+        <div className="ins-brief-band">
+          {renderModule("aibrief")}
+        </div>
+      )}
       <div className="dashboard-scroll">
         <header className="dashboard-hero">
           <div className="dashboard-hero-date">
@@ -447,11 +452,6 @@ export default function Dashboard({ token, user, onNavigate }) {
             )}
           </div>
         </header>
-        {visibleModules.includes("aibrief") && (
-          <div className="ins-brief-rowwrap">
-            <section className="ins-brief-band">{renderModule("aibrief")}</section>
-          </div>
-        )}
         <div
           className={`dashboard-grid is-${layout} ${isEditingLayout ? "is-layout-editing" : ""}`}
           style={{
