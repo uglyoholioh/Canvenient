@@ -259,11 +259,10 @@
 }
 
 /* Horizontal grid — gutter column for day heads, tracks share one axis.
-   Rows flex to fill the window (Stretch): 26px hour header, then every day
-   row takes an equal share with a 72px floor, so a five-day week breathes
-   and a full week still fits without scrolls on a normal window. */
+   Rows sit at a fixed 96px — the week breathes without stretching to fill
+   the window, and the exams below stay in view. */
 .ins-hgridwrap {
-  flex: 1;
+  flex: 0 0 auto;
   min-height: 0;
   display: flex;
   overflow-x: auto;
@@ -278,7 +277,7 @@
   display: grid;
   grid-template-columns: 64px minmax(680px, 1fr);
   grid-template-rows: 26px;
-  grid-auto-rows: minmax(72px, 1fr);
+  grid-auto-rows: 96px;
   min-width: 860px;
 }
 

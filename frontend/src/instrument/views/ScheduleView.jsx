@@ -1,7 +1,7 @@
 // Schedule — the horizontal timeline: days stack as rows, time flows left
-// to right, and the red now-line crosses today where it belongs. The rows
-// flex to fill the window and the axis hugs the timetable (an hour of pad
-// around the earliest and latest block), so the week uses the whole canvas.
+// to right, and the red now-line crosses today where it belongs. Rows sit
+// at a fixed height so the week breathes without stretching, the axis hugs
+// the timetable, and the exam dates sit below the grid.
 //
 // Non-instructional weeks say so in words ("Recess Week") and stay meaningful:
 // Canvas events and any tasks the user scheduled that week still render on the
@@ -29,6 +29,7 @@ import {
   minutesSinceMidnight,
 } from "../../components/scheduleUtils";
 import { getScheduleCardStyle } from "../scheduleCardStyle";
+import { examRows } from "../ledger";
 import { useWorkspaceToolbar } from "../../components/WorkspaceToolbarContext";
 import ClassContextDrawer from "../../components/drawers/ClassContextDrawer";
 import "./schedule.css";
@@ -251,6 +252,10 @@ export default function ScheduleView({ token }) {
   };
 
   const nowMinutes = minutesSinceMidnight(now);
+  const upcomingExams = useMemo(
+    () => examRows(schedule?.exams, now),
+    [schedule, now],
+  );
   const axisStartMin = axis.start * 60;
   const axisMinutes = (axis.end - axis.start) * 60;
   const hours = Array.from({ length: axis.end - axis.start }, (_, i) => axis.start + i);
@@ -431,6 +436,30 @@ export default function ScheduleView({ token }) {
           })}
         </div>
       </div>
+
+      {upcomingExams.length > 0 && (
+        <section className="ins-sec ins-sched-exams">
+          <div className="ins-sec-head">
+            <p className="ins-label">Exams</p>
+            <span className="ins-mono ins-cap">{upcomingExams.length}</span>
+          </div>
+          {upcomingExams.map((exam) => (
+            <div key={exam.id} className="ins-examrow">
+              <span className="ins-vt-title">{exam.moduleCode}</span>
+              <span className="ins-mono ins-cap ins-examrow-when">
+                {exam.start.toLocaleDateString([], {
+                  weekday: "short",
+                  day: "numeric",
+                  month: "short",
+                })}
+                {" · "}
+                {timeHM(exam.start)}
+                {exam.end ? `–${timeHM(exam.end)}` : ""}
+              </span>
+            </div>
+          ))}
+        </section>
+      )}
 
       {schedule &&
         visibleItems.every((items) => items.length === 0) &&
