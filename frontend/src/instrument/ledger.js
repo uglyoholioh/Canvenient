@@ -215,6 +215,39 @@ export function runwayPhaseLabel(type) {
   return RUNWAY_LABELS[type] || type;
 }
 
+// ---- The clock, under user taste ------------------------------------------
+
+export function clockParts(date, { clock = "24h", seconds = true } = {}) {
+  const h24 = date.getHours();
+  const minutes = String(date.getMinutes()).padStart(2, "0");
+  const hour12 = h24 % 12 === 0 ? 12 : h24 % 12;
+  const main =
+    clock === "12h" ? `${hour12}:${minutes}` : `${String(h24).padStart(2, "0")}:${minutes}`;
+  let tail = "";
+  if (seconds) tail += `:${String(date.getSeconds()).padStart(2, "0")}`;
+  if (clock === "12h") tail += h24 >= 12 ? " pm" : " am";
+  return { main, tail };
+}
+
+// ---- Exams, for the dashboard widget and the schedule footer --------------
+
+export function examRows(exams, now, withinDays = 90) {
+  const dayStart = startOfLocalDay(now);
+  const horizon = dayStart.getTime() + withinDays * 86400000;
+  return (exams || [])
+    .map((exam) => ({
+      id: exam.id,
+      moduleCode: exam.module_code,
+      title: `${exam.module_code} Exam`,
+      start: new Date(exam.start_at),
+      end: exam.end_at ? new Date(exam.end_at) : null,
+      past: new Date(exam.start_at) < dayStart,
+    }))
+    .filter((exam) => !Number.isNaN(exam.start.getTime()))
+    .filter((exam) => !exam.past && exam.start.getTime() <= horizon)
+    .sort((a, b) => a.start - b.start);
+}
+
 export function semesterRunway(now) {
   const week = getAcademicWeek(now);
   const semStart = parseISODate(SEMESTER_STARTS[week?.academicYear]?.[week?.semester]);
