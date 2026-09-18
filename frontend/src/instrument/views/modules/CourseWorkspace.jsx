@@ -33,29 +33,28 @@ const SECTIONS = [
 ];
 
 function useLazyResource(enabled, loader) {
-  const [state, setState] = useState({ loading: false, data: null, failed: false });
+  const [state, setState] = useState({ data: null, failed: false });
   const attemptedRef = useRef(false);
   useEffect(() => {
     if (!enabled || attemptedRef.current) return undefined;
     attemptedRef.current = true;
     let alive = true;
-    setState({ loading: true, data: null, failed: false });
     loader()
       .then((data) => {
-        if (alive) setState({ loading: false, data, failed: false });
+        if (alive) setState({ data, failed: false });
       })
       .catch(() => {
         if (alive) {
           // allow a retry next time the section opens
           attemptedRef.current = false;
-          setState({ loading: false, data: null, failed: true });
+          setState({ data: null, failed: true });
         }
       });
     return () => {
       alive = false;
     };
   }, [enabled, loader]);
-  return state;
+  return { ...state, loading: enabled && !state.data && !state.failed };
 }
 
 function LoadingLine() {
@@ -66,20 +65,23 @@ function FailedLine() {
   return <div className="ins-empty">Canvas would not load this section — try again later.</div>;
 }
 
-function PageReader({ course, reader, onBack }) {
-  const [page, setPage] = useState(null);
-  const [failed, setFailed] = useState(false);
+function PageReader({ token, course, reader, onBack }) {
+  const [state, setState] = useState({ page: null, failed: false });
   useEffect(() => {
     let alive = true;
-    setPage(null);
-    setFailed(false);
     getCanvasPage(token, course.id, reader.url)
-      .then((data) => alive && setPage(data))
-      .catch(() => alive && setFailed(true));
+      .then((data) => {
+        if (alive) setState({ page: data, failed: false });
+      })
+      .catch(() => {
+        if (alive) setState({ page: null, failed: true });
+      });
     return () => {
       alive = false;
     };
   }, [token, course.id, reader.url]);
+  const { page, failed } = state;
+  const loading = !page && !failed;
 
   return (
     <div className="ins-pagereader">
@@ -97,7 +99,7 @@ function PageReader({ course, reader, onBack }) {
         </a>
       </div>
       <h3 className="ins-pagereader-title">{reader.title}</h3>
-      {!page && !failed && <LoadingLine />}
+      {loading && <LoadingLine />}
       {failed && <FailedLine />}
       {page && <CanvasHtml html={page.body} />}
     </div>

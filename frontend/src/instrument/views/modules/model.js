@@ -134,6 +134,11 @@ export function postedAt(item) {
 
 // Inbox grouping — New (48h), This week, Earlier — so identical-looking
 // rows stop competing for attention.
+const postedTs = (item) => {
+  const at = postedAt(item);
+  return at ? new Date(at).getTime() : 0;
+};
+
 export function groupAnnouncements(list, now) {
   const groups = { new: [], week: [], earlier: [] };
   for (const item of list || []) {
@@ -143,8 +148,7 @@ export function groupAnnouncements(list, now) {
     else if (age <= WEEK_MS_GROUP) groups.week.push(item);
     else groups.earlier.push(item);
   }
-  const byNewest = (a, b) =>
-    (new Date(postedAt(b) || 0) || 0) - (new Date(postedAt(a) || 0) || 0);
+  const byNewest = (a, b) => postedTs(b) - postedTs(a);
   return [
     { key: "new", label: "New", items: groups.new.sort(byNewest) },
     { key: "week", label: "This week", items: groups.week.sort(byNewest) },

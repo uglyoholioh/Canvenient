@@ -1115,6 +1115,35 @@ async def get_canvas_page(page_url: str, course_id: int, current_user: CurrentUs
     }
 
 
+@router.get("/front-page", response_model=dict[str, Any])
+async def get_canvas_front_page(
+    course_id: int,
+    current_user: CurrentUser,
+    force_refresh: bool = Query(False),
+):
+    cache_key = f"front_page_{course_id}"
+    cached_data, synced_at = await get_canvas_cache(current_user.id, cache_key)
+    if not force_refresh and cached_data is not None and is_cache_fresh(synced_at):
+        return cached_data
+    try:
+        page = await canvas_course_get(course_id, current_user, "front_page")
+    except HTTPException as exc:
+        if exc.status_code == 404:
+            # Courses are not required to designate a front page; cache the
+            # absence so the workspace doesn't re-probe on every visit.
+            result = {"title": None, "body": "", "updated_at": None, "missing": True}
+            await save_canvas_cache(current_user.id, cache_key, result)
+            return result
+        raise
+    result = {
+        "title": page.get("title") or "Front page",
+        "body": page.get("body") or "",
+        "updated_at": page.get("updated_at"),
+    }
+    await save_canvas_cache(current_user.id, cache_key, result)
+    return result
+
+
 @router.get("/modules", response_model=list[dict[str, Any]])
 async def list_canvas_course_modules(
     course_id: int,
