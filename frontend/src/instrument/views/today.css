@@ -1,27 +1,29 @@
-/* Today — the Swiss front page: a live clock, a thin day rule, and the
-   facts of the day set in type. */
+/* Today — the ledger. The day drawn as a shape, dues as weather, the campus
+   as a ribbon. Shape first; numbers only when they are live; details on
+   demand. */
 
 .ins-today {
-  max-width: 760px;
-  margin: 0 auto;
   display: flex;
   flex-direction: column;
   gap: var(--ins-s5);
 }
 
+/* ---- Head: the live clock, the date, and the semester as a hairline ---- */
+
 .ins-today-head {
   display: flex;
-  flex-direction: column;
-  gap: var(--ins-s2);
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--ins-s5);
   padding-bottom: var(--ins-s4);
   border-bottom: 1px solid var(--ins-line-strong);
 }
 
-.ins-today-clockrow {
+.ins-today-headline {
   display: flex;
-  align-items: center;
-  gap: var(--ins-s4);
-  margin-bottom: var(--ins-s2);
+  flex-direction: column;
+  gap: var(--ins-s2);
+  min-width: 0;
 }
 
 .ins-today-clock {
@@ -45,12 +47,233 @@
   animation: ins-tick-in 240ms var(--ins-ease-out);
 }
 
-.ins-today-sub {
-  font-size: var(--ins-fs-label);
-  font-weight: 600;
-  letter-spacing: 0.09em;
+/* Semester runway — phases exist only as tints; names live in the hover. */
+.ins-semrunway {
+  position: relative;
+  width: 280px;
+  height: 20px;
+  flex-shrink: 0;
+  margin-bottom: 4px;
+  cursor: default;
+}
+
+.ins-semrunway-seg {
+  position: absolute;
+  top: 9px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--ins-line);
+}
+
+.ins-semrunway-seg.is-recess {
+  background: var(--ins-green);
+  height: 4px;
+  top: 8px;
+}
+
+.ins-semrunway-seg.is-reading {
+  background: var(--ins-sky);
+  height: 4px;
+  top: 8px;
+}
+
+.ins-semrunway-seg.is-exam {
+  background: var(--ins-amber);
+  height: 4px;
+  top: 8px;
+}
+
+.ins-semrunway-seg.is-vacation {
+  opacity: 0.45;
+}
+
+.ins-semrunway-dot {
+  position: absolute;
+  top: 6.5px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--ins-red);
+  margin-left: -3.5px;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--ins-red) 20%, transparent);
+  transition: left 600ms var(--ins-ease-out);
+}
+
+/* ---- Shared hover facts — the only prose the shapes carry ---- */
+
+.ins-tip {
+  position: relative;
+}
+
+.ins-tip:hover::after {
+  content: attr(data-tip);
+  position: absolute;
+  bottom: calc(100% + 7px);
+  left: 0;
+  z-index: 40;
+  width: max-content;
+  max-width: 300px;
+  padding: 6px 9px;
+  border: 1px solid var(--ins-line);
+  border-radius: 8px;
+  background: var(--ins-bg-raise);
+  box-shadow: var(--ins-shadow-soft);
+  color: var(--ins-ink);
+  font-size: var(--ins-fs-sub);
+  line-height: 1.45;
+  text-align: left;
+  white-space: pre-line;
+  pointer-events: none;
+}
+
+.ins-tip.is-flipped:hover::after {
+  left: auto;
+  right: 0;
+}
+
+/* ---- The day rail ---- */
+
+.ins-rail {
+  position: relative;
+  height: 74px;
+  user-select: none;
+}
+
+.ins-rail-hour {
+  position: absolute;
+  top: 22px;
+  bottom: 8px;
+  width: 1px;
+  background: var(--ins-line);
+  opacity: 0.55;
+}
+
+.ins-rail-hourlabel {
+  position: absolute;
+  top: 4px;
+  font-size: 9px;
+  font-weight: 500;
+  color: var(--ins-ink-faint);
+  transform: translateX(2px);
+}
+
+.ins-rail-block {
+  appearance: none;
+  position: absolute;
+  top: 22px;
+  bottom: 8px;
+  overflow: hidden;
+  padding: 4px 6px;
+  border: 1px solid color-mix(in srgb, var(--tick-color) 26%, transparent);
+  border-left: 2px solid color-mix(in srgb, var(--tick-color) 70%, transparent);
+  border-radius: 7px;
+  background: color-mix(in srgb, var(--tick-color) 16%, var(--ins-bg) 70%);
+  font: inherit;
+  text-align: left;
+  cursor: default;
+  transition: opacity var(--ins-dur-fast) var(--ins-ease), filter var(--ins-dur-fast) var(--ins-ease);
+}
+
+.ins-rail-block:hover {
+  filter: brightness(0.96);
+}
+
+.ins-rail-block.is-past {
+  opacity: 0.38;
+}
+
+.ins-rail-block.is-event {
+  border-style: dashed;
+  background: transparent;
+}
+
+.ins-rail-block.is-exam {
+  background: var(--ins-amber-bg);
+  border-color: var(--ins-amber);
+}
+
+.ins-rail-block.is-selected {
+  outline: 2px solid color-mix(in srgb, var(--tick-color) 50%, transparent);
+  outline-offset: 1px;
+}
+
+.ins-rail-blockcode {
+  display: block;
+  font-size: 9.5px;
+  font-weight: 650;
+  letter-spacing: 0.07em;
   text-transform: uppercase;
+  white-space: nowrap;
+  color: color-mix(in srgb, var(--tick-color) 65%, var(--ins-ink) 35%);
+}
+
+.ins-rail-block.is-event .ins-rail-blockcode {
   color: var(--ins-ink-muted);
+}
+
+.ins-rail-window {
+  position: absolute;
+  top: 22px;
+  bottom: 8px;
+  border-radius: 7px;
+  cursor: default;
+}
+
+.ins-rail-window:hover {
+  background: color-mix(in srgb, var(--ins-ink) 4%, transparent);
+}
+
+.ins-rail-now {
+  position: absolute;
+  top: 12px;
+  bottom: 2px;
+  width: 0;
+  border-left: 1.5px solid var(--ins-red);
+  opacity: 0.85;
+}
+
+.ins-rail-now i {
+  position: absolute;
+  top: -3px;
+  left: -4.25px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--ins-red);
+  animation: ins-breathe 2.4s ease-in-out infinite;
+}
+
+.ins-rail-gap {
+  position: absolute;
+  top: 0;
+  font-size: 10px;
+  color: var(--ins-ink-muted);
+  white-space: nowrap;
+  transform: translateX(6px);
+}
+
+.ins-rail-tom {
+  position: absolute;
+  right: 0;
+  top: 16px;
+  bottom: 4px;
+  width: 0;
+  border-left: 2px dashed color-mix(in srgb, var(--ins-ink-faint) 75%, transparent);
+  cursor: default;
+}
+
+/* The quiet clear-day line stands in for the rail. */
+.ins-clearline {
+  display: flex;
+  align-items: baseline;
+  gap: var(--ins-s2);
+  padding: var(--ins-s1) 0;
+  color: var(--ins-ink-muted);
+  font-size: var(--ins-fs-body);
+}
+
+.ins-clearline .ins-mono {
+  color: var(--ins-ink);
 }
 
 .ins-today-empty {
@@ -60,27 +283,10 @@
   gap: var(--ins-s1);
 }
 
-/* Now line */
-.ins-nowline {
-  display: flex;
-  align-items: center;
-  gap: var(--ins-s2);
-  padding: var(--ins-s2) 0;
-}
+/* ---- Featured card — the rail's detail, on demand ---- */
 
-.ins-nowline-title {
-  font-weight: 700;
-  color: var(--ins-ink);
-}
-
-.ins-nowline-until {
-  margin-left: auto;
-  color: var(--ins-ink-muted);
-  font-size: var(--ins-fs-sub);
-}
-
-/* Next card — typographic, module tick, depleting approach meter */
 .ins-next {
+  margin-top: var(--ins-s3);
   border: 1px solid var(--ins-line);
   border-radius: var(--ins-r-big);
   padding: var(--ins-s4);
@@ -127,11 +333,6 @@
   color: var(--ins-ink);
 }
 
-.ins-next-count {
-  font-size: 22px;
-  color: var(--ins-red);
-}
-
 .ins-next-journey {
   display: flex;
   flex-direction: column;
@@ -149,29 +350,35 @@
   color: var(--ins-ink-muted);
 }
 
-/* Due rows */
+/* ---- Body zones ---- */
+
+.ins-today-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ins-s5);
+}
+
+.ins-today-body.is-wide {
+  display: grid;
+  grid-template-columns: 1.15fr 0.85fr;
+  column-gap: var(--ins-s7);
+  align-items: start;
+}
+
+.ins-today-col {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ins-s5);
+  min-width: 0;
+}
+
+/* Due rows — everything due today, nothing past that */
 .ins-duerow {
   display: flex;
   align-items: center;
   gap: var(--ins-s2);
   min-height: 30px;
   padding: 2px 0;
-}
-
-.ins-duerow.as-button {
-  appearance: none;
-  border: none;
-  background: transparent;
-  width: 100%;
-  text-align: left;
-  font: inherit;
-  color: inherit;
-  cursor: default;
-}
-
-.ins-duerow.as-button:hover {
-  background: rgba(128, 118, 100, 0.07);
-  border-radius: var(--ins-r);
 }
 
 .ins-duerow-title {
@@ -205,116 +412,236 @@ button.ins-duerow-title:hover {
   color: var(--ins-red);
 }
 
-.ins-duerow-course {
+.ins-canvaschip {
   flex-shrink: 0;
-  min-width: 64px;
+  display: inline-flex;
+  align-items: center;
+  color: var(--ins-ink-faint);
+}
+
+/* ---- The fortnight — dues as weather ---- */
+
+.ins-fortnight {
+  display: flex;
+  align-items: stretch;
+  gap: 3px;
+}
+
+.ins-fncol {
+  appearance: none;
+  border: none;
+  background: transparent;
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  height: 58px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+  padding: 5px 0 3px;
+  border-radius: 7px;
+  font: inherit;
+  color: inherit;
+  cursor: default;
+  transition: background var(--ins-dur-fast) var(--ins-ease);
+}
+
+.ins-fncol:hover {
+  background: rgba(128, 118, 100, 0.07);
+}
+
+.ins-fncol.is-today {
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ins-red) 45%, transparent);
+}
+
+.ins-fncol.is-open {
+  background: rgba(128, 118, 100, 0.1);
+}
+
+.ins-fncol.is-recess {
+  background: color-mix(in srgb, var(--ins-green) 9%, transparent);
+}
+
+.ins-fncol.is-reading {
+  background: color-mix(in srgb, var(--ins-sky) 10%, transparent);
+}
+
+.ins-fncol.is-exam {
+  background: color-mix(in srgb, var(--ins-amber) 11%, transparent);
+}
+
+.ins-fncol.is-cap {
+  flex: 0 0 36px;
+}
+
+.ins-fnbars {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 26px;
+}
+
+.ins-fnbars i {
+  width: 7px;
+  border-radius: 2px 2px 0 0;
+  background: color-mix(in srgb, var(--ins-ink) 66%, transparent);
+}
+
+.ins-fncol.is-today .ins-fnbars i {
+  background: var(--ins-red);
+}
+
+.ins-fnoverflow {
+  font-size: 9px;
+  font-style: normal;
+  color: var(--ins-ink-muted);
+  align-self: flex-end;
+  margin-left: 1px;
+}
+
+.ins-fncap {
+  font-family: var(--ins-mono);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ins-red);
+  line-height: 26px;
+}
+
+.ins-fnexam {
+  position: absolute;
+  top: 3px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--ins-amber);
+}
+
+.ins-fnlabel {
+  font-family: var(--ins-mono);
+  font-size: 8.5px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--ins-ink-faint);
+}
+
+.ins-fncol.is-today .ins-fnlabel {
+  color: var(--ins-red);
+}
+
+.ins-fnlist {
+  margin-top: var(--ins-s2);
+  padding-top: var(--ins-s2);
+  border-top: 1px solid var(--ins-line);
 }
 
 .ins-duenum {
-  font-size: 22px;
-}
-
-/* Classes list */
-.ins-classlist {
-  display: flex;
-  flex-direction: column;
-}
-
-.ins-classrow {
-  appearance: none;
-  display: flex;
-  align-items: center;
-  gap: var(--ins-s3);
-  width: 100%;
-  padding: 7px 0;
-  border: none;
-  background: transparent;
-  border-bottom: 1px solid var(--ins-line);
-  font: inherit;
-  color: inherit;
-  text-align: left;
-  cursor: default;
-  transition: opacity var(--ins-dur-fast) var(--ins-ease);
-}
-
-.ins-classrow:last-child {
-  border-bottom: none;
-}
-
-.ins-classrow:hover {
-  background: rgba(128, 118, 100, 0.06);
-  border-radius: var(--ins-r);
-}
-
-.ins-classrow.is-past {
-  opacity: 0.4;
-}
-
-.ins-classrow-time {
-  font-size: var(--ins-fs-sub);
-  color: var(--ins-ink-muted);
-  width: 44px;
-  flex-shrink: 0;
-}
-
-.ins-classrow.is-now .ins-classrow-time {
-  color: var(--ins-red);
+  font-family: var(--ins-rounded);
+  font-size: 18px;
   font-weight: 700;
 }
 
-.ins-classrow-title {
-  font-weight: 600;
-  color: var(--ins-ink);
+.ins-fnlist-head {
+  margin: 0 0 var(--ins-s1);
+  color: var(--ins-ink-muted);
 }
 
-.ins-classrow-venue {
-  margin-left: auto;
-}
+/* ---- Departure ribbon ---- */
 
-/* Departures strip */
-.ins-busstrip {
+.ins-ribbon {
   border: 1px solid var(--ins-line);
   border-radius: var(--ins-r-big);
   padding: var(--ins-s3) var(--ins-s4);
   background: var(--ins-bg-raise);
 }
 
-.ins-busstrip-head {
+.ins-ribbon-head {
   display: flex;
-  align-items: center;
+  align-items: baseline;
   justify-content: space-between;
-  margin-bottom: var(--ins-s1);
+  gap: var(--ins-s2);
+  margin-bottom: 12px;
 }
 
-.ins-busstrip-rows {
-  display: flex;
-  flex-direction: column;
-}
-
-.ins-busstrip-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 6px 0;
-  border-bottom: 1px solid var(--ins-line);
-}
-
-.ins-busstrip-row:last-child {
-  border-bottom: none;
-}
-
-.ins-busstrip-route {
-  font-size: var(--ins-fs-body);
-  font-weight: 700;
+.ins-ribbon-next {
+  font-size: var(--ins-fs-sub);
   color: var(--ins-ink);
 }
 
-.ins-busstrip-etas {
-  font-size: var(--ins-fs-sub);
-  color: var(--ins-ink-muted);
+.ins-ribbon-track {
+  position: relative;
+  height: 24px;
 }
 
-/* My Day — the AI lead, styled as an opening note */
+.ins-ribbon-rule {
+  position: absolute;
+  top: 2px;
+  bottom: 2px;
+  width: 1px;
+  background: var(--ins-line);
+  opacity: 0.5;
+}
+
+.ins-ribbontick {
+  position: absolute;
+  top: 50%;
+  width: 5px;
+  height: 13px;
+  margin: -6.5px 0 0 -2.5px;
+  border-radius: 2px;
+  background: var(--tone);
+}
+
+.ins-ribbontick.is-imminent {
+  animation: ins-breathe 1.6s ease-in-out infinite;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--tone) 25%, transparent);
+}
+
+.ins-ribbon.is-stale .ins-ribbontick {
+  opacity: 0.4;
+}
+
+/* ---- Inbox — one line, only when there is news ---- */
+
+.ins-inboxline {
+  appearance: none;
+  border: none;
+  background: transparent;
+  display: flex;
+  align-items: center;
+  gap: var(--ins-s2);
+  padding: 2px 0;
+  width: 100%;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: default;
+  border-radius: var(--ins-r);
+}
+
+.ins-inboxline:hover {
+  background: rgba(128, 118, 100, 0.07);
+}
+
+.ins-inbox-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--ins-red);
+  flex-shrink: 0;
+}
+
+.ins-inbox-courses {
+  color: var(--ins-ink-muted);
+  font-size: var(--ins-fs-sub);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ---- My Day — the AI lead, styled as an opening note ---- */
+
 .ins-briefsection {
   border: 1px solid var(--ins-line);
   border-radius: var(--ins-r-big);
@@ -367,4 +694,17 @@ button.ins-duerow-title:hover {
   background: var(--ins-red);
   flex-shrink: 0;
   align-self: center;
+}
+
+/* ---- Narrow fold ---- */
+
+@media (max-width: 859px) {
+  .ins-today-head {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .ins-semrunway {
+    width: 100%;
+  }
 }
