@@ -358,10 +358,10 @@ export default function ScheduleView({ token }) {
                     const startMin = minutesSinceMidnight(item.start);
                     const endMin = minutesSinceMidnight(item.end);
                     if (endMin <= axisStartMin || startMin >= axis.end * 60) return null;
-                    const left = axisPct(Math.max(startMin, START_HOUR * 60));
+                    const left = axisPct(Math.max(startMin, axisStartMin));
                     const width =
-                      ((Math.min(endMin, END_HOUR * 60) - Math.max(startMin, START_HOUR * 60)) /
-                        TOTAL_MINUTES) *
+                      ((Math.min(endMin, axis.end * 60) - Math.max(startMin, axisStartMin)) /
+                        axisMinutes) *
                       100;
                     const isSelected = selected?.id === item.id;
                     const typeName = [item.subtitle, item.classNo].filter(Boolean).join(" ");
