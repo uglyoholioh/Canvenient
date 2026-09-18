@@ -12,6 +12,7 @@ import {
 } from "../../api";
 import { useWorkspaceToolbar } from "../../components/WorkspaceToolbarContext";
 import { getThemePreference, setThemePreference } from "../theme";
+import { getScheduleCardStyle, setScheduleCardStyle } from "../scheduleCardStyle";
 import "./settings.css";
 
 const PANES = [
@@ -163,6 +164,7 @@ function TelegramRow({ token }) {
 export default function SettingsView({ token, user, onUpdateUser, onReplayOrientation }) {
   const [pane, setPane] = useState("appearance");
   const [theme, setTheme] = useState(getThemePreference());
+  const [cardStyle, setCardStyle] = useState(getScheduleCardStyle());
   const [name, setName] = useState(user?.name || "");
   const [nameState, setNameState] = useState({ busy: false, message: "" });
   const [backups, setBackups] = useState([]);
@@ -188,6 +190,11 @@ export default function SettingsView({ token, user, onUpdateUser, onReplayOrient
   const pickTheme = (pref) => {
     setThemePreference(pref);
     setTheme(pref);
+  };
+
+  const pickCardStyle = (style) => {
+    setScheduleCardStyle(style);
+    setCardStyle(style);
   };
 
   const saveName = async () => {
@@ -216,6 +223,12 @@ export default function SettingsView({ token, user, onUpdateUser, onReplayOrient
     ["instrument-light", "Fog", "soft light — the default", "light"],
     ["instrument-dark", "Dusk", "soft dark", "dark"],
     ["system", "System", "follows macOS", "system"],
+  ];
+
+  const cardOptions = [
+    ["slab", "Slab", "the colour is the card"],
+    ["registrar", "Registrar", "quiet print — hue as a dot"],
+    ["wash", "Wash", "the soft tint, refined"],
   ];
 
   return (
@@ -252,6 +265,26 @@ export default function SettingsView({ token, user, onUpdateUser, onReplayOrient
                       <span />
                       <span />
                     </span>
+                    <span className="ins-theme-names">
+                      <span className="ins-theme-name">{label}</span>
+                      <span className="ins-cap ins-theme-caption">{caption}</span>
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="ins-sec">
+              <div className="ins-sec-head">
+                <h2>Schedule cards</h2>
+              </div>
+              <div className="ins-themes">
+                {cardOptions.map(([value, label, caption]) => (
+                  <button
+                    key={value}
+                    type="button"
+                    className={`ins-theme ${cardStyle === value ? "is-active" : ""}`}
+                    onClick={() => pickCardStyle(value)}
+                  >
                     <span className="ins-theme-names">
                       <span className="ins-theme-name">{label}</span>
                       <span className="ins-cap ins-theme-caption">{caption}</span>

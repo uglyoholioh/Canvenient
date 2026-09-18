@@ -357,7 +357,7 @@ export default function ScheduleView({ token }) {
                   {(visibleItems[dayIndex] || []).map((item) => {
                     const startMin = minutesSinceMidnight(item.start);
                     const endMin = minutesSinceMidnight(item.end);
-                    if (endMin <= START_HOUR * 60 || startMin >= END_HOUR * 60) return null;
+                    if (endMin <= axisStartMin || startMin >= axis.end * 60) return null;
                     const left = axisPct(Math.max(startMin, START_HOUR * 60));
                     const width =
                       ((Math.min(endMin, END_HOUR * 60) - Math.max(startMin, START_HOUR * 60)) /
@@ -374,6 +374,9 @@ export default function ScheduleView({ token }) {
                           left: `${left}%`,
                           width: `${Math.max(width, 3.5)}%`,
                           "--tick-color": item.color,
+                          // Exam voices re-assert their own ink; drop the
+                          // module-coloured one so the class fallback wins.
+                          "--block-ink": item.kind === "exam" ? undefined : item.ink,
                         }}
                         onClick={() => item.classId && setSelected(item)}
                         title={`${item.title} — ${typeName || item.subtitle || ""} · ${item.venue} · ${timeHM(item.start)}–${timeHM(item.end)}`}
@@ -396,7 +399,7 @@ export default function ScheduleView({ token }) {
                     const due = taskDueDate(task);
                     if (!due) return null;
                     const dueMin = minutesSinceMidnight(due);
-                    const left = axisPct(Math.max(dueMin, START_HOUR * 60));
+                    const left = axisPct(Math.max(dueMin, axisStartMin));
                     return (
                       <button
                         key={`task-${task.id}`}
@@ -413,8 +416,8 @@ export default function ScheduleView({ token }) {
                   })}
                   {isToday &&
                     isCurrentWeek &&
-                    nowMinutes > START_HOUR * 60 &&
-                    nowMinutes < END_HOUR * 60 && (
+                    nowMinutes > axisStartMin &&
+                    nowMinutes < axis.end * 60 && (
                       <div
                         className="ins-hgrid-nowline"
                         style={{ left: `${axisPct(nowMinutes)}%` }}

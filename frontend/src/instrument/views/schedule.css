@@ -1,11 +1,14 @@
 /* Schedule — horizontal timeline: days as rows, time flowing left→right. */
 
 .ins-sched {
-  max-width: var(--ins-content-max);
-  margin: 0 auto;
+  /* The schedule is the widest-data page: it steps past the shared content
+     cap and stretches to the window instead of floating in leftover space. */
   display: flex;
   flex-direction: column;
   gap: var(--ins-s3);
+  min-height: 100%;
+  max-width: 1560px;
+  margin: 0 auto;
 }
 
 .ins-sched-controls {
@@ -38,54 +41,189 @@
   color: var(--ins-ink-muted);
 }
 
-/* Class cards — four quiet lines: time, code · type · no, module name, venue */
-.ins-block {
-  gap: 0;
+/* Class cards — four facts (time · code type no · module name · venue) in one
+   of three voices, chosen in Settings → Appearance. Facts reorder per voice
+   via flex order (DOM order: time, title, name, venue). */
+.cards-slab .ins-block-title,
+.cards-registrar .ins-block-title,
+.cards-wash .ins-block-title,
+.ins-block-name,
+.ins-block-venue {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.ins-block-title {
-  display: block;
-  font-size: var(--ins-fs-sub);
+.ins-block-name {
+  font-size: 12.5px;
   font-weight: 650;
   letter-spacing: -0.008em;
+  text-transform: none;
   color: var(--ins-ink);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
-.ins-block-type {
-  display: block;
-  font-size: 10px;
+/* ---- Slab — the colour is the card; ink is luminance-picked per module --- */
+.cards-slab .ins-block {
+  background: var(--tick-color);
+  border: none;
+  --block-ink: var(--ins-ink); /* fallback for blocks without a computed ink */
+}
+
+.cards-slab .ins-block-time {
+  order: 0;
+  font-family: var(--ins-rounded);
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--block-ink);
+}
+
+.cards-slab .ins-block-name {
+  order: 1;
+  font-size: 13px;
+  color: var(--block-ink);
+}
+
+.cards-slab .ins-block-title,
+.cards-slab .ins-block-venue {
+  font-size: 9.5px;
+  font-weight: 650;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--block-ink) 74%, transparent);
+}
+
+.cards-slab .ins-block-title {
+  order: 2;
+}
+
+.cards-slab .ins-block-venue {
+  order: 3;
+}
+
+.cards-slab .ins-block:hover {
+  filter: brightness(0.96);
+}
+
+/* Exams keep the amber signal in every voice; their inline ink belongs to the
+   module colour, so the class re-asserts a dark one. */
+.cards-slab .ins-block.is-exam {
+  background: var(--ins-amber);
+  --block-ink: var(--color-schedule-card-ink-dark);
+}
+
+/* ---- Registrar — quiet print; hue reduced to a dot ------------------------ */
+.cards-registrar .ins-block {
+  background: var(--ins-bg-raise);
+  border: 1px solid var(--ins-line);
+}
+
+.cards-registrar .ins-block-time {
+  position: absolute;
+  top: 11px;
+  right: 14px;
+  font-family: var(--ins-rounded);
+  font-size: 11px;
   font-weight: 600;
-  letter-spacing: 0.06em;
-  color: var(--ins-ink-muted);
-  white-space: nowrap;
+  color: var(--ins-ink);
 }
 
-.ins-block-venue {
-  display: block;
-  font-size: 10px;
+.cards-registrar .ins-block-title {
+  order: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding-right: 78px; /* keep the caps clear of the clocked time */
+  font-size: 9.5px;
+  font-weight: 650;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
   color: var(--ins-ink-muted);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+}
+
+.cards-registrar .ins-block-title::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--tick-color);
+  flex-shrink: 0;
+}
+
+.cards-registrar .ins-block-name {
+  order: 1;
+}
+
+.cards-registrar .ins-block-venue {
+  order: 2;
+  font-size: 10.5px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ins-ink-muted);
+}
+
+.cards-registrar .ins-block:hover {
+  background: var(--ins-panel);
+}
+
+.cards-registrar .ins-block.is-exam {
+  background: var(--ins-amber-bg);
+  border-color: var(--ins-amber);
+}
+
+/* ---- Wash — the soft tint, refined; hue carries the code line ------------- */
+.cards-wash .ins-block {
+  background: color-mix(in srgb, var(--tick-color) 13%, var(--ins-bg) 72%);
+  border: 1px solid color-mix(in srgb, var(--tick-color) 22%, transparent);
+}
+
+.cards-wash .ins-block-title {
+  order: -1;
+  font-size: 9.5px;
+  font-weight: 650;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--tick-color);
+}
+
+.cards-wash .ins-block-time {
+  order: 2;
+  font-family: var(--ins-rounded);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--ins-ink-muted);
+}
+
+.cards-wash .ins-block-venue {
+  order: 3;
+  font-size: 10.5px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ins-ink-muted);
+}
+
+.cards-wash .ins-block:hover {
+  background: color-mix(in srgb, var(--tick-color) 20%, var(--ins-bg) 72%);
+}
+
+.cards-wash .ins-block.is-exam {
+  background: var(--ins-amber-bg);
+  border-color: var(--ins-amber);
 }
 
 /* Task blocks — the user's own markers on the week */
 .ins-taskblock {
   appearance: none;
   position: absolute;
-  top: 6px;
-  bottom: 6px;
+  top: 8px;
+  bottom: 8px;
   min-width: 76px;
   display: flex;
   flex-direction: column;
   justify-content: center;
   gap: 0;
-  padding: 0 7px;
+  padding: 0 9px;
   border: 1px dashed var(--ins-line-strong);
-  border-radius: 8px;
+  border-radius: 10px;
   background: color-mix(in srgb, var(--ins-bg) 70%, transparent);
   color: var(--ins-ink-body);
   text-align: left;
@@ -120,8 +258,14 @@
   padding: var(--ins-s5);
 }
 
-/* Horizontal grid — gutter column for day heads, tracks share one axis */
+/* Horizontal grid — gutter column for day heads, tracks share one axis.
+   Rows flex to fill the window (Stretch): 26px hour header, then every day
+   row takes an equal share with a 72px floor, so a five-day week breathes
+   and a full week still fits without scrolls on a normal window. */
 .ins-hgridwrap {
+  flex: 1;
+  min-height: 0;
+  display: flex;
   overflow-x: auto;
   border: 1px solid var(--ins-line);
   border-radius: var(--ins-r-big);
@@ -130,8 +274,11 @@
 }
 
 .ins-hgrid {
+  flex: 1;
   display: grid;
   grid-template-columns: 64px minmax(680px, 1fr);
+  grid-template-rows: 26px;
+  grid-auto-rows: minmax(72px, 1fr);
   min-width: 860px;
 }
 
@@ -160,7 +307,6 @@
 .ins-hgrid-row {
   grid-column: 1 / -1;
   display: flex;
-  height: var(--row-h);
   border-bottom: 1px solid var(--ins-line);
 }
 
@@ -216,51 +362,46 @@
   pointer-events: none;
 }
 
-/* Blocks — soft module tint, ink tick, rounded */
+/* Blocks — one card per class; the voice dresses it (see top of file).
+   Positioning and shared layout live here; facts reorder per voice. */
 .ins-block {
   appearance: none;
   position: absolute;
-  top: 4px;
-  bottom: 4px;
+  top: 8px;
+  bottom: 8px;
   display: flex;
   flex-direction: column;
   justify-content: center;
-  gap: 0;
-  padding: 0 5px 0 8px;
-  border: 1px solid color-mix(in srgb, var(--tick-color) 35%, transparent);
-  border-radius: 8px;
-  border-left: var(--ins-tick) solid var(--tick-color);
-  background: color-mix(in srgb, var(--tick-color) 14%, var(--ins-bg) 72%);
+  gap: 4px;
+  padding: 10px 14px;
+  border-radius: 10px;
   color: var(--ins-ink);
   text-align: left;
   font: inherit;
   cursor: default;
   overflow: hidden;
+  container-type: inline-size;
   transition:
     background var(--ins-dur) var(--ins-ease-out),
-    transform var(--ins-dur) var(--ins-ease-out);
+    transform var(--ins-dur) var(--ins-ease-out),
+    filter var(--ins-dur) var(--ins-ease-out);
 }
 
 .ins-block:hover {
-  background: color-mix(in srgb, var(--tick-color) 24%, var(--ins-bg) 72%);
   transform: translateY(-1px);
 }
 
 .ins-block.is-selected {
-  background: color-mix(in srgb, var(--tick-color) 30%, var(--ins-bg) 72%);
   outline: 2px solid var(--ins-red);
   outline-offset: 1px;
 }
 
-.ins-block.is-exam {
-  background: var(--ins-amber-bg);
-  border-color: var(--ins-amber);
-}
-
-.ins-block-meta {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+/* Narrow cards (an hour or less) drop the venue line; the hover title and
+   the drawer carry the full facts. */
+@container (max-width: 132px) {
+  .ins-block-venue {
+    display: none;
+  }
 }
 
 /* Now-line — vertical red thread through today's row */
