@@ -10,10 +10,10 @@ import pytest
 from conftest import auth_headers
 from fastapi import HTTPException
 from httpx import AsyncClient
+from test_canvas_cache import set_canvas_token
 
 from routes import canvas as canvas_routes
 from routes.canvas import get_canvas_cache, save_canvas_cache
-from test_canvas_cache import set_canvas_token
 
 pytestmark = pytest.mark.asyncio
 

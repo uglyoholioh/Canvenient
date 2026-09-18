@@ -12,12 +12,7 @@ import {
   getCanvasSyllabus,
 } from "../../../api";
 import { FileBrowser } from "../../../components/canvas/FileBrowser";
-import {
-  courseNextDue,
-  freshPostCount,
-  parseGradePercent,
-  relativeDay,
-} from "./model";
+import { courseNextDue, freshPostCount, parseGradePercent, relativeDay } from "./model";
 import CanvasHtml from "./CanvasHtml";
 import InboxList from "./InboxList";
 
@@ -214,9 +209,7 @@ export default function CourseWorkspace({
     if (home.failed) return <FailedLine />;
     if (home.data?.missing || !home.data?.body)
       return (
-        <div className="ins-empty">
-          No front page for this course — try Modules or Syllabus.
-        </div>
+        <div className="ins-empty">No front page for this course — try Modules or Syllabus.</div>
       );
     return <CanvasHtml html={home.data.body} />;
   };
@@ -275,12 +268,7 @@ export default function CourseWorkspace({
   const renderSection = () => {
     if (reader) {
       return (
-        <PageReader
-          course={course}
-          token={token}
-          reader={reader}
-          onBack={() => setReader(null)}
-        />
+        <PageReader course={course} token={token} reader={reader} onBack={() => setReader(null)} />
       );
     }
     switch (section) {

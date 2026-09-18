@@ -75,9 +75,7 @@ export function bucketDeadlines(assignments, courses, now) {
 // First thing that should claim the runway band: the oldest overdue item,
 // else the nearest upcoming one.
 export function bandItem(buckets) {
-  return (
-    buckets.overdue[0] || buckets.today[0] || buckets.tomorrow[0] || buckets.week[0] || null
-  );
+  return buckets.overdue[0] || buckets.today[0] || buckets.tomorrow[0] || buckets.week[0] || null;
 }
 
 const WEEK_MS = 7 * 86400000;

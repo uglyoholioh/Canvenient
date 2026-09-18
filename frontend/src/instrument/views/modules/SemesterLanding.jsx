@@ -52,7 +52,9 @@ export default function SemesterLanding({
 
       <div className="ins-glance">
         <GlanceColumn label="Due next">
-          {glanceNext.length === 0 && <p className="ins-cap ins-glance-empty">Nothing else dated</p>}
+          {glanceNext.length === 0 && (
+            <p className="ins-cap ins-glance-empty">Nothing else dated</p>
+          )}
           {glanceNext.map((a) => (
             <button
               key={a.id}
@@ -65,7 +67,9 @@ export default function SemesterLanding({
                 style={{ "--tick-color": a.color || "var(--ins-ink-faint)", height: 16 }}
               />
               <span className="ins-glance-row-title">{a.title || a.name}</span>
-              <span className="ins-mono ins-cap ins-glance-row-due">{relativeDay(a.due_at, now)}</span>
+              <span className="ins-mono ins-cap ins-glance-row-due">
+                {relativeDay(a.due_at, now)}
+              </span>
             </button>
           ))}
         </GlanceColumn>
@@ -157,7 +161,9 @@ export default function SemesterLanding({
                 <span className="ins-mono ins-cap">
                   {next ? `next ${relativeDay(next.due_at, now)}` : "nothing dated"}
                 </span>
-                {posts > 0 && <span className="ins-mono ins-cap ins-modcard-posts">{posts} new</span>}
+                {posts > 0 && (
+                  <span className="ins-mono ins-cap ins-modcard-posts">{posts} new</span>
+                )}
                 {raw != null && <span className="ins-mono ins-cap">{raw}</span>}
               </span>
             </button>

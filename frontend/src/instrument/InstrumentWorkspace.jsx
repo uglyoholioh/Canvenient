@@ -177,11 +177,7 @@ const NavGroup = ({
         </span>
       )}
     </button>
-    {!isSlim && expanded && (
-      <div className="ins-nav-children">
-        {children}
-      </div>
-    )}
+    {!isSlim && expanded && <div className="ins-nav-children">{children}</div>}
   </div>
 );
 
@@ -775,8 +771,18 @@ export default function InstrumentWorkspace({ token, user, onLogout, onUpdateUse
                             : Boolean(openGroups[item.id]);
                           const children = isCampus
                             ? [
-                                { key: "bus", label: "Bus", active: campusSel === "bus", onClick: () => openCampusPage("bus") },
-                                { key: "venues", label: "Venues", active: campusSel === "venues", onClick: () => openCampusPage("venues") },
+                                {
+                                  key: "bus",
+                                  label: "Bus",
+                                  active: campusSel === "bus",
+                                  onClick: () => openCampusPage("bus"),
+                                },
+                                {
+                                  key: "venues",
+                                  label: "Venues",
+                                  active: campusSel === "venues",
+                                  onClick: () => openCampusPage("venues"),
+                                },
                               ]
                             : courses.map((c) => ({
                                 key: String(c.id),

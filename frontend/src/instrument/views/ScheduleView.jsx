@@ -1,11 +1,14 @@
 // Schedule — the horizontal timeline: days stack as rows, time flows left
-// to right, and the red now-line crosses today where it belongs.
+// to right, and the red now-line crosses today where it belongs. The rows
+// flex to fill the window and the axis hugs the timetable (an hour of pad
+// around the earliest and latest block), so the week uses the whole canvas.
 //
 // Non-instructional weeks say so in words ("Recess Week") and stay meaningful:
 // Canvas events and any tasks the user scheduled that week still render on the
 // grid. Only a truly empty week shows a note, and it describes, it doesn't
 // push. Class cards carry the full facts: type + class number, module name,
-// venue, time. ←/→ move weeks, T returns.
+// venue, time, in the voice chosen in Settings (slab / registrar / wash).
+// ←/→ move weeks, T returns.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -25,6 +28,7 @@ import {
   withCanvasEvents,
   minutesSinceMidnight,
 } from "../../components/scheduleUtils";
+import { getScheduleCardStyle } from "../scheduleCardStyle";
 import { useWorkspaceToolbar } from "../../components/WorkspaceToolbarContext";
 import ClassContextDrawer from "../../components/drawers/ClassContextDrawer";
 import "./schedule.css";
@@ -42,10 +46,9 @@ const ABBREV = {
   TUTORIALTYPE2: "TUT2",
   "PACKAGED TEACHING": "PACK",
 };
-const START_HOUR = 8;
-const END_HOUR = 23;
-const TOTAL_MINUTES = (END_HOUR - START_HOUR) * 60;
-const ROW_HEIGHT = 72;
+// Fallback day span — a week with nothing on it still shows a full axis.
+const DEFAULT_START_HOUR = 8;
+const DEFAULT_END_HOUR = 23;
 
 function timeHM(date) {
   return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false });
@@ -61,11 +64,18 @@ export default function ScheduleView({ token }) {
   const [importState, setImportState] = useState({ busy: false, message: "" });
   const [now, setNow] = useState(() => new Date());
   const [fullWeek, setFullWeek] = useState(false);
+  const [cardStyle, setCardStyle] = useState(getScheduleCardStyle());
   const fileRef = useRef(null);
 
   useEffect(() => {
     const timer = window.setInterval(() => setNow(new Date()), 30000);
     return () => window.clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    const onSettings = () => setCardStyle(getScheduleCardStyle());
+    window.addEventListener("settings-updated", onSettings);
+    return () => window.removeEventListener("settings-updated", onSettings);
   }, []);
 
   const load = useCallback(async () => {
@@ -137,6 +147,29 @@ export default function ScheduleView({ token }) {
   const visibleDays = showWeekend ? days : days.slice(0, 5);
   const visibleItems = showWeekend ? weekItems : weekItems.slice(0, 5);
   const visibleTasks = showWeekend ? weekTasks : weekTasks.slice(0, 5);
+
+  // The axis hugs the timetable: an hour of pad around the earliest and
+  // latest block, clamped to the day. Empty weeks fall back to the full span.
+  const axis = useMemo(() => {
+    let earliest = Infinity;
+    let latest = -Infinity;
+    for (const items of visibleItems) {
+      for (const item of items) {
+        const startMin = minutesSinceMidnight(item.start);
+        const endMin = minutesSinceMidnight(item.end);
+        if (endMin <= DEFAULT_START_HOUR * 60 || startMin >= DEFAULT_END_HOUR * 60) continue;
+        earliest = Math.min(earliest, startMin);
+        latest = Math.max(latest, endMin);
+      }
+    }
+    if (!Number.isFinite(earliest)) {
+      return { start: DEFAULT_START_HOUR, end: DEFAULT_END_HOUR };
+    }
+    return {
+      start: Math.max(DEFAULT_START_HOUR, Math.floor(earliest / 60) - 1),
+      end: Math.min(DEFAULT_END_HOUR, Math.ceil(latest / 60) + 1),
+    };
+  }, [visibleItems]);
 
   const week = getAcademicWeek(weekAnchor);
 
@@ -218,8 +251,10 @@ export default function ScheduleView({ token }) {
   };
 
   const nowMinutes = minutesSinceMidnight(now);
-  const hours = Array.from({ length: END_HOUR - START_HOUR }, (_, i) => START_HOUR + i);
-  const axisPct = (minutes) => ((minutes - START_HOUR * 60) / TOTAL_MINUTES) * 100;
+  const axisStartMin = axis.start * 60;
+  const axisMinutes = (axis.end - axis.start) * 60;
+  const hours = Array.from({ length: axis.end - axis.start }, (_, i) => axis.start + i);
+  const axisPct = (minutes) => ((minutes - axisStartMin) / axisMinutes) * 100;
 
   return (
     <div className="ins-sched">
@@ -286,8 +321,8 @@ export default function ScheduleView({ token }) {
         </div>
       </div>
 
-      <div className="ins-hgridwrap">
-        <div className="ins-hgrid" style={{ "--row-h": `${ROW_HEIGHT}px` }}>
+      <div className={`ins-hgridwrap cards-${cardStyle}`}>
+        <div className="ins-hgrid">
           <div className="ins-hgrid-corner" />
           <div className="ins-hgrid-hours">
             {hours.map((hour) => (

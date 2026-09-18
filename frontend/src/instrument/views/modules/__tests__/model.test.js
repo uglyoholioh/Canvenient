@@ -14,8 +14,7 @@ import {
 
 const NOW = new Date("2026-09-19T10:00:00");
 
-const iso = (hoursFromNow) =>
-  new Date(NOW.getTime() + hoursFromNow * 3600000).toISOString();
+const iso = (hoursFromNow) => new Date(NOW.getTime() + hoursFromNow * 3600000).toISOString();
 
 const COURSES = [
   { id: 1, course_code: "CS2103", color: "#c2a265" },
@@ -122,9 +121,7 @@ describe("groupAnnouncements", () => {
 
 describe("freshPostCount / upcomingCounts", () => {
   it("counts fresh posts within 48h only", () => {
-    expect(
-      freshPostCount([{ posted_at: iso(-1) }, { posted_at: iso(-24 * 3) }, {}], NOW),
-    ).toBe(1);
+    expect(freshPostCount([{ posted_at: iso(-1) }, { posted_at: iso(-24 * 3) }, {}], NOW)).toBe(1);
   });
 
   it("counts upcoming per course", () => {

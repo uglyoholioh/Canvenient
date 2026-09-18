@@ -143,10 +143,7 @@ export default function ModulesView({ token }) {
     [deadlineBuckets],
   );
 
-  const freshCount = useMemo(
-    () => freshPostCount(announcements, now),
-    [announcements, now],
-  );
+  const freshCount = useMemo(() => freshPostCount(announcements, now), [announcements, now]);
 
   const fact = useMemo(() => {
     if (!loaded) return "";
@@ -158,7 +155,9 @@ export default function ModulesView({ token }) {
       return bits.length > 0 ? bits.join(" · ") : "nothing dated ahead";
     }
     if (selection.kind === "inbox")
-      return freshCount > 0 ? `${announcements.length} posts · ${freshCount} new` : `${announcements.length} posts`;
+      return freshCount > 0
+        ? `${announcements.length} posts · ${freshCount} new`
+        : `${announcements.length} posts`;
     if (selection.kind === "grades") return `${courses.length} courses`;
     if (course) {
       const upcoming = upcomingCount.get(String(course.id)) || 0;
@@ -282,24 +281,24 @@ export default function ModulesView({ token }) {
         onOpenAssignment={openAssignment}
         onDismiss={dismiss}
       />
-    ) : selection.kind === "inbox"
-        ? <InboxList items={announcements} courses={courses} now={now} onDismiss={dismiss} />
-        : selection.kind === "grades"
-          ? renderGrades()
-          : selection.kind === "deadlines"
-            ? renderDeadlines()
-            : (
-                <SemesterLanding
-                  courses={courses}
-                  assignments={assignments}
-                  announcements={announcements}
-                  buckets={deadlineBuckets}
-                  grades={grades}
-                  now={now}
-                  onOpenAssignment={openAssignment}
-                  onOpenCourse={(id) => select("course", id)}
-                />
-              );
+    ) : selection.kind === "inbox" ? (
+      <InboxList items={announcements} courses={courses} now={now} onDismiss={dismiss} />
+    ) : selection.kind === "grades" ? (
+      renderGrades()
+    ) : selection.kind === "deadlines" ? (
+      renderDeadlines()
+    ) : (
+      <SemesterLanding
+        courses={courses}
+        assignments={assignments}
+        announcements={announcements}
+        buckets={deadlineBuckets}
+        grades={grades}
+        now={now}
+        onOpenAssignment={openAssignment}
+        onOpenCourse={(id) => select("course", id)}
+      />
+    );
 
   return (
     <div className="ins-mods">
