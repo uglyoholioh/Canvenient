@@ -38,22 +38,10 @@ import {
   tomorrowFirst,
   windowLabel,
 } from "../ledger";
-import {
-  DASHBOARD_EVENT,
-  readDashboardConfig,
-} from "../dashboardConfig";
-import {
-  loadBrief,
-  readBriefCache,
-} from "../briefCache";
+import { DASHBOARD_EVENT, readDashboardConfig } from "../dashboardConfig";
+import { loadBrief, readBriefCache } from "../briefCache";
 import { BusCard } from "../busCards";
-import {
-  DayTimeline,
-  ExamsList,
-  HorizonColumns,
-  HorizonList,
-  HorizonStrip,
-} from "../ledgerViews";
+import { DayTimeline, ExamsList, HorizonColumns, HorizonList, HorizonStrip } from "../ledgerViews";
 import "../views/today.css";
 
 const BUS_REFRESH_MS = 20000;
@@ -196,8 +184,7 @@ function DayRail({ items, scale, now, windows, gap, featuredId, onSelect, tomorr
           className="ins-rail-gap ins-mono"
           style={{
             left: `${pctOfMin(nowMin)}%`,
-            transform:
-              pctOfMin(nowMin) > 70 ? "translateX(calc(-100% - 6px))" : "translateX(6px)",
+            transform: pctOfMin(nowMin) > 70 ? "translateX(calc(-100% - 6px))" : "translateX(6px)",
           }}
         >
           {windowLabel(gap.minutesLeft)}
@@ -312,7 +299,8 @@ function DueRow({
   );
 }
 
-export default function TodayView({ token, onNavigate }) {  const [now, setNow] = useState(() => new Date());
+export default function TodayView({ token, onNavigate }) {
+  const [now, setNow] = useState(() => new Date());
   const [schedule, setSchedule] = useState(null);
   const [tasks, setTasks] = useState([]);
   const [assignments, setAssignments] = useState([]);
@@ -365,29 +353,19 @@ export default function TodayView({ token, onNavigate }) {  const [now, setNow] 
       getAcademicModules(token),
       getCampusBusStops(token),
       getVenueLocations(token),
-    ]).then(
-      ([
-        scheduleRes,
-        tasksRes,
-        assignmentsRes,
-        coursesRes,
-        modulesRes,
-        stopsRes,
-        locRes,
-      ]) => {
-        if (!alive) return;
-        if (scheduleRes.status === "fulfilled") setSchedule(scheduleRes.value);
-        if (tasksRes.status === "fulfilled") setTasks(tasksRes.value || []);
-        if (assignmentsRes.status === "fulfilled") setAssignments(assignmentsRes.value || []);
-        if (coursesRes.status === "fulfilled") setCourses(coursesRes.value || []);
-        if (modulesRes.status === "fulfilled") setModules(modulesRes.value || []);
-        if (stopsRes.status === "fulfilled") setStops(stopsRes.value?.stops || []);
-        if (locRes.status === "fulfilled") {
-          setLocations(locRes.value?.locations || {});
-          setCentroids(locRes.value?.building_centroids || {});
-        }
-      },
-    );
+    ]).then(([scheduleRes, tasksRes, assignmentsRes, coursesRes, modulesRes, stopsRes, locRes]) => {
+      if (!alive) return;
+      if (scheduleRes.status === "fulfilled") setSchedule(scheduleRes.value);
+      if (tasksRes.status === "fulfilled") setTasks(tasksRes.value || []);
+      if (assignmentsRes.status === "fulfilled") setAssignments(assignmentsRes.value || []);
+      if (coursesRes.status === "fulfilled") setCourses(coursesRes.value || []);
+      if (modulesRes.status === "fulfilled") setModules(modulesRes.value || []);
+      if (stopsRes.status === "fulfilled") setStops(stopsRes.value?.stops || []);
+      if (locRes.status === "fulfilled") {
+        setLocations(locRes.value?.locations || {});
+        setCentroids(locRes.value?.building_centroids || {});
+      }
+    });
     return () => {
       alive = false;
     };
@@ -571,7 +549,9 @@ export default function TodayView({ token, onNavigate }) {  const [now, setNow] 
     [now, toggleTask, onNavigate, findTask, colorFor, completion],
   );
 
-  const renderDueRow = (item, tone) => <DueRow key={item.id} item={item} tone={tone} {...dueRowProps} />;
+  const renderDueRow = (item, tone) => (
+    <DueRow key={item.id} item={item} tone={tone} {...dueRowProps} />
+  );
 
   const renderDayRows = (items, tone) => {
     const visible = tone === "overdue" ? items.slice(0, 5) : items.slice(0, 6);
@@ -646,8 +626,7 @@ export default function TodayView({ token, onNavigate }) {  const [now, setNow] 
         : HorizonColumns;
 
   const duesSection =
-    config.dues &&
-    (horizon.overdue.length > 0 || horizon.columns[0]?.items.length > 0) ? (
+    config.dues && (horizon.overdue.length > 0 || horizon.columns[0]?.items.length > 0) ? (
       <section className="ins-sec">
         {horizon.overdue.length > 0 && (
           <>
@@ -721,10 +700,12 @@ export default function TodayView({ token, onNavigate }) {  const [now, setNow] 
             <span className="ins-inbox-dot" />
             <span className="ins-mono">{brief.new_announcements.length} new</span>
             <span className="ins-inbox-courses ins-mono">
-              {[...brief.new_announcements.reduce(
-                (map, a) => map.set(a.course, (map.get(a.course) || 0) + 1),
-                new Map(),
-              )]
+              {[
+                ...brief.new_announcements.reduce(
+                  (map, a) => map.set(a.course, (map.get(a.course) || 0) + 1),
+                  new Map(),
+                ),
+              ]
                 .slice(0, 3)
                 .map(([course, count]) => (count > 1 ? `${course} ×${count}` : course))
                 .join(" · ")}

@@ -44,7 +44,12 @@ function Board({ arrivals, stopName, onOpen, failed }) {
     (entry) => Array.isArray(entry.minutes) && entry.minutes.length > 0,
   );
   return (
-    <CardShell stopName={stopName} caption="ISB" onOpen={onOpen} className={`is-board${failed ? " is-stale" : ""}`}>
+    <CardShell
+      stopName={stopName}
+      caption="ISB"
+      onOpen={onOpen}
+      className={`is-board${failed ? " is-stale" : ""}`}
+    >
       {services.length === 0 ? (
         <Empty />
       ) : (
@@ -85,7 +90,11 @@ function Hero({ arrivals, stopName, onOpen, failed }) {
         .map((s) => s.minutes[1])[0]
     : null;
   return (
-    <CardShell stopName={stopName} onOpen={onOpen} className={`is-hero${failed ? " is-stale" : ""}`}>
+    <CardShell
+      stopName={stopName}
+      onOpen={onOpen}
+      className={`is-hero${failed ? " is-stale" : ""}`}
+    >
       {next ? (
         <span className="ins-bushero">
           <span className="ins-bushero-chip" style={{ "--tone": serviceTone(next.service) }}>
@@ -131,7 +140,10 @@ function Ribbon({ arrivals, stopName, onOpen, failed }) {
               <i
                 key={index}
                 className="ins-tip ins-busribbon-tick"
-                style={{ left: `${(tick.minute / 60) * 100}%`, "--tone": serviceTone(tick.service) }}
+                style={{
+                  left: `${(tick.minute / 60) * 100}%`,
+                  "--tone": serviceTone(tick.service),
+                }}
                 data-tip={`${tick.service} · ${etaText(tick.minute)}`}
               />
             ))}
@@ -150,7 +162,11 @@ function Chips({ arrivals, stopName, onOpen, failed }) {
     (entry) => Array.isArray(entry.minutes) && entry.minutes.length > 0,
   );
   return (
-    <CardShell stopName={stopName} onOpen={onOpen} className={`is-chips${failed ? " is-stale" : ""}`}>
+    <CardShell
+      stopName={stopName}
+      onOpen={onOpen}
+      className={`is-chips${failed ? " is-stale" : ""}`}
+    >
       {services.length === 0 ? (
         <Empty compact />
       ) : (
@@ -175,7 +191,12 @@ function Chips({ arrivals, stopName, onOpen, failed }) {
 function Line({ arrivals, stopName, onOpen, failed }) {
   const { ticks } = ribbonTicks(arrivals?.arrivals || [], 60, 5);
   return (
-    <button type="button" className={`ins-busline${failed ? " is-stale" : ""}`} onClick={onOpen} title="Open Campus · Bus">
+    <button
+      type="button"
+      className={`ins-busline${failed ? " is-stale" : ""}`}
+      onClick={onOpen}
+      title="Open Campus · Bus"
+    >
       {ticks.length === 0 ? (
         <span className="ins-cap ins-mono">{stopName} · no departures</span>
       ) : (
@@ -191,7 +212,12 @@ function Line({ arrivals, stopName, onOpen, failed }) {
 }
 
 export const BUS_CARDS = [
-  { id: "board", name: "Board", caption: "services in their tones, next two each", Component: Board },
+  {
+    id: "board",
+    name: "Board",
+    caption: "services in their tones, next two each",
+    Component: Board,
+  },
   { id: "hero", name: "Hero", caption: "the next departure, large", Component: Hero },
   { id: "ribbon", name: "Ribbon", caption: "the hour as a scale", Component: Ribbon },
   { id: "chips", name: "Chips", caption: "one chip per service", Component: Chips },

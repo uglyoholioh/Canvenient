@@ -47,9 +47,7 @@ describe("openWindows", () => {
       { start: at(9, 0), end: at(10, 30) },
       { start: at(13, 0), end: at(14, 0) },
     ];
-    expect(openWindows(items)).toEqual([
-      { from: at(10, 30), until: at(13, 0), minutes: 150 },
-    ]);
+    expect(openWindows(items)).toEqual([{ from: at(10, 30), until: at(13, 0), minutes: 150 }]);
   });
 
   it("ignores hallway crossings", () => {
@@ -68,26 +66,36 @@ describe("gapAround", () => {
   ]);
 
   it("reads the span the now-dot sits in, with minutes left", () => {
-    expect(gapAround(
-      [
-        { start: at(9, 0), end: at(10, 30) },
-        { start: at(13, 0), end: at(14, 0) },
-      ],
-      NOW,
-      scale,
-    )).toMatchObject({ minutes: 150, minutesLeft: 90 });
+    expect(
+      gapAround(
+        [
+          { start: at(9, 0), end: at(10, 30) },
+          { start: at(13, 0), end: at(14, 0) },
+        ],
+        NOW,
+        scale,
+      ),
+    ).toMatchObject({ minutes: 150, minutesLeft: 90 });
   });
 
   it("is null while in class", () => {
-    expect(gapAround([{ start: at(9, 0), end: at(10, 30) }], at(9, 30), railScale([
-      { start: at(9, 0), end: at(10, 30) },
-    ]))).toBeNull();
+    expect(
+      gapAround(
+        [{ start: at(9, 0), end: at(10, 30) }],
+        at(9, 30),
+        railScale([{ start: at(9, 0), end: at(10, 30) }]),
+      ),
+    ).toBeNull();
   });
 
   it("opens with the rail when nothing has started yet", () => {
-    expect(gapAround([{ start: at(9, 0), end: at(10, 30) }], at(8, 45), railScale([
-      { start: at(9, 0), end: at(10, 30) },
-    ]))).toMatchObject({ minutesLeft: 15 });
+    expect(
+      gapAround(
+        [{ start: at(9, 0), end: at(10, 30) }],
+        at(8, 45),
+        railScale([{ start: at(9, 0), end: at(10, 30) }]),
+      ),
+    ).toMatchObject({ minutesLeft: 15 });
   });
 });
 

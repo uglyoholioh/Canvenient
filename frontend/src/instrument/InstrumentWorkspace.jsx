@@ -942,9 +942,7 @@ export default function InstrumentWorkspace({ token, user, onLogout, onUpdateUse
               }}
             />
 
-            {isTriageOpen && (
-              <TriageSheet token={token} onClose={() => setIsTriageOpen(false)} />
-            )}
+            {isTriageOpen && <TriageSheet token={token} onClose={() => setIsTriageOpen(false)} />}
 
             {isCommandBarOpen && (
               <CommandBar

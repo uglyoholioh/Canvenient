@@ -171,7 +171,9 @@
   font: inherit;
   text-align: left;
   cursor: default;
-  transition: opacity var(--ins-dur-fast) var(--ins-ease), filter var(--ins-dur-fast) var(--ins-ease);
+  transition:
+    opacity var(--ins-dur-fast) var(--ins-ease),
+    filter var(--ins-dur-fast) var(--ins-ease);
 }
 
 .ins-rail-block:hover {

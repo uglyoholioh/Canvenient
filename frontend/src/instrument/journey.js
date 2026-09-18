@@ -86,7 +86,15 @@ export function nextClass(schedule, now, dayCount = 7) {
 //             travelSource, walkFromStopMin, makesIt },
 //     routes: [...],
 //   }
-export async function buildClassJourney({ token, cls, origin, stops: _stops, locations, centroids, now }) {
+export async function buildClassJourney({
+  token,
+  cls,
+  origin,
+  stops: _stops,
+  locations,
+  centroids,
+  now,
+}) {
   if (!cls || !origin?.coord) return null;
   const venueCoord = venueCoordinate(cls.venue, locations, centroids);
   if (!venueCoord) return null;

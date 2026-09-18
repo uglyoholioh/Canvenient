@@ -650,7 +650,6 @@ function VenuesPage({ token }) {
     else setWindow(Math.min(winStart, mins - 30), mins);
   };
 
-
   const railMinutes = winStart;
   const railEndMinutes = winEnd;
   const commitWindow = () => setQueryStartMin(winStartRef.current);

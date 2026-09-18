@@ -11779,7 +11779,9 @@ textarea {
   font-size: 13px;
   font-family: var(--font-sans);
   outline: none;
-  transition: border-color 0.15s ease, background 0.15s ease;
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease;
 }
 
 .vf-search-input:focus {
@@ -12372,7 +12374,8 @@ textarea {
 }
 
 @keyframes vfPulse {
-  0%, 100% {
+  0%,
+  100% {
     opacity: 0.6;
   }
   50% {
@@ -12397,7 +12400,11 @@ textarea {
   border-radius: 8px;
   cursor: pointer;
   position: relative;
-  transition: border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease, border-left-color 0.15s ease;
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease,
+    box-shadow 0.15s ease,
+    border-left-color 0.15s ease;
 }
 
 .vf-card.is-free {
@@ -12496,7 +12503,9 @@ textarea {
   padding: 0;
   border-radius: 4px;
   opacity: 0;
-  transition: opacity 0.15s ease, color 0.15s ease;
+  transition:
+    opacity 0.15s ease,
+    color 0.15s ease;
 }
 
 .vf-card:hover .vf-star-btn,
@@ -12542,7 +12551,9 @@ textarea {
   border-radius: 1px;
   cursor: pointer;
   position: relative;
-  transition: opacity 0.1s ease, transform 0.1s ease;
+  transition:
+    opacity 0.1s ease,
+    transform 0.1s ease;
 }
 
 .vf-slot-block.free {
@@ -12909,7 +12920,6 @@ textarea {
   font-size: 11px;
   color: var(--text-muted);
 }
-
 
 /* ==========================================================================
    CANVAS ANNOUNCEMENT TRIAGE INBOX

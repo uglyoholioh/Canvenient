@@ -3,9 +3,10 @@ Tests for the focus session system: /focus/* endpoints, user scoping,
 client_id replay for offline queues, and the 0003 legacy-copy migration.
 """
 
+from datetime import datetime, timedelta, timezone
+
 import pytest
 from conftest import TEST_PASSWORD, auth_headers
-from datetime import datetime, timedelta, timezone
 from httpx import AsyncClient
 
 from database import db

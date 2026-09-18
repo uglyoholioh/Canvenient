@@ -69,10 +69,7 @@ describe("TaskInputBar quick capture", () => {
     );
 
     await waitFor(() =>
-      expect(screen.getByPlaceholderText("New Task")).toHaveAttribute(
-        "maxLength",
-        "160",
-      ),
+      expect(screen.getByPlaceholderText("New Task")).toHaveAttribute("maxLength", "160"),
     );
     expect(screen.queryByLabelText("Task note")).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Add note" }));

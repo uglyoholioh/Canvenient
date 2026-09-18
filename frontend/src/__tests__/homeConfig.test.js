@@ -16,18 +16,10 @@ vi.stubGlobal("window", {
 const getAssistantBrief = vi.fn();
 vi.mock("../api", () => ({ getAssistantBrief: (...args) => getAssistantBrief(...args) }));
 
-const {
-  DASHBOARD_DEFAULTS,
-  readDashboardConfig,
-  writeDashboardConfig,
-} = await import("../instrument/dashboardConfig");
-const {
-  loadBrief,
-  readBriefCache,
-  shouldRefetch,
-  writeBriefCache,
-  BRIEF_REFRESH_MS,
-} = await import("../instrument/briefCache");
+const { DASHBOARD_DEFAULTS, readDashboardConfig, writeDashboardConfig } =
+  await import("../instrument/dashboardConfig");
+const { loadBrief, readBriefCache, shouldRefetch, writeBriefCache, BRIEF_REFRESH_MS } =
+  await import("../instrument/briefCache");
 const { clockParts, examRows } = await import("../instrument/ledger");
 
 beforeEach(() => {
@@ -50,7 +42,11 @@ describe("dashboardConfig", () => {
 
   it("keeps the horizon shape sane", () => {
     writeDashboardConfig({ horizon: { view: "list", range: 30, label: "due pressure" } });
-    expect(readDashboardConfig().horizon).toEqual({ view: "list", range: 14, label: "due pressure" });
+    expect(readDashboardConfig().horizon).toEqual({
+      view: "list",
+      range: 14,
+      label: "due pressure",
+    });
   });
 });
 
@@ -108,7 +104,12 @@ describe("examRows", () => {
     const now = new Date(2026, 8, 29, 9, 0);
     const rows = examRows(
       [
-        { id: 1, module_code: "MA1501", start_at: "2026-11-30T01:00:00Z", end_at: "2026-11-30T03:00:00Z" },
+        {
+          id: 1,
+          module_code: "MA1501",
+          start_at: "2026-11-30T01:00:00Z",
+          end_at: "2026-11-30T03:00:00Z",
+        },
         { id: 2, module_code: "CS2040", start_at: "2026-11-23T02:00:00Z" },
         { id: 3, module_code: "OLD", start_at: "2026-08-01T02:00:00Z" },
         { id: 4, module_code: "FAR", start_at: "2027-06-01T02:00:00Z" },

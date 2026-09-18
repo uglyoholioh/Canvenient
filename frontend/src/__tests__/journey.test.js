@@ -9,17 +9,23 @@ import {
 import { localDateKey, startOfLocalDay } from "../components/scheduleUtils";
 
 const STOPS = [
-  { id: "KR Bus Terminal", name: "KR Bus Terminal", short_name: "KR BT", latitude: 1.2936, longitude: 103.7733 },
+  {
+    id: "KR Bus Terminal",
+    name: "KR Bus Terminal",
+    short_name: "KR BT",
+    latitude: 1.2936,
+    longitude: 103.7733,
+  },
   { id: "EA", name: "EA", short_name: "EA", latitude: 1.2996, longitude: 103.7704 },
 ];
 
 const LOCATIONS = {
-  "LT19": { location: { x: 103.7742, y: 1.2956 } },
+  LT19: { location: { x: 103.7742, y: 1.2956 } },
 };
 
 const CENTROIDS = {
-  "COM1": { lat: 1.2941, lon: 103.7742 },
-  "BIZ2": { lat: 1.2966, lon: 103.7757 },
+  COM1: { lat: 1.2941, lon: 103.7742 },
+  BIZ2: { lat: 1.2966, lon: 103.7757 },
 };
 
 describe("walkMinutes", () => {
@@ -46,7 +52,10 @@ describe("venueCoordinate", () => {
   });
 
   it("falls back to the building centroid", () => {
-    expect(venueCoordinate("COM1-0201", LOCATIONS, CENTROIDS)).toEqual({ lat: 1.2941, lon: 103.7742 });
+    expect(venueCoordinate("COM1-0201", LOCATIONS, CENTROIDS)).toEqual({
+      lat: 1.2941,
+      lon: 103.7742,
+    });
   });
 
   it("returns null without a venue", () => {

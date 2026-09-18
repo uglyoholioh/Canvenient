@@ -324,17 +324,27 @@ export default function VenueFinder({ token }) {
 
   const getStoredPreference = (key, defaultValue) => {
     try {
-      if (typeof window !== "undefined" && window.localStorage && typeof window.localStorage.getItem === "function") {
+      if (
+        typeof window !== "undefined" &&
+        window.localStorage &&
+        typeof window.localStorage.getItem === "function"
+      ) {
         return window.localStorage.getItem(`canvenient.vf.${key}`) || defaultValue;
       }
     } catch {}
     return defaultValue;
   };
 
-  const [timePickerStyle, setTimePickerStyle] = useState(() => getStoredPreference("timePickerStyle", "scrubber"));
+  const [timePickerStyle, setTimePickerStyle] = useState(() =>
+    getStoredPreference("timePickerStyle", "scrubber"),
+  );
   const [vizStyle, setVizStyle] = useState(() => getStoredPreference("vizStyle", "blocks"));
-  const [markerStyle, setMarkerStyle] = useState(() => getStoredPreference("markerStyle", "needle"));
-  const [transitionStyle, setTransitionStyle] = useState(() => getStoredPreference("transitionStyle", "stagger"));
+  const [markerStyle, setMarkerStyle] = useState(() =>
+    getStoredPreference("markerStyle", "needle"),
+  );
+  const [transitionStyle, setTransitionStyle] = useState(() =>
+    getStoredPreference("transitionStyle", "stagger"),
+  );
 
   const [isOptionsOpen, setIsOptionsOpen] = useState(false);
   const optionsDropdownRef = useRef(null);
@@ -345,7 +355,11 @@ export default function VenueFinder({ token }) {
 
   const [starredVenues, setStarredVenues] = useState(() => {
     try {
-      if (typeof window !== "undefined" && window.localStorage && typeof window.localStorage.getItem === "function") {
+      if (
+        typeof window !== "undefined" &&
+        window.localStorage &&
+        typeof window.localStorage.getItem === "function"
+      ) {
         return JSON.parse(window.localStorage.getItem("canvenient.venues.starred") || "[]");
       }
     } catch {
@@ -364,7 +378,11 @@ export default function VenueFinder({ token }) {
     }
     setStarredVenues(newStarred);
     try {
-      if (typeof window !== "undefined" && window.localStorage && typeof window.localStorage.setItem === "function") {
+      if (
+        typeof window !== "undefined" &&
+        window.localStorage &&
+        typeof window.localStorage.setItem === "function"
+      ) {
         window.localStorage.setItem("canvenient.venues.starred", JSON.stringify(newStarred));
       }
     } catch {}
@@ -373,7 +391,11 @@ export default function VenueFinder({ token }) {
   const setPreference = (key, val, setter) => {
     setter(val);
     try {
-      if (typeof window !== "undefined" && window.localStorage && typeof window.localStorage.setItem === "function") {
+      if (
+        typeof window !== "undefined" &&
+        window.localStorage &&
+        typeof window.localStorage.setItem === "function"
+      ) {
         window.localStorage.setItem(`canvenient.vf.${key}`, val);
       }
     } catch {}
@@ -884,7 +906,11 @@ export default function VenueFinder({ token }) {
             </button>
 
             {/* View Customizer Popover Trigger */}
-            <div className="vf-dropdown-wrapper" ref={optionsDropdownRef} style={{ marginLeft: "auto" }}>
+            <div
+              className="vf-dropdown-wrapper"
+              ref={optionsDropdownRef}
+              style={{ marginLeft: "auto" }}
+            >
               <button
                 type="button"
                 className={`vf-btn vf-btn-icon-only ${isOptionsOpen ? "active" : ""}`}
@@ -903,21 +929,27 @@ export default function VenueFinder({ token }) {
                       <button
                         type="button"
                         className={`vf-segmented-item ${timePickerStyle === "scrubber" ? "selected" : ""}`}
-                        onClick={() => setPreference("timePickerStyle", "scrubber", setTimePickerStyle)}
+                        onClick={() =>
+                          setPreference("timePickerStyle", "scrubber", setTimePickerStyle)
+                        }
                       >
                         Timeline
                       </button>
                       <button
                         type="button"
                         className={`vf-segmented-item ${timePickerStyle === "chips" ? "selected" : ""}`}
-                        onClick={() => setPreference("timePickerStyle", "chips", setTimePickerStyle)}
+                        onClick={() =>
+                          setPreference("timePickerStyle", "chips", setTimePickerStyle)
+                        }
                       >
                         Chips
                       </button>
                       <button
                         type="button"
                         className={`vf-segmented-item ${timePickerStyle === "select" ? "selected" : ""}`}
-                        onClick={() => setPreference("timePickerStyle", "select", setTimePickerStyle)}
+                        onClick={() =>
+                          setPreference("timePickerStyle", "select", setTimePickerStyle)
+                        }
                       >
                         Select
                       </button>
@@ -991,7 +1023,9 @@ export default function VenueFinder({ token }) {
                       <button
                         type="button"
                         className={`vf-segmented-item ${transitionStyle === "stagger" ? "selected" : ""}`}
-                        onClick={() => setPreference("transitionStyle", "stagger", setTransitionStyle)}
+                        onClick={() =>
+                          setPreference("transitionStyle", "stagger", setTransitionStyle)
+                        }
                       >
                         Stagger
                       </button>
@@ -1005,14 +1039,18 @@ export default function VenueFinder({ token }) {
                       <button
                         type="button"
                         className={`vf-segmented-item ${transitionStyle === "skeleton" ? "selected" : ""}`}
-                        onClick={() => setPreference("transitionStyle", "skeleton", setTransitionStyle)}
+                        onClick={() =>
+                          setPreference("transitionStyle", "skeleton", setTransitionStyle)
+                        }
                       >
                         Pulse
                       </button>
                       <button
                         type="button"
                         className={`vf-segmented-item ${transitionStyle === "slide" ? "selected" : ""}`}
-                        onClick={() => setPreference("transitionStyle", "slide", setTransitionStyle)}
+                        onClick={() =>
+                          setPreference("transitionStyle", "slide", setTransitionStyle)
+                        }
                       >
                         Slide
                       </button>
@@ -1027,7 +1065,8 @@ export default function VenueFinder({ token }) {
           <div className="vf-time-picker-shell">
             <div className="vf-time-picker-header">
               <span>
-                Target time: <strong style={{ color: "var(--text-h)" }}>{formatTimeSlot(selectedTime)}</strong>
+                Target time:{" "}
+                <strong style={{ color: "var(--text-h)" }}>{formatTimeSlot(selectedTime)}</strong>
               </span>
               <button
                 type="button"
@@ -1232,11 +1271,7 @@ export default function VenueFinder({ token }) {
                   </button>
                 </span>
               )}
-              <button
-                type="button"
-                className="vf-filter-pill-clear-all"
-                onClick={resetFilters}
-              >
+              <button type="button" className="vf-filter-pill-clear-all" onClick={resetFilters}>
                 Clear all
               </button>
             </div>
@@ -1267,7 +1302,10 @@ export default function VenueFinder({ token }) {
             <div key={i} className="vf-skeleton-card">
               <div className="vf-skeleton-line" style={{ width: "45%" }} />
               <div className="vf-skeleton-line" style={{ width: "70%" }} />
-              <div className="vf-skeleton-line" style={{ width: "100%", height: "10px", marginTop: "auto" }} />
+              <div
+                className="vf-skeleton-line"
+                style={{ width: "100%", height: "10px", marginTop: "auto" }}
+              />
             </div>
           ))}
         </div>
@@ -1326,7 +1364,9 @@ export default function VenueFinder({ token }) {
                     {v.distanceM !== null && (
                       <span className="vf-walk-badge" title={`${v.distanceM}m away`}>
                         <MapPin size={10} />
-                        {v.distanceM < 1000 ? `${v.distanceM}m` : `${(v.distanceM / 1000).toFixed(1)}km`}
+                        {v.distanceM < 1000
+                          ? `${v.distanceM}m`
+                          : `${(v.distanceM / 1000).toFixed(1)}km`}
                       </span>
                     )}
                     <button

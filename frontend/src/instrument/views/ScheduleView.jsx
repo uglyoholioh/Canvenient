@@ -241,10 +241,7 @@ export default function ScheduleView({ token }) {
   };
 
   const nowMinutes = minutesSinceMidnight(now);
-  const upcomingExams = useMemo(
-    () => examRows(schedule?.exams, now),
-    [schedule, now],
-  );
+  const upcomingExams = useMemo(() => examRows(schedule?.exams, now), [schedule, now]);
   const axisStartMin = axis.start * 60;
   const axisMinutes = (axis.end - axis.start) * 60;
   const hours = Array.from({ length: axis.end - axis.start }, (_, i) => axis.start + i);

@@ -12,10 +12,7 @@ import {
 } from "../../api";
 import { getThemePreference, setThemePreference } from "../theme";
 import { getScheduleCardStyle, setScheduleCardStyle } from "../scheduleCardStyle";
-import {
-  readDashboardConfig,
-  writeDashboardConfig,
-} from "../dashboardConfig";
+import { readDashboardConfig, writeDashboardConfig } from "../dashboardConfig";
 import { BUS_CARDS } from "../busCards";
 import "./settings.css";
 
@@ -277,8 +274,22 @@ export default function SettingsView({ token, user, onUpdateUser, onReplayOrient
                 <h2>Clock</h2>
               </div>
               <div className="ins-setting-inline">
-                {seg(dash.clock, [["24h", "24-hour"], ["12h", "12-hour"]], (clock) => setDash_({ clock }))}
-                {seg(dash.seconds, [[true, "Seconds"], [false, "No seconds"]], (seconds) => setDash_({ seconds }))}
+                {seg(
+                  dash.clock,
+                  [
+                    ["24h", "24-hour"],
+                    ["12h", "12-hour"],
+                  ],
+                  (clock) => setDash_({ clock }),
+                )}
+                {seg(
+                  dash.seconds,
+                  [
+                    [true, "Seconds"],
+                    [false, "No seconds"],
+                  ],
+                  (seconds) => setDash_({ seconds }),
+                )}
               </div>
             </div>
             <div className="ins-sec">
@@ -313,8 +324,8 @@ export default function SettingsView({ token, user, onUpdateUser, onReplayOrient
                 )}
               </div>
               <p className="ins-cap">
-                Ledger balances dues and campus; Columns uses three across on wide windows;
-                Focus keeps one quiet column.
+                Ledger balances dues and campus; Columns uses three across on wide windows; Focus
+                keeps one quiet column.
               </p>
             </div>
             <div className="ins-sec">
@@ -338,9 +349,30 @@ export default function SettingsView({ token, user, onUpdateUser, onReplayOrient
                 <h2>Sections</h2>
               </div>
               <div className="ins-setting-inline">
-                {seg(dash.brief, [[true, "Brief"], [false, "No brief"]], (brief) => setDash_({ brief }))}
-                {seg(dash.dues, [[true, "Dues"], [false, "No dues"]], (dues) => setDash_({ dues }))}
-                {seg(dash.exams, [[true, "Exams"], [false, "No exams"]], (exams) => setDash_({ exams }))}
+                {seg(
+                  dash.brief,
+                  [
+                    [true, "Brief"],
+                    [false, "No brief"],
+                  ],
+                  (brief) => setDash_({ brief }),
+                )}
+                {seg(
+                  dash.dues,
+                  [
+                    [true, "Dues"],
+                    [false, "No dues"],
+                  ],
+                  (dues) => setDash_({ dues }),
+                )}
+                {seg(
+                  dash.exams,
+                  [
+                    [true, "Exams"],
+                    [false, "No exams"],
+                  ],
+                  (exams) => setDash_({ exams }),
+                )}
               </div>
             </div>
             <div className="ins-sec">
@@ -371,7 +403,9 @@ export default function SettingsView({ token, user, onUpdateUser, onReplayOrient
                   className="ins-input"
                   value={dash.horizon.label}
                   placeholder="No caption"
-                  onChange={(e) => setDash_({ horizon: { ...dash.horizon, label: e.target.value } })}
+                  onChange={(e) =>
+                    setDash_({ horizon: { ...dash.horizon, label: e.target.value } })
+                  }
                 />
               </div>
               <p className="ins-cap">The caption above the horizon — leave empty for none.</p>

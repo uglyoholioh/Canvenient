@@ -14,9 +14,7 @@ export function DayTimeline({ items, now, gap, tomorrow, nextId, journey, expand
         <div key="gap-lead" className="ins-vtgap">
           <span className="ins-mono ins-vt-gaptime">{hm(gap.from)}</span>
           <span className="ins-vt-gapdot" aria-hidden="true" />
-          <span className="ins-mono ins-cap ins-vt-gapcaption">
-            {windowLabel(gap.minutesLeft)}
-          </span>
+          <span className="ins-mono ins-cap ins-vt-gapcaption">{windowLabel(gap.minutesLeft)}</span>
         </div>,
       );
     }
@@ -75,9 +73,7 @@ export function DayTimeline({ items, now, gap, tomorrow, nextId, journey, expand
         <div key="gap" className="ins-vtgap">
           <span className="ins-mono ins-vt-gaptime">{hm(gap.from)}</span>
           <span className="ins-vt-gapdot" aria-hidden="true" />
-          <span className="ins-mono ins-cap ins-vt-gapcaption">
-            {windowLabel(gap.minutesLeft)}
-          </span>
+          <span className="ins-mono ins-cap ins-vt-gapcaption">{windowLabel(gap.minutesLeft)}</span>
         </div>,
       );
     }
@@ -243,7 +239,11 @@ export function HorizonList({ buckets, openDay, onToggle }) {
             <span className="ins-mono ins-cap ins-hzrow-day">
               {day.cap
                 ? "overdue"
-                : day.date.toLocaleDateString([], { weekday: "short", day: "numeric", month: "short" })}
+                : day.date.toLocaleDateString([], {
+                    weekday: "short",
+                    day: "numeric",
+                    month: "short",
+                  })}
             </span>
             <span className="ins-hzrow-items">
               {day.items.length === 0 ? (
@@ -278,7 +278,11 @@ export function ExamsList({ exams, compact = false }) {
         <div key={exam.id} className="ins-examrow">
           <span className="ins-vt-title">{exam.moduleCode}</span>
           <span className="ins-mono ins-cap ins-examrow-when">
-            {exam.start.toLocaleDateString([], { weekday: "short", day: "numeric", month: "short" })}
+            {exam.start.toLocaleDateString([], {
+              weekday: "short",
+              day: "numeric",
+              month: "short",
+            })}
             {" · "}
             {hm(exam.start)}
             {exam.end ? `–${hm(exam.end)}` : ""}
