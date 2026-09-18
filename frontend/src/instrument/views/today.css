@@ -916,6 +916,10 @@ button.ins-duerow-title:hover {
   background: var(--ins-line);
 }
 
+.ins-vt.is-empty::before {
+  display: none;
+}
+
 .ins-vt-dot,
 .ins-vt-gapdot {
   position: relative;

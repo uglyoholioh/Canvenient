@@ -80,7 +80,7 @@ export function DayTimeline({ items, now, gap, tomorrow, nextId, journey, expand
   });
 
   return (
-    <div className="ins-vt">
+    <div className={`ins-vt${rows.length === 0 ? " is-empty" : ""}`}>
       {rows.length === 0 && (
         <div className="ins-vt-empty ins-cap">
           {tomorrow

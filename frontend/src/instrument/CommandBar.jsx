@@ -4,7 +4,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
-  Sun,
+  House,
   ListTodo,
   CalendarDays,
   MapPin,
@@ -28,7 +28,7 @@ import { getThemePreference, setThemePreference } from "./theme";
 import { formatShortcut } from "../keyboardShortcuts";
 
 const VIEWS = [
-  { id: "dashboard", label: "Today", icon: Sun },
+  { id: "dashboard", label: "Home", icon: House },
   { id: "tasks", label: "Tasks", icon: ListTodo },
   { id: "schedule", label: "Schedule", icon: CalendarDays },
   { id: "venues", label: "Campus", icon: MapPin },
