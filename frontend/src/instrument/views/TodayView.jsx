@@ -378,8 +378,15 @@ export default function TodayView({ token, user, onNavigate }) {
   };
 
   const dateLabel = now.toLocaleDateString([], { weekday: "long", day: "numeric", month: "long" });
+  // "Empty" means the timetable itself has nothing for today — past classes
+  // don't count, the classes list tells that story on its own.
   const everythingEmpty =
-    loaded && !happeningNow && !nextToday && overdue.length === 0 && dueToday.length === 0;
+    loaded &&
+    !happeningNow &&
+    !nextToday &&
+    overdue.length === 0 &&
+    dueToday.length === 0 &&
+    todayClasses.length === 0;
 
   // Day progress — elapsed share of today, as a thin filling rule.
   const dayPct =

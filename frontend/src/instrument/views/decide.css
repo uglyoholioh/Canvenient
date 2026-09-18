@@ -146,6 +146,7 @@
 }
 
 .ins-deckcard.is-spent {
+  z-index: 20;
   opacity: 0.45;
   transform: translate(-50%, calc(-50% + 14px)) rotate(calc((var(--i) - (var(--n) - 1) / 2) * 3deg))
     translateX(calc((var(--i) - (var(--n) - 1) / 2) * 16px));
