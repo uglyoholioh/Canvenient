@@ -142,10 +142,7 @@ export default function TasksView({ token }) {
         <div className="ins-remrow-body">
           <span className={`ins-remrow-title ${isDone ? "is-done" : ""}`}>{task.title}</span>
           <span className="ins-remrow-meta">
-            <span
-              className="ins-dot"
-              style={{ "--tick-color": color || "var(--ins-ink-faint)" }}
-            />
+            <span className="ins-dot" style={{ "--tick-color": color || "var(--ins-ink-faint)" }} />
             <span className={isOverdue ? "is-overdue" : "is-muted"}>
               {due ? dueCell(due, now) : "no due date"}
               {task.module_code ? ` · ${task.module_code}` : ""}
@@ -162,40 +159,6 @@ export default function TasksView({ token }) {
           ×
         </button>
       </div>
-    );
-  };
-
-  return (
-      <tr key={task.id} className={isOverdue ? "is-overdue" : ""}>
-        <td className="ins-tasks-check">
-          <input
-            type="checkbox"
-            className="ins-check"
-            checked={isDone}
-            onChange={() => toggle(task)}
-            aria-label={isDone ? `Reopen ${task.title}` : `Mark ${task.title} done`}
-          />
-        </td>
-        <td className="ins-tasks-title">
-          <span className="ins-tick" style={{ "--tick-color": color || "var(--ins-ink-faint)" }} />
-          <span className={isDone ? "is-done" : ""}>{task.title}</span>
-        </td>
-        <td className="ins-tasks-module ins-mono">{task.module_code || ""}</td>
-        <td className={`ins-tasks-due ins-mono${isOverdue ? " is-overdue" : ""}`}>
-          {dueCell(due, now)}
-        </td>
-        <td className="ins-tasks-actions">
-          <button
-            type="button"
-            className="ins-iconbtn"
-            onClick={() => remove(task)}
-            aria-label={`Delete ${task.title}`}
-            title="Delete"
-          >
-            ×
-          </button>
-        </td>
-      </tr>
     );
   };
 
