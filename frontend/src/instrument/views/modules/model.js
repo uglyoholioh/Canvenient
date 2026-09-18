@@ -29,13 +29,15 @@ function startOfDay(date) {
 export function relativeDay(iso, now) {
   if (!iso) return "";
   const date = new Date(iso);
-  const days = Math.round((date - now) / 86400000);
+  // Calendar-day difference, not elapsed rounding — a 23:59 due tonight must
+  // still read "today" at 02:00.
+  const dayDiff = Math.round((startOfDay(date) - startOfDay(now)) / 86400000);
   const time = date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false });
-  if (days === 0) return `today ${time}`;
-  if (days === 1) return `tomorrow ${time}`;
-  if (days === -1) return "yesterday";
-  if (days < 0) return `${-days}d ago`;
-  if (days <= 6) return date.toLocaleDateString([], { weekday: "short" });
+  if (dayDiff === 0) return `today ${time}`;
+  if (dayDiff === 1) return `tomorrow ${time}`;
+  if (dayDiff === -1) return "yesterday";
+  if (dayDiff < 0) return `${-dayDiff}d ago`;
+  if (dayDiff <= 6) return date.toLocaleDateString([], { weekday: "short" });
   return date.toLocaleDateString([], { day: "numeric", month: "short" });
 }
 

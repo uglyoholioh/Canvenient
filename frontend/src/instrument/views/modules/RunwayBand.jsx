@@ -8,10 +8,10 @@ export default function RunwayBand({ item, now, onClick }) {
   if (!item) return null;
   const runway = runwayFor(item.due_at, now);
   const left = humanizeLeft(runway.left);
-  const caption =
-    runway.tone === "overdue"
-      ? `overdue · ${relativeDay(item.due_at, now)}`
-      : `due ${relativeDay(item.due_at, now)}${left ? ` · ${left} left` : ""}`;
+  const overdueBy = runway.tone === "overdue" ? humanizeLeft(now - new Date(item.due_at)) : null;
+  const caption = overdueBy
+    ? `overdue by ${overdueBy}`
+    : `due ${relativeDay(item.due_at, now)}${left ? ` · ${left} left` : ""}`;
 
   return (
     <button type="button" className="ins-runway" onClick={() => onClick && onClick(item)}>

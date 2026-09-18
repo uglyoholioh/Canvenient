@@ -7,6 +7,7 @@ import {
   humanizeLeft,
   parseGradePercent,
   readSelection,
+  relativeDay,
   runwayFor,
   upcomingCounts,
   writeSelection,
@@ -26,6 +27,20 @@ const dueRow = (id, hoursFromNow, courseId = 1, title = `item-${id}`) => ({
   title,
   course_id: courseId,
   due_at: iso(hoursFromNow),
+});
+
+describe("relativeDay", () => {
+  it("keeps a late-evening due on today regardless of the hour", () => {
+    const tonight = new Date(2026, 8, 19, 23, 59).toISOString();
+    const twoAm = new Date(2026, 8, 19, 2, 0);
+    expect(relativeDay(tonight, twoAm)).toContain("today");
+  });
+
+  it("still reads tomorrow for the next calendar day", () => {
+    const tomorrowNight = new Date(2026, 8, 20, 23, 59).toISOString();
+    const twoAm = new Date(2026, 8, 19, 2, 0);
+    expect(relativeDay(tomorrowNight, twoAm)).toContain("tomorrow");
+  });
 });
 
 describe("bucketDeadlines", () => {
