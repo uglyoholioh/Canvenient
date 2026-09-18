@@ -275,7 +275,7 @@ function FortnightStrip({ buckets, phases, openDay, onToggle }) {
               day: "numeric",
               month: "short",
             })}\n${tipFor(col)}`}
-            onClick={() => onToggle(index)}
+            onClick={() => col.items.length > 0 && onToggle(index)}
           >
             {col.examCount > 0 && <i className="ins-fnexam" />}
             <span className="ins-fnbars">
@@ -558,6 +558,16 @@ export default function TodayView({ token, onNavigate }) {
     if (happeningNow) return happeningNow;
     return nextToday;
   }, [featuredId, dayItems, happeningNow, nextToday]);
+  const featuredIsToday = Boolean(featured && dayItems.some((i) => i.id === featured.id));
+  const featuredLabel = !featured
+    ? null
+    : featured.id === happeningNow?.id
+      ? `now · until ${timeHM(featured.end)}`
+      : featuredIsToday
+        ? `today · ${timeHM(featured.start)}`
+        : featured.dayOffset === 1
+          ? "tomorrow"
+          : featured.start.toLocaleDateString([], { weekday: "short" });
 
   const week = getAcademicWeek(now);
 
@@ -666,17 +676,6 @@ export default function TodayView({ token, onNavigate }) {
         : [];
   const openDayDate =
     typeof openDay === "number" ? fortnight.columns[openDay]?.date : null;
-
-  const featuredIsToday = featured && dayItems.includes(featured);
-  const featuredLabel = !featured
-    ? null
-    : featured === happeningNow
-      ? `now · until ${timeHM(featured.end)}`
-      : featuredIsToday
-        ? `today · ${timeHM(featured.start)}`
-        : featured.dayOffset === 1
-          ? "tomorrow"
-          : featured.start.toLocaleDateString([], { weekday: "short" });
 
   const dateLabel = now.toLocaleDateString([], { weekday: "long", day: "numeric", month: "long" });
   const clockHM = timeHM(now);
