@@ -361,9 +361,29 @@
   flex-wrap: wrap;
 }
 
+.ins-venhero-countwrap {
+  display: flex;
+  align-items: baseline;
+  gap: var(--ins-s2);
+  margin-left: auto;
+}
+
 .ins-venhero-count {
   font-size: 24px;
   color: var(--ins-green);
+}
+
+/* Hour ticks stay inside the card */
+.ins-timerail-tick:first-child {
+  transform: none;
+}
+
+.ins-timerail-tick:last-child {
+  transform: translateX(-100%);
+}
+
+.ins-roomstrip {
+  overflow: visible;
 }
 
 /* Time rail */
@@ -439,6 +459,7 @@
 }
 
 .ins-roomrow {
+  position: relative;
   display: flex;
   align-items: center;
   gap: var(--ins-s3);

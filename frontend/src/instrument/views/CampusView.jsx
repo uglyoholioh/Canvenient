@@ -519,6 +519,9 @@ function VenuesPage({ token }) {
     );
   });
   const [winEnd, setWinEnd] = useState(() => RAIL_END);
+  const winStartRef = useRef(winStart);
+  // The availability query commits when the drag ends — not on every tick.
+  const [queryStartMin, setQueryStartMin] = useState(winStart);
   const [results, setResults] = useState(null);
   const [loading, setLoading] = useState(false);
   const [saved, setSaved] = useState(readSaved);
@@ -600,7 +603,7 @@ function VenuesPage({ token }) {
     setLoading(true);
     searchFreeVenues(token, {
       day: availabilityDay,
-      time: String(minutesToHHMM(winStart)).padStart(4, "0"),
+      time: String(minutesToHHMM(queryStartMin)).padStart(4, "0"),
       query: debounced || undefined,
       onlyFree: true,
       sort: "duration",
@@ -617,7 +620,7 @@ function VenuesPage({ token }) {
     return () => {
       alive = false;
     };
-  }, [token, availabilityDay, winStart, debounced]);
+  }, [token, availabilityDay, queryStartMin, debounced]);
 
   const toggleSaved = useCallback((code) => {
     setSaved((prev) => {
@@ -633,6 +636,7 @@ function VenuesPage({ token }) {
   const setWindow = (startMin, endMin) => {
     startMin = Math.max(RAIL_START, Math.min(startMin, RAIL_END - 30));
     endMin = Math.max(startMin + 30, Math.min(endMin, RAIL_END));
+    winStartRef.current = startMin;
     setWinStart(startMin);
     setWinEnd(endMin);
   };
@@ -656,6 +660,7 @@ function VenuesPage({ token }) {
       if (draggingRef.current) railToTime(draggingRef.current, e.clientX);
     };
     const up = () => {
+      if (draggingRef.current) commitWindow();
       draggingRef.current = null;
     };
     window.addEventListener("pointermove", move);
@@ -668,6 +673,7 @@ function VenuesPage({ token }) {
 
   const railMinutes = winStart;
   const railEndMinutes = winEnd;
+  const commitWindow = () => setQueryStartMin(winStartRef.current);
   const windowMinutes = Math.max(30, winEnd - winStart);
   const railPct = (mins) => ((mins - RAIL_START) / (RAIL_END - RAIL_START)) * 100;
   const railNowPct =
@@ -737,7 +743,9 @@ function VenuesPage({ token }) {
             <span
               key={mins}
               className="ins-timerail-tick ins-mono"
-              style={{ left: `${((mins - RAIL_START) / (RAIL_END - RAIL_START)) * 100}%` }}
+              style={{
+                left: `${Math.max(1.5, Math.min(98.5, ((mins - RAIL_START) / (RAIL_END - RAIL_START)) * 100))}%`,
+              }}
             >
               {String(Math.floor(mins / 60)).padStart(2, "0")}
             </span>
@@ -790,8 +798,10 @@ function VenuesPage({ token }) {
               );
             })}
           </div>
-          <span className="ins-numeral ins-venhero-count">{count}</span>
-          <span className="ins-cap">rooms free</span>
+          <div className="ins-venhero-countwrap">
+            <span className="ins-numeral ins-venhero-count">{count}</span>
+            <span className="ins-cap">rooms free</span>
+          </div>
         </div>
       </header>
 
@@ -870,12 +880,14 @@ function VenuesPage({ token }) {
 // One room row: identity, its day timeline (taken slots + the searched
 // window + cursor), and a hover card that names the occupying class.
 function RoomRow({ room, saved, onToggle, slots, winStart, winEnd, now }) {
-  const [hovered, setHovered] = useState(null);
-  const stripRef = useRef(null);
+  const [hoveredIdx, setHoveredIdx] = useState(null);
   const pct = (mins) => ((mins - RAIL_START) / (RAIL_END - RAIL_START)) * 100;
+  const hoveredSlot = hoveredIdx != null ? slots?.[hoveredIdx] : null;
+  // The hover card anchors to the hovered slot, clamped to stay on the row.
+  const cardLeft = hoveredSlot != null ? Math.max(4, Math.min(pct(hoveredSlot.start), 70)) : 0;
 
   return (
-    <div className="ins-roomrow">
+    <div className="ins-roomrow" onMouseLeave={() => setHoveredIdx(null)}>
       <SavedPin code={room.venue_code} saved={saved} onToggle={onToggle} />
       <div className="ins-roomid">
         <span className="ins-mono ins-roomrow-code">{room.venue_code}</span>
@@ -883,7 +895,7 @@ function RoomRow({ room, saved, onToggle, slots, winStart, winEnd, now }) {
           {[room.room_name, room.building_name].filter(Boolean).join(" · ") || room.faculty || ""}
         </span>
       </div>
-      <div className="ins-roomstrip" ref={stripRef} onMouseLeave={() => setHovered(null)}>
+      <div className="ins-roomstrip">
         {slots === null && <span className="ins-roomstrip-noinfo">no schedule data</span>}
         {(slots || []).map((slot, index) => {
           const left = Math.max(0, pct(slot.start));
@@ -908,14 +920,15 @@ function RoomRow({ room, saved, onToggle, slots, winStart, winEnd, now }) {
           className="ins-roomstrip-cursor"
           style={{ left: `${pct(now.getHours() * 60 + now.getMinutes())}%` }}
         />
-        {hovered != null && slots?.[hovered] && (
-          <div className="ins-hovercard" role="tooltip">
-            <p className="ins-hovercard-title">{slots[hovered].label}</p>
-            <p className="ins-cap">{slots[hovered].range}</p>
-            <p className="ins-cap">{slots[hovered].weeksLabel}</p>
-          </div>
-        )}
       </div>
+      {hoveredSlot && (
+        <div className="ins-hovercard" role="tooltip" style={{ left: `${cardLeft}%` }}>
+          <p className="ins-hovercard-title">{hoveredSlot.label}</p>
+          <p className="ins-cap">
+            {hoveredSlot.range} · {hoveredSlot.weeksLabel}
+          </p>
+        </div>
+      )}
       <span className="ins-mono ins-cap ins-roomrow-free">
         {freeLabel(room.free_minutes)}
         {room.distance_metres != null ? ` · ${Math.round(room.distance_metres)} m` : ""}
