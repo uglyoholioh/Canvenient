@@ -547,59 +547,184 @@ button.ins-duerow-title:hover {
   color: var(--ins-ink-muted);
 }
 
-/* ---- Departure ribbon ---- */
+/* ---- Bus cards — one feed, several instruments ---- */
 
-.ins-ribbon {
+.ins-buscard {
+  appearance: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--ins-s2);
+  width: 100%;
   border: 1px solid var(--ins-line);
   border-radius: var(--ins-r-big);
   padding: var(--ins-s3) var(--ins-s4);
   background: var(--ins-bg-raise);
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: default;
+  transition: border-color var(--ins-dur-fast) var(--ins-ease);
 }
 
-.ins-ribbon-head {
+.ins-buscard:hover {
+  border-color: color-mix(in srgb, var(--ins-ink) 22%, transparent);
+}
+
+.ins-buscard.is-stale {
+  opacity: 0.55;
+}
+
+.ins-buscard-head {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
   gap: var(--ins-s2);
-  margin-bottom: 12px;
 }
 
-.ins-ribbon-next {
+/* Board */
+.ins-busboard {
+  display: flex;
+  flex-direction: column;
+}
+
+.ins-busboard-row {
+  display: flex;
+  align-items: center;
+  gap: var(--ins-s2);
+  padding: 5px 0;
+  border-bottom: 1px solid var(--ins-line);
+}
+
+.ins-busboard-row:last-child {
+  border-bottom: none;
+}
+
+.ins-busboard-chip {
+  flex-shrink: 0;
+  min-width: 34px;
+  text-align: center;
+  padding: 2px 6px;
+  border-radius: 999px;
   font-size: var(--ins-fs-sub);
-  color: var(--ins-ink);
+  font-weight: 700;
+  font-family: var(--ins-mono);
+  background: color-mix(in srgb, var(--tone) 22%, transparent);
+  border: 1px solid color-mix(in srgb, var(--tone) 55%, transparent);
 }
 
-.ins-ribbon-track {
+.ins-busboard-etas {
+  margin-left: auto;
+  font-size: var(--ins-fs-sub);
+  color: var(--ins-ink-muted);
+}
+
+/* Hero */
+.ins-bushero {
+  display: flex;
+  align-items: baseline;
+  gap: var(--ins-s3);
+}
+
+.ins-bushero-chip {
+  align-self: center;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-family: var(--ins-mono);
+  font-size: var(--ins-fs-sub);
+  font-weight: 700;
+  background: color-mix(in srgb, var(--tone) 22%, transparent);
+  border: 1px solid color-mix(in srgb, var(--tone) 55%, transparent);
+}
+
+.ins-bushero-numeral {
+  font-family: var(--ins-rounded);
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+/* Ribbon */
+.ins-busribbon {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.ins-busribbon-scale,
+.ins-busribbon-track {
   position: relative;
-  height: 24px;
+  display: block;
+  height: 12px;
 }
 
-.ins-ribbon-rule {
-  position: absolute;
-  top: 2px;
-  bottom: 2px;
-  width: 1px;
-  background: var(--ins-line);
-  opacity: 0.5;
+.ins-busribbon-track {
+  height: 14px;
+  border-top: 1px solid var(--ins-line);
 }
 
-.ins-ribbontick {
+.ins-busribbon-mark {
   position: absolute;
-  top: 50%;
+  top: 0;
+  font-size: 9px;
+  color: var(--ins-ink-faint);
+  transform: translateX(2px);
+}
+
+.ins-busribbon-mark:last-child {
+  transform: translateX(calc(-100% - 2px));
+}
+
+.ins-busribbon-tick {
+  position: absolute;
+  top: -3px;
   width: 5px;
   height: 13px;
-  margin: -6.5px 0 0 -2.5px;
   border-radius: 2px;
   background: var(--tone);
 }
 
-.ins-ribbontick.is-imminent {
-  animation: ins-breathe 1.6s ease-in-out infinite;
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--tone) 25%, transparent);
+/* Chips */
+.ins-buschips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ins-s1);
 }
 
-.ins-ribbon.is-stale .ins-ribbontick {
-  opacity: 0.4;
+.ins-buschip {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--ins-s1);
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--tone) 16%, transparent);
+  border: 1px solid color-mix(in srgb, var(--tone) 45%, transparent);
+}
+
+.ins-buschip b {
+  font-family: var(--ins-mono);
+  font-size: var(--ins-fs-sub);
+}
+
+.ins-buschip .ins-mono {
+  font-size: var(--ins-fs-sub);
+  color: var(--ins-ink-muted);
+}
+
+/* Line */
+.ins-busline {
+  appearance: none;
+  border: none;
+  background: transparent;
+  padding: 2px 0;
+  width: 100%;
+  font: inherit;
+  color: var(--ins-ink);
+  text-align: left;
+  cursor: default;
+}
+
+.ins-busline.is-stale {
+  opacity: 0.55;
 }
 
 /* ---- Inbox — one line, only when there is news ---- */
@@ -696,6 +821,368 @@ button.ins-duerow-title:hover {
   align-self: center;
 }
 
+/* ---- The header zone — the narrow brief beside the day ---- */
+
+.ins-hometop {
+  display: grid;
+  grid-template-columns: minmax(280px, 2fr) 3fr;
+  gap: var(--ins-s5);
+  align-items: start;
+}
+
+.ins-hometop-brief {
+  margin: 0;
+}
+
+.ins-hometop-day {
+  min-width: 0;
+}
+
+/* ---- Type taste — the dashboard's display voice ---- */
+
+.ins-today[data-font="standard"] {
+  --ins-home-display: var(--ins-font);
+}
+
+.ins-today[data-font="serif"] {
+  --ins-home-display: ui-serif, "New York", Georgia, serif;
+}
+
+.ins-today[data-font="rounded"] {
+  --ins-home-display: var(--ins-rounded);
+}
+
+.ins-today .ins-today-clock,
+.ins-today .ins-display {
+  font-family: var(--ins-home-display, var(--ins-rounded));
+}
+
+/* ---- The vertical timeline — the day stated plainly ---- */
+
+.ins-vt {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+.ins-vtrow {
+  appearance: none;
+  border: none;
+  background: transparent;
+  display: grid;
+  grid-template-columns: 108px 14px minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: var(--ins-s2);
+  padding: 8px 0;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: default;
+  border-radius: var(--ins-r);
+  transition: opacity var(--ins-dur-fast) var(--ins-ease);
+}
+
+.ins-vtrow:hover {
+  background: rgba(128, 118, 100, 0.06);
+}
+
+.ins-vtrow.is-past {
+  opacity: 0.42;
+}
+
+.ins-vt-time {
+  font-size: var(--ins-fs-sub);
+  color: var(--ins-ink-muted);
+  text-align: right;
+  white-space: nowrap;
+}
+
+.ins-vtrow.is-now .ins-vt-time,
+.ins-vtrow.is-now .ins-vt-title {
+  color: var(--ins-red);
+  font-weight: 700;
+}
+
+/* The rule: one hairline through every dot. */
+.ins-vt::before {
+  content: "";
+  position: absolute;
+  top: 14px;
+  bottom: 10px;
+  left: calc(108px + var(--ins-s2) + 6px);
+  width: 1px;
+  background: var(--ins-line);
+}
+
+.ins-vt-dot,
+.ins-vt-gapdot {
+  position: relative;
+  align-self: center;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--tick-color, var(--ins-ink-faint));
+  justify-self: center;
+  box-shadow: 0 0 0 2.5px var(--ins-bg);
+}
+
+.ins-vtrow.is-now .ins-vt-dot,
+.ins-vt-gapdot {
+  background: var(--ins-red);
+}
+
+.ins-vt-title {
+  font-weight: 600;
+  color: var(--ins-ink);
+}
+
+.ins-vt-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin-top: 3px;
+}
+
+.ins-vt-detail .ins-cap {
+  color: var(--ins-ink-muted);
+}
+
+.ins-vt-meter {
+  max-width: 220px;
+}
+
+.ins-vt-journey {
+  color: var(--ins-ink-muted);
+}
+
+.ins-vt-venue {
+  color: var(--ins-ink-muted);
+  white-space: nowrap;
+}
+
+/* The gap — the one live caption, hung on the rule between rows. */
+.ins-vtgap {
+  display: grid;
+  grid-template-columns: 108px 14px minmax(0, 1fr);
+  align-items: center;
+  gap: var(--ins-s2);
+  padding: 4px 0;
+}
+
+.ins-vt-gaptime {
+  font-size: var(--ins-fs-sub);
+  color: var(--ins-ink-faint);
+  text-align: right;
+  visibility: hidden;
+}
+
+.ins-vt-gapcaption {
+  color: var(--ins-ink-muted);
+}
+
+.ins-vt-empty {
+  padding: var(--ins-s2) 0;
+  color: var(--ins-ink-muted);
+}
+
+.ins-vt-tomorrow {
+  padding: var(--ins-s2) 0 0;
+  margin-left: calc(108px + var(--ins-s2) + 14px);
+  color: var(--ins-ink-faint);
+}
+
+/* ---- The horizon as a strip and as a list ---- */
+
+.ins-horizonstrip {
+  display: flex;
+  gap: 2px;
+  max-width: 760px;
+}
+
+.ins-hzslice {
+  appearance: none;
+  border: none;
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  height: 46px;
+  padding: 0;
+  background: transparent;
+  font: inherit;
+  color: inherit;
+  cursor: default;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  overflow: hidden;
+  border-radius: 5px;
+}
+
+.ins-hzslice.is-cap {
+  flex: 0 0 26px;
+}
+
+.ins-hzslice.is-today .ins-fnlabel {
+  color: var(--ins-red);
+}
+
+.ins-hzfill {
+  display: block;
+  height: var(--fill, 4%);
+  background: color-mix(in srgb, var(--ins-ink) 62%, transparent);
+  border-radius: 3px 3px 0 0;
+  transition: height var(--ins-dur) var(--ins-ease-out);
+}
+
+.ins-hzslice:hover .ins-hzfill {
+  background: color-mix(in srgb, var(--ins-ink) 80%, transparent);
+}
+
+.ins-hzslice.is-today .ins-hzfill {
+  background: color-mix(in srgb, var(--ins-red) 75%, transparent);
+}
+
+.ins-hzslice.is-cap .ins-hzfill {
+  background: var(--ins-red);
+}
+
+.ins-hzslice.is-recess {
+  background: color-mix(in srgb, var(--ins-green) 9%, transparent);
+}
+
+.ins-hzslice.is-reading {
+  background: color-mix(in srgb, var(--ins-sky) 10%, transparent);
+}
+
+.ins-hzslice.is-exam {
+  background: color-mix(in srgb, var(--ins-amber) 11%, transparent);
+}
+
+.ins-hzslice.is-open {
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ins-ink) 30%, transparent);
+}
+
+.ins-hzcap {
+  position: absolute;
+  top: 2px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--ins-red);
+}
+
+.ins-horizonlist {
+  display: flex;
+  flex-direction: column;
+  max-width: 760px;
+}
+
+.ins-hzrow {
+  appearance: none;
+  border: none;
+  background: transparent;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 7px 0;
+  border-bottom: 1px solid var(--ins-line);
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: default;
+}
+
+.ins-hzrow:last-child {
+  border-bottom: none;
+}
+
+.ins-hzrow.is-cap .ins-hzrow-day {
+  color: var(--ins-red);
+}
+
+.ins-hzrow.is-open {
+  background: rgba(128, 118, 100, 0.05);
+}
+
+.ins-hzrow-items {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.ins-hzrow-item {
+  display: flex;
+  align-items: baseline;
+  gap: var(--ins-s2);
+  font-size: var(--ins-fs-body);
+}
+
+.ins-hzrow-course {
+  flex-shrink: 0;
+  min-width: 64px;
+  color: var(--tick-color);
+}
+
+/* ---- Exams ---- */
+
+.ins-examssec {
+  margin-top: var(--ins-s3);
+}
+
+.ins-exams {
+  display: flex;
+  flex-direction: column;
+}
+
+.ins-examrow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--ins-s2);
+  padding: 5px 0;
+  border-bottom: 1px solid var(--ins-line);
+}
+
+.ins-examrow:last-child {
+  border-bottom: none;
+}
+
+.ins-examrow-when {
+  color: var(--ins-ink-muted);
+}
+
+/* ---- Body compositions ---- */
+
+.ins-home-body.is-columns {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ins-s5);
+}
+
+.ins-home-body.is-columns .ins-today-col {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ins-s5);
+  min-width: 0;
+}
+
+@media (min-width: 1150px) {
+  .ins-home-body.is-columns {
+    display: grid;
+    grid-template-columns: minmax(0, 1.1fr) minmax(0, 1.2fr) minmax(0, 0.8fr);
+    column-gap: var(--ins-s7);
+    align-items: start;
+  }
+}
+
+.ins-home-body.is-focus .ins-today-col {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ins-s5);
+  max-width: 760px;
+}
+
 /* ---- Narrow fold ---- */
 
 @media (max-width: 859px) {
@@ -706,5 +1193,25 @@ button.ins-duerow-title:hover {
 
   .ins-semrunway {
     width: 100%;
+  }
+
+  .ins-hometop {
+    grid-template-columns: 1fr;
+  }
+
+  .ins-vtrow {
+    grid-template-columns: 84px 14px minmax(0, 1fr) auto;
+  }
+
+  .ins-vt::before {
+    left: calc(84px + var(--ins-s2) + 6px);
+  }
+
+  .ins-vtgap {
+    grid-template-columns: 84px 14px minmax(0, 1fr);
+  }
+
+  .ins-vt-tomorrow {
+    margin-left: calc(84px + var(--ins-s2) + 14px);
   }
 }

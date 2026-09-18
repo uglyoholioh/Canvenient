@@ -1,11 +1,11 @@
-// Today — the ledger. The day drawn as a shape, dues as weather, the campus
-// as a ribbon. Shape first; numbers only when they are live; details on
-// demand; nothing spelled out that a high-level user can already infer.
+// Home — the ledger. The day as a vertical timeline beside a narrow brief,
+// dues as weather, the campus as a card. Everything the view draws is a
+// fact; everything it hides lives one hover or click away. Customisation
+// rides readDashboardConfig — clock, type, layout, and which voices show.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   getAcademicModules,
-  getAssistantBrief,
   getCampusBusArrivals,
   getCampusBusStops,
   getCanvasAssignments,
@@ -25,20 +25,35 @@ import {
 } from "../../components/scheduleUtils";
 import { useWorkspaceToolbar } from "../../components/WorkspaceToolbarContext";
 import { buildClassJourney, nextClass, resolveOrigin } from "../journey";
-import { serviceTone } from "../busTones";
 import {
-  barCount,
+  clockParts,
+  examRows,
   fortnightBuckets,
   fuseDueItems,
   gapAround,
   openWindows,
   railScale,
-  ribbonTicks,
   runwayPhaseLabel,
   semesterRunway,
   tomorrowFirst,
   windowLabel,
 } from "../ledger";
+import {
+  DASHBOARD_EVENT,
+  readDashboardConfig,
+} from "../dashboardConfig";
+import {
+  loadBrief,
+  readBriefCache,
+} from "../briefCache";
+import { BusCard } from "../busCards";
+import {
+  DayTimeline,
+  ExamsList,
+  HorizonColumns,
+  HorizonList,
+  HorizonStrip,
+} from "../ledgerViews";
 import "../views/today.css";
 
 const BUS_REFRESH_MS = 20000;
@@ -77,6 +92,20 @@ function useContainerWidth() {
   return [ref, width];
 }
 
+function useDashboardConfig() {
+  const [config, setConfig] = useState(readDashboardConfig);
+  useEffect(() => {
+    const onChange = () => setConfig(readDashboardConfig());
+    window.addEventListener(DASHBOARD_EVENT, onChange);
+    window.addEventListener("storage", onChange);
+    return () => {
+      window.removeEventListener(DASHBOARD_EVENT, onChange);
+      window.removeEventListener("storage", onChange);
+    };
+  }, []);
+  return config;
+}
+
 /* The semester as a hairline: phases exist only as tints, the name lives in
    the hover, and a coral dot rides the span. */
 function SemesterRunway({ runway }) {
@@ -102,8 +131,7 @@ function SemesterRunway({ runway }) {
   );
 }
 
-/* The day rail — today's shape. Blocks carry code only; the hover carries
-   the facts; the now-dot carries the one live caption. */
+/* The day rail — kept as an option for people who read the day as a shape. */
 function DayRail({ items, scale, now, windows, gap, featuredId, onSelect, tomorrow }) {
   const spanMin = scale.endMin - scale.startMin;
   const pctOfMin = (minutes) => ((minutes - scale.startMin) / spanMin) * 100;
@@ -127,11 +155,10 @@ function DayRail({ items, scale, now, windows, gap, featuredId, onSelect, tomorr
       ))}
       {windows.map((w, index) => {
         const left = pctOf(w.from);
-        const flipped = left > 62;
         return (
           <span
             key={index}
-            className={`ins-tip ins-rail-window${flipped ? " is-flipped" : ""}`}
+            className={`ins-tip ins-rail-window${left > 62 ? " is-flipped" : ""}`}
             style={{ left: `${left}%`, width: `${pctOf(w.until) - left}%` }}
             data-tip={`${windowLabel(w.minutes)} open\n${timeHM(w.from)}–${timeHM(w.until)}`}
           />
@@ -140,8 +167,7 @@ function DayRail({ items, scale, now, windows, gap, featuredId, onSelect, tomorr
       {items.map((item) => {
         const left = pctOf(item.start);
         const width = Math.max(pctOf(item.end) - left, 0.6);
-        const state =
-          now >= item.end ? " is-past" : now >= item.start ? "" : "";
+        const state = now >= item.end ? " is-past" : "";
         return (
           <button
             key={item.id}
@@ -187,7 +213,7 @@ function DayRail({ items, scale, now, windows, gap, featuredId, onSelect, tomorr
   );
 }
 
-/* The featured card — the rail's detail, on demand. */
+/* Featured card — the rail's companion when the day reads as a shape. */
 function FeaturedCard({ item, now, label, journey }) {
   const upcoming = item.start > now;
   const approachPct = upcoming
@@ -236,127 +262,57 @@ function FeaturedCard({ item, now, label, journey }) {
   );
 }
 
-/* The fortnight — dues as weather. Hover reads a column, click expands it. */
-function FortnightStrip({ buckets, phases, openDay, onToggle }) {
-  const tipFor = (col) => {
-    if (col.items.length === 0) return "Nothing due";
-    const lines = col.items
-      .slice(0, 3)
-      .map((item) => `${item.courseCode ? `${item.courseCode} ` : ""}${item.title}`);
-    if (col.items.length > 3) lines.push(`+${col.items.length - 3} more`);
-    return lines.join("\n");
-  };
-
+/* Due rows — tasks check here, Canvas assignments point there. */
+function DueRow({
+  item,
+  tone,
+  now,
+  onToggleTask,
+  onOpenTasks,
+  onOpenModules,
+  findTask,
+  colorFor,
+  isDone,
+}) {
+  const isTask = item.kind === "task";
+  const task = isTask ? findTask(item) : null;
+  const checked = isTask && Boolean(task && (task.status === "done" || isDone(task)));
+  const color = colorFor(item);
   return (
-    <div className="ins-fortnight">
-      {buckets.overdue.length > 0 && (
-        <button
-          type="button"
-          className={`ins-tip ins-fncol is-cap${openDay === "overdue" ? " is-open" : ""}`}
-          data-tip={`Overdue · ${buckets.overdue.length}`}
-          onClick={() => onToggle("overdue")}
-        >
-          <span className="ins-fncap">{buckets.overdue.length}</span>
-        </button>
+    <div className="ins-duerow">
+      {isTask ? (
+        <input
+          type="checkbox"
+          className="ins-check"
+          checked={Boolean(checked)}
+          onChange={() => task && onToggleTask(task)}
+          aria-label={`Mark ${item.title} done`}
+        />
+      ) : (
+        <span className="ins-canvaschip" title="Canvas assignment">
+          <ExternalLink size={12} strokeWidth={1.8} />
+        </span>
       )}
-      {buckets.columns.map((col, index) => {
-        const { bars, overflow } = barCount(col.items.length);
-        const phase = phases[index];
-        const phaseClass = ["recess", "reading", "exam"].includes(phase) ? ` is-${phase}` : "";
-        return (
-          <button
-            key={index}
-            type="button"
-            className={`ins-tip ins-fncol${phaseClass}${index === 0 ? " is-today" : ""}${
-              openDay === index ? " is-open" : ""
-            }`}
-            data-tip={`${col.date.toLocaleDateString([], {
-              weekday: "short",
-              day: "numeric",
-              month: "short",
-            })}\n${tipFor(col)}`}
-            onClick={() => col.items.length > 0 && onToggle(index)}
-          >
-            {col.examCount > 0 && <i className="ins-fnexam" />}
-            <span className="ins-fnbars">
-              {Array.from({ length: bars }, (_, bar) => (
-                <i key={bar} style={{ height: `${10 + bar * 5}px` }} />
-              ))}
-              {overflow > 0 && <em className="ins-fnoverflow ins-mono">+{overflow}</em>}
-            </span>
-            <span className="ins-fnlabel">
-              {index === 0 ? "today" : col.date.toLocaleDateString([], { weekday: "narrow" })}
-            </span>
-          </button>
-        );
-      })}
+      <span
+        className="ins-tick"
+        style={{ "--tick-color": color || "var(--ins-ink-faint)", height: 16 }}
+      />
+      <button
+        type="button"
+        className="ins-duerow-title"
+        onClick={() => (isTask ? onOpenTasks() : onOpenModules())}
+      >
+        {item.title}
+      </button>
+      {item.courseCode && <span className="ins-cap ins-mono">{item.courseCode}</span>}
+      <span className={`ins-duerow-due ins-mono${tone === "overdue" ? " is-overdue" : ""}`}>
+        {dueLabel(item.due, now)}
+      </span>
     </div>
   );
 }
 
-/* The departure ribbon — the hour as ticks in route tones. */
-function DepartureRibbon({ arrivals, failed, stopName, onOpen }) {
-  const { ticks, next } = ribbonTicks(arrivals?.arrivals || []);
-  return (
-    <button
-      type="button"
-      className={`ins-ribbon${failed ? " is-stale" : ""}`}
-      onClick={onOpen}
-      title="Open Campus · Bus"
-    >
-      <div className="ins-ribbon-head">
-        <span className="ins-label">{stopName}</span>
-        <span className="ins-mono ins-ribbon-next">
-          {next
-            ? `${next.service} · ${next.minute === 0 ? "now" : `${next.minute} min`}`
-            : "no departures in the hour"}
-        </span>
-      </div>
-      {ticks.length > 0 ? (
-        <div className="ins-ribbon-track">
-          {[0, 25, 50, 75, 100].map((p) => (
-            <i key={p} className="ins-ribbon-rule" style={{ left: `${p}%` }} />
-          ))}
-          {ticks.map((tick, index) => (
-            <i
-              key={index}
-              className={`ins-tip ins-ribbontick${tick.imminent ? " is-imminent" : ""}`}
-              style={{ left: `${(tick.minute / 60) * 100}%`, "--tone": serviceTone(tick.service) }}
-              data-tip={`${tick.service} · ${tick.minute === 0 ? "boarding" : `${tick.minute} min`}`}
-            />
-          ))}
-        </div>
-      ) : (
-        <p className="ins-cap">
-          {arrivals ? "No departures in the feed." : "Departures unavailable right now."}
-        </p>
-      )}
-    </button>
-  );
-}
-
-/* The inbox — one line, only when there is news. */
-function InboxLine({ announcements, onOpen }) {
-  if (!announcements?.length) return null;
-  const byCourse = new Map();
-  for (const a of announcements) {
-    byCourse.set(a.course, (byCourse.get(a.course) || 0) + 1);
-  }
-  const courses = [...byCourse.entries()]
-    .slice(0, 3)
-    .map(([course, count]) => (count > 1 ? `${course} ×${count}` : course))
-    .join(" · ");
-  return (
-    <button type="button" className="ins-inboxline" onClick={onOpen}>
-      <span className="ins-inbox-dot" />
-      <span className="ins-mono">{announcements.length} new</span>
-      <span className="ins-inbox-courses ins-mono">{courses}</span>
-    </button>
-  );
-}
-
-export default function TodayView({ token, onNavigate }) {
-  const [now, setNow] = useState(() => new Date());
+export default function TodayView({ token, onNavigate }) {  const [now, setNow] = useState(() => new Date());
   const [schedule, setSchedule] = useState(null);
   const [tasks, setTasks] = useState([]);
   const [assignments, setAssignments] = useState([]);
@@ -365,24 +321,24 @@ export default function TodayView({ token, onNavigate }) {
   const [stops, setStops] = useState([]);
   const [locations, setLocations] = useState({});
   const [centroids, setCentroids] = useState({});
-  const [brief, setBrief] = useState(null);
+  // The brief starts from cache — a tab switch never shows an empty note.
+  const [brief, setBrief] = useState(() => readBriefCache()?.brief || null);
   const [journey, setJourney] = useState(null);
-  const [loaded, setLoaded] = useState(false);
   const [completion, setCompletion] = useState({});
   const [refreshing, setRefreshing] = useState(false);
   const [featuredId, setFeaturedId] = useState(null);
+  const [expandedId, setExpandedId] = useState(null);
   const [openDay, setOpenDay] = useState(null);
   const [bus, setBus] = useState({ arrivals: null, failed: false });
   const journeyTimer = useRef(null);
   const [containerRef, width] = useContainerWidth();
-  const wide = width >= 880;
+  const config = useDashboardConfig();
 
   const refreshBrief = useCallback(async () => {
     setRefreshing(true);
     try {
-      setBrief(await getAssistantBrief(token, true));
-    } catch {
-      // The previous brief, or none, stays on screen.
+      const { brief: next } = await loadBrief(token, { force: true });
+      if (next) setBrief(next);
     } finally {
       setRefreshing(false);
     }
@@ -396,6 +352,11 @@ export default function TodayView({ token, onNavigate }) {
 
   useEffect(() => {
     let alive = true;
+    // A cached brief is already on screen; this only asks again when the
+    // cache is worth refreshing.
+    loadBrief(token).then(({ brief: next }) => {
+      if (alive && next) setBrief(next);
+    });
     Promise.allSettled([
       getSchedule(token),
       getTasks(token),
@@ -425,14 +386,8 @@ export default function TodayView({ token, onNavigate }) {
           setLocations(locRes.value?.locations || {});
           setCentroids(locRes.value?.building_centroids || {});
         }
-        setLoaded(true);
       },
     );
-    getAssistantBrief(token)
-      .then((data) => {
-        if (alive) setBrief(data);
-      })
-      .catch(() => {});
     return () => {
       alive = false;
     };
@@ -527,7 +482,6 @@ export default function TodayView({ token, onNavigate }) {
     return scheduleItemsForDate(schedule, day);
   }, [schedule, now]);
   const tomorrow = useMemo(() => tomorrowFirst(tomorrowItems), [tomorrowItems]);
-
   const nextToday = useMemo(() => {
     if (!next) return null;
     const nextStart = startOfLocalDay(next.start);
@@ -539,35 +493,20 @@ export default function TodayView({ token, onNavigate }) {
   // not on every clock tick.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const runway = useMemo(() => semesterRunway(new Date()), [dayKey]);
+
   const fused = useMemo(
     () => fuseDueItems(tasks, assignments, courses),
     [tasks, assignments, courses],
   );
-  const fortnight = useMemo(() => fortnightBuckets(fused, now), [fused, now]);
-  const fortnightPhases = useMemo(
-    () => fortnight.columns.map((col) => getAcademicWeek(col.date)?.type),
-    [fortnight],
+  const horizon = useMemo(
+    () => fortnightBuckets(fused, now, config.horizon.range),
+    [fused, now, config.horizon.range],
   );
-
-  // The featured card defaults to now/next and follows the user's clicks.
-  const featured = useMemo(() => {
-    if (featuredId) {
-      const hit = dayItems.find((item) => item.id === featuredId);
-      if (hit) return hit;
-    }
-    if (happeningNow) return happeningNow;
-    return nextToday;
-  }, [featuredId, dayItems, happeningNow, nextToday]);
-  const featuredIsToday = Boolean(featured && dayItems.some((i) => i.id === featured.id));
-  const featuredLabel = !featured
-    ? null
-    : featured.id === happeningNow?.id
-      ? `now · until ${timeHM(featured.end)}`
-      : featuredIsToday
-        ? `today · ${timeHM(featured.start)}`
-        : featured.dayOffset === 1
-          ? "tomorrow"
-          : featured.start.toLocaleDateString([], { weekday: "short" });
+  const horizonPhases = useMemo(
+    () => horizon.columns.map((col) => getAcademicWeek(col.date)?.type),
+    [horizon],
+  );
+  const exams = useMemo(() => examRows(schedule?.exams, now), [schedule, now]);
 
   const week = getAcademicWeek(now);
 
@@ -576,9 +515,9 @@ export default function TodayView({ token, onNavigate }) {
     if (happeningNow) return `${happeningNow.title} · until ${timeHM(happeningNow.end)}`;
     if (nextToday?.dayOffset === 0)
       return `${nextToday.title} ${timeHM(nextToday.start)} · ${nextToday.venue}`;
-    if (fortnight.overdue.length) return `${fortnight.overdue.length} overdue`;
+    if (horizon.overdue.length) return `${horizon.overdue.length} overdue`;
     return week?.formatted || "";
-  }, [happeningNow, nextToday, fortnight.overdue.length, week]);
+  }, [happeningNow, nextToday, horizon.overdue.length, week]);
 
   const toolbarConfig = useMemo(() => ({ fact }), [fact]);
   useWorkspaceToolbar(toolbarConfig);
@@ -600,10 +539,10 @@ export default function TodayView({ token, onNavigate }) {
     [token],
   );
 
-  const fusedColor = useCallback(
+  const colorFor = useCallback(
     (item) => {
       if (item.kind === "task") {
-        const task = tasks.find((t) => String(t.id) === item.id.slice(5));
+        const task = tasks.find((t) => `task-${t.id}` === item.id);
         return task ? getTaskModuleColor(task, modules) : null;
       }
       return courses.find((c) => c.course_code === item.courseCode)?.color || null;
@@ -611,44 +550,28 @@ export default function TodayView({ token, onNavigate }) {
     [tasks, modules, courses],
   );
 
-  const renderDueRow = (item, tone) => {
-    const isTask = item.kind === "task";
-    const task = isTask ? tasks.find((t) => String(t.id) === item.id.slice(5)) : null;
-    const checked = isTask && (task?.status === "done" || completion[task?.id]);
-    const color = fusedColor(item);
-    return (
-      <div key={item.id} className="ins-duerow">
-        {isTask ? (
-          <input
-            type="checkbox"
-            className="ins-check"
-            checked={Boolean(checked)}
-            onChange={() => task && toggleTask(task)}
-            aria-label={`Mark ${item.title} done`}
-          />
-        ) : (
-          <span className="ins-canvaschip" title="Canvas assignment">
-            <ExternalLink size={12} strokeWidth={1.8} />
-          </span>
-        )}
-        <span
-          className="ins-tick"
-          style={{ "--tick-color": color || "var(--ins-ink-faint)", height: 16 }}
-        />
-        <button
-          type="button"
-          className="ins-duerow-title"
-          onClick={() => onNavigate?.(isTask ? "tasks" : "canvas")}
-        >
-          {item.title}
-        </button>
-        {item.courseCode && <span className="ins-cap ins-mono">{item.courseCode}</span>}
-        <span className={`ins-duerow-due ins-mono${tone === "overdue" ? " is-overdue" : ""}`}>
-          {dueLabel(item.due, now)}
-        </span>
-      </div>
-    );
-  };
+  const findTask = useCallback(
+    (item) => {
+      const id = item.id.slice(5);
+      return tasks.find((t) => String(t.id) === id) || null;
+    },
+    [tasks],
+  );
+
+  const dueRowProps = useMemo(
+    () => ({
+      now,
+      onToggleTask: toggleTask,
+      onOpenTasks: () => onNavigate?.("tasks"),
+      onOpenModules: () => onNavigate?.("canvas"),
+      findTask,
+      colorFor,
+      isDone: (task) => Boolean(task && completion[task.id]),
+    }),
+    [now, toggleTask, onNavigate, findTask, colorFor, completion],
+  );
+
+  const renderDueRow = (item, tone) => <DueRow key={item.id} item={item} tone={tone} {...dueRowProps} />;
 
   const renderDayRows = (items, tone) => {
     const visible = tone === "overdue" ? items.slice(0, 5) : items.slice(0, 6);
@@ -668,181 +591,279 @@ export default function TodayView({ token, onNavigate }) {
     setOpenDay((prev) => (prev === day ? null : day));
   }, []);
 
+  const toggleRow = useCallback((id) => {
+    setExpandedId((prev) => (prev === id ? null : id));
+  }, []);
+
+  const openInbox = useCallback(() => {
+    localStorage.setItem(
+      "canvenient.instrument.modules.sel",
+      JSON.stringify({ kind: "inbox", courseId: null }),
+    );
+    window.dispatchEvent(
+      new CustomEvent("canvenient-modules-select", { detail: { kind: "inbox", courseId: null } }),
+    );
+    onNavigate?.("canvas");
+  }, [onNavigate]);
+
   const openDayItems =
     openDay === "overdue"
-      ? fortnight.overdue
+      ? horizon.overdue
       : typeof openDay === "number"
-        ? fortnight.columns[openDay]?.items || []
+        ? horizon.columns[openDay]?.items || []
         : [];
-  const openDayDate =
-    typeof openDay === "number" ? fortnight.columns[openDay]?.date : null;
+  const openDayDate = typeof openDay === "number" ? horizon.columns[openDay]?.date : null;
 
+  const featured = useMemo(() => {
+    if (featuredId) {
+      const hit = dayItems.find((item) => item.id === featuredId);
+      if (hit) return hit;
+    }
+    if (happeningNow) return happeningNow;
+    return nextToday;
+  }, [featuredId, dayItems, happeningNow, nextToday]);
+  const featuredIsToday = Boolean(featured && dayItems.some((i) => i.id === featured.id));
+  const featuredLabel = !featured
+    ? null
+    : featured.id === happeningNow?.id
+      ? `now · until ${timeHM(featured.end)}`
+      : featuredIsToday
+        ? `today · ${timeHM(featured.start)}`
+        : featured.dayOffset === 1
+          ? "tomorrow"
+          : featured.start.toLocaleDateString([], { weekday: "short" });
+
+  const clock = clockParts(now, config);
   const dateLabel = now.toLocaleDateString([], { weekday: "long", day: "numeric", month: "long" });
-  const clockHM = timeHM(now);
-  const clockSS = String(now.getSeconds()).padStart(2, "0");
   const stop = stops.find((s) => s.id === pinnedStopId);
 
+  const horizonProps = { buckets: horizon, phases: horizonPhases, openDay, onToggle: toggleDay };
+  const HorizonView =
+    config.horizon.view === "strip"
+      ? HorizonStrip
+      : config.horizon.view === "list"
+        ? HorizonList
+        : HorizonColumns;
+
+  const duesSection =
+    config.dues &&
+    (horizon.overdue.length > 0 || horizon.columns[0]?.items.length > 0) ? (
+      <section className="ins-sec">
+        {horizon.overdue.length > 0 && (
+          <>
+            <div className="ins-sec-head">
+              <p className="ins-label is-red">Overdue</p>
+              <span className="ins-numeral ins-duenum is-red">{horizon.overdue.length}</span>
+            </div>
+            {renderDayRows(horizon.overdue, "overdue")}
+          </>
+        )}
+        {horizon.columns[0]?.items.length > 0 && (
+          <>
+            <div className="ins-sec-head">
+              <p className="ins-label">Due today</p>
+              <span className="ins-numeral ins-duenum">{horizon.columns[0].items.length}</span>
+            </div>
+            {renderDayRows(horizon.columns[0].items, "today")}
+          </>
+        )}
+      </section>
+    ) : null;
+
+  const horizonSection = fused.length > 0 && (
+    <section className="ins-sec">
+      {config.horizon.label && (
+        <div className="ins-sec-head">
+          <p className="ins-label">{config.horizon.label}</p>
+        </div>
+      )}
+      <HorizonView {...horizonProps} />
+      {openDay !== null && (
+        <div className="ins-fnlist">
+          <p className="ins-cap ins-mono ins-fnlist-head">
+            {openDay === "overdue"
+              ? "Overdue"
+              : openDayDate?.toLocaleDateString([], {
+                  weekday: "short",
+                  day: "numeric",
+                  month: "short",
+                })}
+            {" · "}
+            {openDayItems.length}
+          </p>
+          {openDayItems.map((item) =>
+            renderDueRow(item, openDay === "overdue" ? "overdue" : "later"),
+          )}
+        </div>
+      )}
+    </section>
+  );
+
+  const campusSection = (
+    <>
+      {stops.length > 0 && (
+        <section className="ins-sec">
+          <BusCard
+            variant={config.busCard}
+            arrivals={bus.arrivals}
+            failed={bus.failed}
+            stopName={stop?.name || "Bus stop"}
+            onOpen={() => {
+              localStorage.setItem("canvenient.campus.page", "bus");
+              onNavigate?.("venues");
+            }}
+          />
+        </section>
+      )}
+      <section className="ins-sec">
+        {brief?.new_announcements?.length > 0 && (
+          <button type="button" className="ins-inboxline" onClick={openInbox}>
+            <span className="ins-inbox-dot" />
+            <span className="ins-mono">{brief.new_announcements.length} new</span>
+            <span className="ins-inbox-courses ins-mono">
+              {[...brief.new_announcements.reduce(
+                (map, a) => map.set(a.course, (map.get(a.course) || 0) + 1),
+                new Map(),
+              )]
+                .slice(0, 3)
+                .map(([course, count]) => (count > 1 ? `${course} ×${count}` : course))
+                .join(" · ")}
+            </span>
+          </button>
+        )}
+        {config.exams && exams.length > 0 && (
+          <section className="ins-sec ins-examssec">
+            <div className="ins-sec-head">
+              <p className="ins-label">Exams</p>
+            </div>
+            <ExamsList exams={exams} compact />
+          </section>
+        )}
+      </section>
+    </>
+  );
+
+  const daySection =
+    config.dayView === "none" ? null : config.dayView === "rail" ? (
+      scale ? (
+        <>
+          <DayRail
+            items={dayItems}
+            scale={scale}
+            now={now}
+            windows={windows}
+            gap={gap}
+            featuredId={featuredIsToday ? featured?.id : null}
+            onSelect={setFeaturedId}
+            tomorrow={tomorrow}
+          />
+          {featured && (
+            <FeaturedCard
+              item={featured}
+              now={now}
+              label={featuredLabel}
+              journey={featured.id === nextToday?.id ? journey : null}
+            />
+          )}
+        </>
+      ) : (
+        <div className="ins-clearline">
+          <span>{schedule ? "Clear day" : ""}</span>
+          {tomorrow && (
+            <span className="ins-mono">
+              next tomorrow {timeHM(tomorrow.start)} · {tomorrow.title}
+            </span>
+          )}
+        </div>
+      )
+    ) : (
+      <DayTimeline
+        items={dayItems}
+        now={now}
+        gap={gap}
+        tomorrow={tomorrow}
+        nextId={nextToday?.id}
+        journey={journey}
+        expandedId={expandedId}
+        onToggle={toggleRow}
+      />
+    );
+
+  // Body compositions — the same facts, arranged for the window's shape.
+  const body =
+    config.layout === "columns" ? (
+      <div className="ins-home-body is-columns">
+        <div className="ins-today-col">{duesSection}</div>
+        <div className="ins-today-col">{horizonSection}</div>
+        <div className="ins-today-col">{campusSection}</div>
+      </div>
+    ) : config.layout === "focus" ? (
+      <div className="ins-home-body is-focus">
+        <div className="ins-today-col">
+          {duesSection}
+          {horizonSection}
+          {campusSection}
+        </div>
+      </div>
+    ) : (
+      <div className={`ins-home-body is-ledger${width >= 880 ? " is-wide" : ""}`}>
+        <div className="ins-today-col">
+          {duesSection}
+          {horizonSection}
+        </div>
+        <div className="ins-today-col">{campusSection}</div>
+      </div>
+    );
+
   return (
-    <div className="ins-today" ref={containerRef}>
+    <div className="ins-today" ref={containerRef} data-font={config.font}>
       <header className="ins-today-head">
         <div className="ins-today-headline">
           <span className="ins-today-clock">
-            {clockHM}
-            <span className="ins-today-sec">:{clockSS}</span>
+            {clock.main}
+            {clock.tail && <span className="ins-today-sec">{clock.tail}</span>}
           </span>
           <h2 className="ins-display">{dateLabel}</h2>
         </div>
         <SemesterRunway runway={runway} />
       </header>
 
-      {brief?.ai_ok && brief?.summary && (
-        <section className="ins-sec ins-briefsection">
-          <div className="ins-sec-head">
-            <p className="ins-label">My Day</p>
-            <div className="ins-briefsection-meta">
-              <span className="ins-tag">AI</span>
-              <button
-                type="button"
-                className="ins-iconbtn ins-briefsection-refresh"
-                onClick={refreshBrief}
-                disabled={refreshing}
-                aria-label="Refresh brief"
-                title="Refresh"
-              >
-                <RefreshCw size={13} className={refreshing ? "is-spinning" : ""} />
-              </button>
+      <section className="ins-hometop">
+        {config.brief && brief?.ai_ok && brief?.summary && (
+          <div className="ins-sec ins-briefsection ins-hometop-brief">
+            <div className="ins-sec-head">
+              <p className="ins-label">My Day</p>
+              <div className="ins-briefsection-meta">
+                <span className="ins-tag">AI</span>
+                <button
+                  type="button"
+                  className="ins-iconbtn ins-briefsection-refresh"
+                  onClick={refreshBrief}
+                  disabled={refreshing}
+                  aria-label="Refresh brief"
+                  title="Refresh"
+                >
+                  <RefreshCw size={13} className={refreshing ? "is-spinning" : ""} />
+                </button>
+              </div>
             </div>
-          </div>
-          <p className="ins-briefsection-lead">{brief.summary}</p>
-          {brief.attention?.length > 0 && (
-            <div className="ins-briefsection-facts">
-              {brief.attention.slice(0, 3).map((item, index) => (
-                <div key={index} className="ins-brief-row">
-                  <span className="ins-brief-dot" />
-                  <span>{item.text || item}</span>
-                </div>
-              ))}
-            </div>
-          )}
-        </section>
-      )}
-
-      <section className="ins-sec">
-        {scale ? (
-          <>
-            <DayRail
-              items={dayItems}
-              scale={scale}
-              now={now}
-              windows={windows}
-              gap={gap}
-              featuredId={featuredIsToday ? featured?.id : null}
-              onSelect={setFeaturedId}
-              tomorrow={tomorrow}
-            />
-            {featured && (
-              <FeaturedCard
-                item={featured}
-                now={now}
-                label={featuredLabel}
-                journey={featured.id === nextToday?.id ? journey : null}
-              />
-            )}
-          </>
-        ) : (
-          <div className="ins-clearline">
-            <span>{loaded ? "Clear day" : ""}</span>
-            {tomorrow && (
-              <span className="ins-mono">
-                next tomorrow {timeHM(tomorrow.start)} · {tomorrow.title}
-              </span>
+            <p className="ins-briefsection-lead">{brief.summary}</p>
+            {brief.attention?.length > 0 && (
+              <div className="ins-briefsection-facts">
+                {brief.attention.slice(0, 3).map((item, index) => (
+                  <div key={index} className="ins-brief-row">
+                    <span className="ins-brief-dot" />
+                    <span>{item.text || item}</span>
+                  </div>
+                ))}
+              </div>
             )}
           </div>
         )}
+        <div className="ins-hometop-day ins-sec">{daySection}</div>
       </section>
 
-      <div className={`ins-today-body${wide ? " is-wide" : ""}`}>
-        <div className="ins-today-col">
-          {(fortnight.overdue.length > 0 || fortnight.columns[0]?.items.length > 0) && (
-            <section className="ins-sec">
-              {fortnight.overdue.length > 0 && (
-                <>
-                  <div className="ins-sec-head">
-                    <p className="ins-label is-red">Overdue</p>
-                    <span className="ins-numeral ins-duenum is-red">
-                      {fortnight.overdue.length}
-                    </span>
-                  </div>
-                  {renderDayRows(fortnight.overdue, "overdue")}
-                </>
-              )}
-              {fortnight.columns[0]?.items.length > 0 && (
-                <>
-                  <div className="ins-sec-head">
-                    <p className="ins-label">Due today</p>
-                    <span className="ins-numeral ins-duenum">
-                      {fortnight.columns[0].items.length}
-                    </span>
-                  </div>
-                  {renderDayRows(fortnight.columns[0].items, "today")}
-                </>
-              )}
-            </section>
-          )}
-
-          {fused.length > 0 && (
-            <section className="ins-sec">
-              <div className="ins-sec-head">
-                <p className="ins-label">Fortnight</p>
-              </div>
-              <FortnightStrip
-                buckets={fortnight}
-                phases={fortnightPhases}
-                openDay={openDay}
-                onToggle={toggleDay}
-              />
-              {openDay !== null && (
-                <div className="ins-fnlist">
-                  <p className="ins-cap ins-mono ins-fnlist-head">
-                    {openDay === "overdue"
-                      ? "Overdue"
-                      : openDayDate?.toLocaleDateString([], {
-                          weekday: "short",
-                          day: "numeric",
-                          month: "short",
-                        })}
-                    {" · "}
-                    {openDayItems.length}
-                  </p>
-                  {openDayItems.map((item) => renderDueRow(item, openDay === "overdue" ? "overdue" : "later"))}
-                </div>
-              )}
-            </section>
-          )}
-        </div>
-
-        <div className="ins-today-col">
-          {stops.length > 0 && (
-            <section className="ins-sec">
-              <DepartureRibbon
-                arrivals={bus.arrivals}
-                failed={bus.failed}
-                stopName={stop?.name || "Bus stop"}
-                onOpen={() => {
-                  localStorage.setItem("canvenient.campus.page", "bus");
-                  onNavigate?.("venues");
-                }}
-              />
-            </section>
-          )}
-          <section className="ins-sec">
-            <InboxLine
-              announcements={brief?.new_announcements}
-              onOpen={() => onNavigate?.("canvas")}
-            />
-          </section>
-        </div>
-      </div>
+      {body}
     </div>
   );
 }

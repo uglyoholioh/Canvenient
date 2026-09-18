@@ -1,6 +1,6 @@
 // Settings — native panes, two materials, no tint gallery.
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   claimTelegramLink,
   getBackups,
@@ -10,12 +10,17 @@ import {
   updateProfile,
   validateCanvasToken,
 } from "../../api";
-import { useWorkspaceToolbar } from "../../components/WorkspaceToolbarContext";
 import { getThemePreference, setThemePreference } from "../theme";
 import { getScheduleCardStyle, setScheduleCardStyle } from "../scheduleCardStyle";
+import {
+  readDashboardConfig,
+  writeDashboardConfig,
+} from "../dashboardConfig";
+import { BUS_CARDS } from "../busCards";
 import "./settings.css";
 
 const PANES = [
+  ["dashboard", "Dashboard"],
   ["appearance", "Appearance"],
   ["connections", "Connections"],
   ["backups", "Backups"],
@@ -165,6 +170,7 @@ export default function SettingsView({ token, user, onUpdateUser, onReplayOrient
   const [pane, setPane] = useState("appearance");
   const [theme, setTheme] = useState(getThemePreference());
   const [cardStyle, setCardStyle] = useState(getScheduleCardStyle());
+  const [dash, setDash] = useState(readDashboardConfig);
   const [name, setName] = useState(user?.name || "");
   const [nameState, setNameState] = useState({ busy: false, message: "" });
   const [backups, setBackups] = useState([]);
@@ -196,6 +202,23 @@ export default function SettingsView({ token, user, onUpdateUser, onReplayOrient
     setScheduleCardStyle(style);
     setCardStyle(style);
   };
+
+  const setDash_ = (patch) => setDash(writeDashboardConfig(patch));
+
+  const seg = (value, options, onPick) => (
+    <div className="ins-seg">
+      {options.map(([key, label]) => (
+        <button
+          key={key}
+          type="button"
+          className={value === key ? "is-active" : ""}
+          onClick={() => onPick(key)}
+        >
+          {label}
+        </button>
+      ))}
+    </div>
+  );
 
   const saveName = async () => {
     if (!name.trim()) return;
@@ -247,6 +270,135 @@ export default function SettingsView({ token, user, onUpdateUser, onReplayOrient
       </div>
 
       <div className="ins-settings-pane">
+        {pane === "dashboard" && (
+          <>
+            <div className="ins-sec">
+              <div className="ins-sec-head">
+                <h2>Clock</h2>
+              </div>
+              <div className="ins-setting-inline">
+                {seg(dash.clock, [["24h", "24-hour"], ["12h", "12-hour"]], (clock) => setDash_({ clock }))}
+                {seg(dash.seconds, [[true, "Seconds"], [false, "No seconds"]], (seconds) => setDash_({ seconds }))}
+              </div>
+            </div>
+            <div className="ins-sec">
+              <div className="ins-sec-head">
+                <h2>Type</h2>
+              </div>
+              <div className="ins-setting-inline">
+                {seg(
+                  dash.font,
+                  [
+                    ["rounded", "Rounded"],
+                    ["standard", "Standard"],
+                    ["serif", "Serif"],
+                  ],
+                  (font) => setDash_({ font }),
+                )}
+              </div>
+            </div>
+            <div className="ins-sec">
+              <div className="ins-sec-head">
+                <h2>Arrangement</h2>
+              </div>
+              <div className="ins-setting-inline">
+                {seg(
+                  dash.layout,
+                  [
+                    ["ledger", "Ledger"],
+                    ["columns", "Columns"],
+                    ["focus", "Focus"],
+                  ],
+                  (layout) => setDash_({ layout }),
+                )}
+              </div>
+              <p className="ins-cap">
+                Ledger balances dues and campus; Columns uses three across on wide windows;
+                Focus keeps one quiet column.
+              </p>
+            </div>
+            <div className="ins-sec">
+              <div className="ins-sec-head">
+                <h2>The day</h2>
+              </div>
+              <div className="ins-setting-inline">
+                {seg(
+                  dash.dayView,
+                  [
+                    ["timeline", "Timeline"],
+                    ["rail", "Rail"],
+                    ["none", "Hidden"],
+                  ],
+                  (dayView) => setDash_({ dayView }),
+                )}
+              </div>
+            </div>
+            <div className="ins-sec">
+              <div className="ins-sec-head">
+                <h2>Sections</h2>
+              </div>
+              <div className="ins-setting-inline">
+                {seg(dash.brief, [[true, "Brief"], [false, "No brief"]], (brief) => setDash_({ brief }))}
+                {seg(dash.dues, [[true, "Dues"], [false, "No dues"]], (dues) => setDash_({ dues }))}
+                {seg(dash.exams, [[true, "Exams"], [false, "No exams"]], (exams) => setDash_({ exams }))}
+              </div>
+            </div>
+            <div className="ins-sec">
+              <div className="ins-sec-head">
+                <h2>Horizon</h2>
+              </div>
+              <div className="ins-setting-inline">
+                {seg(
+                  dash.horizon.view,
+                  [
+                    ["columns", "Columns"],
+                    ["strip", "Strip"],
+                    ["list", "List"],
+                  ],
+                  (view) => setDash_({ horizon: { ...dash.horizon, view } }),
+                )}
+                {seg(
+                  dash.horizon.range,
+                  [
+                    [7, "7 days"],
+                    [14, "14 days"],
+                  ],
+                  (range) => setDash_({ horizon: { ...dash.horizon, range } }),
+                )}
+              </div>
+              <div className="ins-setting-inline">
+                <input
+                  className="ins-input"
+                  value={dash.horizon.label}
+                  placeholder="No caption"
+                  onChange={(e) => setDash_({ horizon: { ...dash.horizon, label: e.target.value } })}
+                />
+              </div>
+              <p className="ins-cap">The caption above the horizon — leave empty for none.</p>
+            </div>
+            <div className="ins-sec">
+              <div className="ins-sec-head">
+                <h2>Bus card</h2>
+              </div>
+              <div className="ins-themes">
+                {BUS_CARDS.map((card) => (
+                  <button
+                    key={card.id}
+                    type="button"
+                    className={`ins-theme ${dash.busCard === card.id ? "is-active" : ""}`}
+                    onClick={() => setDash_({ busCard: card.id })}
+                  >
+                    <span className="ins-theme-names">
+                      <span className="ins-theme-name">{card.name}</span>
+                      <span className="ins-cap ins-theme-caption">{card.caption}</span>
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </>
+        )}
+
         {pane === "appearance" && (
           <>
             <div className="ins-sec">

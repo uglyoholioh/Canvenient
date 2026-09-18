@@ -23,7 +23,7 @@ import {
   Plus,
   Search,
   Sparkles,
-  Sun,
+  House,
   ListTodo,
   CalendarDays,
   MapPin,
@@ -66,7 +66,7 @@ const ASSISTANT_VIEW_MAP = {
 };
 
 const VIEW_TITLES = {
-  dashboard: "Today",
+  dashboard: "Home",
   tasks: "Tasks",
   schedule: "Schedule",
   venues: "Campus",
@@ -78,7 +78,7 @@ const VIEW_TITLES = {
 };
 
 const SIDEBAR_PRIMARY = [
-  { id: "dashboard", label: "Today", icon: Sun, index: "01" },
+  { id: "dashboard", label: "Home", icon: House, index: "01" },
   { id: "tasks", label: "Tasks", icon: ListTodo, index: "02" },
   { id: "schedule", label: "Schedule", icon: CalendarDays, index: "03" },
   { id: "venues", label: "Campus", icon: MapPin, index: "04" },
