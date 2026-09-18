@@ -131,6 +131,41 @@ export default function TasksView({ token }) {
     const color = getTaskModuleColor(task, modules);
     const isOverdue = !isDone && due && due < now;
     return (
+      <div key={task.id} className={`ins-remrow ${isOverdue ? "is-overdue" : ""}`}>
+        <input
+          type="checkbox"
+          className="ins-remcheck"
+          checked={isDone}
+          onChange={() => toggle(task)}
+          aria-label={isDone ? `Reopen ${task.title}` : `Mark ${task.title} done`}
+        />
+        <div className="ins-remrow-body">
+          <span className={`ins-remrow-title ${isDone ? "is-done" : ""}`}>{task.title}</span>
+          <span className="ins-remrow-meta">
+            <span
+              className="ins-dot"
+              style={{ "--tick-color": color || "var(--ins-ink-faint)" }}
+            />
+            <span className={isOverdue ? "is-overdue" : "is-muted"}>
+              {due ? dueCell(due, now) : "no due date"}
+              {task.module_code ? ` · ${task.module_code}` : ""}
+            </span>
+          </span>
+        </div>
+        <button
+          type="button"
+          className="ins-remrow-del"
+          onClick={() => remove(task)}
+          aria-label={`Delete ${task.title}`}
+          title="Delete"
+        >
+          ×
+        </button>
+      </div>
+    );
+  };
+
+  return (
       <tr key={task.id} className={isOverdue ? "is-overdue" : ""}>
         <td className="ins-tasks-check">
           <input
@@ -191,7 +226,7 @@ export default function TasksView({ token }) {
         </div>
       </div>
 
-      <div className="ins-tasks-tablewrap">
+      <div className="ins-tasks-list">
         {loaded && visible.length === 0 ? (
           <div className="ins-empty">
             {filter === "open" ? (
@@ -203,18 +238,7 @@ export default function TasksView({ token }) {
             )}
           </div>
         ) : (
-          <table className="ins-table ins-tasks-table">
-            <thead>
-              <tr>
-                <th style={{ width: 32 }} />
-                <th>Task</th>
-                <th style={{ width: 90 }}>Module</th>
-                <th style={{ width: 130 }}>Due</th>
-                <th style={{ width: 40 }} />
-              </tr>
-            </thead>
-            <tbody>{visible.map((task) => renderRow(task, filter === "done"))}</tbody>
-          </table>
+          visible.map((task) => renderRow(task, filter === "done"))
         )}
       </div>
 

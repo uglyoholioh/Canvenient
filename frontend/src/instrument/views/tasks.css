@@ -1,11 +1,11 @@
-/* Tasks — dense table. */
+/* Tasks — Reminders-style rows. */
 
 .ins-tasks {
-  max-width: 900px;
+  max-width: 760px;
   margin: 0 auto;
   display: flex;
   flex-direction: column;
-  gap: var(--ins-s4);
+  gap: var(--ins-s3);
   min-height: 100%;
 }
 
@@ -13,73 +13,269 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: var(--ins-s3);
 }
 
-.ins-tasks-tablewrap {
+.ins-tasks-tablewrap,
+.ins-tasks-list {
   flex: 1;
 }
 
-.ins-tasks-table td {
-  padding-top: 6px;
-  padding-bottom: 6px;
-}
-
-.ins-tasks-check {
-  width: 32px;
-}
-
-.ins-tasks-title {
+.ins-tasks-list {
   display: flex;
-  align-items: center;
-  gap: var(--ins-s2);
-  color: var(--ins-ink);
+  flex-direction: column;
 }
 
-.ins-tasks-title .is-done {
+/* Reminders row — circle checkbox, title with facts beneath, due on the right */
+.ins-remrow {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--ins-s3);
+  padding: 11px 10px;
+  margin: 0 -10px;
+  border-bottom: 1px solid var(--ins-line);
+  border-radius: var(--ins-r);
+  transition:
+    background var(--ins-dur) var(--ins-ease-out),
+    transform var(--ins-dur-fast) var(--ins-ease-out);
+}
+
+.ins-remrow:hover {
+  background: rgba(128, 118, 100, 0.06);
+}
+
+:root[data-theme="instrument-dark"] .ins-remrow:hover {
+  background: rgba(238, 234, 228, 0.045);
+}
+
+.ins-remrow .ins-remcheck {
+  appearance: none;
+  width: 19px;
+  height: 19px;
+  border: 1.5px solid var(--ins-line-strong);
+  border-radius: 50%;
+  background: transparent;
+  cursor: default;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 2px;
+  transition:
+    background var(--ins-dur) var(--ins-ease-spring),
+    border-color var(--ins-dur) var(--ins-ease),
+    box-shadow var(--ins-dur) var(--ins-ease);
+}
+
+.ins-remcheck:hover {
+  border-color: var(--ins-red);
+  transform: scale(1.08);
+}
+
+.ins-remcheck:checked {
+  background: var(--ins-red);
+  border-color: var(--ins-red);
+  box-shadow: 0 2px 8px rgba(217, 138, 112, 0.4);
+}
+
+.ins-remcheck:checked::after {
+  content: "";
+  width: 9px;
+  height: 5px;
+  border-left: 1.8px solid #fff;
+  border-bottom: 1.8px solid #fff;
+  transform: rotate(-45deg) translate(0.5px, -0.5px);
+}
+
+.ins-remrow-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
+.ins-remrow-title {
+  font-size: var(--ins-fs-body);
+  font-weight: 550;
+  color: var(--ins-ink);
+  line-height: 1.35;
+}
+
+.ins-remrow-title.is-done {
   color: var(--ins-ink-faint);
   text-decoration: line-through;
   text-decoration-color: var(--ins-line-strong);
 }
 
-.ins-tasks-title .ins-tick {
-  height: 16px;
-}
-
-.ins-tasks-module {
-  font-size: var(--ins-fs-sub);
+.ins-remrow-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--ins-fs-cap);
   color: var(--ins-ink-muted);
 }
 
-.ins-tasks-due {
-  font-size: var(--ins-fs-sub);
+.ins-remrow-meta .ins-dot {
+  width: 5px;
+  height: 5px;
+}
+
+.ins-remrow-meta .is-muted {
   color: var(--ins-ink-muted);
 }
 
-.ins-tasks-due.is-overdue,
-.ins-tasks-table tr.is-overdue .ins-tasks-title {
+.ins-remrow-meta .is-overdue {
   color: var(--ins-red);
+  font-weight: 600;
 }
 
-.ins-tasks-table tr.is-overdue .ins-tasks-due {
-  color: var(--ins-red);
-}
-
-.ins-tasks-actions {
-  text-align: right;
-}
-
-.ins-tasks-actions .ins-iconbtn {
+.ins-remrow-del {
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: var(--ins-ink-faint);
+  font-size: 15px;
+  cursor: default;
   opacity: 0;
+  transition: opacity var(--ins-dur-fast) var(--ins-ease);
+  margin-top: 4px;
 }
 
-.ins-tasks-table tr:hover .ins-iconbtn {
+.ins-remrow:hover .ins-remrow-del {
   opacity: 1;
 }
 
+.ins-remrow-del:hover {
+  color: var(--ins-red);
+}
+
+/* Composer — one rounded card, borderless title field, quiet pills */
 .ins-tasks-composer {
   position: sticky;
   bottom: 0;
-  padding: var(--ins-s2) 0;
+  padding: var(--ins-s2) 0 var(--ins-s1);
   background: var(--ins-bg);
-  border-top: 1px solid var(--ins-line);
+}
+
+.ins-root .task-input-shell.is-inline .task-input-card,
+.ins-root .task-input-shell.is-panel .task-input-card {
+  border-radius: 14px;
+  border: 1px solid var(--ins-line);
+  background: var(--ins-bg-raise, var(--surface));
+  box-shadow: var(--ins-shadow-soft, none);
+  padding: var(--ins-s2) var(--ins-s3);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.ins-root .task-input-shell .task-mode-switcher {
+  display: flex;
+  gap: 2px;
+  align-self: flex-start;
+}
+
+.ins-root .task-input-shell .task-mode-switcher button {
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: var(--ins-ink-muted);
+  font-size: var(--ins-fs-sub);
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 999px;
+  cursor: default;
+}
+
+.ins-root .task-input-shell .task-mode-switcher button.is-active {
+  background: var(--ins-ink);
+  color: var(--ins-bg);
+}
+
+.ins-root .task-input-shell .task-mode-badge {
+  display: none;
+}
+
+.ins-root .task-input-shell .task-input-main textarea {
+  border: none;
+  background: transparent;
+  box-shadow: none;
+  padding: 4px 2px;
+  font-size: var(--ins-fs-body);
+  font-weight: 500;
+  color: var(--ins-ink);
+  min-height: 26px;
+}
+
+.ins-root .task-input-shell .task-input-main textarea::placeholder {
+  color: var(--ins-ink-faint);
+  font-weight: 450;
+}
+
+.ins-root .task-input-shell .task-properties {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-wrap: wrap;
+}
+
+.ins-root .task-input-shell .task-property-pill {
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: var(--ins-ink-muted);
+  font-size: var(--ins-fs-cap);
+  font-weight: 500;
+  border-radius: 7px;
+  padding: 3px 7px;
+  cursor: default;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition:
+    background var(--ins-dur-fast) var(--ins-ease-out),
+    color var(--ins-dur-fast) var(--ins-ease-out);
+}
+
+.ins-root .task-input-shell .task-property-pill:hover {
+  background: rgba(128, 118, 100, 0.1);
+  color: var(--ins-ink);
+}
+
+.ins-root .task-input-shell .task-add-button.property-pill {
+  background: var(--ins-red);
+  color: #fff;
+  border-radius: 999px;
+  padding: 4px 14px;
+  font-weight: 650;
+}
+
+.ins-root .task-input-shell .task-add-button.property-pill:hover {
+  filter: brightness(1.08);
+  background: var(--ins-red);
+  color: #fff;
+}
+
+.ins-root .task-input-shell .task-note-toggle {
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: var(--ins-ink-muted);
+  font-size: var(--ins-fs-cap);
+  cursor: default;
+}
+
+.ins-root .task-input-shell .task-note-toggle:hover {
+  color: var(--ins-ink);
+}
+
+.ins-root .task-input-shell .task-input-note {
+  font-size: var(--ins-fs-sub);
+  color: var(--ins-ink-body);
+  background: transparent;
+  border: none;
+  outline: none;
+  width: 100%;
+  resize: none;
 }
