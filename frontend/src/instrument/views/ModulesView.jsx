@@ -1,9 +1,9 @@
 // Modules — the semester, organised by what you do with it.
 //
-// Smart views answer the cross-course questions: Deadlines (every due date in
-// order), Inbox (every announcement), Grades (scores per course). Picking a
-// module opens its workspace: assignments, files, its own announcements, and
-// an overview. Data types drive the views — never the other way round.
+// The rail holds the cross-course smart views (Semester overview, Deadlines,
+// Inbox, Grades); picking a module opens its workspace. Semester is the
+// landing: runway band, glance row, one card per module. Data types drive
+// the views — never the other way round.
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
@@ -15,42 +15,20 @@ import {
 } from "../../api";
 import { useWorkspaceToolbar } from "../../components/WorkspaceToolbarContext";
 import CanvasDrawer from "../../components/drawers/CanvasDrawer";
-import { FileBrowser } from "../../components/canvas/FileBrowser";
+import {
+  bucketDeadlines,
+  freshPostCount,
+  parseGradePercent,
+  readSelection,
+  relativeDay,
+  upcomingCounts,
+  writeSelection,
+} from "./modules/model";
+import SemesterLanding from "./modules/SemesterLanding";
+import InboxList from "./modules/InboxList";
+import RunwayBand from "./modules/RunwayBand";
+import CourseWorkspace from "./modules/CourseWorkspace";
 import "./modules.css";
-
-function relativeDay(iso, now) {
-  if (!iso) return "";
-  const date = new Date(iso);
-  const days = Math.round((date - now) / 86400000);
-  const time = date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false });
-  if (days === 0) return `today ${time}`;
-  if (days === 1) return `tomorrow ${time}`;
-  if (days === -1) return "yesterday";
-  if (days < 0) return `${-days}d ago`;
-  if (days <= 6) return date.toLocaleDateString([], { weekday: "short" });
-  return date.toLocaleDateString([], { day: "numeric", month: "short" });
-}
-
-function parseGradePercent(grade) {
-  if (grade == null) return null;
-  const m = String(grade).match(/([\d.]+)\s*%?/);
-  if (!m) return null;
-  const value = Number(m[1]);
-  return Number.isFinite(value) ? value : null;
-}
-
-const SEL_KEY = "canvenient.instrument.modules.sel";
-const DEFAULT_SELECTION = { kind: "deadlines", courseId: null };
-
-function readSelection() {
-  try {
-    const raw = JSON.parse(localStorage.getItem(SEL_KEY) || "null");
-    if (raw && ["deadlines", "inbox", "grades", "course"].includes(raw.kind)) return raw;
-  } catch {
-    // fall through to the default view
-  }
-  return DEFAULT_SELECTION;
-}
 
 export default function ModulesView({ token }) {
   const [courses, setCourses] = useState([]);
@@ -60,7 +38,6 @@ export default function ModulesView({ token }) {
   const [loaded, setLoaded] = useState(false);
   const [selection, setSelection] = useState(readSelection);
   const [drawerItem, setDrawerItem] = useState(null);
-  const [coursePane, setCoursePane] = useState("assignments");
   const [now, setNow] = useState(() => new Date());
 
   useEffect(() => {
@@ -87,8 +64,23 @@ export default function ModulesView({ token }) {
   }, [token]);
 
   const select = useCallback((kind, courseId = null) => {
-    setSelection({ kind, courseId });
-    localStorage.setItem(SEL_KEY, JSON.stringify({ kind, courseId }));
+    const next = { kind, courseId };
+    setSelection(next);
+    writeSelection(next);
+    // the shell's sidebar reflects the current selection on its course items
+    window.dispatchEvent(new CustomEvent("canvenient-modules-sel", { detail: next }));
+  }, []);
+
+  // The shell's Modules dropdown can drive the view from outside.
+  useEffect(() => {
+    const onExternalSelect = (event) => {
+      const detail = event.detail;
+      if (detail && ["semester", "deadlines", "inbox", "grades", "course"].includes(detail.kind)) {
+        setSelection(detail);
+      }
+    };
+    window.addEventListener("canvenient-modules-select", onExternalSelect);
+    return () => window.removeEventListener("canvenient-modules-select", onExternalSelect);
   }, []);
 
   const dismiss = useCallback(
@@ -104,10 +96,12 @@ export default function ModulesView({ token }) {
     [courses, selection],
   );
 
-  // Grades load only when the Grades view is open — one small call per course.
+  // Grades feed the Grades view and the Semester glance — one small call per
+  // course, served from the backend cache.
+  const needsGrades = selection.kind === "grades" || selection.kind === "semester";
   const gradeCourseIds = useMemo(
-    () => (selection.kind === "grades" ? courses.map((c) => c.id) : []),
-    [selection.kind, courses],
+    () => (needsGrades ? courses.map((c) => c.id) : []),
+    [needsGrades, courses],
   );
   useEffect(() => {
     if (!gradeCourseIds.length) return undefined;
@@ -136,40 +130,12 @@ export default function ModulesView({ token }) {
     [grades],
   );
 
-  // Deadlines — every dated assignment across courses, bucketed by distance.
-  const deadlineBuckets = useMemo(() => {
-    const buckets = { overdue: [], today: [], tomorrow: [], week: [], later: [] };
-    const dayStart = new Date(now);
-    dayStart.setHours(0, 0, 0, 0);
-    const dayEnd = new Date(dayStart);
-    dayEnd.setDate(dayStart.getDate() + 1);
-    const tomorrowEnd = new Date(dayEnd);
-    tomorrowEnd.setDate(dayEnd.getDate() + 1);
-    const weekEnd = new Date(dayStart);
-    weekEnd.setDate(dayStart.getDate() + 7);
-    for (const a of assignments) {
-      if (!a.due_at) continue;
-      const due = new Date(a.due_at);
-      const c = courses.find((x) => String(x.id) === String(a.course_id));
-      const row = { ...a, due, courseCode: c?.course_code, color: c?.color };
-      if (due < dayStart) buckets.overdue.push(row);
-      else if (due < dayEnd) buckets.today.push(row);
-      else if (due < tomorrowEnd) buckets.tomorrow.push(row);
-      else if (due < weekEnd) buckets.week.push(row);
-      else buckets.later.push(row);
-    }
-    Object.values(buckets).forEach((list) => list.sort((a, b) => a.due - b.due));
-    return buckets;
-  }, [assignments, courses, now]);
+  const deadlineBuckets = useMemo(
+    () => bucketDeadlines(assignments, courses, now),
+    [assignments, courses, now],
+  );
 
-  const upcomingCount = useMemo(() => {
-    const counts = new Map();
-    for (const a of assignments) {
-      if (!a.due_at || new Date(a.due_at) < now) continue;
-      counts.set(String(a.course_id), (counts.get(String(a.course_id)) || 0) + 1);
-    }
-    return counts;
-  }, [assignments, now]);
+  const upcomingCount = useMemo(() => upcomingCounts(assignments, now), [assignments, now]);
 
   const nextDeadline = useMemo(
     () =>
@@ -177,17 +143,22 @@ export default function ModulesView({ token }) {
     [deadlineBuckets],
   );
 
+  const freshCount = useMemo(
+    () => freshPostCount(announcements, now),
+    [announcements, now],
+  );
+
   const fact = useMemo(() => {
     if (!loaded) return "";
-    if (selection.kind === "deadlines") {
-      const total =
-        deadlineBuckets.overdue.length +
-        deadlineBuckets.today.length +
-        deadlineBuckets.tomorrow.length;
-      if (nextDeadline) return `next due ${relativeDay(nextDeadline.due_at, now)}`;
-      return "nothing dated ahead";
+    const overdue = deadlineBuckets.overdue.length;
+    if (selection.kind === "semester" || selection.kind === "deadlines") {
+      const bits = [];
+      if (overdue > 0) bits.push(`${overdue} overdue`);
+      if (nextDeadline) bits.push(`next due ${relativeDay(nextDeadline.due_at, now)}`);
+      return bits.length > 0 ? bits.join(" · ") : "nothing dated ahead";
     }
-    if (selection.kind === "inbox") return `${announcements.length} posts`;
+    if (selection.kind === "inbox")
+      return freshCount > 0 ? `${announcements.length} posts · ${freshCount} new` : `${announcements.length} posts`;
     if (selection.kind === "grades") return `${courses.length} courses`;
     if (course) {
       const upcoming = upcomingCount.get(String(course.id)) || 0;
@@ -200,6 +171,7 @@ export default function ModulesView({ token }) {
     deadlineBuckets,
     nextDeadline,
     announcements.length,
+    freshCount,
     courses.length,
     course,
     upcomingCount,
@@ -245,6 +217,16 @@ export default function ModulesView({ token }) {
 
   const renderDeadlines = () => (
     <div className="ins-modspane">
+      <RunwayBand
+        item={
+          deadlineBuckets.overdue[0] ||
+          deadlineBuckets.today[0] ||
+          deadlineBuckets.tomorrow[0] ||
+          null
+        }
+        now={now}
+        onClick={(a) => openAssignment(a)}
+      />
       {renderBucket("Overdue", deadlineBuckets.overdue, true)}
       {renderBucket("Today", deadlineBuckets.today)}
       {renderBucket("Tomorrow", deadlineBuckets.tomorrow)}
@@ -253,30 +235,6 @@ export default function ModulesView({ token }) {
       {assignments.filter((a) => a.due_at).length === 0 && (
         <div className="ins-empty">No dated assignments posted</div>
       )}
-    </div>
-  );
-
-  const renderAnnouncements = (list) => (
-    <div className="ins-inbox">
-      {list.length === 0 && <div className="ins-empty">No announcements</div>}
-      {list.map((item) => (
-        <div key={item.id} className="ins-annrow">
-          {item.course_code && (
-            <span className="ins-mono ins-cap ins-annrow-course">{item.course_code}</span>
-          )}
-          <a
-            className="ins-annrow-title"
-            href={item.html_url || "#"}
-            target="_blank"
-            rel="noreferrer"
-          >
-            {item.title}
-          </a>
-          <span className="ins-cap ins-annrow-date">
-            {relativeDay(item.posted_at || item.created_at, now)}
-          </span>
-        </div>
-      ))}
     </div>
   );
 
@@ -311,177 +269,66 @@ export default function ModulesView({ token }) {
     </div>
   );
 
-  const renderCourse = (c) => {
-    const list = assignments
-      .filter((a) => String(a.course_id) === String(c.id))
-      .sort((a, b) => new Date(a.due_at || 0) - new Date(b.due_at || 0));
-    const courseAnnouncements = announcements.filter((a) => String(a.course_id) === String(c.id));
-    return (
-      <div className="ins-modspane">
-        <header className="ins-coursehead">
-          <div className="ins-coursehead-id">
-            <span
-              className="ins-tick"
-              style={{ "--tick-color": c.color || "var(--ins-ink-faint)", height: 36 }}
-            />
-            <div>
-              <h2 className="ins-title">{c.name}</h2>
-              <p className="ins-cap ins-mono">
-                {c.course_code}
-                {gradeFor(c.id) != null ? ` · ${gradeFor(c.id)}` : ""}
-              </p>
-            </div>
-          </div>
-          <div className="ins-seg">
-            {[
-              ["assignments", "Assignments"],
-              ["announcements", "Posts"],
-              ["files", "Files"],
-              ["about", "About"],
-            ].map(([id, label]) => (
-              <button
-                key={id}
-                type="button"
-                className={coursePane === id ? "is-active" : ""}
-                onClick={() => setCoursePane(id)}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-        </header>
-
-        {coursePane === "assignments" && (
-          <div className="ins-mods-list">
-            {list.length === 0 && <div className="ins-empty">No assignments posted</div>}
-            {list.map((a) => {
-              const due = a.due_at ? new Date(a.due_at) : null;
-              const isPast = due && due < now;
-              return (
-                <button
-                  key={a.id}
-                  type="button"
-                  className={`ins-asgrow ${isPast ? "is-past" : ""}`}
-                  onClick={() => openAssignment(a)}
-                >
-                  <span className="ins-asgrow-title">{a.title || a.name}</span>
-                  <span className={`ins-mono ins-cap${isPast ? " is-muted" : " is-due"}`}>
-                    {due ? relativeDay(a.due_at, now) : "no due date"}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-        )}
-
-        {coursePane === "announcements" && renderAnnouncements(courseAnnouncements)}
-
-        {coursePane === "files" && (
-          <div className="ins-mods-files">
-            <FileBrowser token={token} courseId={c.id} />
-          </div>
-        )}
-
-        {coursePane === "about" && (
-          <div className="ins-mods-overview">
-            <div className="ins-sec">
-              <div className="ins-sec-head">
-                <h3 className="ins-label">Assignments</h3>
-              </div>
-              <p className="ins-mono ins-cap">
-                {list.length} total · {upcomingCount.get(String(c.id)) || 0} upcoming
-              </p>
-            </div>
-            <div className="ins-sec">
-              <div className="ins-sec-head">
-                <h3 className="ins-label">Grade</h3>
-              </div>
-              <p className="ins-mono ins-cap">
-                {gradeFor(c.id) != null ? gradeFor(c.id) : "not posted"}
-              </p>
-            </div>
-            <div className="ins-sec">
-              <div className="ins-sec-head">
-                <h3 className="ins-label">In Canvas</h3>
-              </div>
-              <a
-                className="ins-btn"
-                href={`https://canvas.nus.edu.sg/courses/${c.id}`}
-                target="_blank"
-                rel="noreferrer"
-              >
-                Open course
-              </a>
-            </div>
-          </div>
-        )}
-      </div>
-    );
-  };
-
   const pane =
-    selection.kind === "course" && course
-      ? renderCourse(course)
-      : selection.kind === "inbox"
-        ? renderAnnouncements(announcements)
+    selection.kind === "course" && course ? (
+      <CourseWorkspace
+        key={course.id}
+        course={course}
+        token={token}
+        assignments={assignments}
+        announcements={announcements}
+        grade={gradeFor(course.id)}
+        now={now}
+        onOpenAssignment={openAssignment}
+        onDismiss={dismiss}
+      />
+    ) : selection.kind === "inbox"
+        ? <InboxList items={announcements} courses={courses} now={now} onDismiss={dismiss} />
         : selection.kind === "grades"
           ? renderGrades()
-          : renderDeadlines();
+          : selection.kind === "deadlines"
+            ? renderDeadlines()
+            : (
+                <SemesterLanding
+                  courses={courses}
+                  assignments={assignments}
+                  announcements={announcements}
+                  buckets={deadlineBuckets}
+                  grades={grades}
+                  now={now}
+                  onOpenAssignment={openAssignment}
+                  onOpenCourse={(id) => select("course", id)}
+                />
+              );
 
   return (
     <div className="ins-mods">
       <nav className="ins-mods-rail" aria-label="Modules">
-        <button
-          type="button"
-          className={`ins-railrow ${selection.kind === "deadlines" ? "is-active" : ""}`}
-          onClick={() => select("deadlines")}
-        >
-          <span className="ins-railrow-label">Deadlines</span>
-          <span className="ins-mono ins-cap ins-railrow-count">
-            {deadlineBuckets.overdue.length + deadlineBuckets.today.length}
-          </span>
-        </button>
-        <button
-          type="button"
-          className={`ins-railrow ${selection.kind === "inbox" ? "is-active" : ""}`}
-          onClick={() => select("inbox")}
-        >
-          <span className="ins-railrow-label">Inbox</span>
-          <span className="ins-mono ins-cap ins-railrow-count">{announcements.length}</span>
-        </button>
-        <button
-          type="button"
-          className={`ins-railrow ${selection.kind === "grades" ? "is-active" : ""}`}
-          onClick={() => select("grades")}
-        >
-          <span className="ins-railrow-label">Grades</span>
-        </button>
-
-        <div className="ins-nav-caption">Modules</div>
-        {courses.map((c) => {
-          const active = selection.kind === "course" && String(c.id) === String(selection.courseId);
-          const upcoming = upcomingCount.get(String(c.id)) || 0;
-          return (
-            <button
-              key={c.id}
-              type="button"
-              className={`ins-railrow ${active ? "is-active" : ""}`}
-              onClick={() => select("course", c.id)}
-            >
-              <span
-                className="ins-tick"
-                style={{ "--tick-color": c.color || "var(--ins-ink-faint)", height: 30 }}
-              />
-              <span className="ins-railrow-main">
-                <span className="ins-mono ins-railrow-code">{c.course_code}</span>
-                <span className="ins-cap ins-railrow-name">{c.name}</span>
+        {[
+          ["semester", "Semester"],
+          ["deadlines", "Deadlines"],
+          ["inbox", "Inbox"],
+          ["grades", "Grades"],
+        ].map(([kind, label]) => (
+          <button
+            key={kind}
+            type="button"
+            className={`ins-railrow ${selection.kind === kind ? "is-active" : ""}`}
+            onClick={() => select(kind)}
+          >
+            <span className="ins-railrow-label">{label}</span>
+            {kind === "deadlines" && (
+              <span className="ins-mono ins-cap ins-railrow-count">
+                {deadlineBuckets.overdue.length + deadlineBuckets.today.length}
               </span>
-              {upcoming > 0 && (
-                <span className="ins-mono ins-cap ins-railrow-count">{upcoming}</span>
-              )}
-            </button>
-          );
-        })}
+            )}
+            {kind === "inbox" && (
+              <span className="ins-mono ins-cap ins-railrow-count">
+                {freshCount > 0 ? freshCount : ""}
+              </span>
+            )}
+          </button>
+        ))}
       </nav>
 
       {pane}

@@ -14,7 +14,7 @@ export default function InboxList({ items, courses, now, onDismiss }) {
   return (
     <div className="ins-inbox">
       {groupAnnouncements(items, now).map((group) => (
-        <div key={group.key} className="ins-inbox-group">
+        <div key={group.key} className={`ins-inbox-group ins-group-${group.key}`}>
           <div className="ins-sec-head">
             <p className={`ins-label${group.key === "new" ? " is-accent" : ""}`}>{group.label}</p>
             <span className="ins-cap ins-mono">{group.items.length}</span>

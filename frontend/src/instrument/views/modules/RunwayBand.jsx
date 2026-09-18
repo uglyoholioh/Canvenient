@@ -13,7 +13,7 @@ export default function RunwayBand({ item, now, onClick }) {
     : `due ${relativeDay(item.due_at, now)}${left ? ` · ${left} left` : ""}`;
 
   return (
-    <button type="button" className="ins-runway" onClick={onClick}>
+    <button type="button" className="ins-runway" onClick={() => onClick && onClick(item)}>
       <span className="ins-runway-top">
         <span
           className="ins-tick"

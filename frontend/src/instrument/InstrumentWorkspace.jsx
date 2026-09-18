@@ -17,6 +17,7 @@ import { QuickCaptureContext } from "../components/QuickCaptureContext";
 import { AssistantContext } from "../components/AssistantContext";
 import {
   PanelLeft,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
   Plus,
@@ -35,6 +36,7 @@ import {
 } from "lucide-react";
 import { formatShortcut, matchesShortcut, readKeyboardShortcuts } from "../keyboardShortcuts";
 import { getAcademicWeek } from "../components/scheduleUtils";
+import { getCanvasCourses } from "../api";
 import CommandBar from "./CommandBar";
 import CheatSheet from "./CheatSheet";
 import OrientationSheet from "./OrientationSheet";
@@ -94,6 +96,19 @@ const getSidebarBehavior = () => {
   return ["hover", "pinned", "hidden"].includes(stored) ? stored : "pinned";
 };
 
+const CAMPUS_PAGE_KEY = "canvenient.campus.page";
+const MODULES_SEL_KEY = "canvenient.instrument.modules.sel";
+
+function readModulesSel() {
+  try {
+    const raw = JSON.parse(localStorage.getItem(MODULES_SEL_KEY) || "null");
+    if (raw && raw.kind) return raw;
+  } catch {
+    // fall through to the semester landing
+  }
+  return { kind: "semester", courseId: null };
+}
+
 const getInitialView = () => {
   const stored = localStorage.getItem("canvenient-active-view") || "dashboard";
   return Object.keys(VIEW_TITLES).includes(stored) || /^note-\d+$/.test(stored)
@@ -121,6 +136,53 @@ const NavItem = ({ icon: Icon, label, index, active, onClick, isSlim }) => (
     <Icon size={15} strokeWidth={1.8} style={{ flexShrink: 0 }} />
     <span className="ins-nav-label">{label}</span>
   </button>
+);
+
+// NavGroup — a sidebar section that unfolds: Modules lists the semester's
+// courses, Campus lists Bus and Venues. The row itself navigates; the
+// chevron folds without moving you.
+const NavGroup = ({
+  icon: Icon,
+  label,
+  index,
+  active,
+  isSlim,
+  expanded,
+  onToggle,
+  onClick,
+  children,
+}) => (
+  <div className={`ins-nav-group ${expanded ? "is-open" : ""}`}>
+    <button
+      type="button"
+      className={`ins-nav-row ${active ? "is-active" : ""} ${isSlim ? "is-slim" : ""}`}
+      onClick={onClick}
+      aria-current={active ? "page" : undefined}
+      aria-expanded={isSlim ? undefined : expanded}
+      title={isSlim ? label : undefined}
+    >
+      {index && <span className="ins-nav-index">{index}</span>}
+      <Icon size={15} strokeWidth={1.8} style={{ flexShrink: 0 }} />
+      <span className="ins-nav-label">{label}</span>
+      {!isSlim && (
+        <span
+          className={`ins-nav-chevron ${expanded ? "is-open" : ""}`}
+          aria-hidden="true"
+          onClick={(event) => {
+            event.stopPropagation();
+            onToggle();
+          }}
+        >
+          <ChevronDown size={13} strokeWidth={2} />
+        </span>
+      )}
+    </button>
+    {!isSlim && expanded && (
+      <div className="ins-nav-children">
+        {children}
+      </div>
+    )}
+  </div>
 );
 
 export default function InstrumentWorkspace({ token, user, onLogout, onUpdateUser }) {
@@ -151,6 +213,56 @@ export default function InstrumentWorkspace({ token, user, onLogout, onUpdateUse
   const [isTriageOpen, setIsTriageOpen] = useState(false);
   const [toolbar, setToolbar] = useState(null);
   const [isSidebarHovered, setIsSidebarHovered] = useState(false);
+  const [courses, setCourses] = useState([]);
+  const [modulesSel, setModulesSel] = useState(readModulesSel);
+  const [campusSel, setCampusSel] = useState(() => localStorage.getItem(CAMPUS_PAGE_KEY) || "bus");
+  const [openGroups, setOpenGroups] = useState({});
+
+  useEffect(() => {
+    let alive = true;
+    getCanvasCourses(token)
+      .then((list) => {
+        if (alive) setCourses(list || []);
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [token]);
+
+  // The views report their sub-selection so the sidebar's folded items can
+  // highlight faithfully.
+  useEffect(() => {
+    const onModulesSel = (event) => setModulesSel(event.detail || { kind: "semester" });
+    const onCampusSel = (event) => setCampusSel(event.detail?.page || "bus");
+    window.addEventListener("canvenient-modules-sel", onModulesSel);
+    window.addEventListener("canvenient-campus-sel", onCampusSel);
+    return () => {
+      window.removeEventListener("canvenient-modules-sel", onModulesSel);
+      window.removeEventListener("canvenient-campus-sel", onCampusSel);
+    };
+  }, []);
+
+  const openModule = useCallback(
+    (courseId) => {
+      const sel = { kind: "course", courseId };
+      localStorage.setItem(MODULES_SEL_KEY, JSON.stringify(sel));
+      setModulesSel(sel);
+      window.dispatchEvent(new CustomEvent("canvenient-modules-select", { detail: sel }));
+      setActiveTab("canvas");
+    },
+    [setActiveTab],
+  );
+
+  const openCampusPage = useCallback(
+    (page) => {
+      localStorage.setItem(CAMPUS_PAGE_KEY, page);
+      setCampusSel(page);
+      window.dispatchEvent(new CustomEvent("canvenient-campus-select", { detail: { page } }));
+      setActiveTab("venues");
+    },
+    [setActiveTab],
+  );
   const [shortcuts, setShortcuts] = useState(readKeyboardShortcuts);
   const [globalCanvasItem, setGlobalCanvasItem] = useState(null);
   const [tasksPanel, setTasksPanel] = useState({ isOpen: false, focusComposer: false });
@@ -654,20 +766,76 @@ export default function InstrumentWorkspace({ token, user, onLogout, onUpdateUse
                 >
                   <div className={`ins-sidebar-scroll ${isSlim ? "is-slim" : ""}`}>
                     <nav className="ins-nav" aria-label="Views">
-                      {SIDEBAR_PRIMARY.map((item) => (
-                        <NavItem
-                          key={item.id}
-                          isSlim={isSlim}
-                          icon={item.icon}
-                          label={item.label}
-                          index={item.index}
-                          active={
-                            activeTab === item.id ||
-                            (item.id === "notes" && activeTab.startsWith("note-"))
-                          }
-                          onClick={() => setActiveTab(item.id)}
-                        />
-                      ))}
+                      {SIDEBAR_PRIMARY.map((item) => {
+                        if (item.id === "canvas" || item.id === "venues") {
+                          const isCampus = item.id === "venues";
+                          const groupActive = activeTab === item.id;
+                          const expanded = groupActive
+                            ? openGroups[item.id] !== false
+                            : Boolean(openGroups[item.id]);
+                          const children = isCampus
+                            ? [
+                                { key: "bus", label: "Bus", active: campusSel === "bus", onClick: () => openCampusPage("bus") },
+                                { key: "venues", label: "Venues", active: campusSel === "venues", onClick: () => openCampusPage("venues") },
+                              ]
+                            : courses.map((c) => ({
+                                key: String(c.id),
+                                label: c.course_code,
+                                color: c.color,
+                                active:
+                                  modulesSel.kind === "course" &&
+                                  String(modulesSel.courseId) === String(c.id),
+                                onClick: () => openModule(c.id),
+                              }));
+                          return (
+                            <NavGroup
+                              key={item.id}
+                              icon={item.icon}
+                              label={item.label}
+                              index={item.index}
+                              active={groupActive}
+                              isSlim={isSlim}
+                              expanded={expanded}
+                              onToggle={() =>
+                                setOpenGroups((prev) => ({
+                                  ...prev,
+                                  [item.id]: expanded ? false : true,
+                                }))
+                              }
+                              onClick={() => setActiveTab(item.id)}
+                            >
+                              {children.map((child) => (
+                                <button
+                                  key={child.key}
+                                  type="button"
+                                  className={`ins-nav-child ${child.active ? "is-active" : ""}`}
+                                  onClick={child.onClick}
+                                >
+                                  <span
+                                    className="ins-nav-child-dot"
+                                    style={child.color ? { background: child.color } : undefined}
+                                  />
+                                  <span className="ins-nav-child-label">{child.label}</span>
+                                </button>
+                              ))}
+                            </NavGroup>
+                          );
+                        }
+                        return (
+                          <NavItem
+                            key={item.id}
+                            isSlim={isSlim}
+                            icon={item.icon}
+                            label={item.label}
+                            index={item.index}
+                            active={
+                              activeTab === item.id ||
+                              (item.id === "notes" && activeTab.startsWith("note-"))
+                            }
+                            onClick={() => setActiveTab(item.id)}
+                          />
+                        );
+                      })}
                     </nav>
                     <div className="ins-nav-caption">{!isSlim && "Utilities"}</div>
                     <nav className="ins-nav" aria-label="Utilities">

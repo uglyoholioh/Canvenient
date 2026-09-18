@@ -646,6 +646,10 @@ export function getCanvasPage(token, courseId, pageUrl) {
   );
 }
 
+export function getCanvasFrontPage(token, courseId) {
+  return apiRequest(`/canvas/front-page?course_id=${encodeURIComponent(courseId)}`, { token });
+}
+
 export function getCanvasCourseModules(token, courseId) {
   return apiRequest(`/canvas/modules?course_id=${encodeURIComponent(courseId)}`, { token });
 }

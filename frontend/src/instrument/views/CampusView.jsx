@@ -31,8 +31,9 @@ const RAIL_START = 8 * 60;
 const RAIL_END = 21 * 60 + 30;
 
 function clockFromHHMM(hhmm) {
-  const h = Math.floor(hhmm / 100);
-  const m = hhmm % 100;
+  const clean = String(Math.max(0, Math.round(hhmm || 0))).padStart(4, "0");
+  const h = Math.min(23, Number(clean.slice(0, 2)));
+  const m = Math.min(59, Number(clean.slice(2, 4)));
   return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
 }
 
@@ -509,11 +510,15 @@ function VenuesPage({ token }) {
   const [query, setQuery] = useState("");
   const [debounced, setDebounced] = useState("");
   const [dayOffset, setDayOffset] = useState(0);
-  const [timeHHMM, setTimeHHMM] = useState(() => {
+  // The window lives in total minutes internally — HHMM only at the edges.
+  const [winStart, setWinStart] = useState(() => {
     const d = new Date();
-    return Math.max(800, Math.min(2100, d.getHours() * 100 + Math.round(d.getMinutes() / 30) * 30));
+    return Math.max(
+      RAIL_START,
+      Math.min(RAIL_END - 60, d.getHours() * 60 + Math.round(d.getMinutes() / 30) * 30),
+    );
   });
-  const [endHHMM, setEndHHMM] = useState(1200);
+  const [winEnd, setWinEnd] = useState(() => RAIL_END);
   const [results, setResults] = useState(null);
   const [loading, setLoading] = useState(false);
   const [saved, setSaved] = useState(readSaved);
@@ -595,7 +600,7 @@ function VenuesPage({ token }) {
     setLoading(true);
     searchFreeVenues(token, {
       day: availabilityDay,
-      time: String(timeHHMM).padStart(4, "0"),
+      time: String(minutesToHHMM(winStart)).padStart(4, "0"),
       query: debounced || undefined,
       onlyFree: true,
       sort: "duration",
@@ -612,7 +617,7 @@ function VenuesPage({ token }) {
     return () => {
       alive = false;
     };
-  }, [token, availabilityDay, timeHHMM, debounced]);
+  }, [token, availabilityDay, winStart, debounced]);
 
   const toggleSaved = useCallback((code) => {
     setSaved((prev) => {
@@ -625,17 +630,25 @@ function VenuesPage({ token }) {
   const savedSet = useMemo(() => new Set(saved), [saved]);
 
   // Time rail — two drag handles define the window the search asks about.
-  const railToTime = (which, clientX) => {
+  const setWindow = (startMin, endMin) => {
+    startMin = Math.max(RAIL_START, Math.min(startMin, RAIL_END - 30));
+    endMin = Math.max(startMin + 30, Math.min(endMin, RAIL_END));
+    setWinStart(startMin);
+    setWinEnd(endMin);
+  };
+
+  const railMinsAt = (clientX) => {
     const rail = railRef.current;
-    if (!rail) return;
+    if (!rail) return RAIL_START;
     const rect = rail.getBoundingClientRect();
     const frac = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
-    const mins = minutesToHHMM(Math.round((RAIL_START + frac * (RAIL_END - RAIL_START)) / 30) * 30);
-    if (which === "start") {
-      setTimeHHMM(Math.min(mins, hhmmToMinutes(endHHMM) - 30));
-    } else {
-      setEndHHMM(Math.max(mins, hhmmToMinutes(timeHHMM) + 30));
-    }
+    return Math.round((RAIL_START + frac * (RAIL_END - RAIL_START)) / 30) * 30;
+  };
+
+  const railToTime = (which, clientX) => {
+    const mins = railMinsAt(clientX);
+    if (which === "start") setWindow(mins, Math.max(mins + 30, winEnd));
+    else setWindow(Math.min(winStart, mins - 30), mins);
   };
 
   useEffect(() => {
@@ -651,11 +664,11 @@ function VenuesPage({ token }) {
       window.removeEventListener("pointermove", move);
       window.removeEventListener("pointerup", up);
     };
-  }, []);
+  });
 
-  const railMinutes = hhmmToMinutes(timeHHMM);
-  const railEndMinutes = hhmmToMinutes(endHHMM);
-  const windowMinutes = Math.max(30, railEndMinutes - railMinutes);
+  const railMinutes = winStart;
+  const railEndMinutes = winEnd;
+  const windowMinutes = Math.max(30, winEnd - winStart);
   const railPct = (mins) => ((mins - RAIL_START) / (RAIL_END - RAIL_START)) * 100;
   const railNowPct =
     dayOffset === 0
@@ -692,8 +705,12 @@ function VenuesPage({ token }) {
     <div className="ins-venuespage">
       <header className="ins-venhero">
         <div className="ins-venhero-clock">
-          <span className="ins-numeral ins-venhero-time ins-mono">{clockFromHHMM(timeHHMM)}</span>
-          <span className="ins-mono ins-venhero-end ins-mono">– {clockFromHHMM(endHHMM)}</span>
+          <span className="ins-numeral ins-venhero-time ins-mono">
+            {clockFromHHMM(minutesToHHMM(winStart))}
+          </span>
+          <span className="ins-mono ins-venhero-end ins-mono">
+            – {clockFromHHMM(minutesToHHMM(winEnd))}
+          </span>
           <span className="ins-cap">{availabilityDay}</span>
         </div>
         <div
@@ -706,14 +723,14 @@ function VenuesPage({ token }) {
           aria-valuenow={railMinutes}
           tabIndex={0}
           onPointerDown={(e) => {
-            draggingRef.current = true;
-            railToTime(e.clientX);
+            const mins = railMinsAt(e.clientX);
+            const which = Math.abs(mins - winStart) <= Math.abs(mins - winEnd) ? "start" : "end";
+            draggingRef.current = which;
+            railToTime(which, e.clientX);
           }}
           onKeyDown={(e) => {
-            if (e.key === "ArrowLeft")
-              setTimeHHMM((t) => Math.max(RAIL_START, hhmmToMinutes(t) - 30));
-            if (e.key === "ArrowRight")
-              setTimeHHMM((t) => Math.min(RAIL_END, hhmmToMinutes(t) + 30));
+            if (e.key === "ArrowLeft") setWindow(winStart - 30, winEnd);
+            if (e.key === "ArrowRight") setWindow(winStart + 30, winEnd);
           }}
         >
           {Array.from({ length: 15 }, (_, i) => RAIL_START + i * 60).map((mins) => (
@@ -820,47 +837,18 @@ function VenuesPage({ token }) {
         {results && rooms.length === 0 && (
           <div className="ins-empty">No rooms free at this time</div>
         )}
-        {rooms.slice(0, 60).map((room) => {
-          const slots = daySlots(room.venue_code);
-          const savedHere = savedSet.has(room.venue_code);
-          return (
-            <div key={room.venue_code} className="ins-roomrow">
-              <SavedPin code={room.venue_code} saved={savedHere} onToggle={toggleSaved} />
-              <div className="ins-roomid">
-                <span className="ins-mono ins-roomrow-code">{room.venue_code}</span>
-                <span className="ins-roomrow-name">
-                  {[room.room_name, room.building_name].filter(Boolean).join(" · ") ||
-                    room.faculty ||
-                    ""}
-                </span>
-              </div>
-              <div className="ins-roomstrip" aria-hidden="true">
-                {slots === null && <span className="ins-roomstrip-noinfo">no schedule data</span>}
-                {(slots || []).map((slot, index) => {
-                  const left = Math.max(0, railPct(slot.start));
-                  const right = Math.min(100, railPct(slot.end));
-                  return (
-                    <span
-                      key={index}
-                      className="ins-roomstrip-busy"
-                      style={{ left: `${left}%`, width: `${Math.max(right - left, 1)}%` }}
-                      title={`Occupied ${slot.range} — ${slot.label}`}
-                    />
-                  );
-                })}
-                <span
-                  className="ins-roomstrip-cursor"
-                  style={{ left: `${railPct(hhmmToMinutes(timeHHMM))}%` }}
-                  title={clockFromHHMM(timeHHMM)}
-                />
-              </div>
-              <span className="ins-mono ins-cap ins-roomrow-free">
-                {freeLabel(room.free_minutes)}
-                {room.distance_metres != null ? ` · ${Math.round(room.distance_metres)} m` : ""}
-              </span>
-            </div>
-          );
-        })}
+        {rooms.slice(0, 60).map((room) => (
+          <RoomRow
+            key={room.venue_code}
+            room={room}
+            saved={savedSet.has(room.venue_code)}
+            onToggle={toggleSaved}
+            slots={daySlots(room.venue_code)}
+            winStart={railMinutes}
+            winEnd={railEndMinutes}
+            now={now}
+          />
+        ))}
       </div>
 
       {saved.length > 0 && (
@@ -942,7 +930,19 @@ export default function CampusView({ token }) {
   const showPage = (next) => {
     setPage(next);
     localStorage.setItem(PAGE_KEY, next);
+    // the shell's Campus dropdown reflects the current page
+    window.dispatchEvent(new CustomEvent("canvenient-campus-sel", { detail: { page: next } }));
   };
+
+  // The shell's Campus dropdown can switch the page from outside.
+  useEffect(() => {
+    const onExternalSelect = (event) => {
+      const next = event.detail?.page;
+      if (next === "bus" || next === "venues") setPage(next);
+    };
+    window.addEventListener("canvenient-campus-select", onExternalSelect);
+    return () => window.removeEventListener("canvenient-campus-select", onExternalSelect);
+  }, []);
 
   return (
     <div className="ins-campus">
