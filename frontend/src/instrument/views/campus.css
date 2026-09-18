@@ -640,3 +640,45 @@
   flex-wrap: wrap;
   gap: var(--ins-s1);
 }
+
+/* Hover card for an occupied slot */
+.ins-hovercard {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 0;
+  z-index: 30;
+  min-width: 200px;
+  padding: 9px 11px;
+  border-radius: 10px;
+  background: var(--ins-menu-bg);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  box-shadow: var(--ins-shadow-sheet);
+  pointer-events: none;
+}
+
+.ins-hovercard-title {
+  font-size: var(--ins-fs-sub);
+  font-weight: 600;
+  color: var(--ins-ink);
+  margin-bottom: 2px;
+}
+
+/* The searched window drawn on every room strip */
+.ins-roomstrip-window {
+  position: absolute;
+  top: 1px;
+  bottom: 1px;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--ins-green) 16%, transparent);
+  border: 1px dashed color-mix(in srgb, var(--ins-green) 55%, transparent);
+  pointer-events: none;
+}
+
+.ins-roomstrip-busy {
+  cursor: default;
+}
+
+.ins-roomstrip-busy.is-hovered {
+  background: color-mix(in srgb, var(--ins-red) 60%, transparent);
+}

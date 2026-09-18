@@ -569,7 +569,7 @@ export default function TaskInputBar({
               if (parseHint) setParseHint("");
             }}
             onKeyDown={handleInputKeyDown}
-            placeholder={inputMode === "task" ? "Short task title..." : "Capture a note title..."}
+            placeholder={inputMode === "task" ? "New Task" : "New Note"}
           />
         </div>
         {inputMode === "task" && (

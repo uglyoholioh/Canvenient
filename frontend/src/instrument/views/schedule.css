@@ -43,13 +43,6 @@
   gap: 0;
 }
 
-.ins-block-time {
-  display: block;
-  font-size: 9.5px;
-  color: var(--ins-ink-muted);
-  white-space: nowrap;
-}
-
 .ins-block-title {
   display: block;
   font-size: var(--ins-fs-sub);
@@ -61,14 +54,13 @@
   text-overflow: ellipsis;
 }
 
-.ins-block-name {
+.ins-block-type {
   display: block;
   font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
   color: var(--ins-ink-muted);
-  font-style: italic;
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .ins-block-venue {
@@ -263,15 +255,6 @@
 .ins-block.is-exam {
   background: var(--ins-amber-bg);
   border-color: var(--ins-amber);
-}
-
-.ins-block-title {
-  font-size: var(--ins-fs-sub);
-  font-weight: 650;
-  letter-spacing: -0.008em;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .ins-block-meta {

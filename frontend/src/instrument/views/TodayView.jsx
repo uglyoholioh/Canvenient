@@ -13,6 +13,7 @@ import {
   getVenueLocations,
   updateTask,
 } from "../../api";
+import { RefreshCw } from "lucide-react";
 import {
   getAcademicWeek,
   getTaskModuleColor,
@@ -171,7 +172,19 @@ export default function TodayView({ token, user, onNavigate }) {
   const [journey, setJourney] = useState(null);
   const [loaded, setLoaded] = useState(false);
   const [completion, setCompletion] = useState({});
+  const [refreshing, setRefreshing] = useState(false);
   const journeyTimer = useRef(null);
+
+  const refreshBrief = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      setBrief(await getAssistantBrief(token, true));
+    } catch {
+      // The previous brief, or none, stays on screen.
+    } finally {
+      setRefreshing(false);
+    }
+  }, [token]);
 
   // The clock ticks every second; the page breathes with it.
   useEffect(() => {
@@ -391,9 +404,6 @@ export default function TodayView({ token, user, onNavigate }) {
             {clockHM}
             <span className="ins-today-sec">:{clockSS}</span>
           </span>
-          <div className="ins-today-daymeter ins-meter is-red">
-            <span style={{ width: `${dayPct}%` }} />
-          </div>
         </div>
         <h2 className="ins-display">{dateLabel}</h2>
         <p className="ins-today-sub">
@@ -401,6 +411,38 @@ export default function TodayView({ token, user, onNavigate }) {
           {phase ? ` — ${phase.label} in ${phase.inDays} day${phase.inDays === 1 ? "" : "s"}` : ""}
         </p>
       </header>
+
+      {brief?.ai_ok && brief?.summary && (
+        <section className="ins-sec ins-briefsection">
+          <div className="ins-sec-head">
+            <p className="ins-label">My Day</p>
+            <div className="ins-briefsection-meta">
+              <span className="ins-tag">AI</span>
+              <button
+                type="button"
+                className="ins-iconbtn ins-briefsection-refresh"
+                onClick={refreshBrief}
+                disabled={refreshing}
+                aria-label="Refresh brief"
+                title="Refresh"
+              >
+                <RefreshCw size={13} className={refreshing ? "is-spinning" : ""} />
+              </button>
+            </div>
+          </div>
+          <p className="ins-briefsection-lead">{brief.summary}</p>
+          {brief.attention?.length > 0 && (
+            <div className="ins-briefsection-facts">
+              {brief.attention.slice(0, 3).map((item, index) => (
+                <div key={index} className="ins-brief-row">
+                  <span className="ins-brief-dot" />
+                  <span>{item.text || item}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
 
       {everythingEmpty && (
         <div className="ins-empty ins-today-empty">
@@ -434,7 +476,6 @@ export default function TodayView({ token, user, onNavigate }) {
                   ? "tomorrow"
                   : now.toLocaleDateString([], { weekday: "short" })}
             </p>
-            <span className="ins-numeral ins-next-count">{nextCountdown}</span>
           </div>
           <div className="ins-next" style={{ "--tick-color": nextToday.color }}>
             <div className="ins-next-main">

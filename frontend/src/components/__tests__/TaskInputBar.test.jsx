@@ -32,7 +32,7 @@ describe("TaskInputBar quick capture", () => {
       />,
     );
 
-    fireEvent.change(screen.getByPlaceholderText("Short task title..."), {
+    fireEvent.change(screen.getByPlaceholderText("New Task"), {
       target: { value: "Review assignment" },
     });
     expect(screen.queryByLabelText("Task note")).not.toBeInTheDocument();
@@ -54,7 +54,7 @@ describe("TaskInputBar quick capture", () => {
     );
     expect(createTask.mock.calls[0][1]).not.toHaveProperty("source_type");
     expect(screen.getByRole("dialog", { name: "Quick capture" })).toBeInTheDocument();
-    await waitFor(() => expect(screen.getByPlaceholderText("Short task title...")).toHaveValue(""));
+    await waitFor(() => expect(screen.getByPlaceholderText("New Task")).toHaveValue(""));
   });
 
   it("keeps title-only capture primary and reveals the longer note on demand", async () => {
@@ -69,7 +69,7 @@ describe("TaskInputBar quick capture", () => {
     );
 
     await waitFor(() =>
-      expect(screen.getByPlaceholderText("Short task title...")).toHaveAttribute(
+      expect(screen.getByPlaceholderText("New Task")).toHaveAttribute(
         "maxLength",
         "160",
       ),
@@ -90,7 +90,7 @@ describe("TaskInputBar quick capture", () => {
       />,
     );
 
-    const title = screen.getByPlaceholderText("Short task title...");
+    const title = screen.getByPlaceholderText("New Task");
     fireEvent.change(title, { target: { value: "Email tutor" } });
     fireEvent.keyDown(title, { key: "Enter" });
 
@@ -118,7 +118,7 @@ describe("TaskInputBar quick capture", () => {
     );
     await act(async () => {});
 
-    const title = screen.getByPlaceholderText("Short task title...");
+    const title = screen.getByPlaceholderText("New Task");
     fireEvent.keyDown(title, { key: "ArrowDown" });
     fireEvent.keyDown(title, { key: "ArrowUp" });
 
@@ -138,7 +138,7 @@ describe("TaskInputBar quick capture", () => {
     });
     render(<TaskInputBar token="token" isOpen initialMode="task" allowedModes={["task"]} />);
 
-    const title = screen.getByPlaceholderText("Short task title...");
+    const title = screen.getByPlaceholderText("New Task");
     fireEvent.change(title, {
       target: { value: "finish ma2002 ps4 before next friday 5pm urgent" },
     });
@@ -175,7 +175,7 @@ describe("TaskInputBar quick capture", () => {
     parseTaskSmart.mockRejectedValue(new Error("AI unavailable"));
     render(<TaskInputBar token="token" isOpen initialMode="task" allowedModes={["task"]} />);
 
-    const title = screen.getByPlaceholderText("Short task title...");
+    const title = screen.getByPlaceholderText("New Task");
     fireEvent.change(title, {
       target: { value: "some complicated sentence with a friday deadline" },
     });
@@ -236,7 +236,7 @@ describe("TaskInputBar quick capture", () => {
     });
     expect(onClose).toHaveBeenCalledTimes(1);
 
-    const title = screen.getByPlaceholderText("Short task title...");
+    const title = screen.getByPlaceholderText("New Task");
     act(() => {
       fireEvent.keyDown(title, { key: "Escape" });
     });
@@ -246,7 +246,7 @@ describe("TaskInputBar quick capture", () => {
   it("submits task with Cmd+Enter from note field", async () => {
     render(<TaskInputBar token="token" isOpen initialMode="task" allowedModes={["task"]} />);
 
-    fireEvent.change(screen.getByPlaceholderText("Short task title..."), {
+    fireEvent.change(screen.getByPlaceholderText("New Task"), {
       target: { value: "Cmd enter task" },
     });
     fireEvent.click(screen.getByRole("button", { name: "Add note" }));

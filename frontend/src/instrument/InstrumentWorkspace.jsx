@@ -39,11 +39,9 @@ import CommandBar from "./CommandBar";
 import CheatSheet from "./CheatSheet";
 import OrientationSheet from "./OrientationSheet";
 import TriageSheet from "./TriageSheet";
+import TodayView from "./views/TodayView";
 import "./instrument.css";
 
-// Today renders the proven dashboard layout (AI brief, due list, classes,
-// campus bus card) inside the Fog/Dusk materials via the pinned tokens.
-const Dashboard = lazy(() => import("../components/Dashboard"));
 const TasksView = lazy(() => import("./views/TasksView"));
 const ScheduleView = lazy(() => import("./views/ScheduleView"));
 const CampusView = lazy(() => import("./views/CampusView"));
@@ -720,13 +718,7 @@ export default function InstrumentWorkspace({ token, user, onLogout, onUpdateUse
                 <div className="ins-content" key={activeTab}>
                   <Suspense fallback={<ViewLoader />}>
                     {activeTab === "dashboard" && (
-                      <Dashboard
-                        token={token}
-                        user={user}
-                        onNavigate={setActiveTab}
-                        onOpenSearch={() => setIsCommandBarOpen(true)}
-                        searchShortcutLabel={formatShortcut(shortcuts.search)}
-                      />
+                      <TodayView token={token} onNavigate={setActiveTab} />
                     )}
                     {activeTab === "tasks" && <TasksView token={token} user={user} />}
                     {activeTab === "schedule" && <ScheduleView token={token} />}

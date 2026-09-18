@@ -513,13 +513,14 @@ function VenuesPage({ token }) {
     const d = new Date();
     return Math.max(800, Math.min(2100, d.getHours() * 100 + Math.round(d.getMinutes() / 30) * 30));
   });
+  const [endHHMM, setEndHHMM] = useState(1200);
   const [results, setResults] = useState(null);
   const [loading, setLoading] = useState(false);
   const [saved, setSaved] = useState(readSaved);
   const [area, setArea] = useState("All areas");
   const [venuesInfo, setVenuesInfo] = useState({});
   const railRef = useRef(null);
-  const draggingRef = useRef(false);
+  const draggingRef = useRef(null); // "start" | "end" | null
 
   // Full-day schedules per venue (NUSMods, cached a day) — the strips.
   const availabilityDay = useMemo(() => {
@@ -562,9 +563,18 @@ function VenuesPage({ token }) {
           const end = slotToMinutes(cls.endTime);
           const parts = [cls.moduleCode || cls.eventname || "Class"];
           if (cls.lessonType) parts.push(cls.lessonType);
+          let weeksLabel = "every week";
+          if (cls.weeks && typeof cls.weeks === "object" && cls.weeks.start && cls.weeks.end) {
+            weeksLabel = `${String(cls.weeks.start).slice(8, 10)}.${String(cls.weeks.start).slice(5, 7)} – ${String(cls.weeks.end).slice(8, 10)}.${String(cls.weeks.end).slice(5, 7)}`;
+          } else if (Array.isArray(cls.weeks) && cls.weeks.length) {
+            weeksLabel = `weeks ${cls.weeks.join(", ")}`;
+          }
           return {
             start,
             end,
+            moduleCode: cls.moduleCode || "",
+            lessonType: cls.lessonType || "",
+            weeksLabel,
             label: parts.join(" · "),
             range: `${clockFromHHMM(start)}–${clockFromHHMM(end)}`,
           };
@@ -614,22 +624,26 @@ function VenuesPage({ token }) {
 
   const savedSet = useMemo(() => new Set(saved), [saved]);
 
-  // Time rail — click or drag anywhere on the axis.
-  const railToTime = (clientX) => {
+  // Time rail — two drag handles define the window the search asks about.
+  const railToTime = (which, clientX) => {
     const rail = railRef.current;
     if (!rail) return;
     const rect = rail.getBoundingClientRect();
     const frac = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
-    const mins = RAIL_START + frac * (RAIL_END - RAIL_START);
-    setTimeHHMM(minutesToHHMM(Math.round(mins / 30) * 30));
+    const mins = minutesToHHMM(Math.round((RAIL_START + frac * (RAIL_END - RAIL_START)) / 30) * 30);
+    if (which === "start") {
+      setTimeHHMM(Math.min(mins, hhmmToMinutes(endHHMM) - 30));
+    } else {
+      setEndHHMM(Math.max(mins, hhmmToMinutes(timeHHMM) + 30));
+    }
   };
 
   useEffect(() => {
     const move = (e) => {
-      if (draggingRef.current) railToTime(e.clientX);
+      if (draggingRef.current) railToTime(draggingRef.current, e.clientX);
     };
     const up = () => {
-      draggingRef.current = false;
+      draggingRef.current = null;
     };
     window.addEventListener("pointermove", move);
     window.addEventListener("pointerup", up);
@@ -640,6 +654,8 @@ function VenuesPage({ token }) {
   }, []);
 
   const railMinutes = hhmmToMinutes(timeHHMM);
+  const railEndMinutes = hhmmToMinutes(endHHMM);
+  const windowMinutes = Math.max(30, railEndMinutes - railMinutes);
   const railPct = (mins) => ((mins - RAIL_START) / (RAIL_END - RAIL_START)) * 100;
   const railNowPct =
     dayOffset === 0
@@ -666,9 +682,10 @@ function VenuesPage({ token }) {
 
   const rooms = useMemo(() => {
     const list = results?.results || [];
-    if (area === "All areas") return list;
-    return list.filter((room) => (room.faculty || "Other") === area);
-  }, [results, area]);
+    const sized = list.filter((room) => (room.free_minutes || 0) >= windowMinutes);
+    if (area === "All areas") return sized;
+    return sized.filter((room) => (room.faculty || "Other") === area);
+  }, [results, area, windowMinutes]);
   const count = rooms.length;
 
   return (
@@ -676,6 +693,7 @@ function VenuesPage({ token }) {
       <header className="ins-venhero">
         <div className="ins-venhero-clock">
           <span className="ins-numeral ins-venhero-time ins-mono">{clockFromHHMM(timeHHMM)}</span>
+          <span className="ins-mono ins-venhero-end ins-mono">– {clockFromHHMM(endHHMM)}</span>
           <span className="ins-cap">{availabilityDay}</span>
         </div>
         <div
@@ -708,12 +726,31 @@ function VenuesPage({ token }) {
             </span>
           ))}
           <span
-            className="ins-timerail-fill"
-            style={{ width: `${((railMinutes - RAIL_START) / (RAIL_END - RAIL_START)) * 100}%` }}
+            className="ins-timerail-win"
+            style={{
+              left: `${railPct(railMinutes)}%`,
+              width: `${railPct(railEndMinutes) - railPct(railMinutes)}%`,
+            }}
           />
-          <span
+          <button
+            type="button"
             className="ins-timerail-knob"
-            style={{ left: `${((railMinutes - RAIL_START) / (RAIL_END - RAIL_START)) * 100}%` }}
+            style={{ left: `${railPct(railMinutes)}%` }}
+            onPointerDown={(e) => {
+              e.stopPropagation();
+              draggingRef.current = "start";
+            }}
+            aria-label="Window start"
+          />
+          <button
+            type="button"
+            className="ins-timerail-knob"
+            style={{ left: `${railPct(railEndMinutes)}%` }}
+            onPointerDown={(e) => {
+              e.stopPropagation();
+              draggingRef.current = "end";
+            }}
+            aria-label="Window end"
           />
           {railNowPct != null && (
             <span className="ins-timerail-now" style={{ left: `${railNowPct}%` }} title="now" />
@@ -838,6 +875,63 @@ function VenuesPage({ token }) {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+// One room row: identity, its day timeline (taken slots + the searched
+// window + cursor), and a hover card that names the occupying class.
+function RoomRow({ room, saved, onToggle, slots, winStart, winEnd, now }) {
+  const [hovered, setHovered] = useState(null);
+  const stripRef = useRef(null);
+  const pct = (mins) => ((mins - RAIL_START) / (RAIL_END - RAIL_START)) * 100;
+
+  return (
+    <div className="ins-roomrow">
+      <SavedPin code={room.venue_code} saved={saved} onToggle={onToggle} />
+      <div className="ins-roomid">
+        <span className="ins-mono ins-roomrow-code">{room.venue_code}</span>
+        <span className="ins-roomrow-name">
+          {[room.room_name, room.building_name].filter(Boolean).join(" · ") || room.faculty || ""}
+        </span>
+      </div>
+      <div className="ins-roomstrip" ref={stripRef} onMouseLeave={() => setHovered(null)}>
+        {slots === null && <span className="ins-roomstrip-noinfo">no schedule data</span>}
+        {(slots || []).map((slot, index) => {
+          const left = Math.max(0, pct(slot.start));
+          const right = Math.min(100, pct(slot.end));
+          return (
+            <span
+              key={index}
+              className={`ins-roomstrip-busy ${hovered === index ? "is-hovered" : ""}`}
+              style={{ left: `${left}%`, width: `${Math.max(right - left, 1.5)}%` }}
+              onMouseEnter={() => setHovered(index)}
+            />
+          );
+        })}
+        <span
+          className="ins-roomstrip-window"
+          style={{
+            left: `${pct(winStart)}%`,
+            width: `${Math.max(pct(winEnd) - pct(winStart), 1)}%`,
+          }}
+        />
+        <span
+          className="ins-roomstrip-cursor"
+          style={{ left: `${pct(now.getHours() * 60 + now.getMinutes())}%` }}
+        />
+        {hovered != null && slots?.[hovered] && (
+          <div className="ins-hovercard" role="tooltip">
+            <p className="ins-hovercard-title">{slots[hovered].label}</p>
+            <p className="ins-cap">{slots[hovered].range}</p>
+            <p className="ins-cap">{slots[hovered].weeksLabel}</p>
+          </div>
+        )}
+      </div>
+      <span className="ins-mono ins-cap ins-roomrow-free">
+        {freeLabel(room.free_minutes)}
+        {room.distance_metres != null ? ` · ${Math.round(room.distance_metres)} m` : ""}
+      </span>
     </div>
   );
 }

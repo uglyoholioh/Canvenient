@@ -700,3 +700,63 @@
 .ins-brief-rowwrap {
   grid-column: 1 / -1;
 }
+
+/* ---- Task input — Apple Reminders-style composer ---------------------------- */
+.ins-root .task-input-shell.is-inline .task-input-card,
+.ins-root .task-input-shell.is-panel .task-input-card {
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--bg-raise, var(--surface));
+  box-shadow: var(--shadow-soft, none);
+}
+
+.ins-root .task-input-card:focus-within {
+  border-color: var(--border-strong);
+}
+
+.ins-root .task-input-main textarea {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-h);
+}
+
+.ins-root .task-input-main textarea::placeholder {
+  color: var(--text-muted);
+  font-weight: 450;
+}
+
+.ins-root .task-property-pill {
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-weight: 500;
+  border-radius: 6px;
+  padding: 2px 6px;
+}
+
+.ins-root .task-property-pill:hover {
+  background: rgba(128, 128, 128, 0.1);
+  color: var(--text);
+}
+
+.ins-root .task-add-button.property-pill {
+  background: var(--accent, var(--text-h));
+  color: var(--text-inverse);
+  border-radius: 999px;
+  padding: 3px 12px;
+  font-weight: 600;
+}
+
+.ins-root .task-add-button.property-pill:hover {
+  filter: brightness(1.1);
+}
+
+.ins-root .task-mode-switcher button {
+  border-radius: 6px;
+  font-weight: 550;
+}
+
+.ins-root .task-mode-switcher button.is-active {
+  background: var(--text-h);
+  color: var(--text-inverse);
+}

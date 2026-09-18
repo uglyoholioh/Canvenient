@@ -30,6 +30,18 @@ import ClassContextDrawer from "../../components/drawers/ClassContextDrawer";
 import "./schedule.css";
 
 const DAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+// NUS lesson types, abbreviated the way timetables print them.
+const ABBREV = {
+  LECTURE: "LEC",
+  LABORATORY: "LAB",
+  TUTORIAL: "TUT",
+  SEMINAR: "SEM",
+  RECITATION: "REC",
+  "SECTIONAL TEACHING": "SEC",
+  "DESIGN TEACHING": "DES",
+  TUTORIALTYPE2: "TUT2",
+  "PACKAGED TEACHING": "PACK",
+};
 const START_HOUR = 8;
 const END_HOUR = 23;
 const TOTAL_MINUTES = (END_HOUR - START_HOUR) * 60;

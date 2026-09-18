@@ -432,9 +432,7 @@ export default function Dashboard({ token, user, onNavigate }) {
   return (
     <div className="dashboard-page">
       {visibleModules.includes("aibrief") && (
-        <div className="ins-brief-band">
-          {renderModule("aibrief")}
-        </div>
+        <div className="ins-brief-band">{renderModule("aibrief")}</div>
       )}
       <div className="dashboard-scroll">
         <header className="dashboard-hero">

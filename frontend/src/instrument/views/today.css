@@ -45,11 +45,6 @@
   animation: ins-tick-in 240ms var(--ins-ease-out);
 }
 
-.ins-today-daymeter {
-  flex: 1;
-  max-width: 320px;
-}
-
 .ins-today-sub {
   font-size: var(--ins-fs-label);
   font-weight: 600;
@@ -317,4 +312,59 @@ button.ins-duerow-title:hover {
 .ins-busstrip-etas {
   font-size: var(--ins-fs-sub);
   color: var(--ins-ink-muted);
+}
+
+/* My Day — the AI lead, styled as an opening note */
+.ins-briefsection {
+  border: 1px solid var(--ins-line);
+  border-radius: var(--ins-r-big);
+  background: var(--ins-bg-raise);
+  padding: var(--ins-s4);
+}
+
+.ins-briefsection-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--ins-s2);
+}
+
+.ins-briefsection-refresh {
+  width: 24px;
+  height: 24px;
+}
+
+.ins-briefsection-refresh .is-spinning {
+  animation: ins-breathe 1s linear infinite;
+}
+
+.ins-briefsection-lead {
+  font-size: 15px;
+  font-weight: 550;
+  line-height: 1.45;
+  letter-spacing: -0.01em;
+  color: var(--ins-ink);
+  margin-bottom: var(--ins-s2);
+}
+
+.ins-briefsection-facts {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ins-s1);
+}
+
+.ins-brief-row {
+  display: flex;
+  align-items: baseline;
+  gap: var(--ins-s2);
+  font-size: var(--ins-fs-sub);
+  color: var(--ins-ink-body);
+}
+
+.ins-brief-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--ins-red);
+  flex-shrink: 0;
+  align-self: center;
 }
