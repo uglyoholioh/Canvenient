@@ -53,10 +53,10 @@ export default function TriageSheet({ token, onClose }) {
   const total = queue.length + processed;
   const current = queue[index];
 
-  const advance = () => {
+  const advance = useCallback(() => {
     setIndex((i) => Math.max(0, Math.min(i, queue.length - 1)));
     setProcessed((n) => n + 1);
-  };
+  }, [queue.length]);
 
   const finishTask = useCallback(
     async (task) => {
@@ -69,7 +69,7 @@ export default function TriageSheet({ token, onClose }) {
         setTasks((prev) => [...prev, task]);
       }
     },
-    [token],
+    [token, advance],
   );
 
   const removeTask = useCallback(
@@ -83,7 +83,7 @@ export default function TriageSheet({ token, onClose }) {
         setTasks((prev) => [...prev, task]);
       }
     },
-    [token],
+    [token, advance],
   );
 
   const dismissPost = useCallback(
@@ -92,7 +92,7 @@ export default function TriageSheet({ token, onClose }) {
       advance();
       dismissCanvasAnnouncement(token, post.id).catch(() => {});
     },
-    [token],
+    [token, advance],
   );
 
   const skip = useCallback(() => {

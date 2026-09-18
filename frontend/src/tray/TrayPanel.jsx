@@ -5,7 +5,7 @@
 // next ISB departure, nearest deadlines. On expiry the panel raises an
 // interaction-to-stop alarm.
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { getCurrent, WebviewWindow } from "@tauri-apps/api/window";
 import { emit, listen } from "@tauri-apps/api/event";
 import { Search } from "lucide-react";

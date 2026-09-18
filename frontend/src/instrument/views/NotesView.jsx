@@ -7,7 +7,7 @@ import { useWorkspaceToolbar } from "../../components/WorkspaceToolbarContext";
 import MarkdownEditor from "../../components/MarkdownEditor";
 import "./notes.css";
 
-export default function NotesView({ token, onNavigate }) {
+export default function NotesView({ token, onNavigate: _onNavigate }) {
   const [notes, setNotes] = useState([]);
   const [query, setQuery] = useState("");
   const [loaded, setLoaded] = useState(false);

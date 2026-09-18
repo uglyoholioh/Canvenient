@@ -18,7 +18,6 @@ import {
   searchCampusBusPlaces,
   searchFreeVenues,
 } from "../../api";
-import { useWorkspaceToolbar } from "../../components/WorkspaceToolbarContext";
 import { useNow } from "../useNow";
 import { serviceTone } from "../busTones";
 import "./campus.css";
@@ -35,10 +34,6 @@ function clockFromHHMM(hhmm) {
   const h = Math.min(23, Number(clean.slice(0, 2)));
   const m = Math.min(59, Number(clean.slice(2, 4)));
   return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
-}
-
-function hhmmToMinutes(hhmm) {
-  return Math.floor(hhmm / 100) * 60 + (hhmm % 100);
 }
 
 function minutesToHHMM(mins) {
@@ -655,6 +650,11 @@ function VenuesPage({ token }) {
     else setWindow(Math.min(winStart, mins - 30), mins);
   };
 
+
+  const railMinutes = winStart;
+  const railEndMinutes = winEnd;
+  const commitWindow = () => setQueryStartMin(winStartRef.current);
+
   useEffect(() => {
     const move = (e) => {
       if (draggingRef.current) railToTime(draggingRef.current, e.clientX);
@@ -670,10 +670,6 @@ function VenuesPage({ token }) {
       window.removeEventListener("pointerup", up);
     };
   });
-
-  const railMinutes = winStart;
-  const railEndMinutes = winEnd;
-  const commitWindow = () => setQueryStartMin(winStartRef.current);
   const windowMinutes = Math.max(30, winEnd - winStart);
   const railPct = (mins) => ((mins - RAIL_START) / (RAIL_END - RAIL_START)) * 100;
   const railNowPct =
@@ -903,9 +899,9 @@ function RoomRow({ room, saved, onToggle, slots, winStart, winEnd, now }) {
           return (
             <span
               key={index}
-              className={`ins-roomstrip-busy ${hovered === index ? "is-hovered" : ""}`}
+              className={`ins-roomstrip-busy ${hoveredIdx === index ? "is-hovered" : ""}`}
               style={{ left: `${left}%`, width: `${Math.max(right - left, 1.5)}%` }}
-              onMouseEnter={() => setHovered(index)}
+              onMouseEnter={() => setHoveredIdx(index)}
             />
           );
         })}

@@ -6,7 +6,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { RefreshCw } from "lucide-react";
 import { getAssistantBrief } from "../api";
-import { AssistantContext } from "../components/AssistantContext";
 
 function formatTime(value) {
   if (!value) return "";
