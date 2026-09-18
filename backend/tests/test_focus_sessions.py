@@ -5,6 +5,7 @@ client_id replay for offline queues, and the 0003 legacy-copy migration.
 
 import pytest
 from conftest import TEST_PASSWORD, auth_headers
+from datetime import datetime, timedelta, timezone
 from httpx import AsyncClient
 
 from database import db
@@ -14,9 +15,12 @@ pytestmark = pytest.mark.asyncio
 
 
 def payload(**overrides):
+    # Timestamps must be relative to now: the summary windows count sessions
+    # in "today"/"this week", and a hardcoded date rots the test in days.
+    now = datetime.now(timezone.utc)
     base = {
-        "started_at": "2026-09-16T02:00:00+00:00",
-        "ended_at": "2026-09-16T02:25:00+00:00",
+        "started_at": (now - timedelta(minutes=25)).isoformat(),
+        "ended_at": now.isoformat(),
         "planned_minutes": 25,
         "actual_seconds": 1500,
         "source": "mac_tray",
@@ -69,9 +73,10 @@ class TestCreateFocusSession:
         token, _, _ = auth
         bad_source = await client.post("/focus/sessions", json=payload(source="hacker"), headers=auth_headers(token))
         assert bad_source.status_code == 422
+        # A start in the future is inverted relative to the dynamic ended_at.
         inverted = await client.post(
             "/focus/sessions",
-            json=payload(started_at="2026-09-16T03:00:00+00:00"),
+            json=payload(started_at=(datetime.now(timezone.utc) + timedelta(minutes=5)).isoformat()),
             headers=auth_headers(token),
         )
         assert inverted.status_code == 422

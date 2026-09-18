@@ -4,7 +4,7 @@ session. Clients own running state and only report completed sessions, so
 offline runs queue locally and replay safely via client_id."""
 
 import uuid
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, HTTPException, Response, status
 from pydantic import BaseModel, Field
@@ -124,11 +124,15 @@ async def create_focus_session(payload: FocusSessionIn, current_user: CurrentUse
 async def focus_summary(current_user: CurrentUser, range: str = "today"):
     if range not in ("today", "week"):
         raise HTTPException(status_code=422, detail="range must be 'today' or 'week'.")
-    now = datetime.now()
+    # Stored stamps are UTC ISO strings; the day/week boundary is the
+    # student's local midnight. Convert local midnight to UTC before the
+    # string comparison, or sessions logged between local midnight and
+    # 08:00 SGT vanish from "today".
+    local_now = datetime.now().astimezone()
     if range == "today":
-        start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        start = local_now.replace(hour=0, minute=0, second=0, microsecond=0).astimezone(timezone.utc)
     else:
-        start = week_start(now)
+        start = week_start(local_now).astimezone(timezone.utc)
     row = await db.fetch_one(
         query="""
             SELECT COALESCE(SUM(actual_seconds), 0) AS total_seconds,
