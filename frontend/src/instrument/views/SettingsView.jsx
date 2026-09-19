@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import {
   applyModulePalette,
+  claimTelegramLink,
   createAcademicModule,
   deleteAcademicModule,
   getAcademicModules,
