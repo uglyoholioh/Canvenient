@@ -7,11 +7,16 @@ class AcademicModuleOut(BaseModel):
     id: int
     module_code: str
     name: str
-    source_type: Literal["canvas"]
+    source_type: Literal["canvas", "manual"]
     source_course_id: str | None = None
     external_url: str | None = None
     color: str | None = None
     is_selected: bool = True
+
+
+class AcademicModuleCreate(BaseModel):
+    module_code: str
+    name: str
 
 
 class AcademicModuleSelectionUpdate(BaseModel):

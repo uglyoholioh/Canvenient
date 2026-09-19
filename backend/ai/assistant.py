@@ -353,21 +353,33 @@ async def build_brief(user, force: bool = False) -> dict:
 
     facts = await day_context(user)
     summary, attention, ai_ok = "", [], False
-    try:
-        raw = await generate_json(
-            BRIEF_SYSTEM,
-            "FACTS (JSON):\n" + json.dumps(facts, default=str),
-            BRIEF_SCHEMA,
-        )
-        summary = str(raw.get("summary") or "").strip()
-        attention = [
-            {"text": str(item.get("text") or "").strip()[:240]}
-            for item in (raw.get("attention") or [])[:3]
-            if isinstance(item, dict) and str(item.get("text") or "").strip()
-        ]
+    if not (
+        facts.get("classes")
+        or facts.get("tasks")
+        or facts.get("new_announcements")
+        or facts.get("events")
+        or facts.get("exams")
+    ):
+        # An empty day needs no synthesis — and the model must never dress
+        # leftover facts up as commitments.
+        summary = "Nothing scheduled — enjoy the quiet day."
         ai_ok = True
-    except AIUnavailable:
-        logger.info("brief synthesis unavailable; returning deterministic facts only")
+    else:
+        try:
+            raw = await generate_json(
+                BRIEF_SYSTEM,
+                "FACTS (JSON):\n" + json.dumps(facts, default=str),
+                BRIEF_SCHEMA,
+            )
+            summary = str(raw.get("summary") or "").strip()
+            attention = [
+                {"text": str(item.get("text") or "").strip()[:240]}
+                for item in (raw.get("attention") or [])[:3]
+                if isinstance(item, dict) and str(item.get("text") or "").strip()
+            ]
+            ai_ok = True
+        except AIUnavailable:
+            logger.info("brief synthesis unavailable; returning deterministic facts only")
 
     payload = {**facts, "summary": summary, "attention": attention, "ai_ok": ai_ok}
     await _cache_put(user.id, "brief", payload)
@@ -407,6 +419,19 @@ async def build_brief_text(user_id: int) -> str:
         for a in facts["new_announcements"][:5]:
             lines.append(f"• [{a['course']}] {a['title']}")
         lines.append("")
+    if facts.get("events"):
+        lines.append("Events:")
+        for e in facts["events"]:
+            lines.append(f"• {e['title']}")
+        lines.append("")
+    if facts.get("exams"):
+        lines.append("Exams:")
+        for e in facts["exams"]:
+            lines.append(f"• {e['code']} {e['name']}")
+        lines.append("")
+
+    if len(lines) <= 2:
+        return "Nothing scheduled — enjoy the quiet day."
 
     try:
         raw = await generate_json(

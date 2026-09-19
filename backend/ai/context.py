@@ -148,8 +148,11 @@ def _as_dt(value) -> datetime | None:
 async def day_context(user) -> dict:
     """Everything that is true about the student's day, no AI involved."""
     user_id = user.id
-    classes, tasks, exams = await asyncio.gather(
-        todays_classes(user_id), open_tasks(user_id, limit=20), upcoming_exams(user_id)
+    classes, tasks, exams, events = await asyncio.gather(
+        todays_classes(user_id),
+        open_tasks(user_id, limit=20),
+        upcoming_exams(user_id),
+        upcoming_events(user_id, days=1),
     )
     now = datetime.now()
     announcements = await recent_announcements(user, limit=6)
@@ -195,6 +198,10 @@ async def day_context(user) -> dict:
             for t in tasks
         ],
         "exams": [{"code": e["module_code"], "name": e["module_name"], "start_at": _iso(e["start_at"])} for e in exams],
+        "events": [
+            {"id": e["id"], "title": e["title"], "start_at": _iso(e["start_at"]), "venue": e.get("venue") or ""}
+            for e in events
+        ],
         "new_announcements": recent,
     }
 
