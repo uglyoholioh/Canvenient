@@ -454,6 +454,14 @@ export function getModuleColors(token) {
   return apiRequest("/module-colors", { token });
 }
 
+export function setModuleColor(token, moduleCode, color) {
+  return apiRequest(`/module-colors/${encodeURIComponent(moduleCode)}`, {
+    method: "PATCH",
+    body: { color },
+    token,
+  });
+}
+
 export function applyModulePalette(token, palette) {
   return apiRequest("/module-colors/palette", {
     method: "PUT",

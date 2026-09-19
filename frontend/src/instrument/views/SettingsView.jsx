@@ -2,10 +2,15 @@
 
 import { useEffect, useState } from "react";
 import {
-  claimTelegramLink,
+  applyModulePalette,
+  createAcademicModule,
+  deleteAcademicModule,
+  getAcademicModules,
   getBackups,
+  getModuleColors,
   getTelegramLink,
   restoreBackup,
+  setModuleColor,
   unlinkTelegram,
   updateProfile,
   validateCanvasToken,
@@ -18,6 +23,7 @@ import "./settings.css";
 
 const PANES = [
   ["dashboard", "Dashboard"],
+  ["modules", "Modules"],
   ["appearance", "Appearance"],
   ["connections", "Connections"],
   ["backups", "Backups"],
@@ -168,6 +174,11 @@ export default function SettingsView({ token, user, onUpdateUser, onReplayOrient
   const [theme, setTheme] = useState(getThemePreference());
   const [cardStyle, setCardStyle] = useState(getScheduleCardStyle());
   const [dash, setDash] = useState(readDashboardConfig);
+  const [academicModules, setAcademicModules] = useState([]);
+  const [moduleColors, setModuleColors] = useState(null);
+  const [modulesMessage, setModulesMessage] = useState("");
+  const [newCode, setNewCode] = useState("");
+  const [newName, setNewName] = useState("");
   const [name, setName] = useState(user?.name || "");
   const [nameState, setNameState] = useState({ busy: false, message: "" });
   const [backups, setBackups] = useState([]);
@@ -189,6 +200,77 @@ export default function SettingsView({ token, user, onUpdateUser, onReplayOrient
       .then((data) => setBackups(data?.backups || []))
       .catch(() => {});
   }, [token, pane]);
+
+  useEffect(() => {
+    if (pane !== "modules") return;
+    getAcademicModules(token)
+      .then((list) => setAcademicModules(list || []))
+      .catch(() => setAcademicModules([]));
+    getModuleColors(token)
+      .then((data) => setModuleColors(data || null))
+      .catch(() => setModuleColors(null));
+  }, [token, pane]);
+
+  const refreshModules = () => {
+    getAcademicModules(token)
+      .then((list) => setAcademicModules(list || []))
+      .catch(() => {});
+    getModuleColors(token)
+      .then((data) => setModuleColors(data || null))
+      .catch(() => {});
+  };
+
+  const addModule = async () => {
+    if (!newCode.trim()) return;
+    setModulesMessage("");
+    try {
+      await createAcademicModule(token, newCode.trim(), newName.trim());
+      setNewCode("");
+      setNewName("");
+      refreshModules();
+      setModulesMessage("Module added.");
+    } catch (err) {
+      setModulesMessage(err.message || "Could not add the module.");
+    }
+  };
+
+  const removeModule = async (academicId, moduleCode) => {
+    setModulesMessage("");
+    try {
+      await deleteAcademicModule(token, academicId);
+      refreshModules();
+      setModulesMessage(`${moduleCode} removed.`);
+    } catch (err) {
+      setModulesMessage(err.message || "Could not remove the module.");
+    }
+  };
+
+  const pickPalette = async (palette) => {
+    try {
+      const next = await applyModulePalette(token, palette);
+      setModuleColors(next || null);
+    } catch (err) {
+      setModulesMessage(err.message || "Could not apply the palette.");
+    }
+  };
+
+  const recolorModule = async (moduleCode, color) => {
+    try {
+      await setModuleColor(token, moduleCode, color);
+      setModuleColors((prev) =>
+        prev
+          ? {
+              ...prev,
+              modules: prev.modules.map((m) =>
+                m.module_code === moduleCode ? { ...m, color } : m,
+              ),
+            }
+          : prev,
+      );
+    } catch {
+      setModulesMessage("Could not set that colour.");
+    }
+  };
 
   const pickTheme = (pref) => {
     setThemePreference(pref);
@@ -427,6 +509,114 @@ export default function SettingsView({ token, user, onUpdateUser, onReplayOrient
                       <span className="ins-cap ins-theme-caption">{card.caption}</span>
                     </span>
                   </button>
+                ))}
+              </div>
+            </div>
+          </>
+        )}
+
+        {pane === "modules" && (
+          <>
+            <div className="ins-sec">
+              <div className="ins-sec-head">
+                <h2>My modules</h2>
+              </div>
+              <p className="ins-cap">
+                Modules that are not on Canvas — labs, projects, audited courses. They join the
+                semester and the task pickers.
+              </p>
+              <div className="ins-addmodule">
+                <input
+                  className="ins-input"
+                  placeholder="Code — e.g. XFS3241"
+                  value={newCode}
+                  onChange={(e) => setNewCode(e.target.value)}
+                  aria-label="Module code"
+                />
+                <input
+                  className="ins-input"
+                  placeholder="Name — optional"
+                  value={newName}
+                  onChange={(e) => setNewName(e.target.value)}
+                  aria-label="Module name"
+                />
+                <button
+                  type="button"
+                  className="ins-btn is-primary"
+                  disabled={!newCode.trim()}
+                  onClick={addModule}
+                >
+                  Add
+                </button>
+              </div>
+              {modulesMessage && <p className="ins-cap">{modulesMessage}</p>}
+              <div className="ins-settinglist">
+                {academicModules.map((m) => (
+                  <div key={m.id} className="ins-modrow">
+                    <span
+                      className="ins-tick"
+                      style={{
+                        "--tick-color": m.color || "var(--ins-ink-faint)",
+                        height: 18,
+                      }}
+                    />
+                    <span className="ins-mono">{m.module_code}</span>
+                    <span className="ins-cap">{m.name}</span>
+                    <span className="ins-semester-modhead-meta">
+                      <span className="ins-cap ins-mono">{m.source_type}</span>
+                      {m.source_type === "manual" && (
+                        <button
+                          type="button"
+                          className="ins-btn is-ghost"
+                          onClick={() => removeModule(m.id, m.module_code)}
+                        >
+                          Remove
+                        </button>
+                      )}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="ins-sec">
+              <div className="ins-sec-head">
+                <h2>Palettes</h2>
+              </div>
+              <div className="ins-setting-inline" style={{ flexWrap: "wrap" }}>
+                {(moduleColors?.palettes || []).map((palette) => (
+                  <button
+                    key={palette.id}
+                    type="button"
+                    className={`ins-theme ${moduleColors?.active_palette === palette.id ? "is-active" : ""}`}
+                    onClick={() => pickPalette(palette.id)}
+                  >
+                    <span className="ins-theme-names">
+                      <span className="ins-theme-name">{palette.name}</span>
+                      <span className="ins-palette-stripes" aria-hidden="true">
+                        {(palette.colors || []).slice(0, 6).map((c, i) => (
+                          <i key={i} style={{ background: c }} />
+                        ))}
+                      </span>
+                    </span>
+                  </button>
+                ))}
+              </div>
+              <div className="ins-sec-head" style={{ marginTop: "var(--ins-s4)" }}>
+                <h2>Module colours</h2>
+              </div>
+              <div className="ins-settinglist">
+                {(moduleColors?.modules || []).map((m) => (
+                  <div key={m.module_code} className="ins-modrow">
+                    <span className="ins-mono">{m.module_code}</span>
+                    <input
+                      type="color"
+                      className="ins-colorinput"
+                      value={(m.color || "#888888").slice(0, 7)}
+                      onChange={(e) => recolorModule(m.module_code, e.target.value)}
+                      aria-label={`Colour for ${m.module_code}`}
+                    />
+                  </div>
                 ))}
               </div>
             </div>
