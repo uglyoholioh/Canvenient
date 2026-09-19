@@ -23,6 +23,12 @@ pytestmark = pytest.mark.asyncio
 async def test_assistant_brief_builds_context_on_sqlite(client: AsyncClient, auth, monkeypatch):
     """A forced refresh skips the cache, so the day-context queries must execute."""
     token, user_id, _ = auth
+    # A fact keeps the brief on the synthesis path — empty days short-circuit.
+    await client.post(
+        "/tasks",
+        json={"title": "Seed fact", "due_at": None, "priority": "high", "category_id": None, "estimated_minutes": None},
+        headers=auth_headers(token),
+    )
 
     async def fake_generate_json(system, prompt, schema, extra_parts=None):
         return {"summary": "All clear.", "attention": []}

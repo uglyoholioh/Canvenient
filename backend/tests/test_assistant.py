@@ -97,6 +97,13 @@ async def test_chat_sanitises_and_includes_attachment(client: AsyncClient, auth,
 async def test_brief_degrades_without_ai_and_caches(client: AsyncClient, auth, monkeypatch):
     token, _, _ = auth
     monkeypatch.delenv("MODEL_API_KEY", raising=False)
+    # A fact keeps the brief on the synthesis path — an empty day now
+    # short-circuits to the quiet-day message with ai_ok true.
+    await client.post(
+        "/tasks",
+        json={"title": "Seed fact", "due_at": None, "priority": "high", "category_id": None, "estimated_minutes": None},
+        headers=auth_headers(token),
+    )
 
     resp1 = await client.get("/assistant/brief", headers=auth_headers(token))
     assert resp1.status_code == 200
