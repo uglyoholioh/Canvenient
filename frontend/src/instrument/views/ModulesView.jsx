@@ -7,7 +7,10 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
+  createAcademicModule,
+  deleteAcademicModule,
   dismissCanvasAnnouncement,
+  getAcademicModules,
   getCanvasAnnouncements,
   getCanvasAssignments,
   getCanvasCourses,
@@ -31,6 +34,7 @@ import CourseWorkspace from "./modules/CourseWorkspace";
 import "./modules.css";
 
 export default function ModulesView({ token }) {
+  const [manualModules, setManualModules] = useState([]);
   const [courses, setCourses] = useState([]);
   const [assignments, setAssignments] = useState([]);
   const [announcements, setAnnouncements] = useState([]);
@@ -51,17 +55,56 @@ export default function ModulesView({ token }) {
       getCanvasCourses(token),
       getCanvasAssignments(token),
       getCanvasAnnouncements(token),
-    ]).then(([coursesRes, assignmentsRes, announcementsRes]) => {
+      getAcademicModules(token),
+    ]).then(([coursesRes, assignmentsRes, announcementsRes, modulesRes]) => {
       if (!alive) return;
       setCourses(coursesRes.status === "fulfilled" ? coursesRes.value || [] : []);
       setAssignments(assignmentsRes.status === "fulfilled" ? assignmentsRes.value || [] : []);
       setAnnouncements(announcementsRes.status === "fulfilled" ? announcementsRes.value || [] : []);
+      setManualModules(
+        (modulesRes.status === "fulfilled" ? modulesRes.value || [] : []).filter(
+          (m) => m.source_type === "manual",
+        ),
+      );
       setLoaded(true);
     });
     return () => {
       alive = false;
     };
   }, [token]);
+
+  // Modules that are not on Canvas join the semester as first-class cards —
+  // they carry tasks and dates, just no Canvas sync.
+  const displayCourses = useMemo(() => {
+    const canvasCodes = new Set(courses.map((c) => (c.course_code || "").toUpperCase()));
+    const manual = manualModules
+      .filter((m) => !canvasCodes.has((m.module_code || "").toUpperCase()))
+      .map((m) => ({
+        id: `manual-${m.id}`,
+        academicId: m.id,
+        course_code: m.module_code,
+        name: m.name,
+        color: m.color,
+        isManual: true,
+      }));
+    return [...courses, ...manual];
+  }, [courses, manualModules]);
+
+  const addModule = useCallback(
+    async (moduleCode, name) => {
+      const created = await createAcademicModule(token, moduleCode, name);
+      setManualModules((prev) => [...prev, created]);
+    },
+    [token],
+  );
+
+  const removeModule = useCallback(
+    async (academicId) => {
+      await deleteAcademicModule(token, academicId);
+      setManualModules((prev) => prev.filter((m) => m.id !== academicId));
+    },
+    [token],
+  );
 
   const select = useCallback((kind, courseId = null) => {
     const next = { kind, courseId };
@@ -289,7 +332,7 @@ export default function ModulesView({ token }) {
       renderDeadlines()
     ) : (
       <SemesterLanding
-        courses={courses}
+        courses={displayCourses}
         assignments={assignments}
         announcements={announcements}
         buckets={deadlineBuckets}
@@ -297,6 +340,8 @@ export default function ModulesView({ token }) {
         now={now}
         onOpenAssignment={openAssignment}
         onOpenCourse={(id) => select("course", id)}
+        onAddModule={addModule}
+        onDeleteModule={removeModule}
       />
     );
 

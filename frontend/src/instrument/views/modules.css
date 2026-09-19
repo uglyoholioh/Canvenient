@@ -299,6 +299,48 @@
   margin-bottom: var(--ins-s2);
 }
 
+.ins-semester-modhead-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--ins-s2);
+}
+
+.ins-addmodule {
+  display: flex;
+  gap: var(--ins-s2);
+  margin-bottom: var(--ins-s3);
+}
+
+.ins-addmodule .ins-input {
+  flex: 1;
+  min-width: 0;
+}
+
+.ins-modcard.is-manual {
+  position: relative;
+  border-style: dashed;
+}
+
+.ins-modcard-remove {
+  appearance: none;
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 22px;
+  height: 22px;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--ins-ink-faint);
+  font: 600 14px/1 var(--ins-font);
+  cursor: default;
+}
+
+.ins-modcard-remove:hover {
+  background: color-mix(in srgb, var(--ins-red) 14%, transparent);
+  color: var(--ins-red);
+}
+
 .ins-modcards {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));

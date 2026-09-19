@@ -1,7 +1,9 @@
 // Semester landing — what's true across all modules, at a glance: the
 // runway band (next due / most overdue), a glance row (due next, fresh
-// posts, grades), and one quiet card per module.
+// posts, grades), and one quiet card per module. Modules that are not on
+// Canvas live here too: add them with the "+", remove them from their card.
 
+import { useState } from "react";
 import { courseNextDue, freshPostCount, parseGradePercent, relativeDay } from "./model";
 import RunwayBand from "./RunwayBand";
 
@@ -25,7 +27,32 @@ export default function SemesterLanding({
   now,
   onOpenAssignment,
   onOpenCourse,
+  onAddModule,
+  onDeleteModule,
 }) {
+  const [adding, setAdding] = useState(false);
+  const [code, setCode] = useState("");
+  const [name, setName] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+
+  const submitModule = async (event) => {
+    event.preventDefault();
+    if (!code.trim() || busy) return;
+    setBusy(true);
+    setError("");
+    try {
+      await onAddModule(code.trim(), name.trim());
+      setCode("");
+      setName("");
+      setAdding(false);
+    } catch (err) {
+      setError(err.message || "Could not add the module.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const band = buckets.overdue[0] || buckets.today[0] || buckets.tomorrow[0] || buckets.week[0];
   const upcoming = [...buckets.today, ...buckets.tomorrow, ...buckets.week, ...buckets.later];
   // Skip the band's item from the glance list unless the band is an overdue one.
@@ -130,8 +157,43 @@ export default function SemesterLanding({
 
       <div className="ins-sec-head ins-semester-modhead">
         <p className="ins-label">Modules</p>
-        <span className="ins-cap ins-mono">{courses.length}</span>
+        <span className="ins-semester-modhead-meta">
+          <span className="ins-cap ins-mono">{courses.length}</span>
+          {onAddModule && (
+            <button
+              type="button"
+              className="ins-iconbtn"
+              aria-label="Add a module"
+              title="Add a module that is not on Canvas"
+              onClick={() => setAdding((prev) => !prev)}
+            >
+              +
+            </button>
+          )}
+        </span>
       </div>
+      {adding && onAddModule && (
+        <form className="ins-addmodule" onSubmit={submitModule}>
+          <input
+            className="ins-input"
+            placeholder="Code — e.g. XFS3241"
+            value={code}
+            onChange={(e) => setCode(e.target.value)}
+            aria-label="Module code"
+          />
+          <input
+            className="ins-input"
+            placeholder="Name — e.g. Independent Study"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            aria-label="Module name"
+          />
+          <button type="submit" className="ins-btn is-primary" disabled={busy || !code.trim()}>
+            Add
+          </button>
+        </form>
+      )}
+      {adding && error && <p className="ins-cap is-red">{error}</p>}
       <div className="ins-modcards">
         {courses.map((c) => {
           const next = courseNextDue(assignments, c.id, now);
@@ -140,13 +202,8 @@ export default function SemesterLanding({
             now,
           );
           const raw = gradeText(c.id);
-          return (
-            <button
-              key={c.id}
-              type="button"
-              className="ins-modcard"
-              onClick={() => onOpenCourse(c.id)}
-            >
+          const body = (
+            <>
               <span className="ins-modcard-head">
                 <span
                   className="ins-tick"
@@ -159,13 +216,45 @@ export default function SemesterLanding({
               </span>
               <span className="ins-modcard-facts">
                 <span className="ins-mono ins-cap">
-                  {next ? `next ${relativeDay(next.due_at, now)}` : "nothing dated"}
+                  {c.isManual
+                    ? "not on Canvas"
+                    : next
+                      ? `next ${relativeDay(next.due_at, now)}`
+                      : "nothing dated"}
                 </span>
                 {posts > 0 && (
                   <span className="ins-mono ins-cap ins-modcard-posts">{posts} new</span>
                 )}
                 {raw != null && <span className="ins-mono ins-cap">{raw}</span>}
               </span>
+            </>
+          );
+          if (c.isManual) {
+            return (
+              <div key={c.id} className="ins-modcard is-manual">
+                {body}
+                {onDeleteModule && (
+                  <button
+                    type="button"
+                    className="ins-modcard-remove"
+                    aria-label={`Remove ${c.course_code}`}
+                    title="Remove module"
+                    onClick={() => onDeleteModule(c.academicId)}
+                  >
+                    ×
+                  </button>
+                )}
+              </div>
+            );
+          }
+          return (
+            <button
+              key={c.id}
+              type="button"
+              className="ins-modcard"
+              onClick={() => onOpenCourse(c.id)}
+            >
+              {body}
             </button>
           );
         })}

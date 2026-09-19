@@ -429,6 +429,27 @@ export function updateAcademicModuleSelection(token, moduleIds) {
   });
 }
 
+export function createAcademicModule(token, moduleCode, name) {
+  try {
+    window.sessionStorage.removeItem(ACADEMIC_MODULES_CACHE_KEY);
+  } catch {}
+  return apiRequest("/academic-modules/custom", {
+    method: "POST",
+    body: { module_code: moduleCode, name },
+    token,
+  });
+}
+
+export function deleteAcademicModule(token, moduleId) {
+  try {
+    window.sessionStorage.removeItem(ACADEMIC_MODULES_CACHE_KEY);
+  } catch {}
+  return apiRequest(`/academic-modules/custom/${Number(moduleId)}`, {
+    method: "DELETE",
+    token,
+  });
+}
+
 export function getModuleColors(token) {
   return apiRequest("/module-colors", { token });
 }
